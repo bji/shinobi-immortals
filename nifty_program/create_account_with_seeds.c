@@ -1,7 +1,9 @@
 
 // To be used as data to pass to the system program when invoking CreateAccount
-typedef struct
+typedef struct __attribute__((__packed__))
 {
+    uint16_t instruction_code;
+    uint16_t padding;
     uint64_t lamports;
     uint64_t space;
     SolPubkey owner;
@@ -10,23 +12,22 @@ typedef struct
 
 // Creates a new account, using sol_invoke_signed, which is what allows the newly created account to take ownership
 // of the created account
-static uint64_t create_account_with_seeds(SolPubkey *account_pubkey, SolSignerSeed *seeds, int seeds_count,
+static uint64_t create_account_with_seeds(SolAccountInfo *new_account, SolSignerSeed *seeds, int seeds_count,
                                           SolAccountInfo *funding_account, SolPubkey *owner_account,
-                                          uint64_t funding_lamports, uint64_t space)
+                                          uint64_t funding_lamports, uint64_t space,
+                                          // All cross-program invocation must pass all account infos through, it's
+                                          // the only sane way to cross-program invoke
+                                          SolAccountInfo *all_accounts, int all_accounts_len)
 {
     SolInstruction instruction;
-    
+
     SolAccountMeta account_metas[2] = 
         // First account to pass to CreateAccount is the funding_account
-        { { /* pubkey */ funding_account->key, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ funding_account->key, /* is_writable */ true, /* is_signer */ true },
           // Second account to pass to CreateAccount is the new account to be created
-          { /* pubkey */ account_pubkey, /* is_writable */ true, /* is_signer */ false } };
-    
-    // No account_info for the second account because it's not an existing account yet
-    SolAccountInfo account_info;;
-    sol_memcpy(&account_info, funding_account, sizeof(SolAccountInfo));
+          { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
 
-    CreateAccountWithSeedsData data = { funding_lamports, space, *owner_account };
+    CreateAccountWithSeedsData data = { 0, 0, funding_lamports, space, *owner_account };
 
     SolPubkey system_program_id = SYSTEM_PROGRAM_ID_BYTES;
     instruction.program_id = &system_program_id;
@@ -37,5 +38,5 @@ static uint64_t create_account_with_seeds(SolPubkey *account_pubkey, SolSignerSe
 
     SolSignerSeeds signer_seeds = { seeds, seeds_count };
 
-    return sol_invoke_signed(&instruction, &account_info, 1, &signer_seeds, 1);
+    return sol_invoke_signed(&instruction, all_accounts, all_accounts_len, &signer_seeds, 1);
 }
