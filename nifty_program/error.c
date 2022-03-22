@@ -36,6 +36,9 @@ typedef enum Error
     
     // The block account doesn't have the correct number of bytes in it
     Error_InvalidDataLen               = 1010,
+
+    // Block parameters would result in a block that exceeds maximum allowed system account size
+    Error_BlockTooLarge                = 1011,
     
     // Errors 1100 through 1199 are used to indicate an error in input data, where the specific input field
     // that was faulty is the offset from 1100.

@@ -70,7 +70,7 @@ typedef enum Instruction
 
 // Include helper functions required by all subsequent functions
 #include "is_admin_authenticated.c"
-#include "create_account_with_seeds.c"
+#include "create_pda.c"
 #include "find_block_address.c"
 #include "compute_block_size.c"
 
@@ -115,14 +115,15 @@ uint64_t entrypoint(const uint8_t *input)
         return Error_ShortData;
     }
 
-    // Initialize "globals"
-
     // The instruction index is the first byte of data.  For each instruction code, call the appropriate do_ function
     // to handle that instruction, and return its result.
     switch (params.data[0]) {
     case Instruction_CreateBlock:
         return do_create_block(&params);
 
+    case Instruction_InitializeBlock:
+        return do_initialize_block(&params);
+        
     case Instruction_AddEntriesToBlock:
         return do_add_entries_to_block(&params);
 

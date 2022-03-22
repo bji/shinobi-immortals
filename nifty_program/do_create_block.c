@@ -20,18 +20,11 @@ typedef struct
     // lamports from the funding account, except when the account is deleted on a successful DeleteBlock instruction.
     uint64_t funding_lamports;
 
-    // The Program Derived Account address is generated from two 32 bit numbers.  The first is a block group id.  The
-    // second is a block id within that group.  These two numbers together (in their little endian encoding) form the
-    // seed that is used to generate the address of the block (using whatever bump seed first computes a valid PDA).
-    // If the PDA that is derived from these seeds is invalid, the transaction fails.
-    uint32_t group_id;
-    uint32_t block_id;
-    
-    // Total number of entries in this block.  Must be greater than 0.
-    uint16_t total_entry_count;
-    
-    // This is the number of bytes in mint_data for each BlockEntry in this block
-    uint16_t mint_data_size;
+    // The Program Derived Account address is generated using 32 seed bytes, these are those seed bytes
+    uint8_t seed[32];
+
+    // The actual configuration of the block is provided
+    BlockConfiguration config;
     
 } CreateBlockData;
     
@@ -39,10 +32,10 @@ typedef struct
 // Creates a new block of entries
 static uint64_t do_create_block(SolParameters *params)
 {
-    sol_log_params(params);
+    //sol_log_params(params);
     
     // Sanitize the accounts.  There must be 5.
-    if (params->ka_num != 4) {
+    if (params->ka_num != 5) {
         return Error_IncorrectNumberOfAccounts;
     }
 
@@ -52,7 +45,7 @@ static uint64_t do_create_block(SolParameters *params)
     SolAccountInfo *system_account = &(params->ka[3]);
     SolAccountInfo *block_account = &(params->ka[4]);
     
-    // Ensure the the caller is the admin user
+    // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_authenticated(config_account, admin_account)) {
         return Error_PermissionDenied;
     }
@@ -75,35 +68,52 @@ static uint64_t do_create_block(SolParameters *params)
     // Cast to instruction data
     CreateBlockData *data = (CreateBlockData *) params->data;
 
-    // Compute the address of the block
-    SolPubkey block_address;
-    if (!find_block_address(data->group_id, data->block_id, &block_address)) {
-        return Error_InvalidBlockAddressSeeds;
+    BlockConfiguration *config = &(data->config);
+    
+    // Sanitize inputs
+    if (config->total_entry_count == 0) {
+        return Error_InvalidInputData_First + 0;
+    }
+    if (config->reveal_ticket_count > config->total_entry_count) {
+        return Error_InvalidInputData_First + 1;
+    }
+    if (config->ticket_price_lamports == 0) {
+        return Error_InvalidInputData_First + 2;
+    }
+    if (config->ticket_refund_lamports > config->ticket_price_lamports) {
+        return Error_InvalidInputData_First + 3;
+    }
+    if (config->bid_minimum == 0) {
+        return Error_InvalidInputData_First + 4;
+    }
+    if (config->permabuy_commission == 0) {
+        return Error_InvalidInputData_First + 5;
     }
 
-    // Ensure that the block account reference was for the correctly derived PDA
-    if (sol_memcmp(block_account->key, &block_address, sizeof(SolPubkey))) {
-        sol_log_pubkey(&block_address);
-        return Error_InvalidBlockAccount;
+    // This is the size that the fully populated block will use
+    uint64_t total_block_size = compute_block_size(data->config.mint_data_size, data->config.total_entry_count);
+    
+    // If completed block would be too big to fit in the maximum system account size, reject it
+    if (total_block_size > (10 * 1000 * 1000)) {
+        return Error_BlockTooLarge;
     }
 
-    uint64_t space = compute_block_size(data->mint_data_size, data->total_entry_count);
-
-    sol_log("sizeof block");
-    sol_log_64(0, 0, 0, 0, space);
+    // Initial account size is just the size of everything up to the actual entries array
+    uint64_t space = compute_block_size(data->config.mint_data_size, 0);
 
     // Two seeds: the group id and the block id
-    SolSignerSeed seeds[2] =
-        { // First is group id
-            { (uint8_t *) &(data->group_id), 4 },
-            // Second is block id
-            { (uint8_t *) &(data->block_id), 4 }
-        };
-    if (!create_account_with_seeds(block_account, seeds, 2, funding_account, (SolPubkey *) params->program_id,
-                                   data->funding_lamports, space, params->ka, params->ka_num)) {
+    SolSignerSeed seed = { data->seed, sizeof(data->seed) };
+
+    if (create_pda(block_account, &seed, 1, funding_account, (SolPubkey *) params->program_id, data->funding_lamports,
+                   space, params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
 
-    // The program has succeeded.  Return success code 0.
+    // The program has succeeded.  Initialize the block data.
+    BlockData *blockData = (BlockData *) (block_account->data);
+
+    sol_memcpy(&(blockData->config), config, sizeof(BlockConfiguration));
+
+    // Return success code 0
     return 0;
 }

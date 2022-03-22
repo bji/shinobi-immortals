@@ -48,25 +48,7 @@ static uint64_t do_initialize_block(SolParameters *params)
 
     BlockConfiguration *config = &(data->config);
 
-    // Compute the address of the block
-    SolPubkey block_address;
-    if (!find_block_address(config->group_id, config->block_id, &block_address)) {
-        return Error_InvalidBlockAddressSeeds;
-    }
-
-    // Ensure that the block account reference was for the correctly derived PDA
-    if (sol_memcmp(block_account->key, &block_address, sizeof(SolPubkey))) {
-        sol_log_pubkey(&block_address);
-        return Error_InvalidBlockAccount;
-    }
-
-    // Ensure that the block account reference was for the correctly derived PDA
-    if (sol_memcmp(block_account->key, &block_address, sizeof(SolPubkey))) {
-        sol_log_pubkey(&block_address);
-        return Error_InvalidBlockAccount;
-    }
-
-    // Sanitize other inputs
+    // Sanitize inputs
     if (config->total_entry_count == 0) {
         return Error_InvalidInputData_First + 0;
     }

@@ -19,12 +19,11 @@ typedef struct
 
 typedef struct
 {
-    // The Program Derived Account address is generated from two 32 bit numbers.  The first is a block group id.  The
-    // second is a block id within that group.  These two numbers together (in their little endian encoding) form the
-    // seed that is used to generate the address of the block (using whatever bump seed first computes a valid PDA).
-    // If the PDA that is derived from these seeds is invalid, the transaction fails.
-    uint32_t group_id;
-    uint32_t block_id;
+    // Identification of the group number of this block
+    uint32_t group_number;
+
+    // Identification of the block number of this block within its group.
+    uint32_t block_number;
     
     // Total number of entries in this block.  Must be greater than 0.
     uint16_t total_entry_count;
@@ -38,7 +37,7 @@ typedef struct
     // This is a number of seconds to add to the block state's reveal_time value to get the cutoff period for reveal;
     // any entry which has not been revealed by this point allows zero-penalty ticket return.
     uint32_t reveal_grace_duration;
-    
+
     // This is cost in lamports of each ticket.  Cannot be zero.
     uint64_t ticket_price_lamports;
 
@@ -73,13 +72,13 @@ typedef struct
     // nonzero.
     uint16_t permabuy_commission;
 
-    // This is the extra cost in lamports charged when a stake account that is not delegated to Shinobi Systems
+    // This is the extra commission charged when a stake account that is not delegated to Shinobi Systems
     // is un-delegated via the redelegation crank.
-    uint64_t undelegate_charge_lamports;
+    uint16_t undelegate_commission;
 
-    // This is the extra cost in lamports charged when a stake account that is undelegated is delegated to
+    // This is the extra commission charged when a stake account that is undelegated is delegated to
     // Shinobi Systems via the redelegation crank.
-    uint64_t delegate_charge_lamports;
+    uint16_t delegate_commission;
 
     // This is the number of stake earned lamports per Ki that is earned.  For example, 1000 would mean
     // that for every 1000 lamports of SOL earned via staking, 1 Ki token is awarded.
@@ -127,7 +126,7 @@ typedef enum
 } BlockEntryState;
 
 
-typedef struct __attribute__((__packed__))
+typedef struct
 {
     // The current state of the Entry
     BlockEntryState entry_state;
@@ -170,6 +169,10 @@ typedef struct __attribute__((__packed__))
             SolPubkey winning_bidder;
         } in_auction;
     };
+
+    // Each time an entry starts, this number is incremented.  This prevents losing bids from prior auctions from
+    // being redeemed as winning bids for the current auction.
+    uint64_t auction_number;
     
     // Total Ki harvested over the lifetime of this entry
     uint64_t total_ki_harvested_lamports;
@@ -213,4 +216,4 @@ typedef struct
 #define BLOCK_ENTRY(block_data, index)                                                       \
     ((BlockEntry *)                                                                          \
      (((uint8_t *) ((block_data)->entries)) +                                                \
-      (((sizeof(BlockEntry) + (block_data)->config.mint_data_size + 3) % 4) * (index))))
+      (((sizeof(BlockEntry) + (block_data)->config.mint_data_size + 7) & ~0x7) * (index))))

@@ -1,14 +1,9 @@
 
 
-static bool find_block_address(uint32_t group_id, uint32_t block_id, SolPubkey *return_key)
+static bool find_block_address(uint8_t *seed, uint16_t seed_len, SolPubkey *return_key)
 {
-    // Two seeds: the group id and the block id
-    SolSignerSeed seeds[2] =
-        { // First is group id
-            { (uint8_t *) &group_id, 4 },
-            // Second is block id
-            { (uint8_t *) &block_id, 4 }
-        };
+    // One seed: the group id and the block id
+    SolSignerSeed sol_seed = { seed, seed_len };
     
     SolPubkey nifty_stakes_program_id = NIFTY_STAKES_PROGRAM_ID_BYTES;
     
@@ -17,5 +12,5 @@ static bool find_block_address(uint32_t group_id, uint32_t block_id, SolPubkey *
     // listed in accounts and will be rejected
     uint8_t junk;
 
-    return !sol_try_find_program_address(seeds, 2, &nifty_stakes_program_id, return_key, &junk);
+    return !sol_try_find_program_address(&sol_seed, 1, &nifty_stakes_program_id, return_key, &junk);
 }

@@ -1,23 +1,28 @@
-// Some instructions can only be invoked if the transaction was signed by the admin user.  The admin user
-// is specified in the program config account.  For all instructions which require admin privileges, the
-// first account of the instruction must be the program config account, and must be specified read-only, and
-// the second account identifies the admin as a signer of the transaction.
+// Some instructions can only be invoked if the transaction was signed by the admin user.  The admin user is specified
+// in the program config account.  For all instructions which require admin privileges, the first account of the
+// instruction must be the program config account, and the second account identifies the admin as a signer of the
+// transaction.
 static bool is_admin_authenticated(const SolAccountInfo *config_account,
-                                   const SolAccountInfo *admin_signer_account)
+                                   const SolAccountInfo *supplied_admin_account)
 {
-    // The config account must be the correct account
+    // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
+    // account
     if (!is_program_config_account(config_account->key)) {
+        sol_log("Config account was");
+        sol_log_pubkey(config_account->key);
         return false;
     }
 
-    // The instruction must only reference the config_account read-only, just as a safety measure, to prevent possible
-    // bugs from causing it to be modified, and it must not be executable for a similar reason
-    if (config_account->is_writable || config_account->executable) {
+    // The config account can be locked down to exactly the expected permissions because it is never going to be
+    // used for any other purpose than reading config data.
+    if (config_account->is_signer || config_account->is_writable || config_account->executable) {
+        sol_log("Config account bad perms");
         return false;
     }
 
     // The data must be correctly sized -- may be larger than, but never smaller than, the expected size
     if (config_account->data_len < sizeof(ProgramConfig)) {
+        sol_log("Config account short data");
         return false;
     }
 
@@ -26,12 +31,19 @@ static bool is_admin_authenticated(const SolAccountInfo *config_account,
     SolPubkey *admin_pubkey = &(config->admin_pubkey);
 
     // Now ensure that admin signer account is actually the configured admin account
-    if (sol_memcmp(admin_pubkey, admin_signer_account->key, sizeof(SolPubkey))) {
+    if (sol_memcmp(admin_pubkey, supplied_admin_account->key, sizeof(SolPubkey))) {
+        sol_log("Supplied admin account");
+        sol_log_pubkey(supplied_admin_account->key);
+        sol_log("Correct admin account");
+        sol_log_pubkey(admin_pubkey);
         return false;
     }
 
-    // The admin signer account must be a read-only signer that is not executable
-    if (admin_signer_account->is_writable || admin_signer_account->executable || !admin_signer_account->is_signer) {
+    // The admin signer account must be a signer, and not be executable, just because it doesn't need to be
+    // executable.  It may or may not be writable, because it may validly be used as a source of funds for the
+    // transaction too.
+    if (!supplied_admin_account->is_signer || supplied_admin_account->executable) {
+        sol_log("Supplied admin account bad perms");
         return false;
     }
 
