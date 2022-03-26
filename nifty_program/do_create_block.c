@@ -92,6 +92,9 @@ static uint64_t do_create_block(SolParameters *params)
 
     // This is the size that the fully populated block will use
     uint64_t total_block_size = compute_block_size(data->config.mint_data_size, data->config.total_entry_count);
+
+    sol_log("Total block size");
+    sol_log_64(0, 0, 0, 0, total_block_size);
     
     // If completed block would be too big to fit in the maximum system account size, reject it
     if (total_block_size > (10 * 1000 * 1000)) {

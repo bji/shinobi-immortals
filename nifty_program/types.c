@@ -72,16 +72,18 @@ typedef struct
     // nonzero.
     uint16_t permabuy_commission;
 
-    // This is the extra commission charged when a stake account that is not delegated to Shinobi Systems
-    // is un-delegated via the redelegation crank.
+    // This is the extra commission charged when a stake account that is not delegated to Shinobi Systems is
+    // un-delegated via the redelegation crank.  It is a binary fractional value, with 0xFFFF representing 100%
+    // commission and 0x0000 representing 0% commission.
     uint16_t undelegate_commission;
 
-    // This is the extra commission charged when a stake account that is undelegated is delegated to
-    // Shinobi Systems via the redelegation crank.
+    // This is the extra commission charged when a stake account that is undelegated is delegated to Shinobi Systems
+    // via the redelegation crank.  It is a binary fractional value, with 0xFFFF representing 100% commission and
+    // 0x0000 representing 0% commission.
     uint16_t delegate_commission;
 
-    // This is the number of stake earned lamports per Ki that is earned.  For example, 1000 would mean
-    // that for every 1000 lamports of SOL earned via staking, 1 Ki token is awarded.
+    // This is the number of "stake earned lamports" per Ki that is earned.  For example, 1000 would mean that for
+    // every 1000 lamports of SOL earned via staking, 1 Ki token is awarded.
     uint32_t ki_factor;
 
     // Fraction of Ki that can be replaced by SOL when levelling up.  For example, if this were 0.5, and if the total
@@ -90,7 +92,7 @@ typedef struct
     // fraction with 0xFFFF representing 1.0 and 0x0000 representing 0.  If this value is 0xFFFF, then an owner of the
     // NFT can just directly pay SOL to level up regardless of cumulative Ki earnings.  If this value is 0, then the
     // NFT cannot be leveled up except by fulling earning all required Ki.
-    uint16_t sol_level_up_fraction;
+    uint16_t level_up_sol_payable_fraction;
 
     // This is the number of bytes in mint_data for each BlockEntry in this block
     uint16_t mint_data_size;
