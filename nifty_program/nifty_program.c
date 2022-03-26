@@ -13,58 +13,56 @@
 // These are all instructions that this program can execute
 typedef enum Instruction
 {
-    // Creates a new block, ready to be initialized
+    // Creates a new block
     Instruction_CreateBlock              =  0,
-    // Initialize a new block, ready to accept entries
-    Instruction_InitializeBlock          =  1,
     // Adds entries to a newly created block.  Is called multiple times in sequence until the block has had all of its
     // entries added.  When the last entry is added, the block becomes live.
-    Instruction_AddEntriesToBlock        =  2,
+    Instruction_AddEntriesToBlock        =  1,
     // Deletes a block which was created but has not had all of its entries added yet and thus is not live.  This
     // would be for removing "mistake" blocks before they are made live.  Once live, blocks cannot be deleted.
-    Instruction_DeleteBlock              =  3,
+    Instruction_DeleteBlock              =  2,
     // Reveals entries that have not been revealed yet.  This can obviously only be done after the block has reached
     // its reveal criteria (either number of tickets sold, or reveal date passed).
-    Instruction_RevealEntries            =  4,
+    Instruction_RevealEntries            =  3,
     // Buys a ticket
-    Instruction_BuyTicket                =  5,
+    Instruction_BuyTicket                =  4,
     // Refunds a ticket, which can only be done if the entry is not revealed yet
-    Instruction_RefundTicket             =  6,
+    Instruction_RefundTicket             =  5,
     // Redeems a ticket, which can only be done after the entry has been revealed
-    Instruction_RedeemTicket             =  7,
+    Instruction_RedeemTicket             =  6,
     // Bids on an unsold entry
-    Instruction_Bid                      =  8,
+    Instruction_Bid                      =  7,
     // Claims a winning or losing bid
-    Instruction_Claim                    =  9,
+    Instruction_Claim                    =  8,
     // Returns a claimed entry in exchange for the stake account.  The returned entry immediately enters a new auction.
-    Instruction_Return                   = 10,
+    Instruction_Return                   =  9,
     // Merge stake into the stake account backing an entry.  This allows users to put more stake behind an owned entry
     // whenever they want to (presumably to earn Ki faster and level up faster)
-    Instruction_MergeStake               = 11,
+    Instruction_MergeStake               = 10,
     // Split stake from the stake account backing an entry.  This allows users to extract stake rewards earned by the
     // entry.  Can only split off earned rewards, not principal.
-    Instruction_SplitStake               = 12,
+    Instruction_SplitStake               = 11,
     // Harvests Ki
-    Instruction_Harvest                  = 13,
+    Instruction_Harvest                  = 12,
     // Levels up an entry.  This requires that the entry has cumulatively earned enough Ki to do so.
-    Instruction_LevelUp                  = 14,
+    Instruction_LevelUp                  = 13,
     // Permanently buys an owned entry, by paying the permabuy fee.  The owner of the entry gets their stake
     // account back (minus fee), and retains the NFT itself.  Once permabought, an entry can never be returned,
     // and thus can never be levelled up again.
-    Instruction_Permanently_Buy          = 15,
+    Instruction_Permanently_Buy          = 14,
     // The owner of an entry can call this to update the id of the metadata program to use to manage metadata to the
     // value in the program config
-    Instruction_UpdateMetadataProgramId  = 16,
+    Instruction_UpdateMetadataProgramId  = 15,
     // Updates the commission charged per epoch per stake account.  This is in addition to the validator commission.
     // This command fails if the commission has already been updated in the current epoch, and if the old commission
     // is above 5% and the new commission is more than 5% higher than the old commission.
-    Instruction_SetBlockCommission       = 17,
+    Instruction_SetBlockCommission       = 16,
     // Takes cumulatively earned commission from a stake account
-    Instruction_TakeCommission           = 18,
+    Instruction_TakeCommission           = 17,
     // Performs the next step in redelegation for a stake account: if the stake account is delegated but not to
     // Shinobi Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not
     // delegated, a small fee is taken and the stake account is delegated to Shinobi Systems.
-    Instruction_RedelegateTurnCrank      = 19
+    Instruction_RedelegateTurnCrank      = 18
 } Instruction;
 
 
@@ -76,7 +74,6 @@ typedef enum Instruction
 
 // Split the actual instruction processing up into separate files for ease of use
 #include "do_create_block.c"
-#include "do_initialize_block.c"
 #include "do_add_entries_to_block.c"
 #include "do_delete_block.c"
 #include "do_reveal_entries.c"
@@ -121,9 +118,6 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_CreateBlock:
         return do_create_block(&params);
 
-    case Instruction_InitializeBlock:
-        return do_initialize_block(&params);
-        
     case Instruction_AddEntriesToBlock:
         return do_add_entries_to_block(&params);
 

@@ -90,25 +90,15 @@ static uint64_t do_create_block(SolParameters *params)
         return Error_InvalidInputData_First + 5;
     }
 
-    // This is the size that the fully populated block will use
+    // This is the size that the fully populated block will use.  Because accounts cannot currently be appended to,
+    // pre-allocate the total amount.
     uint64_t total_block_size = compute_block_size(data->config.mint_data_size, data->config.total_entry_count);
-
-    sol_log("Total block size");
-    sol_log_64(0, 0, 0, 0, total_block_size);
-    
-    // If completed block would be too big to fit in the maximum system account size, reject it
-    if (total_block_size > (10 * 1000 * 1000)) {
-        return Error_BlockTooLarge;
-    }
-
-    // Initial account size is just the size of everything up to the actual entries array
-    uint64_t space = compute_block_size(data->config.mint_data_size, 0);
 
     // Two seeds: the group id and the block id
     SolSignerSeed seed = { data->seed, sizeof(data->seed) };
 
     if (create_pda(block_account, &seed, 1, funding_account, (SolPubkey *) params->program_id, data->funding_lamports,
-                   space, params->ka, params->ka_num)) {
+                   total_block_size, params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
 
