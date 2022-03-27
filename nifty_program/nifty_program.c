@@ -66,8 +66,10 @@ typedef enum Instruction
 // Include helper functions required by all subsequent functions
 #include "is_admin_authenticated.c"
 #include "is_block_complete.c"
+#include "is_empty_pubkey.c"
 #include "create_pda.c"
 #include "find_block_address.c"
+#include "reveal_single_entry.c"
 
 // Split the actual instruction processing up into separate files for ease of use
 #include "do_create_block.c"
@@ -94,12 +96,12 @@ uint64_t entrypoint(const uint8_t *input)
 {
     SolParameters params;
 
-    // At most 16 accounts are supported for any command
-    SolAccountInfo account_info[16];
+    // At most 23 accounts are supported for any command
+    SolAccountInfo account_info[23];
     params.ka = account_info;
     
     // Deserialize parameters.  Must succeed.
-    if (!sol_deserialize(input, &params, 16)) {
+    if (!sol_deserialize(input, &params, 23)) {
         return Error_InvalidData;
     }
 

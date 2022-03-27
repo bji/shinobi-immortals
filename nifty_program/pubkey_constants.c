@@ -24,18 +24,41 @@
 
 // This is the address of the Shinobi Systems vote account.
 // "BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2"
-#define SHINOBI_VOTE_ACCOUNT_ADDRESS_BYTES \
+#define SHINOBI_VOTE_ACCOUNT_ADDRESS_BYTES                              \
     { 0x99, 0x7d, 0x51, 0xbc, 0x6d, 0xc7, 0xaf, 0x75,                   \
       0x3c, 0x8e, 0xa7, 0x3b, 0x5f, 0xa4, 0xd9, 0xd0,                   \
       0x7d, 0x35, 0xf1, 0xd4, 0x07, 0xef, 0xb7, 0x00,                   \
       0x33, 0x10, 0xb4, 0xb1, 0x2c, 0x08, 0x0e, 0x55 }
 
+// This is the metaplex metadata program id.
+// metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
+#define METAPLEX_METADATA_PROGRAM_ID_BYTES                              \
+    { 0x0b, 0x70, 0x65, 0xb1, 0xe3, 0xd1, 0x7c, 0x45,                   \
+      0x38, 0x9d, 0x52, 0x7f, 0x6b, 0x04, 0xc3, 0xcd,                   \
+      0x58, 0xb8, 0x6c, 0x73, 0x1a, 0xa0, 0xfd, 0xb5,                   \
+      0x49, 0xb6, 0xd1, 0xbc, 0x03, 0xf8, 0x29, 0x46 }
+
+// This is the shinobi metadata program id.
+// temporary devnet "dmpMC5xzSzjKiyA3gmKpu29fp7RjWKwkVNgRGonEnSH"
+#define SHINOBI_METADATA_PROGRAM_ID_BYTES                               \
+    { 0x09, 0x6b, 0x95, 0x48, 0x1f, 0x43, 0xb4, 0xf2,                   \
+      0x8e, 0xa0, 0x76, 0xd4, 0x1b, 0x27, 0x09, 0x42,                   \
+      0x41, 0xf5, 0xb7, 0x25, 0x6e, 0x98, 0x04, 0x2c,                   \
+      0x8b, 0x33, 0x15, 0xc1, 0x81, 0x32, 0x62, 0x66 }
+
+// This is the solana token program token, which owns all Solana tokens
+#define SOLANA_TOKEN_PROGRAM_ID_BYTES                                   \
+    { 0x06, 0xdd, 0xf6, 0xe1, 0xd7, 0x65, 0xa1, 0x93,                   \
+      0xd9, 0xcb, 0xe1, 0x46, 0xce, 0xeb, 0x79, 0xac,                   \
+      0x1c, 0xb4, 0x85, 0xed, 0x5f, 0x5b, 0x37, 0x91,                   \
+      0x3a, 0x8c, 0xf5, 0x85, 0x7e, 0xff, 0x00, 0xa9 }
+
 
 static bool is_nifty_stakes_program(SolPubkey *pubkey)
 {
     SolPubkey spk = NIFTY_STAKES_PROGRAM_ID_BYTES;
-    
-    return !sol_memcmp(pubkey, &spk, sizeof(SolPubkey));
+
+    return SolPubkey_same(pubkey, &spk);
 }
 
 
@@ -43,7 +66,7 @@ static bool is_system_program(SolPubkey *pubkey)
 {
     SolPubkey key = SYSTEM_PROGRAM_ID_BYTES;
     
-    return !sol_memcmp(pubkey, &key, sizeof(SolPubkey));
+    return SolPubkey_same(pubkey, &key);
 }
 
 
@@ -51,7 +74,7 @@ static bool is_program_config_account(SolPubkey *pubkey)
 {
     SolPubkey key = PROGRAM_CONFIG_ACCOUNT_ADDRESS_BYTES;
 
-    return !sol_memcmp(pubkey, &key, sizeof(SolPubkey));
+    return SolPubkey_same(pubkey, &key);
 }
 
 
@@ -59,5 +82,29 @@ static bool is_shinobi_vote_account_address(SolPubkey *pubkey)
 {
     SolPubkey key = SHINOBI_VOTE_ACCOUNT_ADDRESS_BYTES;
 
-    return !sol_memcmp(pubkey, &key, sizeof(SolPubkey));
+    return SolPubkey_same(pubkey, &key);
+}
+
+
+static bool is_metaplex_metadata_program(SolPubkey *pubkey)
+{
+    SolPubkey key = METAPLEX_METADATA_PROGRAM_ID_BYTES;
+
+    return SolPubkey_same(pubkey, &key);
+}
+
+
+static bool is_shinobi_metadata_program(SolPubkey *pubkey)
+{
+    SolPubkey key = SHINOBI_METADATA_PROGRAM_ID_BYTES;
+
+    return SolPubkey_same(pubkey, &key);
+}
+
+
+static bool is_solana_token_program(SolPubkey *pubkey)
+{
+    SolPubkey key = SOLANA_TOKEN_PROGRAM_ID_BYTES;
+
+    return SolPubkey_same(pubkey, &key);
 }

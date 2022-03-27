@@ -45,10 +45,11 @@ typedef struct
     uint16_t entry_count;
     
     sha256_t entries[0];
+    
 } AddEntriesToBlockData;
 
 
-static uint64_t compute_data_size(uint16_t entry_count)
+static uint64_t compute_add_entries_data_size(uint16_t entry_count)
 {
     AddEntriesToBlockData *d = 0;
 
@@ -94,7 +95,7 @@ static uint64_t do_add_entries_to_block(SolParameters *params)
     AddEntriesToBlockData *data = (AddEntriesToBlockData *) params->data;
 
     // Make sure that the data is properly sized given the number of entries
-    if (params->data_len != compute_data_size(data->entry_count)) {
+    if (params->data_len != compute_add_entries_data_size(data->entry_count)) {
         return Error_InvalidDataSize;
     }
 

@@ -8,7 +8,6 @@ static bool is_admin_authenticated(const SolAccountInfo *config_account,
     // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
     // account
     if (!is_program_config_account(config_account->key)) {
-        sol_log_pubkey(config_account->key);
         return false;
     }
 
@@ -28,7 +27,7 @@ static bool is_admin_authenticated(const SolAccountInfo *config_account,
     SolPubkey *admin_pubkey = &(config->admin_pubkey);
 
     // Now ensure that admin signer account is actually the configured admin account
-    if (sol_memcmp(admin_pubkey, supplied_admin_account->key, sizeof(SolPubkey))) {
+    if (!SolPubkey_same(admin_pubkey, supplied_admin_account->key)) {
         return false;
     }
 

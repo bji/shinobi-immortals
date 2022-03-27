@@ -43,6 +43,18 @@ typedef enum Error
     // Transaction attempted to use a program derived account of the wrong type
     Error_IncorrectAccountType                         = 1012,
 
+    // Attempt to reveal an entry which was already revealed
+    Error_AlreadyRevealed                              = 1013,
+
+    // Attempted to reveal an NFT that was not owned by the nifty program
+    Error_InvalidNFTOwner                              = 1014,
+
+    // Attempted to reveal an account that wasn't even a valid NFT
+    Error_InvalidNFTAccount                            = 1015,
+
+    // Attempted to reveal an entry using an NFT account that does not hash to the correct entry hash
+    Error_InvalidHash                                  = 1016,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

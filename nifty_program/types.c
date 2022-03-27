@@ -141,13 +141,11 @@ typedef enum
     // allowed action is:
     // - Redeem ticket
     BlockEntryState_AwaitingTicketRedeem  = 1,
-    // The Entry has in an auction.  The only allowed action is:
-    // - Bid
-    BlockEntryState_InAuction             = 2,
-    // The Entry is not sold and so is available for immediate purchase for the bid minimum price
-    BlockEntryState_Unsold                = 3,
+    // The Entry in either in an auction (if the current time is less than the end of auction time) or is unsold
+    // (if the auction end has passed)
+    BlockEntryState_Unsold                = 2,
     // The entry is owned and staked
-    BlockEntryState_Staked                = 4
+    BlockEntryState_Staked                = 3
 } BlockEntryState;
 
 
@@ -183,25 +181,22 @@ typedef struct __attribute__((packed))
     // This union holds additional values depending on BlockEntryState.  A union is used because keeping BlockEntry
     // size down is critically important for keeping account size as low as possible.
     union {
-        // If entry_state is BlockEntryState_InAuction, this struct is used
+        // If entry_state is BlockEntryState_Unsold, this struct is used
         struct {
             // The auction begin time
             timestamp_t auction_begin_timestamp;
             
             // The current maximum auction bid for this entry, or 0 if no bids have been received
             uint64_t maximum_bid_lamports;
-        } in_auction;
+        } unsold;
 
         // If entry_state is BlockEntryState_Staked, this struct is used
         struct {
             // Number of lamports in the stake account at the time of its last commission collection
             uint64_t last_commission_charge_stake_account_lamports;
 
-            // Epoch number of the last time commission was charged.  Prevents charging commission more than once
-            // per epoch
-            uint64_t last_commission_charge_epoch;
-            
-            // Total cumulative commission collected in lamports (reset to 0 whenever the entry is un-staked)
+            // Total cumulative commission collected in lamports (reset to 0 whenever the entry goes from Staked to
+            // Unsold)
             uint64_t total_commission_charged_lamports;
         } staked;
     };
