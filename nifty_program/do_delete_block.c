@@ -27,7 +27,7 @@ static uint64_t do_delete_block(SolParameters *params)
 
     // Ensure that the destination account can be written to
     if (!destination_account->is_writable) {
-        return Error_InvalidDestinationAccount;
+        return Error_InvalidAccountPermissions_First + 2;
     }
 
     // Ensure that the block account is writable too.  Doesn't need to be a signer since the program can write it
@@ -40,10 +40,16 @@ static uint64_t do_delete_block(SolParameters *params)
     // entries in the block, which means that this is an incomplete block.  Only incomplete blocks can be
     // deleted.
 
-    BlockData *data = (BlockData *) block_account->data;
+    Block *block = (Block *) block_account->data;
 
-    if (data->state.added_entries_count == data->config.total_entry_count) {
-        return Error_CompletedBlockCannotBeDeleted;
+    // If the block does not have the correct data type, then this is an error (admin accidentally treating a bid as a
+    // block?)
+    if (block->data_type != DataType_Block) {
+        return Error_IncorrectAccountType;
+    }
+
+    if (is_block_complete(block)) {
+        return Error_BlockAlreadyComplete;
     }
 
     // Delete the block.  This is accomplished by moving all of its lamports out.

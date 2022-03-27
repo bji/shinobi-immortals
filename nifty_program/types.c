@@ -5,6 +5,12 @@
 // the SlotHistory sysvar.
 typedef int64_t timestamp_t;
 
+// This is a commission.  It is a binary fractional value, with 0xFFFF representing 100% commission and 0x0000
+// representing 0% commission.
+typedef uint16_t commission_t;
+
+typedef uint8_t sha256_t[32];
+
 
 // This is the format of data stored in the program config account
 typedef struct
@@ -17,6 +23,21 @@ typedef struct
 } ProgramConfig;
 
 
+// This is a single value stored at the front of Program Derived Account of the nifty program, that indicates the type
+// of data stored in the account.  Do not use 0 for any value here, since that is what will be present for accounts
+// that do not exist and are supplied as all zeroes
+typedef enum
+{
+    // This is a block of entries
+    DataType_Block   = 1,
+
+    // This is an auction bid
+    DataType_Bid     = 2
+} DataType;
+
+
+// This is all configuration values that define the operational parameters of a block of entries.  These values are
+// supplied when the block is first created, and can never be changed
 typedef struct
 {
     // Identification of the group number of this block
@@ -31,7 +52,7 @@ typedef struct
     // Number of tickets which when purchased will allow a reveal.  Must be equal to or less than total_entry_count.
     uint16_t reveal_ticket_count;
 
-    // This is either a number of seconds to add to the current slot/time to get the reveal slot/time.
+    // This is the number of seconds to add to the time that the block is completed to get the reveal time.
     uint32_t ticket_phase_duration;
 
     // This is a number of seconds to add to the block state's reveal_time value to get the cutoff period for reveal;
@@ -55,32 +76,21 @@ typedef struct
     // auction has completed without any bids.  Must be nonzero.
     uint64_t bid_minimum;
 
-    // This is the commission to charge on stake reward earned by stake accounts.  It is a binary fractional value,
-    // with 0xFFFF representing 100% commission and 0x0000 representing 0% commission.
-    uint16_t commission;
+    // This is the minimum percentage of lamports staking commission to charge for an NFT.  Which means that when an
+    // NFT is returned, if the total commission charged via stake commission while the user owned the NFT is less than
+    // minimum_accrued_stake_commission, then commission will be charged to make up the difference.
+    commission_t minimum_accrued_stake_commission;
 
-    // This is the minimum percentage of lamports commission to charge for an NFT.  Which means that when an NFT is
-    // returned, if the total commission charged while the user owned the NFT is less than minimum_accrued_commission,
-    // then commission will be charged to make up the difference.  Like other commission values, it is a binary
-    // fractional value, with 0xFFFF representing 100% commission and 0x0000 representing 0% commission.
-    uint16_t minimum_accrued_commission;
-
-    // This is the fraction of the stake account balance to use as the "permabuy" price.  If the user has a purchased
-    // an entry, they can get their stake account back while retaining the entry by paying this "permabuy" commission.
-    // Then the entry is basically owned outright by the user without any stake account committment.  It is a binary
-    // fractional value, with 0xFFFF representing 100% commission and 0x0000 representing 0% commission.  Must be
-    // nonzero.
-    uint16_t permabuy_commission;
+    // This is the commission charged for stake that is withdrawn below the initial stake account value of a stake
+    // account that was used to purchase an entry.  Withdrawing down to this value is free, but withdrawing below this
+    // value will charge this commission (thus if this value is 2%, then 2% of stake will be split off and given to
+    // the admin whenever stake is withdrawn).  It is not allowed to withdraw stake down below the rent exempt minimum
+    // of a stake account.
+    commission_t principal_withdraw_commission;
 
     // This is the extra commission charged when a stake account that is not delegated to Shinobi Systems is
-    // un-delegated via the redelegation crank.  It is a binary fractional value, with 0xFFFF representing 100%
-    // commission and 0x0000 representing 0% commission.
-    uint16_t undelegate_commission;
-
-    // This is the extra commission charged when a stake account that is undelegated is delegated to Shinobi Systems
-    // via the redelegation crank.  It is a binary fractional value, with 0xFFFF representing 100% commission and
-    // 0x0000 representing 0% commission.
-    uint16_t delegate_commission;
+    // either un-delegated or re-delegated via the redelegation crank.
+    commission_t redelegate_crank_commission;
 
     // This is the number of "stake earned lamports" per Ki that is earned.  For example, 1000 would mean that for
     // every 1000 lamports of SOL earned via staking, 1 Ki token is awarded.
@@ -94,9 +104,6 @@ typedef struct
     // NFT cannot be leveled up except by fulling earning all required Ki.
     uint16_t level_up_sol_payable_fraction;
 
-    // This is the number of bytes in mint_data for each BlockEntry in this block
-    uint16_t mint_data_size;
-
 } BlockConfiguration;
 
 
@@ -105,103 +112,112 @@ typedef struct
     // This is the total number of entries that have been added to the block thus far.
     uint16_t added_entries_count;
 
-    // This is the timestamp of the end of the reveal grace period.  This value is set when the last entry is added
-    // to the block as the timestamp at which the last entry was added, plus ticket_phase_duration, plus
-    // reveal_grace_duration.  It is updated when the number of tickets sold becomes equal to reveal_ticket_count
-    // (which may be as soon as the last entry is added, if reveal_ticket_count is 0) to that timestamp plus
-    // reveal_grace_duration.
-    timestamp_t reveal_grace_end_timestamp;
+    // This is the timestamp that the last entry was added to the block and it became complete; at that instant,
+    // the block is complete and the ticket phase begins.
+    timestamp_t block_start_time;
+
+    // Commission currently charged per epoch.  It is a binary fractional value, with 0xFFFF representing 100%
+    // commission and 0x0000 representing 0% commission.  This value can be updated but not more often than once
+    // per epoch, and if the updated commission is more than 5%, then it can only be updated in maximum increments
+    // of 2%.  In addition, commission cannot be changed if any entry has a last_commission_charge_epoch that is
+    // not the current epoch (i.e. all accounts must be up-to-date with commission charges).
+    commission_t commission;
+
+    // Epoch of the last time that the commission was changed
+    uint64_t last_commission_change_epoch;
 
 } BlockState;
 
 
+// All possible states of an entry
 typedef enum
 {
-    // Entry is 
-    BlockEntryState_UnsoldTicket          = 0,
-    BlockEntryState_PurchasedTicket       = 1,
-    BlockEntryState_Owned                 = 2,
-    BlockEntryState_InAuction             = 3,
-    BlockEntryState_Unsold                = 4,
-    BlockEntryState_PermanentlyOwned      = 5
-    
+    // Entry has not been revealed yet.  The only allowed actions are:
+    // - Buy ticket
+    // - Refund ticket
+    // - Reveal
+    BlockEntryState_PreReveal             = 0,
+    // Entry has been revealed, and a ticket was purchased for it, but the ticket has not been redeemed yet.  The only
+    // allowed action is:
+    // - Redeem ticket
+    BlockEntryState_AwaitingTicketRedeem  = 1,
+    // The Entry has in an auction.  The only allowed action is:
+    // - Bid
+    BlockEntryState_InAuction             = 2,
+    // The Entry is not sold and so is available for immediate purchase for the bid minimum price
+    BlockEntryState_Unsold                = 3,
+    // The entry is owned and staked
+    BlockEntryState_Staked                = 4
 } BlockEntryState;
 
 
-typedef struct
+// Packed to save space, since each entry needs to be as small as possible to allow the largest number possible
+// to fit in a block
+typedef struct __attribute__((packed))
 {
-    // The current state of the Entry
-    BlockEntryState entry_state;
+    BlockEntryState state;
+    
+    union {
+        // Prior to entry reveal, this holds the SHA-256 of the following values concatenated together:
+        // - SHA-256 of the token id
+        // - SHA-256 of the metaplex on-chain metadata
+        // - SHA-256 of the shinobi systems on-chain metadata
+        // - 8 bytes of salt (provided in the reveal transaction)
+        sha256_t entry_sha256;
+        // Post entry reveal, this holds the account of the NFT
+        SolPubkey token_account;
+    };
 
     // The value present here depends upon the value of entry_state:
-    //  BlockEntryState_UnsoldTicket: undefined
-    //  BlockEntryState_PurchasedTicket: the ticket token pubkey
-    //  BlockEntryState_Owned: the NFT token pubkey
-    //  BlockEntryState_InAuction: the NFT token pubkey, or all zero if the NFT was not minted yet
-    //  BlockEntryState_Unsold: the NFT token pubkey, or all zero if the NFT was not minted yet
-    //  BlockEntryState_PermanentlyOwned: the NFT token pubkey
-    SolPubkey entry_pubkey;
+    //  BlockEntryState_PreReveal: if a ticket has been sold, this is the ticket NFT, else this is all zeroes
+    //  BlockEntryState_AwaitingTicketRedeem: the ticket NFT
+    //  BlockEntryState_InAuction: the winning bid NFT, or zero if there is no bid yet
+    //  BlockEntryState_AwaitingClaim: the winning bid NFT
+    //  BlockEntryState_Unsold: all zeroes
+    //  BlockEntryState_Staked: all zeroes
+    SolPubkey ticket_or_bid_account;
+
+    // If the program holds a stake account for this entry, then this is the pubkey of that stake account
+    SolPubkey stake_account;
 
     // This union holds additional values depending on BlockEntryState.  A union is used because keeping BlockEntry
     // size down is critically important for keeping account size as low as possible.
     union {
-        // If entry_state is BlockEntryState_Owned, this struct is used
-        struct {
-            // If this BlockEntry is BlockEntryState_Owned, this is the address of the stake account that is held for
-            // this entry.
-            SolPubkey stake_account_pubkey;
-            
-            // Number of lamports in the stake account at the time of its last commission collection
-            uint64_t last_commission_charge_stake_account_lamports;
-            
-            // Total cumulative commection collected in lamports
-            uint64_t total_commission_charged_lamports;
-        } owned;
-        
         // If entry_state is BlockEntryState_InAuction, this struct is used
         struct {
-            // The auction begin time, if this entry is in auction, otherwise zero
+            // The auction begin time
             timestamp_t auction_begin_timestamp;
             
-            // The current maximum auction bid for this entry, if it is in auction.  0 if no bids have been received
-            // or it's not in auction.
+            // The current maximum auction bid for this entry, or 0 if no bids have been received
             uint64_t maximum_bid_lamports;
-            
-            // The current winning auction bid token, if there is a winning bid.
-            SolPubkey winning_bidder;
         } in_auction;
+
+        // If entry_state is BlockEntryState_Staked, this struct is used
+        struct {
+            // Number of lamports in the stake account at the time of its last commission collection
+            uint64_t last_commission_charge_stake_account_lamports;
+
+            // Epoch number of the last time commission was charged.  Prevents charging commission more than once
+            // per epoch
+            uint64_t last_commission_charge_epoch;
+            
+            // Total cumulative commission collected in lamports (reset to 0 whenever the entry is un-staked)
+            uint64_t total_commission_charged_lamports;
+        } staked;
     };
 
-    // Each time an entry starts, this number is incremented.  This prevents losing bids from prior auctions from
-    // being redeemed as winning bids for the current auction.
-    uint64_t auction_number;
-    
-    // Total Ki harvested over the lifetime of this entry
-    uint64_t total_ki_harvested_lamports;
-    
-    // This is the account address of the mint program which manages this entry.  This is set when the entry is first
-    // created, from the ProgramConfig.metadata_program_id value.  At any time, the ProgramConfig may be updated to a
-    // new program.  But the metadata program actually used for this block is not updated unless the owner of the
-    // entry issues a valid update_metadata instruction (if the entry is not owned, then the admin user can issue this
-    // instruction).  In this way, owned entries cannot have their metadata program changed without consent of the
-    // owner.
-    SolPubkey mint_program_id;
-    
-    // This is the SHA-256 hash of the mint data.  It is always published in the entry and allows program to ensure
-    // that only the values contents that were computed before the reveal are presented after the reveal.
-    uint8_t mint_data_hash[32];
-
-    // This is the mint data itself.  Its contents prior to reveal are all zeroes.  Post-reveal, the contents and
-    // their meaning is determined by the mint program.  The actual number of bytes present in the mint_data of each
-    // entry is determined by the block's [mint_data_size].
-    uint8_t mint_data[0];
+    // Total Ki harvested or paid over the lifetime of this entry.  This is what allows levelling up.
+    uint64_t total_ki_harvested_or_paid_lamports;
     
 } BlockEntry;
 
 
-// This is the format of block data stored in a block
+// This is the format of data stored in a block account
 typedef struct
 {
+    // This is an indicator that the data is a Block
+    DataType data_type;
+    
     // This is the configuration of the block.  It is never changed after the block is created.
     BlockConfiguration config;
 
@@ -211,11 +227,41 @@ typedef struct
     // The block will have been created with [total_entry_count] entries in place of this empty array
     BlockEntry entries[0];
     
-} BlockData;
+} Block;
 
 
-// This macro evaluates to the address of a BlockEntry within the entries array
-#define BLOCK_ENTRY(block_data, index)                                                       \
-    ((BlockEntry *)                                                                          \
-     (((uint8_t *) ((block_data)->entries)) +                                                \
-      (((sizeof(BlockEntry) + (block_data)->config.mint_data_size + 7) & ~0x7) * (index))))
+// This is the format of data stored in a bid account, which is the PDA associated with a bid token
+typedef struct
+{
+    // This is an indicator that the data is a Bid
+    DataType data_type;
+
+    // This is the account address of the block containing the entry that was bid on
+    SolPubkey block_account;
+
+    // This is the index of the entry within the block that was bid on
+    uint16_t entry_index;
+
+    // This is the stake account that was supplied as the bid.  This is owned by the nifty program and cannot
+    // be operated on in any way until the bid is either exchanged for the token (because it was the winning bid; at
+    // which time the stake account becomes subject to all rules of stake accounts for entries in the 'staked' state),
+    // or the bid is redeemed as a losing bid (because it was outbid, and the only action possible is the return of
+    // the stake account to the owner of the token)
+    SolPubkey stake_account;
+    
+} Bid;
+
+
+// This is the type of the data stored in the clock sysvar
+typedef struct
+{
+    uint64_t slot;
+
+    timestamp_t epoch_start_timestamp;
+
+    uint64_t epoch;
+
+    uint64_t leader_schedule_epoch;
+
+    timestamp_t unix_timestamp;
+} Clock;

@@ -15,6 +15,9 @@ typedef struct
     // This is the instruction code for CreateBlock
     uint8_t instruction_code;
 
+    // Initial commission to use in the newly created block
+    commission_t initial_commission;
+
     // Number of lamports to transfer from the funding account to the newly created account.  Sufficient lamports must
     // be supplied to make the account rent exempt, or else the transaction will fail.  It is not possible to withdraw
     // lamports from the funding account, except when the account is deleted on a successful DeleteBlock instruction.
@@ -29,12 +32,21 @@ typedef struct
 } CreateBlockData;
     
 
+static uint64_t compute_block_size(uint16_t total_entry_count)
+{
+    Block *b = 0;
+
+    // The total space needed is from the beginning of a Block to the entries element one beyond the total
+    // supported (i.e. if there are 100 entries, then then entry at index 100 starts at the first byte beyond the
+    // array)
+    return ((uint64_t) &(b->entries[total_entry_count]));
+}
+
+
 // Creates a new block of entries
 static uint64_t do_create_block(SolParameters *params)
 {
-    //sol_log_params(params);
-    
-    // Sanitize the accounts.  There must be 5.
+    // Sanitize the accounts.  There must be 3.
     if (params->ka_num != 5) {
         return Error_IncorrectNumberOfAccounts;
     }
@@ -52,17 +64,17 @@ static uint64_t do_create_block(SolParameters *params)
 
     // Ensure funding account is a signer and is writable, but not executable
     if (!funding_account->is_signer || !funding_account->is_writable || funding_account->executable) {
-        return Error_InvalidFundingAccount;
+        return Error_InvalidAccountPermissions_First + 2;
     }
 
     // Ensure that the system account reference was for the actual system account and that it has the correct flags
     if (!is_system_program(system_account->key)) {
-        return Error_InvalidSystemAccount;
+        return Error_InvalidAccount_First + 3;
     }
 
     // Ensure that the instruction data is the correct size
     if (params->data_len != sizeof(CreateBlockData)) {
-        return Error_ShortData;
+        return Error_InvalidDataSize;
     }
 
     // Cast to instruction data
@@ -72,29 +84,28 @@ static uint64_t do_create_block(SolParameters *params)
     
     // Sanitize inputs
     if (config->total_entry_count == 0) {
-        return Error_InvalidInputData_First + 0;
+        return Error_InvalidData_First + 0;
     }
     if (config->reveal_ticket_count > config->total_entry_count) {
-        return Error_InvalidInputData_First + 1;
+        return Error_InvalidData_First + 1;
     }
     if (config->ticket_price_lamports == 0) {
-        return Error_InvalidInputData_First + 2;
+        return Error_InvalidData_First + 2;
     }
     if (config->ticket_refund_lamports > config->ticket_price_lamports) {
-        return Error_InvalidInputData_First + 3;
+        return Error_InvalidData_First + 3;
     }
     if (config->bid_minimum == 0) {
-        return Error_InvalidInputData_First + 4;
+        return Error_InvalidData_First + 4;
     }
-    if (config->permabuy_commission == 0) {
-        return Error_InvalidInputData_First + 5;
+    if (config->principal_withdraw_commission == 0) {
+        return Error_InvalidData_First + 5;
     }
 
     // This is the size that the fully populated block will use.  Because accounts cannot currently be appended to,
     // pre-allocate the total amount.
-    uint64_t total_block_size = compute_block_size(data->config.mint_data_size, data->config.total_entry_count);
+    uint64_t total_block_size = compute_block_size(data->config.total_entry_count);
 
-    // Two seeds: the group id and the block id
     SolSignerSeed seed = { data->seed, sizeof(data->seed) };
 
     if (create_pda(block_account, &seed, 1, funding_account, (SolPubkey *) params->program_id, data->funding_lamports,
@@ -103,9 +114,14 @@ static uint64_t do_create_block(SolParameters *params)
     }
 
     // The program has succeeded.  Initialize the block data.
-    BlockData *blockData = (BlockData *) (block_account->data);
+    Block *block = (Block *) (block_account->data);
 
-    sol_memcpy(&(blockData->config), config, sizeof(BlockConfiguration));
+    block->data_type = DataType_Block;
+
+    sol_memcpy(&(block->config), config, sizeof(BlockConfiguration));
+
+    // Set the commission to the initial commission
+    block->state.commission = data->initial_commission;
 
     // Return success code 0
     return 0;
