@@ -80,6 +80,11 @@ static uint64_t do_add_entries_to_block(SolParameters *params)
         return Error_BadPermissions;
     }
 
+    // Ensure that the block account is owned by the program
+    if (!is_nifty_stakes_program(block_account->owner)) {
+        return Error_InvalidAccount_First + 2;
+    }
+
     // Ensure that the instruction data has the minimum possible size
     if (params->data_len < sizeof(AddEntriesToBlockData)) {
         return Error_InvalidDataSize;

@@ -36,6 +36,11 @@ static uint64_t do_delete_block(SolParameters *params)
         return Error_BadPermissions;
     }
 
+    // Ensure that the block account is owned by the program
+    if (!is_nifty_stakes_program(block_account->owner)) {
+        return Error_InvalidAccount_First + 2;
+    }
+
     // Now check to make sure that the number entries that have been added is less than the total number of
     // entries in the block, which means that this is an incomplete block.  Only incomplete blocks can be
     // deleted.
@@ -47,7 +52,7 @@ static uint64_t do_delete_block(SolParameters *params)
     if (block->data_type != DataType_Block) {
         return Error_IncorrectAccountType;
     }
-
+ 
     if (is_block_complete(block)) {
         return Error_BlockAlreadyComplete;
     }
