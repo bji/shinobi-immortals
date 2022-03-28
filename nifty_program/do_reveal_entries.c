@@ -1,4 +1,13 @@
 
+// Account references:
+// 0. `[]` Program config account -- this must be g_program_config_account_address
+// 1. `[SIGNER]` -- This must be the admin account
+// 2. `[WRITE]` -- The block account address
+// 3. `[]` -- Token mint account
+// 4. `[]` -- Token account
+// 5. `[]` -- Metaplex metadata account
+// 6. `[]` -- Shinobi metadata account
+// (Repeat 3-6 for each additional entry in the transaction)
 
 typedef struct
 {
@@ -121,6 +130,11 @@ static uint64_t do_reveal_entries(SolParameters *params)
         return Error_IncorrectAccountType;
     }
 
+    // Ensure that the block is complete; cannot reveal entries of a block that is not complete yet
+    if (!is_block_complete(block)) {
+        return Error_BlockNotComplete;
+    }
+    
     // Make sure that the last entry to reveal does not exceed the number of entries in the block
     if ((data->first_entry + data->entry_count) > block->config.total_entry_count) {
         return Error_InvalidData_First + 1;

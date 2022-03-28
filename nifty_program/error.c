@@ -55,6 +55,18 @@ typedef enum Error
     // Attempted to reveal an entry using an NFT account that does not hash to the correct entry hash
     Error_InvalidHash                                  = 1016,
 
+    // Attempted an action that requires a completed block, but the block was not complete
+    Error_BlockNotComplete                             = 1017,
+
+    // Attempt to purchase a ticket for an entry for which a ticket has already been purchased
+    Error_TicketAlreadyPurchased                       = 1018,
+
+    // Attempt to buy a ticket with a stake account that has an incorrect size
+    Error_IncorrectStakeAccountBalance                 = 1019,
+
+    // Suppled stake account was not a valid stake account
+    Error_InvalidStakeAccount                          = 1020,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

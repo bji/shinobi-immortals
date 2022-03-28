@@ -5,7 +5,7 @@
 // 0. `[]` Program config account -- this must be g_program_config_account_address
 // 1. `[SIGNER]` -- This must be the admin account
 // 2. `[WRITE]` -- Destination for lamports recovered from deleted block
-// 4. `[WRITE]` -- The block account address (this is the address that results from finding a program address
+// 3. `[WRITE]` -- The block account address (this is the address that results from finding a program address
 //                 using the group id and block id as seeds)
 
 static uint64_t do_delete_block(SolParameters *params)
@@ -41,10 +41,7 @@ static uint64_t do_delete_block(SolParameters *params)
         return Error_InvalidAccount_First + 2;
     }
 
-    // Now check to make sure that the number entries that have been added is less than the total number of
-    // entries in the block, which means that this is an incomplete block.  Only incomplete blocks can be
-    // deleted.
-
+    // This is the block data
     Block *block = (Block *) block_account->data;
 
     // If the block does not have the correct data type, then this is an error (admin accidentally treating a bid as a
@@ -53,6 +50,10 @@ static uint64_t do_delete_block(SolParameters *params)
         return Error_IncorrectAccountType;
     }
  
+    // Now check to make sure that the number entries that have been added is less than the total number of
+    // entries in the block, which means that this is an incomplete block.  Only incomplete blocks can be
+    // deleted.
+
     if (is_block_complete(block)) {
         return Error_BlockAlreadyComplete;
     }

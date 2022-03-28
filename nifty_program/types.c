@@ -260,3 +260,61 @@ typedef struct
 
     timestamp_t unix_timestamp;
 } Clock;
+
+
+// This is the type of data stored in a stake account
+typedef enum StakeState
+{
+    StakeState_Uninitialized =    0,
+    StakeState_Initialized  =     1,
+    StakeState_Stake =            2,
+    StakeState_RewardsPool =      3
+} StakeState;
+
+
+typedef struct __attribute__((packed))
+{
+    // One of the StakeState enum values
+    uint32_t state;
+
+    uint64_t rent_exempt_reserve;
+
+    SolPubkey authorized_staker;
+
+    SolPubkey authorized_withdrawer;
+
+    /// UnixTimestamp at which this stake will allow withdrawal, unless the
+    ///   transaction is signed by the custodian
+    timestamp_t lockup_unix_timestamp;
+    
+    /// epoch height at which this stake will allow withdrawal, unless the
+    ///   transaction is signed by the custodian
+    uint64_t lockup_epoch;
+        
+    /// custodian signature on a transaction exempts the operation from
+    ///  lockup constraints
+    SolPubkey lockup_custodian;
+
+    /// to whom the stake is delegated
+    SolPubkey voter_pubkey;
+    
+    /// activated stake amount, set at delegate() time
+    uint64_t stake;
+        
+    /// epoch at which this stake was activated, std::Epoch::MAX if is a bootstrap stake
+    uint64_t activation_epoch;
+        
+    /// epoch the stake was deactivated, std::Epoch::MAX if not deactivated
+    uint64_t deactivation_epoch;
+    
+    /// how much stake we can activate per-epoch as a fraction of currently effective stake
+    // This is a 64 bit floating point value
+    uint8_t warmup_cooldown_rate[8];
+        
+    /// credits observed is credits from vote account state when delegated or redeemed
+    uint64_t credits_observed;
+
+    /// There are 4 bytes of zero padding stored at the end of stake accounts
+    uint8_t padding[4];
+        
+} StakeAccountData;

@@ -1,13 +1,8 @@
 
-// XXX what is in an entry?
-// -- All that is needed is the mint id (i.e. id of the NFT)
-// -- Plus a hash of the metaplex metadata + shinobi systems metadata (to prove that they were generated before
-//    the entry) + salt
-// -- Plus 8 bytes of salt so that the SHA-256 is not predictable from the above
-
-// So when the entry is first written, it's just a SHA-256 hash (32 bytes)
-// When it is revealed, that is overwritten with the actual token id but only if the SHA-256 value was the correct
-// SHA of the token id + metaplex metadata + shinobi systems metadata + salt
+// Account references:
+// 0. `[]` Program config account -- this must be g_program_config_account_address
+// 1. `[SIGNER]` -- This must be the admin account
+// 2. `[WRITE]` -- The block account address
 
 // The metadata program will have an entrypoint for creating metadata associated with a mint, just like metaplex.
 // It will also have an entry point for "incorporating changes in the entry into its metadata".  This will:

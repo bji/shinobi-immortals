@@ -5,9 +5,8 @@
 // 0. `[]` Program config account -- this must be g_program_config_account_address
 // 1. `[SIGNER]` -- This must be the admin account
 // 2. `[WRITE, SIGNER]` Funding account
-// 3. `[]` The system account, so that cross-program invoke of the system account can be done
-// 4. `[WRITE]` -- The block account address (this is the address that results from finding a program address
-//                 using the group id and block id as seeds)
+// 3. `[WRITE]` -- The block account address
+// 4. `[]` The system account, so that cross-program invoke of the system account can be done
 
 // instruction data type for CreateBlock instruction.
 typedef struct
@@ -46,7 +45,7 @@ static uint64_t compute_block_size(uint16_t total_entry_count)
 // Creates a new block of entries
 static uint64_t do_create_block(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be 3.
+    // Sanitize the accounts.  There must be 5.
     if (params->ka_num != 5) {
         return Error_IncorrectNumberOfAccounts;
     }
@@ -54,8 +53,9 @@ static uint64_t do_create_block(SolParameters *params)
     SolAccountInfo *config_account = &(params->ka[0]);
     SolAccountInfo *admin_account = &(params->ka[1]);
     SolAccountInfo *funding_account = &(params->ka[2]);
-    SolAccountInfo *system_account = &(params->ka[3]);
-    SolAccountInfo *block_account = &(params->ka[4]);
+    SolAccountInfo *block_account = &(params->ka[3]);
+    // The fifth account is the system account but there's no need to check that; the create_pda call will simply
+    // fail if the 5th account is not the system account
     
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_authenticated(config_account, admin_account)) {
@@ -65,11 +65,6 @@ static uint64_t do_create_block(SolParameters *params)
     // Ensure funding account is a signer and is writable, but not executable
     if (!funding_account->is_signer || !funding_account->is_writable || funding_account->executable) {
         return Error_InvalidAccountPermissions_First + 2;
-    }
-
-    // Ensure that the system account reference was for the actual system account and that it has the correct flags
-    if (!is_system_program(system_account->key)) {
-        return Error_InvalidAccount_First + 3;
     }
 
     // Ensure that the instruction data is the correct size
