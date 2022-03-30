@@ -49,11 +49,8 @@ static uint64_t do_delete_block(SolParameters *params)
     if (block->data_type != DataType_Block) {
         return Error_IncorrectAccountType;
     }
- 
-    // Now check to make sure that the number entries that have been added is less than the total number of
-    // entries in the block, which means that this is an incomplete block.  Only incomplete blocks can be
-    // deleted.
 
+    // Now check to make sure that the block is not complete.  Ccomplete blocks cannot be deleted.
     if (is_block_complete(block)) {
         return Error_BlockAlreadyComplete;
     }

@@ -6,7 +6,7 @@
 // 3. `[]` -- Token mint account
 // 4. `[]` -- Token account
 // 5. `[]` -- Metaplex metadata account
-// 6. `[]` -- Shinobi metadata account
+// 6. `[WRITE]` -- Entry account
 // (Repeat 3-6 for each additional entry in the transaction)
 
 typedef struct
@@ -22,7 +22,7 @@ typedef struct
     uint8_t entry_count;
 
     // These are the salt values that were used to compute the SHA-256 hash of each entry
-    uint64_t entries[0];
+    salt_t entry_salt[0];
     
 } RevealEntriesData;
 
@@ -34,7 +34,7 @@ static uint64_t compute_reveal_entries_data_size(uint16_t entry_count)
     // The total space needed is from the beginning of RevealEntriesData to the entries element one beyond the
     // total supported (i.e. if there are 100 entries, then then entry at index 100 starts at the first byte beyond
     // the array)
-    return ((uint64_t) &(d->entries[entry_count]));
+    return ((uint64_t) &(d->entry_salt[entry_count]));
 }
 
 static uint8_t index_of_reveal_mint_account(uint8_t entry_index)
@@ -55,7 +55,7 @@ static uint8_t index_of_reveal_metaplex_metadata_account(uint8_t entry_index)
 }
 
 
-static uint8_t index_of_reveal_shinobi_metadata_account(uint8_t entry_index)
+static uint8_t index_of_reveal_entry_account(uint8_t entry_index)
 {
     return (6 + (4 * entry_index));
 }
@@ -113,10 +113,9 @@ static uint64_t do_reveal_entries(SolParameters *params)
         return Error_InvalidDataSize;
     }
 
-    // Make sure that the number of accounts in the instruction account list is 3 + (4 * the number of entries in
+    // Make sure that the number of accounts in the instruction account list is 3 + (2 * the number of entries in
     // the transaction), because each NFT account to reveal in sequence has four corresponding accounts from the
-    // instruction accounts array: 1. Mint account, 2. Token account, 3. Metaplex metadata account,
-    // 4. Shinobi metadata account, starting at index 3.
+    // instruction accounts array: 1. Mint account, 2. Metaplex metadata account
     if (params->ka_num != (3 + (4 * data->entry_count))) {
         return Error_InvalidData_First;
     }
@@ -135,42 +134,45 @@ static uint64_t do_reveal_entries(SolParameters *params)
         return Error_BlockNotComplete;
     }
     
-    // Make sure that the last entry to reveal does not exceed the number of entries in the block
-    if ((data->first_entry + data->entry_count) > block->config.total_entry_count) {
-        return Error_InvalidData_First + 1;
-    }
-
     // Load the clock, which is needed by reveals
     Clock clock;
     if (sol_get_clock_sysvar(&clock)) {
         return Error_FailedToGetClock;
     }
         
+    // Ensure that the block has reached its reveal criteria; cannot reveal entries of a block that has not reached
+    // reveal
+    if (!is_block_reveal_criteria_met(block, &clock)) {
+        return Error_BlockNotRevealable;
+    }
+    
+    // Make sure that the last entry to reveal does not exceed the number of entries in the block
+    if ((data->first_entry + data->entry_count) > block->config.total_entry_count) {
+        return Error_InvalidData_First + 1;
+    }
+
     // Reveal entries one by one
     for (uint16_t i = 0; i < data->entry_count; i++) {
         uint16_t destination_index = data->first_entry + i;
 
-        // This is the entry itself
-        BlockEntry *entry = (BlockEntry *) &(data->entries[destination_index]);
-
         // This is the account info of the NFT mint, as passed into the accounts list
         SolAccountInfo *mint_account_info = &(params->ka[index_of_reveal_mint_account(i)]);
         
-        // This is the account info of the NFT tokn, as passed into the accounts list
+        // This is the token account of the NFT, as passed into the accounts list
         SolAccountInfo *token_account_info = &(params->ka[index_of_reveal_token_account(i)]);
-                                              
+        
         // This is the account info of the metaplex metadata for the NFT, as passed into the accounts list
         SolAccountInfo *metaplex_metadata_account_info = &(params->ka[index_of_reveal_metaplex_metadata_account(i)]);
 
-        // This is the account info of the shinobi metadata for the NFT, as passed into the accounts list
-        SolAccountInfo *shinobi_metadata_account_info = &(params->ka[index_of_reveal_shinobi_metadata_account(i)]);
-
+        // This is the account info of the entry, as passed into the accounts list
+        SolAccountInfo *entry_account_info = &(params->ka[index_of_reveal_entry_account(i)]);
+        
         // The salt is the corresponding entry in the input data
-        uint64_t salt = data->entries[i];
+        salt_t salt = data->entry_salt[i];
 
         // Do a single reveal of this entry
-        uint64_t result = reveal_single_entry(entry, &clock, salt, mint_account_info, token_account_info,
-                                              metaplex_metadata_account_info, shinobi_metadata_account_info);
+        uint64_t result = reveal_single_entry(block, &clock, salt, mint_account_info, token_account_info,
+                                              metaplex_metadata_account_info, entry_account_info);
 
         // If that reveal failed, then the entire transaction fails
         if (result) {

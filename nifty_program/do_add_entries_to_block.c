@@ -36,10 +36,10 @@ typedef struct
     // Index of first entry included here
     uint16_t first_entry;
 
-    // Total number of entries in the entries array
+    // Total number of entries in the entry_seeds array
     uint16_t entry_count;
     
-    sha256_t entries[0];
+    seed_t entry_seeds[0];
     
 } AddEntriesToBlockData;
 
@@ -51,13 +51,13 @@ static uint64_t compute_add_entries_data_size(uint16_t entry_count)
     // The total space needed is from the beginning of AddEntriesToBlockData to the entries element one beyond the
     // total supported (i.e. if there are 100 entries, then then entry at index 100 starts at the first byte beyond
     // the array)
-    return ((uint64_t) &(d->entries[entry_count]));
+    return ((uint64_t) &(d->entry_seeds[entry_count]));
 }
 
     
 static uint64_t do_add_entries_to_block(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be 3.
+    // Sanitize the accounts.  There must be exactly 3.
     if (params->ka_num != 3) {
         return Error_IncorrectNumberOfAccounts;
     }
@@ -119,11 +119,8 @@ static uint64_t do_add_entries_to_block(SolParameters *params)
     }
 
     // Copy the entries in
-    for (uint16_t i = 0; i < data->entry_count; i++) {
-        uint16_t destination_index = block->state.added_entries_count + i;
-
-        sol_memcpy(&(block->entries[destination_index].entry_sha256), &(data->entries[i]), sizeof(sha256_t));
-    }
+    sol_memcpy(&(block->entry_seeds[block->state.added_entries_count]), data->entry_seeds,
+               sizeof(seed_t) * data->entry_count);
 
     // Now the total number of entries added is increased
     block->state.added_entries_count += data->entry_count;
@@ -134,7 +131,7 @@ static uint64_t do_add_entries_to_block(SolParameters *params)
         if (sol_get_clock_sysvar(&clock)) {
             return Error_FailedToGetClock;
         }
-        block->state.block_start_time = clock.unix_timestamp;
+        block->state.block_start_timestamp = clock.unix_timestamp;
     }
     
     return 0;

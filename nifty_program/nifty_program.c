@@ -17,64 +17,79 @@ extern uint64_t sol_get_clock_sysvar(void *ret);
 typedef enum Instruction
 {
     // Admin function: Creates a new block
-    Instruction_CreateBlock              =  0,
+    Instruction_CreateBlock                   =  0,
     // Admin function: Adds entries to a newly created block.  Is called multiple times in sequence until the block
-    // has had all of its entries added.  When the last entry is added, the block becomes live.
-    Instruction_AddEntriesToBlock        =  1,
+    // has had all of its entries added.  When the last entry is added, the block becomes live
+    Instruction_AddEntriesToBlock             =  1,
     // Admin function: Deletes a block which was created but has not had all of its entries added yet and thus is not
     // live.  This would be for removing "mistake" blocks before they are made live.  Once live, blocks cannot be
     // deleted.
-    Instruction_DeleteBlock              =  2,
+    Instruction_DeleteBlock                   =  2,
+    // Sets bytes of metadata in an entry.  This can only be done after the entry's block has reached its reveal
+    // criteria.
+    Instruction_SetMetadataBytes              =  3,
     // Admin function: Reveals entries that have not been revealed yet.  This can obviously only be done after the
-    // block has reached its reveal criteria (either number of tickets sold, or reveal date passed).
-    Instruction_RevealEntries            =  3,
+    // block has reached its reveal criteria.
+    Instruction_RevealEntries                 =  4,
     // Buys a ticket
-    Instruction_BuyTicket                =  4,
+    Instruction_BuyTicket                     =  5,
     // Refunds a ticket, which can only be done if the entry is not revealed yet
-    Instruction_RefundTicket             =  5,
+    Instruction_RefundTicket                  =  6,
     // Redeems a ticket, which can only be done after the entry has been revealed
-    Instruction_RedeemTicket             =  6,
+    Instruction_RedeemTicket                  =  7,
     // Bids on an entry that is in auction
-    Instruction_Bid                      =  7,
+    Instruction_Bid                           =  8,
     // Claims a winning or losing bid
-    Instruction_Claim                    =  8,
+    Instruction_Claim                         =  9,
     // Returns a claimed entry in exchange for the stake account.  The returned entry immediately enters a new auction.
-    Instruction_Return                   =  9,
+    Instruction_Return                        = 10,
     // Merge stake into the stake account backing an entry.  This allows users to put more stake behind an owned entry
     // whenever they want to (presumably to earn Ki faster and level up faster)
-    Instruction_MergeStake               = 10,
+    Instruction_MergeStake                    = 11,
     // Split stake from the stake account backing an entry.  This allows users to extract stake rewards earned by the
     // entry.  It is free to split stake earnings off.  It costs commission to split principal off.
-    Instruction_SplitStake               = 11,
+    Instruction_SplitStake                    = 12,
     // Harvests Ki
-    Instruction_Harvest                  = 12,
+    Instruction_Harvest                       = 13,
     // Levels up an entry.  This requires that the entry has cumulatively earned enough Ki to do so.
-    Instruction_LevelUp                  = 13,
+    Instruction_LevelUp                       = 14,
+    // Updates the metadata program id of an entry.  This will only update to the next metadata entry id from the
+    // program config after the current metadata program id (or the first one if the current one is empty).  It
+    // will also call that metdata program to do its initial update of the data, and if that succeeds, will
+    // set the metaplex metadata update authority to that program.  All future metadata updates will be through
+    // that program
+    Instruction_UpdateEntryMetadataProgramId  = 15,
     // Admin function: Updates the commission charged per epoch per stake account.  This is in addition to the
     // validator commission.  This command fails if the commission has already been updated in the current epoch, and
     // if the old commission is above 5% and the new commission is more than 2% higher than the old commission.
-    Instruction_SetBlockCommission       = 14,
+    Instruction_SetBlockCommission            = 16,
     // Admin function: Takes cumulatively earned commission from a stake account
-    Instruction_TakeCommission           = 15,
+    Instruction_TakeCommission                = 17,
     // Performs the next step in redelegation for a stake account: if the stake account is delegated but not to
     // Shinobi Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not
     // delegated, a small fee is taken and the stake account is delegated to Shinobi Systems.
-    Instruction_RedelegateTurnCrank      = 16
+    Instruction_RedelegateTurnCrank           = 18
 } Instruction;
 
+
+// Included from common implementation
+#include "program_config.c"
 
 // Include helper functions required by all subsequent functions
 #include "is_admin_authenticated.c"
 #include "is_block_complete.c"
+#include "is_block_reveal_criteria_met.c"
 #include "is_empty_pubkey.c"
 #include "create_pda.c"
 #include "find_block_address.c"
+#include "get_metaplex_metadata_account.c"
 #include "reveal_single_entry.c"
 
 // Split the actual instruction processing up into separate files for ease of use
 #include "do_create_block.c"
 #include "do_add_entries_to_block.c"
 #include "do_delete_block.c"
+#include "do_set_metadata_bytes.c"
 #include "do_reveal_entries.c"
 #include "do_buy_ticket.c"
 #include "do_refund_ticket.c"
@@ -122,6 +137,9 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_DeleteBlock:
         return do_delete_block(&params);
 
+    case Instruction_SetMetadataBytes:
+        return do_set_metadata_bytes(&params);
+
     case Instruction_RevealEntries:
         return do_reveal_entries(&params);
 
@@ -164,7 +182,6 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_RedelegateTurnCrank:
         return do_redelegate_turn_crank(&params);
 
-    // If the instruction code is not for a valid instruction, return an error.
     default:
         return Error_UnknownInstruction;
     }

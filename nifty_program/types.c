@@ -1,26 +1,19 @@
 
-
-// This is a timestamp.  If this is a positive value, it is a number of seconds since the Unix Epoch, as presented
-// by the Clock sysvar.  If this is a negative value, then its absolute value is a slot height as presented by
-// the SlotHistory sysvar.
+// This is a unix timestamp
 typedef int64_t timestamp_t;
 
 // This is a commission.  It is a binary fractional value, with 0xFFFF representing 100% commission and 0x0000
 // representing 0% commission.
 typedef uint16_t commission_t;
 
+// 32 bytes of a SHA-256 value
 typedef uint8_t sha256_t[32];
 
+// This is a 10 byte seed value used to derive a PDA
+typedef uint8_t seed_t[10];
 
-// This is the format of data stored in the program config account
-typedef struct
-{
-    // Pubkey of the admin user, which is the only user allowed to perform admin functions
-    SolPubkey admin_pubkey;
-
-    // This is the payout pubkey, where all funds paid to the operator of the nifty_stakes program are deposited
-    SolPubkey payee_pubkey;
-} ProgramConfig;
+// This is a 64 bitseed value used to make the SHA-256 of an entry unguessable
+typedef uint64_t salt_t;
 
 
 // This is a single value stored at the front of Program Derived Account of the nifty program, that indicates the type
@@ -49,32 +42,30 @@ typedef struct
     // Total number of entries in this block.  Must be greater than 0.
     uint16_t total_entry_count;
 
-    // Number of tickets which when purchased will allow a reveal.  Must be equal to or less than total_entry_count.
-    uint16_t reveal_ticket_count;
+    // Number of tickets which may be purchased; when all are purchased, the block can be revealed.  Must be equal to
+    // or less than total_entry_count.
+    uint16_t total_ticket_count;
 
-    // This is the number of seconds to add to the time that the block is completed to get the reveal time.
+    // Number of seconds to add to the time that the block is completed to get the reveal time.
     uint32_t ticket_phase_duration;
 
-    // This is a number of seconds to add to the block state's reveal_time value to get the cutoff period for reveal;
-    // any entry which has not been revealed by this point allows zero-penalty ticket return.
+    // Number of seconds to add to the block state's reveal_time value to get the cutoff period for reveal; any entry
+    // which has not been revealed by this point allows zero-penalty ticket return.
     uint32_t reveal_grace_duration;
 
-    // This is cost in lamports of each ticket.  Cannot be zero.
-    uint64_t ticket_price_lamports;
+    // Cost in lamports of each ticket at the time that the ticketing phase began.  Cannot be zero.
+    uint64_t start_ticket_price_lamports;
 
-    // This is the number of lamports to return to the user when a ticket is refunded.  It must be less than or equal
-    // to ticket_price_lamports.  Tickets that are refunded after reveal grace period (which is the block state
-    // reveal_time plus reveal_grace_seconds) are refunded full lamports instead of ticket_refund_lamports.  In this
-    // way, ticket owners can be assured that if the reveal does not occur in a timely fashion, they can get 100% of
-    // their funds back.
-    uint64_t ticket_refund_lamports;
+    // Cost in lamports of each ticket at the end of the ticketing phase.  Cannot be less than
+    // start_ticket_price_lamports.  At any time during the ticketing phase, the cost of a ticket is
+    // ((start_ticket_price_lamports - end_ticket_price_lamports) * (current_time - block_start_time)) /
+    //    ticket_phase_duration.  Note that since ticket_phase_duration can be zero, this formula should not be
+    //    used in that case.
+    // This is also the bid minimum for any auction of an entry from this block.
+    uint64_t end_ticket_price_lamports;
 
-    // This is either a number of seconds to add to the current time to get the end of auction time.
+    // This is a number of seconds to add to the auction start time to get the end of auction time.
     uint32_t auction_duration;
-
-    // This is the minimum number of lamports for any auction bid.  This is also the sale price of an entry whose
-    // auction has completed without any bids.  Must be nonzero.
-    uint64_t bid_minimum;
 
     // This is the minimum percentage of lamports staking commission to charge for an NFT.  Which means that when an
     // NFT is returned, if the total commission charged via stake commission while the user owned the NFT is less than
@@ -98,15 +89,16 @@ typedef struct
 
     // Fraction of Ki that can be replaced by SOL when levelling up.  For example, if this were 0.5, and if the total
     // amount of Ki needed to go from level 2 to level 3 were 1,000 Ki; and if the total Ki earnings were only 500,
-    // then 500 Ki worth of SOL could be paid as an alternate cost for completing the level up.  This value is a
-    // fraction with 0xFFFF representing 1.0 and 0x0000 representing 0.  If this value is 0xFFFF, then an owner of the
-    // NFT can just directly pay SOL to level up regardless of cumulative Ki earnings.  If this value is 0, then the
-    // NFT cannot be leveled up except by fulling earning all required Ki.
-    uint16_t level_up_sol_payable_fraction;
+    // then 500 Ki could be paid as an alternate cost for completing the level up.  This value is a fraction with
+    // 0xFFFF representing 1.0 and 0x0000 representing 0.  If this value is 0xFFFF, then an owner of the NFT can just
+    // directly pay Ki to level up regardless of cumulative Ki earnings.  If this value is 0, then the NFT cannot be
+    // leveled up except by fulling earning all required Ki via stake rewards.
+    uint16_t level_up_payable_fraction;
 
 } BlockConfiguration;
 
 
+// The state values of a block; these can be updated after a block is created
 typedef struct
 {
     // This is the total number of entries that have been added to the block thus far.
@@ -114,7 +106,14 @@ typedef struct
 
     // This is the timestamp that the last entry was added to the block and it became complete; at that instant,
     // the block is complete and the ticket phase begins.
-    timestamp_t block_start_time;
+    timestamp_t block_start_timestamp;
+
+    // This is the total number of tickets which have been sold
+    uint16_t tickets_sold_count;
+
+    // This is the timestamp that the number of tickets sold became equal to the total_ticket_count, at which
+    // time the reveal grace period begins.
+    timestamp_t all_tickest_sold_timestamp;
 
     // Commission currently charged per epoch.  It is a binary fractional value, with 0xFFFF representing 100%
     // commission and 0x0000 representing 0% commission.  This value can be updated but not more often than once
@@ -129,6 +128,26 @@ typedef struct
 } BlockState;
 
 
+// This is the format of data stored in a block account
+typedef struct
+{
+    // This is an indicator that the data is a Block
+    DataType data_type;
+    
+    // This is the configuration of the block.  It is never changed after the block is created.  Each entry of the
+    // block contains a duplicate of this data in its config.
+    BlockConfiguration config;
+
+    // These are the state values of the block.
+    BlockState state;
+
+    // These are the seeds of the entries of the block, of which there are config.total_entry_count.  Each seed can be
+    // used to derive the address of an entry mint, from which can then be derived the address of an Entry.
+    seed_t entry_seeds[];
+    
+} Block;
+
+
 // All possible states of an entry
 typedef enum
 {
@@ -136,52 +155,90 @@ typedef enum
     // - Buy ticket
     // - Refund ticket
     // - Reveal
-    BlockEntryState_PreReveal             = 0,
+    EntryState_PreReveal             = 0,
     // Entry has been revealed, and a ticket was purchased for it, but the ticket has not been redeemed yet.  The only
     // allowed action is:
     // - Redeem ticket
-    BlockEntryState_AwaitingTicketRedeem  = 1,
+    EntryState_AwaitingTicketRedeem  = 1,
     // The Entry in either in an auction (if the current time is less than the end of auction time) or is unsold
     // (if the auction end has passed)
-    BlockEntryState_Unsold                = 2,
+    EntryState_Unsold                = 2,
     // The entry is owned and staked
-    BlockEntryState_Staked                = 3
-} BlockEntryState;
+    EntryState_Staked                = 3
+} EntryState;
 
 
-// Packed to save space, since each entry needs to be as small as possible to allow the largest number possible
-// to fit in a block
-typedef struct __attribute__((packed))
+typedef struct
 {
-    BlockEntryState state;
+    // 10 stat numbers
+    uint16_t stats[10];
+
+    // Name of the entry at each level (metaplex metadata maximum name length of 32), used to update metaplex
+    // metadata with each level up.
+    uint8_t name[32];
+
+    // Image URL of the entry at each level (metaplex metadata uri length is 200), used to update metaplex
+    // metadata with each level up.
+    uint8_t uri[200];
     
+} LevelMetadata;
+
+
+typedef struct
+{
+    // Current level of the NFT
+    uint8_t level;
+
+    // Number of ki to achieve level 1.  Each subsequent level requires twice the Ki to achieve than the previous.
+    uint64_t level_1_ki;
+
+    // Metadata for each of the 10 levels
+    LevelMetadata level_metadata[10];
+    
+} EntryMetadata;
+
+
+typedef struct
+{
+    // Block containing to this entry
+    SolPubkey block_pubkey;
+
+    // Index of this entry within that block
+    uint16_t block_index;
+    
+    // This is identical to the config values in the block that this entry is a part of.  They are duplicated here
+    // to allow transactions that otherwise do not need the block, to not have to read it.
+    BlockConfiguration block_config;
+
+    // The overall state of the entry
+    EntryState state;
+
     union {
-        // Prior to entry reveal, this holds the SHA-256 of the following values concatenated together:
-        // - SHA-256 of the token id
-        // - SHA-256 of the metaplex on-chain metadata
-        // - SHA-256 of the shinobi systems on-chain metadata
-        // - 8 bytes of salt (provided in the reveal transaction)
-        sha256_t entry_sha256;
-        // Post entry reveal, this holds the account of the NFT
-        SolPubkey token_account;
+        // Pre entry reveal, this holds the SHA-256 of the following values concatenated together:
+        // - The SHA-256 of the Shinobi Systems metadata that will be supplied by the reveal transaction
+        // - The SHA-256 of the Metaplex metadata that will be supplied by the reveal transaction
+        // - 8 bytes of salt
+        // The above is all supplied by the reveal transaction
+        sha256_t sha256;
+        // Post entry reveal, this holds the account of the entry's token mint
+        SolPubkey token_mint;
     };
 
     // The value present here depends upon the value of entry_state:
-    //  BlockEntryState_PreReveal: if a ticket has been sold, this is the ticket NFT, else this is all zeroes
-    //  BlockEntryState_AwaitingTicketRedeem: the ticket NFT
-    //  BlockEntryState_InAuction: the winning bid NFT, or zero if there is no bid yet
-    //  BlockEntryState_AwaitingClaim: the winning bid NFT
-    //  BlockEntryState_Unsold: all zeroes
-    //  BlockEntryState_Staked: all zeroes
-    SolPubkey ticket_or_bid_account;
+    //  EntryState_PreReveal: if a ticket has been sold, this is the ticket mint, else this is all zeroes
+    //  EntryState_AwaitingTicketRedeem: the ticket mint
+    //  EntryState_InAuction: the winning bid token mint, or zero if there is no bid yet
+    //  EntryState_AwaitingClaim: the winning bid token mint
+    //  EntryState_Unsold: all zeroes
+    //  EntryState_Staked: all zeroes
+    SolPubkey ticket_or_bid_mint;
 
     // If the program holds a stake account for this entry, then this is the pubkey of that stake account
     SolPubkey stake_account;
 
-    // This union holds additional values depending on BlockEntryState.  A union is used because keeping BlockEntry
-    // size down is critically important for keeping account size as low as possible.
+    // This union holds additional values depending on EntryState.
     union {
-        // If entry_state is BlockEntryState_Unsold, this struct is used
+        // If entry_state is EntryState_Unsold, this struct is used
         struct {
             // The auction begin time
             timestamp_t auction_begin_timestamp;
@@ -190,7 +247,7 @@ typedef struct __attribute__((packed))
             uint64_t maximum_bid_lamports;
         } unsold;
 
-        // If entry_state is BlockEntryState_Staked, this struct is used
+        // If entry_state is EntryState_Staked, this struct is used
         struct {
             // Number of lamports in the stake account at the time of its last commission collection
             uint64_t last_commission_charge_stake_account_lamports;
@@ -203,29 +260,27 @@ typedef struct __attribute__((packed))
 
     // Total Ki harvested or paid over the lifetime of this entry.  This is what allows levelling up.
     uint64_t total_ki_harvested_or_paid_lamports;
+
+    // Program id of the replacement metadata program which is used to update metadata.  If all zeroes, the nifty
+    // program itself updates metadata.  It may be updated only by the owner of the entry, and only to a the "next
+    // value" in the sequence of metadata program ids listed in the config.  If this is all zeroes, then the nifty
+    // program itself manages the metadata.
+    SolPubkey metadata_program;
+
+    // These are the Shinobi metadata values for this entry.  These are all zeroes until the entry is revealed,
+    // at which point the verified metadata is copied in.
+    EntryMetadata metadata;
+
+    // This is a metadata expansion area, which holds any expansion metadata created by an upgraded metadata program.
+    // The entry is allocated with some amount of additional space here, and any replacement metadata program can use
+    // read it; it is updated with the results of that metadata program (including re-allocing this Entry if necessary
+    // to accomodate the larger size).
+    uint8_t metadata_expansion[];
     
-} BlockEntry;
+} Entry;
 
 
-// This is the format of data stored in a block account
-typedef struct
-{
-    // This is an indicator that the data is a Block
-    DataType data_type;
-    
-    // This is the configuration of the block.  It is never changed after the block is created.
-    BlockConfiguration config;
-
-    // These are the state values of the block.
-    BlockState state;
-
-    // The block will have been created with [total_entry_count] entries in place of this empty array
-    BlockEntry entries[0];
-    
-} Block;
-
-
-// This is the format of data stored in a bid account, which is the PDA associated with a bid token
+// This is the format of data stored in a bid account, which is the PDA associated with a bid token.
 typedef struct
 {
     // This is an indicator that the data is a Bid
@@ -318,3 +373,71 @@ typedef struct __attribute__((packed))
     uint8_t padding[4];
         
 } StakeAccountData;
+
+
+// This is the type of data stored in a Solana token program mint account
+typedef struct
+{
+    /// Optional authority used to mint new tokens. The mint authority may only be provided during
+    /// mint creation. If no mint authority is present then the mint has a fixed supply and no
+    /// further tokens may be minted.
+    uint32_t has_mint_authority;
+    SolPubkey mint_authority;
+
+    /// Total supply of tokens.
+    uint64_t supply;
+
+    /// Number of base 10 digits to the right of the decimal place.
+    uint8_t decimals;
+
+    /// Is `true` if this structure has been initialized
+    bool is_initialized;
+
+    /// Optional authority to freeze token accounts.
+    uint32_t has_freeze_authority;
+    SolPubkey freeze_authority;
+    
+} SolanaTokenProgramMintData;
+
+
+typedef enum
+{
+    SolanaTokenAccountState_Uninitialized  = 0,
+    SolanaTokenAccountState_Initialized    = 1,
+    SolanaTokenAccountState_Frozen         = 2
+} SolanaTokenAccountState;
+
+// This is the type of data stored in a Solana token program token account
+typedef struct
+{
+    /// The mint associated with this account
+    SolPubkey mint;
+
+    /// The owner of this account.
+    SolPubkey owner;
+
+    /// The amount of tokens this account holds.
+    uint64_t amount;
+
+    /// If `delegate` is `Some` then `delegated_amount` represents
+    /// the amount authorized by the delegate
+    uint32_t has_delegate;
+    SolPubkey delegate;
+
+    /// The account's state (one of the SolanaTokenAccountState values)
+    uint8_t account_state;
+        
+    /// If has_is_native, this is a native token, and the value logs the rent-exempt reserve. An
+    /// Account is required to be rent-exempt, so the value is used by the Processor to ensure that
+    /// wrapped SOL accounts do not drop below this threshold.
+    uint32_t has_is_native;
+    uint64_t is_native;
+
+    /// The amount delegated
+    uint64_t delegated_amount;
+
+    /// Optional authority to close the account.
+    uint32_t has_close_authority;
+    SolPubkey close_authority;
+    
+} SolanaTokenProgramTokenData;

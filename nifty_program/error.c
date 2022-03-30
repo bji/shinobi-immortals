@@ -67,6 +67,12 @@ typedef enum Error
     // Suppled stake account was not a valid stake account
     Error_InvalidStakeAccount                          = 1020,
 
+    // Add entries finished adding all entries for a block but did not supply a link block
+    Error_MissingLinkBlock                             = 1021,
+
+    // Attempt to perform an operation that requires a block to have met its reveal criteria, on a block which hasn't
+    Error_BlockNotRevealable                           = 1022,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

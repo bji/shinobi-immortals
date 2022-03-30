@@ -6,13 +6,6 @@
       0x06, 0x25, 0x46, 0x8c, 0xfe, 0x4f, 0x3d, 0x0a,                   \
       0x20, 0x85, 0xfe, 0x39, 0xff, 0xcc, 0x4c, 0x2c }
 
-// This is the System program id ("11111111111111111111111111111111" in base-58 which is all zeroes).
-#define SYSTEM_PROGRAM_ID_BYTES                                         \
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,                   \
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,                   \
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,                   \
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
-
 // This is the address of the system account that contains the "program configuration" which includes an instance
 // of ProgramConfig.
 // Temporary devnet "Q4iZQMJvv7EtGrubJVnJGc9VGZShY8HRXCpitAeBViL"
@@ -30,6 +23,14 @@
       0x7d, 0x35, 0xf1, 0xd4, 0x07, 0xef, 0xb7, 0x00,                   \
       0x33, 0x10, 0xb4, 0xb1, 0x2c, 0x08, 0x0e, 0x55 }
 
+// This is the address of the root block
+// Temporary devnet "drbQpgSmkeqSRp9A1iWjG86vqXAKUU8AaCBfcd6Zx2J"
+#define ROOT_BLOCK_ACCOUNT_ADDRESS_BYTES                                \
+    { 0x09, 0x70, 0xfc, 0x04, 0x09, 0xfc, 0x12, 0x2e,                   \
+      0xbc, 0x50, 0x3f, 0x81, 0x0b, 0x64, 0x3f, 0xf3,                   \
+      0xbb, 0xd3, 0xf1, 0x05, 0xe7, 0xa9, 0x7a, 0x1d,                   \
+      0x95, 0x35, 0x0c, 0x34, 0xb4, 0x75, 0xb1, 0x97 }
+
 // This is the metaplex metadata program id.
 // metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
 #define METAPLEX_METADATA_PROGRAM_ID_BYTES                              \
@@ -37,14 +38,6 @@
       0x38, 0x9d, 0x52, 0x7f, 0x6b, 0x04, 0xc3, 0xcd,                   \
       0x58, 0xb8, 0x6c, 0x73, 0x1a, 0xa0, 0xfd, 0xb5,                   \
       0x49, 0xb6, 0xd1, 0xbc, 0x03, 0xf8, 0x29, 0x46 }
-
-// This is the shinobi metadata program id.
-// temporary devnet "dmpMC5xzSzjKiyA3gmKpu29fp7RjWKwkVNgRGonEnSH"
-#define SHINOBI_METADATA_PROGRAM_ID_BYTES                               \
-    { 0x09, 0x6b, 0x95, 0x48, 0x1f, 0x43, 0xb4, 0xf2,                   \
-      0x8e, 0xa0, 0x76, 0xd4, 0x1b, 0x27, 0x09, 0x42,                   \
-      0x41, 0xf5, 0xb7, 0x25, 0x6e, 0x98, 0x04, 0x2c,                   \
-      0x8b, 0x33, 0x15, 0xc1, 0x81, 0x32, 0x62, 0x66 }
 
 // This is the solana token program token, which owns all Solana tokens
 #define SOLANA_TOKEN_PROGRAM_ID_BYTES                                   \
@@ -62,17 +55,17 @@ static bool is_nifty_stakes_program(SolPubkey *pubkey)
 }
 
 
-static bool is_system_program(SolPubkey *pubkey)
+static bool is_program_config_account(SolPubkey *pubkey)
 {
-    SolPubkey key = SYSTEM_PROGRAM_ID_BYTES;
-    
+    SolPubkey key = PROGRAM_CONFIG_ACCOUNT_ADDRESS_BYTES;
+
     return SolPubkey_same(pubkey, &key);
 }
 
 
-static bool is_program_config_account(SolPubkey *pubkey)
+static bool is_root_block_account(SolPubkey *pubkey)
 {
-    SolPubkey key = PROGRAM_CONFIG_ACCOUNT_ADDRESS_BYTES;
+    SolPubkey key = ROOT_BLOCK_ACCOUNT_ADDRESS_BYTES;
 
     return SolPubkey_same(pubkey, &key);
 }
@@ -89,14 +82,6 @@ static bool is_shinobi_vote_account_address(SolPubkey *pubkey)
 static bool is_metaplex_metadata_program(SolPubkey *pubkey)
 {
     SolPubkey key = METAPLEX_METADATA_PROGRAM_ID_BYTES;
-
-    return SolPubkey_same(pubkey, &key);
-}
-
-
-static bool is_shinobi_metadata_program(SolPubkey *pubkey)
-{
-    SolPubkey key = SHINOBI_METADATA_PROGRAM_ID_BYTES;
 
     return SolPubkey_same(pubkey, &key);
 }

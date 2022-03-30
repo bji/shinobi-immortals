@@ -2,15 +2,16 @@
 // Account references:
 // 0. `[WRITE]` -- The funding account to pay all fees associated with this transaction
 // 1. `[WRITE]` -- The block account address
-// 2. `[WRITE]` -- The stake account
-// 3. `[SIGNER]` -- The stake account withdraw authority
-// 4. `[WRITE]` -- The ticket mint account (must be a PDA of the nifty program, derived from ticket_mint_seed from
+// 2. `[WRITE]` -- The entry account address
+// 3. `[WRITE]` -- The stake account
+// 4. `[SIGNER]` -- The stake account withdraw authority
+// 5. `[WRITE]` -- The ticket mint account (must be a PDA of the nifty program, derived from ticket_mint_seed from
 //                 instruction data)
-// 5. `[WRITE]` -- The ticket token account (must be a PDA of the nifty program, derived from ticket_token_seed from
+// 6. `[WRITE]` -- The ticket token account (must be a PDA of the nifty program, derived from ticket_token_seed from
 //                 instruction data)
-// 6. `[WRITE]` -- The account to give ownership of the ticket to
-// 7. `[]` -- The metaplex metadata account (for cross-program invoke)
-// 8. `[]` -- The stake account program (for cross-program invoke)
+// 7. `[WRITE]` -- The account to give ownership of the ticket to
+// 8. `[]` -- The metaplex metadata account (for cross-program invoke)
+// 9. `[]` -- The stake account program (for cross-program invoke)
 
 
 typedef struct
@@ -32,18 +33,20 @@ typedef struct
 
 static uint64_t do_buy_ticket(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be 8.
-    if (params->ka_num != 8) {
+    #if 0
+    // Sanitize the accounts.  There must be 9.
+    if (params->ka_num != 9) {
         return Error_IncorrectNumberOfAccounts;
     }
 
     SolAccountInfo *funding_account = &(params->ka[0]);
     SolAccountInfo *block_account = &(params->ka[1]);
-    SolAccountInfo *stake_account = &(params->ka[2]);
-    SolAccountInfo *stake_withdraw_authority = &(params->ka[3]);
-    SolAccountInfo *ticket_mint_account = &(params->ka[4]);
-    SolAccountInfo *ticket_token_account = &(params->ka[5]);
-    SolAccountInfo *ticket_destination_account = &(params->ka[6]);
+    SolAccountInfo *entry_account = &(params->ka[2]);
+    SolAccountInfo *stake_account = &(params->ka[3]);
+    SolAccountInfo *stake_withdraw_authority = &(params->ka[4]);
+    SolAccountInfo *ticket_mint_account = &(params->ka[5);
+    SolAccountInfo *ticket_token_account = &(params->ka[6]);
+    SolAccountInfo *ticket_destination_account = &(params->ka[7]);
     // 7 is the metaplex metadata account, but doesn't need to be checked because it will simply fail on
     // cross-program invocation if it's not in the account list
     // 8 is the stake account program, but doesn't need to be checked because it will simply fail on
@@ -88,10 +91,10 @@ static uint64_t do_buy_ticket(SolParameters *params)
     }
 
     // This is the entry itself
-    BlockEntry *entry = &(block->entries[data->entry_index]);
+    Entry *entry = &(block->entries[data->entry_index]);
 
     // Ensure that the entry is pre-reveal
-    if (entry->state != BlockEntryState_PreReveal) {
+    if (entry->state != EntryState_PreReveal) {
         // Cannot buy ticket for an entry which has already been revealed
         return Error_AlreadyRevealed;
     }
@@ -151,6 +154,8 @@ static uint64_t do_buy_ticket(SolParameters *params)
 
     // Cross-program invoke the stake program to re-assign all authorities of the stake account to the nifty program
 
+#endif
+    
     // Not done yet ...
     return 2000;
 }
