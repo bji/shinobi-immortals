@@ -16,59 +16,72 @@ extern uint64_t sol_get_clock_sysvar(void *ret);
 // These are all instructions that this program can execute
 typedef enum Instruction
 {
-    // Admin function: Creates a new block
-    Instruction_CreateBlock                   =  0,
-    // Admin function: Adds entries to a newly created block.  Is called multiple times in sequence until the block
-    // has had all of its entries added.  When the last entry is added, the block becomes live
-    Instruction_AddEntriesToBlock             =  1,
-    // Admin function: Deletes a block which was created but has not had all of its entries added yet and thus is not
-    // live.  This would be for removing "mistake" blocks before they are made live.  Once live, blocks cannot be
-    // deleted.
-    Instruction_DeleteBlock                   =  2,
-    // Sets bytes of metadata in an entry.  This can only be done after the entry's block has reached its reveal
+    // Super user functions: only the super user may perform these actions ---------------------------------------------
+    // Create admin account
+    Instruction_CreateAdminAccount            =  0,
+    // Set admin
+    Instruction_SetAdmin                      =  1,
+
+    // Admin functions: only the admin may perform these actions -------------------------------------------------------
+    // Add metadata program id
+    Instruction_AddMetadataProgramId          =  2,
+    // Create a new block
+    Instruction_CreateBlock                   =  3,
+    // Add entries to a newly created block.  Is called multiple times in sequence until the block has had all of its
+    // entries added.  When the last entry is added, the block becomes live
+    Instruction_AddEntriesToBlock             =  4,
+    // Delete a block which was created but has not had all of its entries added yet and thus is not live.  This would
+    // be for removing "mistake" blocks before they are made live.  Once live, blocks cannot be deleted.
+    Instruction_DeleteBlock                   =  5,
+    // Set bytes of metadata in an entry.  This can only be done after the entry's block has reached its reveal
     // criteria.
-    Instruction_SetMetadataBytes              =  3,
-    // Admin function: Reveals entries that have not been revealed yet.  This can obviously only be done after the
-    // block has reached its reveal criteria.
-    Instruction_RevealEntries                 =  4,
-    // Buys a ticket
-    Instruction_BuyTicket                     =  5,
-    // Refunds a ticket, which can only be done if the entry is not revealed yet
-    Instruction_RefundTicket                  =  6,
-    // Redeems a ticket, which can only be done after the entry has been revealed
-    Instruction_RedeemTicket                  =  7,
-    // Bids on an entry that is in auction
-    Instruction_Bid                           =  8,
-    // Claims a winning or losing bid
-    Instruction_Claim                         =  9,
-    // Returns a claimed entry in exchange for the stake account.  The returned entry immediately enters a new auction.
-    Instruction_Return                        = 10,
-    // Merge stake into the stake account backing an entry.  This allows users to put more stake behind an owned entry
-    // whenever they want to (presumably to earn Ki faster and level up faster)
-    Instruction_MergeStake                    = 11,
-    // Split stake from the stake account backing an entry.  This allows users to extract stake rewards earned by the
-    // entry.  It is free to split stake earnings off.  It costs commission to split principal off.
-    Instruction_SplitStake                    = 12,
-    // Harvests Ki
-    Instruction_Harvest                       = 13,
-    // Levels up an entry.  This requires that the entry has cumulatively earned enough Ki to do so.
-    Instruction_LevelUp                       = 14,
-    // Updates the metadata program id of an entry.  This will only update to the next metadata entry id from the
-    // program config after the current metadata program id (or the first one if the current one is empty).  It
-    // will also call that metdata program to do its initial update of the data, and if that succeeds, will
-    // set the metaplex metadata update authority to that program.  All future metadata updates will be through
-    // that program
-    Instruction_UpdateEntryMetadataProgramId  = 15,
-    // Admin function: Updates the commission charged per epoch per stake account.  This is in addition to the
-    // validator commission.  This command fails if the commission has already been updated in the current epoch, and
-    // if the old commission is above 5% and the new commission is more than 2% higher than the old commission.
-    Instruction_SetBlockCommission            = 16,
-    // Admin function: Takes cumulatively earned commission from a stake account
-    Instruction_TakeCommission                = 17,
-    // Performs the next step in redelegation for a stake account: if the stake account is delegated but not to
-    // Shinobi Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not
-    // delegated, a small fee is taken and the stake account is delegated to Shinobi Systems.
-    Instruction_RedelegateTurnCrank           = 18
+    Instruction_SetMetadataBytes              =  6,
+    // Reveal entries that have not been revealed yet.  This can only be done after the block has reached its reveal
+    // criteria.
+    Instruction_RevealEntries                 =  7,
+    // Update the commission charged per epoch per stake account.  This is in addition to the validator commission.
+    // This command fails if the commission has already been updated in the current epoch, and if the old commission
+    // is above 5% and the new commission is more than 2% higher than the old commission.
+    Instruction_SetBlockCommission            =  8,
+    // Take cumulatively earned commission from a stake account
+    Instruction_TakeCommission                =  9,
+
+    // User functions: end users may perform these actions -------------------------------------------------------------
+    // Buy a ticket
+    Instruction_BuyTicket                     = 10,
+    // Refund a ticket, which can only be done if the entry is not revealed yet but the reveal grace period has
+    // elapsed
+    Instruction_RefundTicket                  = 11,
+    // Redeem a ticket, which can only be done after the entry has been revealed
+    Instruction_RedeemTicket                  = 12,
+    // Bid on an entry that is in auction
+    Instruction_Bid                           = 13,
+    // Claim a winning or losing bid
+    Instruction_Claim                         = 14,
+    // Return am owned entry in exchange for the stake account.  The returned entry immediately enters
+    // a new auction.
+    Instruction_Return                        = 15,
+    // Merge stake into the stake account backing an entry.  This allows users to put more stake behind
+    // an owned entry whenever they want to (presumably to earn Ki faster and level up faster)
+    Instruction_MergeStake                    = 16,
+    // Split stake from the stake account backing an entry.  This allows users to extract stake rewards
+    // earned by the entry.  It is free to split stake earnings off.  It costs commission to split principal off.
+    Instruction_SplitStake                    = 17,
+    // Harvest Ki
+    Instruction_Harvest                       = 18,
+    // Level up an entry.  This requires that the entry has cumulatively earned enough Ki to do so.
+    Instruction_LevelUp                       = 19,
+    // Update the metadata program id of an entry.  This will only update to the next metadata entry id from the
+    // program config after the current metadata program id (or the first one if the current one is empty).  It will
+    // also call that metdata program to do its initial update of the data, and if that succeeds, will set the
+    // metaplex metadata update authority to that program.  All future metadata updates will be through that program
+    Instruction_UpdateEntryMetadataProgramId  = 20,
+
+    // Anyone functions: anyone may perform these actions --------------------------------------------------------------
+    // Perform the next step in redelegation for a stake account: if the stake account is delegated but not to Shinobi
+    // Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not delegated, a
+    // small fee is taken and the stake account is delegated to Shinobi Systems.
+    Instruction_RedelegateTurnCrank           = 21
 } Instruction;
 
 
