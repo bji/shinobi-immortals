@@ -1,4 +1,19 @@
 
+#ifndef UTIL_AUTHENTICATION_C
+#define UTIL_AUTHENTICATION_C
+
+#include "inc/program_config.h"
+#include "util/util_accounts.c"
+
+
+// Some instructions can only be invoked if the transaction was signed by the super user.
+static bool is_superuser_authenticated(const SolAccountInfo *superuser_account)
+{
+    // Ensure that the superuser signed this transaction
+    return is_superuser_pubkey(superuser_account->key) && superuser_account->is_signer;
+}
+
+
 // Some instructions can only be invoked if the transaction was signed by the admin user.  The admin user is specified
 // in the program config account.  For all instructions which require admin privileges, the first account of the
 // instruction must be the program config account, and the second account identifies the admin as a signer of the
@@ -8,13 +23,7 @@ static bool is_admin_authenticated(const SolAccountInfo *config_account,
 {
     // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
     // account
-    if (!is_program_config_account(config_account->key)) {
-        return false;
-    }
-
-    // The config account can be locked down to exactly the expected permissions because it is never going to be
-    // used for any other purpose than reading config data.
-    if (config_account->is_signer || config_account->is_writable || config_account->executable) {
+    if (!is_nifty_config_account(config_account->key)) {
         return false;
     }
 
@@ -42,3 +51,6 @@ static bool is_admin_authenticated(const SolAccountInfo *config_account,
     // All checks passed.  This transaction was signed by the admin account.
     return true;
 }
+
+
+#endif // UTIL_AUTHENTICATION_C

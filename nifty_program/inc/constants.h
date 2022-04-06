@@ -1,0 +1,125 @@
+
+#ifndef PUBKEYS_H
+#define PUBKEYS_H
+
+
+#include "solana_sdk.h"
+
+
+// Each different PDA type has its own unique prefix, to ensure that even if other seed values between different PDA
+// account types would result in overlapping addresses, the addresses in fact never overlap
+typedef enum 
+{
+    PDA_Account_Seed_Prefix_Config = 1,
+    
+    PDA_Account_Seed_Prefix_Authority = 2,
+    
+    PDA_Account_Seed_Prefix_Mint = 3,
+    
+    PDA_Account_Seed_Prefix_Token = 4,
+
+    PDA_Account_Seed_Prefix_Block = 5,
+
+    PDA_Account_Seed_Prefix_Entry = 6
+    
+} PDA_Account_Seed_Prefix;
+
+
+// These are constant values that the program can use.  An instance of Constants is initialized by entrypoint and
+// passed to all instruction entrypoints.  It would be ideal to have these values stored in a data segment but
+// BPF is unable to do this.
+typedef struct
+{
+    // This is the pubkey bytes of the superuser
+    SolPubkey superuser_pubkey;
+
+    // This is the account address of the program config.  It is a program derived address using the
+    // program id and nifty_config_seed_bytes
+    SolPubkey nifty_config_account;
+
+    // These are the seed bytes used to derive the nifty_config_account address
+    uint8_t nifty_config_seed_bytes[2];
+
+    // This is the account address of the authority account.  The authority account is used by the program as the
+    // authority anywhere that an authority is needed, because the program can sign this authority.  This is computed
+    // when the program's address is known and hardcoded into the program, along with the seeds needed to generate it.
+    SolPubkey nifty_authority_account;
+
+    // These are the seed bytes used to derive the nifty_authority_account address
+    uint8_t nifty_authority_seed_bytes[2];
+
+    // This is the nifty program id.  It is the account address that actually stores this program.
+    SolPubkey nifty_program_id;
+
+    // This is the system program id
+    SolPubkey system_program_id;
+
+    // This is the rent program id
+    SolPubkey rent_program_id;
+
+    // This is the metaplex program id
+    SolPubkey metaplex_program_id;
+
+    // This is the Solana Program Library Token program id
+    SolPubkey spl_token_program_id;
+
+} _Constants;
+
+
+const _Constants Constants =
+{
+    // superuser_pubkey
+    // DEVNET test value: dspaQ8kM3myRapUFqw8zRgwHJMUB5YcKKh7CxA1MWF1
+    { 0x09, 0x72, 0x5f, 0x2d, 0xcf, 0x16, 0x13, 0x1c, 0x3d, 0x71, 0x3d, 0xf1, 0xf3, 0x66, 0x09, 0xc4,
+      0xa1, 0xc7, 0x39, 0xff, 0xfe, 0xeb, 0x8e, 0x04, 0x67, 0x5f, 0x44, 0x59, 0x37, 0xb7, 0x37, 0x40 },
+    
+    // nifty_config_account
+    // DEVNET test value: CqvEvXCZnJcsqsfBLYY5SuEyzZZPGEYNo1i2eoo3oiUE
+    { 0xaf, 0xf8, 0xa2, 0x3c, 0xbe, 0xd5, 0x5d, 0xd0, 0x40, 0x10, 0x24, 0x04, 0x51, 0x59, 0xf8, 0xb3,
+      0x3f, 0x64, 0x35, 0x23, 0x69, 0x0c, 0xa4, 0xdb, 0x6a, 0x22, 0xaa, 0x76, 0x30, 0xfe, 0x5f, 0xff },
+    
+    // nifty_config_seed_bytes
+    { PDA_Account_Seed_Prefix_Config, 252 },
+    
+    // nifty_authority_account
+    // DEVNET test value: 4T6BDsr5AZDmf351qyQ29Ww2J64oJmxEsWtH1S58JWZE
+    { 0x33, 0x42, 0x03, 0xbd, 0x7b, 0x62, 0x4b, 0x99, 0x57, 0xc7, 0xaf, 0x26, 0x3c, 0x48, 0x1e, 0xfa,
+      0xf6, 0x40, 0xd3, 0xf1, 0x29, 0xe4, 0x6d, 0x8e, 0xb0, 0x01, 0x3f, 0x57, 0x6e, 0x6b, 0xe1, 0x39 },
+    
+    // nifty_authority_seed_bytes
+    { PDA_Account_Seed_Prefix_Authority, 255 },
+    
+    // nifty_program_id
+    // DEVNET test value: dnpHN9oTti7DAoZMw7WL8PvXWuL5Q4BZeVtcEevzaGa
+    { 0x09, 0x6c, 0xb6, 0x69, 0xa0, 0x04, 0xa6, 0x98, 0x0e, 0x80, 0x7d, 0x43, 0x4e, 0xb0, 0xa6, 0x04,
+      0x00, 0x63, 0xfa, 0xd5, 0x9b, 0x64, 0x37, 0xcc, 0xe5, 0xa6, 0x8f, 0x93, 0x23, 0x04, 0x9c, 0x43 },
+    
+    // system_program_id
+    // 11111111111111111111111111111111
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    
+    // rent_program_id
+    // SysvarRent111111111111111111111111111111111
+    { 0x06, 0xa7, 0xd5, 0x17, 0x19, 0x2c, 0x5c, 0x51, 0x21, 0x8c, 0xc9, 0x4c, 0x3d, 0x4a, 0xf1, 0x7f,
+      0x58, 0xda, 0xee, 0x08, 0x9b, 0xa1, 0xfd, 0x44, 0xe3, 0xdb, 0xd9, 0x8a, 0x00, 0x00, 0x00, 0x00 },
+    
+    // metaplex_program_id
+    // metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
+    { 0x0b, 0x70, 0x65, 0xb1, 0xe3, 0xd1, 0x7c, 0x45, 0x38, 0x9d, 0x52, 0x7f, 0x6b, 0x04, 0xc3, 0xcd,
+      0x58, 0xb8, 0x6c, 0x73, 0x1a, 0xa0, 0xfd, 0xb5, 0x49, 0xb6, 0xd1, 0xbc, 0x03, 0xf8, 0x29, 0x46 },
+    
+    // spl_token_program_id
+    // TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+    { 0x06, 0xdd, 0xf6, 0xe1, 0xd7, 0x65, 0xa1, 0x93, 0xd9, 0xcb, 0xe1, 0x46, 0xce, 0xeb, 0x79, 0xac,
+      0x1c, 0xb4, 0x85, 0xed, 0x5f, 0x5b, 0x37, 0x91, 0x3a, 0x8c, 0xf5, 0x85, 0x7e, 0xff, 0x00, 0xa9 }
+    
+};
+
+
+// solana_sdk misses "const" in many places, so de-const to avoid compiler warnings.  The Constants instance
+// is in a read-only data section so can't be modified anyway.
+#define Constants (* ((_Constants *) &Constants))
+
+
+#endif // PUBKEYS_H

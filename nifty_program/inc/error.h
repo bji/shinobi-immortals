@@ -1,6 +1,9 @@
 
+#ifndef ERROR_H
+#define ERROR_H
+
 // This is all error codes that can be returned by this program
-typedef enum Error
+typedef enum
 {
     // Returned when the instruction data is malformed and cannot be deserialized.  This should never happen as it
     // would imply that the validator provided malformed data structures to the program.
@@ -89,3 +92,6 @@ typedef enum Error
     Error_InvalidData_First                            = 1300,
     Error_InvalidData_Last                             = 1399
 } Error;
+
+
+#endif // ERROR_H

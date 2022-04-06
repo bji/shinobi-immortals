@@ -1,4 +1,9 @@
 
+#include "inc/block.h"
+#include "util/util_accounts.c"
+#include "util/util_authentication.c"
+#include "util/util_rent.c"
+
 // Transaction must be signed by the admin address contained within the Admin Identifier Account.
 
 // Account references:
@@ -18,12 +23,7 @@ typedef struct
     // Initial commission to use in the newly created block
     commission_t initial_commission;
 
-    // Number of lamports to transfer from the funding account to the newly created account.  Sufficient lamports must
-    // be supplied to make the account rent exempt, or else the transaction will fail.  It is not possible to withdraw
-    // lamports from the funding account, except when the account is deleted on a successful DeleteBlock instruction.
-    uint64_t funding_lamports;
-
-    // This is the bump seed to add to the sequence "0, config.group_number, config.block_number" to derive the
+    // This is the bump seed to add to the sequence "5, config.group_number, config.block_number" to derive the
     // PDA of the block
     uint8_t bump_seed;
 
@@ -40,12 +40,12 @@ static uint64_t compute_block_size(uint16_t total_entry_count)
     // The total space needed is from the beginning of a Block to the entries element one beyond the total
     // supported (i.e. if there are 100 entries, then then entry at index 100 starts at the first byte beyond the
     // array)
-    return ((uint64_t) &(b->entry_seeds[total_entry_count]));
+    return ((uint64_t) &(b->entry_bump_seeds[total_entry_count]));
 }
 
 
 // Creates a new block of entries
-static uint64_t do_create_block(SolParameters *params)
+static uint64_t admin_create_block(SolParameters *params)
 {
     // Sanitize the accounts.  There must be 5.
     if (params->ka_num != 5) {
@@ -89,22 +89,27 @@ static uint64_t do_create_block(SolParameters *params)
     if (config->start_ticket_price_lamports == 0) {
         return Error_InvalidData_First + 2;
     }
-    if (config->end_ticket_price_lamports < config->start_ticket_price_lamports) {
+    if (config->end_ticket_price_lamports > config->start_ticket_price_lamports) {
         return Error_InvalidData_First + 3;
+    }
+    if (config->ki_factor == 0) {
+        return Error_InvalidData_First + 4;
     }
 
     // This is the size that the fully populated block will use.
     uint64_t total_block_size = compute_block_size(data->config.total_entry_count);
 
     // Use the provided bump seed plus the deterministic seed parts to create the block account address
-    uint8_t zero = 0;
-    SolSignerSeed seed_parts[4] = { { &zero, 1 },
-                                    { (uint8_t *) &(data->config.group_number), sizeof(data->config.group_number) },
-                                    { (uint8_t *) &(data->config.block_number), sizeof(data->config.block_number) },
-                                    { (uint8_t *) &(data->bump_seed), sizeof(data->bump_seed) } };
-    
-    if (create_pda(block_account, seed_parts, 4, funding_account, (SolPubkey *) params->program_id,
-                   data->funding_lamports, total_block_size, params->ka, params->ka_num)) {
+    uint8_t prefix = PDA_Account_Seed_Prefix_Block;
+    SolSignerSeed seed_parts[] = { { &prefix, 1 },
+                                   { (uint8_t *) &(data->config.group_number), sizeof(data->config.group_number) },
+                                   { (uint8_t *) &(data->config.block_number), sizeof(data->config.block_number) },
+                                   { &(data->bump_seed), sizeof(data->bump_seed) } };
+
+    // Create the block account
+    if (create_pda(block_account->key, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_account->key,
+                   (SolPubkey *) params->program_id, get_rent_exempt_minimum(total_block_size), total_block_size,
+                   params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
 
@@ -117,6 +122,6 @@ static uint64_t do_create_block(SolParameters *params)
 
     // Set the commission to the initial commission
     block->state.commission = data->initial_commission;
-
+    
     return 0;
 }
