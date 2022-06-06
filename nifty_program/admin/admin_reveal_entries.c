@@ -142,7 +142,7 @@ static uint64_t do_reveal_entries(SolParameters *params)
         
     // Ensure that the block has reached its reveal criteria; cannot reveal entries of a block that has not reached
     // reveal
-    if (!is_block_reveal_criteria_met(block, &clock)) {
+    if (!is_complete_block_revealable(block, &clock)) {
         return Error_BlockNotRevealable;
     }
     

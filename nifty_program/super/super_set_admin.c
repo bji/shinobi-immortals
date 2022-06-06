@@ -32,22 +32,6 @@ static uint64_t super_set_admin(SolParameters *params)
 
     UpdateAdminData *data = (UpdateAdminData *) params->data;
 
-    // TEMPORARY TESTING!!!
-    // If there are three accounts, delete the program config account and authority.  This allows for testing
-    // scenarios to delete the account so that it can be re-created.
-    if (params->ka_num == 3) {
-        SolAccountInfo *superuser_account = &(params->ka[0]);
-        if (is_superuser_authenticated(superuser_account)) {
-            SolAccountInfo *config_account = &(params->ka[1]);
-            SolAccountInfo *authority_account = &(params->ka[2]);
-            *(superuser_account->lamports) += *(config_account->lamports);
-            *(config_account->lamports) = 0;
-            *(superuser_account->lamports) += *(authority_account->lamports);
-            *(authority_account->lamports) = 0;
-            return 0;
-        }
-    }
-
     // Sanitize the accounts.  There must be exactly 2.
     if (params->ka_num != 2) {
         return Error_IncorrectNumberOfAccounts;

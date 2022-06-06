@@ -38,7 +38,8 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
           // update authority info
           { /* pubkey */ authority_key, /* is_writable */ false, /* is_signer */ false },
           // system program
-          { /* pubkey */ &((* (_Constants *) &Constants).system_program_id), /* is_writable */ false, /* is_signer */ false },
+          { /* pubkey */ &((* (_Constants *) &Constants).system_program_id), /* is_writable */ false,
+            /* is_signer */ false },
           // rent
           { /* pubkey */ &(Constants.rent_program_id), /* is_writable */ false, /* is_signer */ false } };
     
@@ -64,14 +65,14 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
 
     // The name of the NFT will be "Shinobi LLL-MM-NNNN" where LLL is the group number, MM is the block number,
     // and NNNN is the block index (+1).
-    uint8_t name[7 + 1 + 3 + 1 + 2 + 1 + 4];
+    uint8_t name[7 + 1 + 3 + 1 + 3 + 1 + 4];
     sol_memcpy(name, "Shinobi", 7);
     name[7] = ' ';
     number_string(&(name[8]), group_number, 3);
     name[11] = '-';
-    number_string(&(name[12]), block_number, 2);
-    name[14] = '-';
-    number_string(&(name[15]), entry_index + 1, 4);
+    number_string(&(name[12]), block_number, 3);
+    name[15] = '-';
+    number_string(&(name[16]), entry_index + 1, 4);
 
     uint8_t *encoded = borsh_encode_u8(data, 16); // instruction code 16 = CreateMetadataAccountV2
 

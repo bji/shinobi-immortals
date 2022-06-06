@@ -32,36 +32,35 @@ typedef enum
     // criteria, and the entries have had their metadata set.
     Instruction_RevealEntries                 =  6,
     // Update the commission charged per epoch per stake account.  This is in addition to the validator commission.
-    // This command fails if the commission has already been updated in the current epoch, and if the old commission
-    // is above 5% and the new commission is more than 2% higher than the old commission.
+    // This command fails if the commission has already been updated in the current epoch, and also if the new
+    // commission is more than 2% higher than the old commission.
     Instruction_SetBlockCommission            =  7,
-    // Take cumulatively earned commission from a stake account
-    Instruction_TakeCommission                =  8,
 
     // User functions: end users may perform these actions -------------------------------------------------------------
-    // Buy a ticket
-    Instruction_BuyTicket                     =  9,
-    // Redeem a ticket, which if done after reveal, redeems for the entry NFT; if done before reveal and after
-    // the reveal grace period (i.e. reveal didn't happen on time), returns the stake account.  If done before
-    // reveal and before reveal grace, error.
-    Instruction_RedeemTicket                  = 10,
+    // Buy, either before first auction begin, or after most recent auction has ended.
+    Instruction_Buy                           =  8,
     // Bid on an entry that is in auction
-    Instruction_Bid                           = 11,
+    Instruction_Bid                           =  9,
     // Claim a winning or losing bid
-    Instruction_Claim                         = 12,
-    // Return am owned entry in exchange for the stake account.  The returned entry immediately enters
-    // a new auction.
-    Instruction_Return                        = 13,
+    Instruction_Claim                         = 10,
+    // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
+    // progrmam.
+    Instruction_Stake                         = 11,
+    // Destake the entry, returning the stake account of the entry.
+    Instruction_Destake                       = 12,
     // Merge stake into the stake account backing an entry.  This allows users to put more stake behind
     // an owned entry whenever they want to (presumably to earn Ki faster and level up faster)
-    Instruction_MergeStake                    = 14,
-    // Split stake from the stake account backing an entry.  This allows users to extract stake rewards
-    // earned by the entry.  It is free to split stake earnings off.  It costs commission to split principal off.
-    Instruction_SplitStake                    = 15,
+    Instruction_MergeStake                    = 13,
+    // Split stake from the stake account backing an entry.  This allows users to extract stake rewards earned by the
+    // entry.  Only stake rewards may be split off, not principal.
+    Instruction_SplitStake                    = 14,
     // Harvest Ki
-    Instruction_Harvest                       = 16,
-    // Level up an entry.  This requires that the entry has cumulatively earned enough Ki to do so.
-    Instruction_LevelUp                       = 17,
+    Instruction_Harvest                       = 15,
+    // Level up an entry.  This requires as input am amount of Ki, which is burned.
+    Instruction_LevelUp                       = 16,
+    // Once the entry has reached maximum level, the owner may set the art to whichever version they prefer.  Costs the
+    // same Ki as the final level up did.
+    Instruction_SetArt                        = 17,
     // Update the metadata program id of an entry.  This will only update to the next metadata entry id from the
     // program config after the current metadata program id (or the first one if the current one is empty).  It will
     // also call that metdata program to do its initial update of the data, and if that succeeds, will set the
@@ -69,10 +68,15 @@ typedef enum
     Instruction_UpdateMetadataProgramId       = 18,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
+    // Take cumulatively earned commission from a stake account.  Owners of stake accounts may wish to do this if they
+    // expect commission to rise, so that any already accrued stake rewards are charged the old commission before the
+    // commission is updated.
+    Instruction_TakeCommission                = 19,
     // Perform the next step in redelegation for a stake account: if the stake account is delegated but not to Shinobi
     // Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not delegated, a
     // small fee is taken and the stake account is delegated to Shinobi Systems.
-    Instruction_RedelegateTurnCrank           = 19
+    Instruction_RedelegateTurnCrank           = 20
+    
 } Instruction;
 
 
@@ -82,14 +86,15 @@ typedef enum
 #include "admin/admin_create_block.c"
 //#include "admin/admin_reveal_entries.c"
 //#include "admin/admin_set_block_commission.c"
-//#include "admin/admin_set_metadata_bytes.c"
+#include "admin/admin_set_metadata_bytes.c"
 //#include "admin/admin_take_commission.c"
 
 //#include "user/user_bid.c"
-//#include "user/user_buy_ticket.c"
+//#include "user/user_buy.c"
 //#include "user/user_claim.c"
 //#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
+//#include "user/user_set_art.c"
 //#include "user/user_merge_stake.c"
 //#include "user/user_redeem_ticket.c"
 //#include "user/user_return.c"
@@ -103,56 +108,6 @@ typedef enum
 // Program entrypoint
 uint64_t entrypoint(const uint8_t *input)
 {
-    // Initialize Constants
-//    const Constants constants =
-//        {
-//            // superuser_pubkey
-//            // DEVNET test value: dspaQ8kM3myRapUFqw8zRgwHJMUB5YcKKh7CxA1MWF1
-//            { 0x09, 0x72, 0x5f, 0x2d, 0xcf, 0x16, 0x13, 0x1c, 0x3d, 0x71, 0x3d, 0xf1, 0xf3, 0x66, 0x09, 0xc4,
-//              0xa1, 0xc7, 0x39, 0xff, 0xfe, 0xeb, 0x8e, 0x04, 0x67, 0x5f, 0x44, 0x59, 0x37, 0xb7, 0x37, 0x40 },
-//
-//            // nifty_config_account
-//            // DEVNET test value: CqvEvXCZnJcsqsfBLYY5SuEyzZZPGEYNo1i2eoo3oiUE
-//            { 0xaf, 0xf8, 0xa2, 0x3c, 0xbe, 0xd5, 0x5d, 0xd0, 0x40, 0x10, 0x24, 0x04, 0x51, 0x59, 0xf8, 0xb3,
-//              0x3f, 0x64, 0x35, 0x23, 0x69, 0x0c, 0xa4, 0xdb, 0x6a, 0x22, 0xaa, 0x76, 0x30, 0xfe, 0x5f, 0xff },
-//
-//            // nifty_config_seed_bytes
-//            { PDA_Account_Seed_Prefix_Config, 252 },
-//
-//            // nifty_authority_account
-//            // DEVNET test value: 4T6BDsr5AZDmf351qyQ29Ww2J64oJmxEsWtH1S58JWZE
-//            { 0x33, 0x42, 0x03, 0xbd, 0x7b, 0x62, 0x4b, 0x99, 0x57, 0xc7, 0xaf, 0x26, 0x3c, 0x48, 0x1e, 0xfa,
-//              0xf6, 0x40, 0xd3, 0xf1, 0x29, 0xe4, 0x6d, 0x8e, 0xb0, 0x01, 0x3f, 0x57, 0x6e, 0x6b, 0xe1, 0x39 },
-//
-//            // nifty_authority_seed_bytes
-//            { PDA_Account_Seed_Prefix_Authority, 255 },
-//
-//            // nifty_program_id
-//            // DEVNET test value: dnpHN9oTti7DAoZMw7WL8PvXWuL5Q4BZeVtcEevzaGa
-//            { 0x09, 0x6c, 0xb6, 0x69, 0xa0, 0x04, 0xa6, 0x98, 0x0e, 0x80, 0x7d, 0x43, 0x4e, 0xb0, 0xa6, 0x04,
-//              0x00, 0x63, 0xfa, 0xd5, 0x9b, 0x64, 0x37, 0xcc, 0xe5, 0xa6, 0x8f, 0x93, 0x23, 0x04, 0x9c, 0x43 },
-//
-//            // system_program_id
-//            // 11111111111111111111111111111111
-//            { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-//
-//            // rent_program_id
-//            // SysvarRent111111111111111111111111111111111
-//            { 0x06, 0xa7, 0xd5, 0x17, 0x19, 0x2c, 0x5c, 0x51, 0x21, 0x8c, 0xc9, 0x4c, 0x3d, 0x4a, 0xf1, 0x7f,
-//              0x58, 0xda, 0xee, 0x08, 0x9b, 0xa1, 0xfd, 0x44, 0xe3, 0xdb, 0xd9, 0x8a, 0x00, 0x00, 0x00, 0x00 },
-//
-//            // metaplex_program_id
-//            // metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
-//            { 0x0b, 0x70, 0x65, 0xb1, 0xe3, 0xd1, 0x7c, 0x45, 0x38, 0x9d, 0x52, 0x7f, 0x6b, 0x04, 0xc3, 0xcd,
-//              0x58, 0xb8, 0x6c, 0x73, 0x1a, 0xa0, 0xfd, 0xb5, 0x49, 0xb6, 0xd1, 0xbc, 0x03, 0xf8, 0x29, 0x46 },
-//
-//            // spl_token_program_id
-//            // TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
-//            { 0x06, 0xdd, 0xf6, 0xe1, 0xd7, 0x65, 0xa1, 0x93, 0xd9, 0xcb, 0xe1, 0x46, 0xce, 0xeb, 0x79, 0xac,
-//              0x1c, 0xb4, 0x85, 0xed, 0x5f, 0x5b, 0x37, 0x91, 0x3a, 0x8c, 0xf5, 0x85, 0x7e, 0xff, 0x00, 0xa9 }
-//        };
-    
     SolParameters params;
 
     // At most 21 accounts are supported for any command.  This is enough for 3 entries in the "add entries to block"
@@ -181,30 +136,24 @@ uint64_t entrypoint(const uint8_t *input)
         
     case Instruction_AddMetadataProgramId:
         return admin_add_metadata_program_id(&params);
-        
+
     case Instruction_CreateBlock:
         return admin_create_block(&params);
 
     case Instruction_AddEntriesToBlock:
         return admin_add_entries_to_block(&params);
 
-//    case Instruction_SetMetadataBytes:
-//        return admin_set_metadata_bytes(&params);
-//        
+    case Instruction_SetMetadataBytes:
+        return admin_set_metadata_bytes(&params);
+        
 //    case Instruction_RevealEntries:
 //        return admin_reveal_entries(&params);
 //        
 //    case Instruction_SetBlockCommission:
 //        return admin_set_block_commission(&params);
 //        
-//    case Instruction_TakeCommission:
-//        return admin_take_commission(&params);
-//        
-//    case Instruction_BuyTicket:
-//        return user_buy_ticket(&params);
-//        
-//    case Instruction_RedeemTicket:
-//        return user_redeem_ticket(&params);
+//    case Instruction_Buy:
+//        return user_buy(&params);
 //        
 //    case Instruction_Bid:
 //        return user_bid(&params);
@@ -212,8 +161,11 @@ uint64_t entrypoint(const uint8_t *input)
 //    case Instruction_Claim:
 //        return user_claim(&params);
 //        
-//    case Instruction_Return:
-//        return user_return(&params);
+//    case Instruction_Stake:
+//        return user_stake(&params);
+//
+//    case Instruction_Destake:
+//        return user_destake(&params);
 //        
 //    case Instruction_MergeStake:
 //        return user_merge_stake(&params);
@@ -227,8 +179,14 @@ uint64_t entrypoint(const uint8_t *input)
 //    case Instruction_LevelUp:
 //        return user_level_up(&params);
 //        
+//    case Instruction_SetArt:
+//        return user_set_art(&params);
+//        
 //    case Instruction_UpdateEntryMetadataProgramId:
 //        return user_update_metadata_program_id(&params);
+//        
+//    case Instruction_TakeCommission:
+//        return anyone_take_commission(&params);
 //        
 //    case Instruction_RedelegateTurnCrank:
 //        return anyone_redelegate_turn_crank(&params);

@@ -11,7 +11,7 @@
 // 1. `[SIGNER]` -- This must be the admin account
 // 2. `[WRITE, SIGNER]` Funding account
 // 3. `[WRITE]` -- The block account address.  This must be the PDA derived from the following seed values
-//       concatenated together: 0, config.group_number, config.block_number
+//       concatenated together: PDA_Account_Seed_Prefix_Block, config.group_number, config.block_number
 // 4. `[]` The system account, so that cross-program invoke of the system account can be done
 
 // instruction data type for CreateBlock instruction.
@@ -23,8 +23,8 @@ typedef struct
     // Initial commission to use in the newly created block
     commission_t initial_commission;
 
-    // This is the bump seed to add to the sequence "5, config.group_number, config.block_number" to derive the
-    // PDA of the block
+    // This is the bump seed to add to the sequence
+    // "PDA_Account_Seed_Prefix_Block, config.group_number, config.block_number" to derive the PDA of the block
     uint8_t bump_seed;
 
     // The actual configuration of the block is provided
@@ -83,19 +83,18 @@ static uint64_t admin_create_block(SolParameters *params)
     if (config->total_entry_count == 0) {
         return Error_InvalidData_First + 0;
     }
-    if (config->total_ticket_count > config->total_entry_count) {
-        return Error_InvalidData_First + 1;
+    if (config->total_mystery_count > 0) {
+        if (config->total_mystery_count > config->total_entry_count) {
+            return Error_InvalidData_First + 1;
+        }
+        if (config->initial_mystery_price_lamports < config->minimum_bid_lamports) {
+            return Error_InvalidData_First + 2;
+        }
     }
-    if (config->start_ticket_price_lamports == 0) {
-        return Error_InvalidData_First + 2;
-    }
-    if (config->end_ticket_price_lamports > config->start_ticket_price_lamports) {
+    if (config->minimum_bid_lamports == 0) {
         return Error_InvalidData_First + 3;
     }
-    if (config->ki_factor == 0) {
-        return Error_InvalidData_First + 4;
-    }
-
+    
     // This is the size that the fully populated block will use.
     uint64_t total_block_size = compute_block_size(data->config.total_entry_count);
 
@@ -118,7 +117,7 @@ static uint64_t admin_create_block(SolParameters *params)
 
     block->data_type = DataType_Block;
 
-    sol_memcpy(&(block->config), config, sizeof(BlockConfiguration));
+    sol_memcpy(&(block->config), config, sizeof(block->config));
 
     // Set the commission to the initial commission
     block->state.commission = data->initial_commission;

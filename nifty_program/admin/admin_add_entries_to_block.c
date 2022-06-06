@@ -20,15 +20,18 @@
 // 7. `[]` -- The metaplex metadata program
 // 8. `[]` -- The rent sysvar
 // The following are repeated for each entry:
-// a. `[WRITE]` -- Mint account
-// b. `[WRITE]` -- Token account
-// c. `[WRITE]` -- Metaplex metadata account
-// d. `[WRITE]` -- Entry account
+// a. `[WRITE]` -- Entry account
+// b. `[WRITE]` -- Mint account
+// c. `[WRITE]` -- Token account
+// d. `[WRITE]` -- Metaplex metadata account
 
 
 // Details provided along with each entry to be added
 typedef struct
 {
+    // The bump seed that is used to generate the entry account for the entry
+    uint8_t entry_bump_seed;
+
     // The bump seed that is used to generate the mint account for the entry
     uint8_t mint_bump_seed;
 
@@ -38,11 +41,9 @@ typedef struct
     // The bump seed that is used to generate the metaplex metadata account for the entry
     uint8_t metaplex_metadata_bump_seed;
     
-    // The bump seed that is used to generate the entry account for the entry
-    uint8_t entry_bump_seed;
-
-    // The sha256 of the metadata to copy into the entry, which will ensure that when the reveal of the entry occurs,
-    // it will reveal metadata which was already determined at the time that the entry was added
+    // The sha256 of the metadata + salt to copy into the entry as reveal_sha256, which will ensure that when the
+    // reveal of the entry occurs, it will reveal metadata which was already determined at the time that the entry was
+    // added
     sha256_t sha256;
     
 } EntryDetails;
@@ -210,6 +211,11 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
             return Error_FailedToGetClock;
         }
         block->state.block_start_timestamp = clock.unix_timestamp;
+        // If the number of mysteries is 0, then the mystery phase is already done, and so the reveal phase starts
+        // immediately.
+        if (block->config.total_mystery_count == 0) {
+            block->state.reveal_period_start_timestamp = clock.unix_timestamp;
+        }
     }
     
     return 0;
@@ -221,23 +227,35 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
                           EntryDetails *entry_details, uint8_t *destination_entry_bump_seed,
                           SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    SolAccountInfo *mint_account =                      &(entry_accounts[0]);
-    SolAccountInfo *token_account =                     &(entry_accounts[1]);
-    SolAccountInfo *metaplex_metadata_account =         &(entry_accounts[2]);
-    SolAccountInfo *entry_account =                     &(entry_accounts[3]);
+    SolAccountInfo *entry_account =                     &(entry_accounts[0]);
+    SolAccountInfo *mint_account =                      &(entry_accounts[1]);
+    SolAccountInfo *token_account =                     &(entry_accounts[2]);
+    SolAccountInfo *metaplex_metadata_account =         &(entry_accounts[3]);
 
     // Faster fail: make sure all accounts are writable
-    if (!mint_account->is_writable) {
+    if (!entry_account->is_writable) {
         return Error_InvalidAccountPermissions_First + 11;
     }
-    if (!token_account->is_writable) {
+    if (!mint_account->is_writable) {
         return Error_InvalidAccountPermissions_First + 12;
     }
-    if (!metaplex_metadata_account->is_writable) {
+    if (!token_account->is_writable) {
         return Error_InvalidAccountPermissions_First + 13;
     }
-    if (!entry_account->is_writable) {
+    if (!metaplex_metadata_account->is_writable) {
         return Error_InvalidAccountPermissions_First + 14;
+    }
+
+    // Compute entry address, ensure that it is as supplied
+    {
+        SolPubkey entry_address;
+        if (!compute_entry_address(block->config.group_number, block->config.block_number, entry_index,
+                                   entry_details->entry_bump_seed, &entry_address)) {
+            return Error_InvalidAccount_First + 11;
+        }
+        if (!SolPubkey_same(&entry_address, entry_account->key)) {
+            return Error_InvalidAccount_First + 11;
+        }
     }
 
     // Compute mint address, ensure that it is as supplied
@@ -245,10 +263,10 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
         SolPubkey mint_address;
         if (!compute_mint_address(block->config.group_number, block->config.block_number, entry_index,
                                   entry_details->mint_bump_seed, &mint_address)) {
-            return Error_InvalidAccount_First + 11;
+            return Error_InvalidAccount_First + 12;
         }
         if (!SolPubkey_same(&mint_address, mint_account->key)) {
-            return Error_InvalidAccount_First + 11;
+            return Error_InvalidAccount_First + 12;
         }
     }
 
@@ -257,10 +275,10 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
         SolPubkey token_address;
         if (!compute_token_address(block->config.group_number, block->config.block_number, entry_index,
                                    entry_details->token_bump_seed, &token_address)) {
-            return Error_InvalidAccount_First + 12;
+            return Error_InvalidAccount_First + 13;
         }
         if (!SolPubkey_same(&token_address, token_account->key)) {
-            return Error_InvalidAccount_First + 12;
+            return Error_InvalidAccount_First + 13;
         }
     }
 
@@ -269,21 +287,9 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
         SolPubkey metaplex_metadata_address;
         if (!compute_metaplex_metadata_address(mint_account->key, entry_details->metaplex_metadata_bump_seed,
                                                &metaplex_metadata_address)) {
-            return Error_InvalidAccount_First + 13;
-        }
-        if (!SolPubkey_same(&metaplex_metadata_address, metaplex_metadata_account->key)) {
-            return Error_InvalidAccount_First + 13;
-        }
-    }
-
-    // Compute entry address, ensure that it is as supplied
-    {
-        SolPubkey entry_address;
-        if (!compute_entry_address(block->config.group_number, block->config.block_number, entry_index,
-                                   entry_details->entry_bump_seed, &entry_address)) {
             return Error_InvalidAccount_First + 14;
         }
-        if (!SolPubkey_same(&entry_address, entry_account->key)) {
+        if (!SolPubkey_same(&metaplex_metadata_address, metaplex_metadata_account->key)) {
             return Error_InvalidAccount_First + 14;
         }
     }
@@ -372,10 +378,14 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
 
     entry->entry_index = entry_index;
 
-    *(entry->reveal_sha256) = *(entry_details->sha256);
-
+    entry->mint_account = *(entry_account->key);
+    
     entry->token_account = *(token_account->key);
     
+    entry->metaplex_metadata_account = *(metaplex_metadata_account->key);
+
+    *(entry->reveal_sha256) = *(entry_details->sha256);
+
     // Write the entry bump seed
     *destination_entry_bump_seed = entry_details->entry_bump_seed;
 

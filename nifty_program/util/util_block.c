@@ -12,4 +12,18 @@ static bool is_block_complete(const Block *block)
 }
 
 
+// This function assumes that the block is complete
+static bool is_complete_block_revealable(const Block *block, const Clock *clock)
+{
+    // If all mysteries have been sold, then the block is revealable
+    if (block->state.mysteries_sold_count == block->config.total_mystery_count) {
+        return true;
+    }
+    
+    // Otherwise, it's revealable if the mystery phase has passed (even though not all mysteries were sold)
+    timestamp_t mystery_phase_end = block->state.block_start_timestamp + block->config.mystery_phase_duration;
+    return (clock->unix_timestamp > mystery_phase_end);
+}
+
+
 #endif // UTIL_BLOCK_C

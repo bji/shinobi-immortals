@@ -19,10 +19,7 @@ typedef struct
     // This is the instruction code for BuyTicket
     uint8_t instruction_code;
     
-    // Seed to use to create the ticket mint account
-    uint8_t ticket_mint_seed[32];
-
-    // Seed to use to create the ticket token account
+    // Seed to use to create the ticket token account that the user will store the ticket in
     uint8_t ticket_token_seed[32];
     
     // Index within the block of the entry to buy
@@ -31,7 +28,7 @@ typedef struct
 } BuyTicketData;
 
 
-static uint64_t do_buy_ticket(SolParameters *params)
+static uint64_t user_buy(SolParameters *params)
 {
     #if 0
     // Sanitize the accounts.  There must be 9.

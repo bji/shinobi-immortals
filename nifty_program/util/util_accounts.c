@@ -99,6 +99,24 @@ static void set_account_size(SolAccountInfo *account, uint64_t size)
 }
 
 
+// Computes an Entry address given given the group number, block number, entry number, and bump seed.
+// This will be a PDA of the nifty stakes program.
+static bool compute_entry_address(uint32_t group_number, uint32_t block_number, uint16_t entry_index,
+                                  uint8_t bump_seed, SolPubkey *fill_in)
+
+{
+    uint8_t prefix = PDA_Account_Seed_Prefix_Entry;
+    
+    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
+                              { (uint8_t *) &group_number, sizeof(group_number) },
+                              { (uint8_t *) &block_number, sizeof(block_number) },
+                              { (uint8_t *) &entry_index, sizeof(entry_index) },
+                              { &bump_seed, sizeof(bump_seed) } };
+
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
+}
+
+
 // Computes the account address of a mint given the group number, block number, entry number, and bump seed.
 // This will be a PDA of metaplex metadata program.
 static bool compute_mint_address(uint32_t group_number, uint32_t block_number, uint16_t entry_index, uint8_t bump_seed,
@@ -172,24 +190,6 @@ static bool compute_block_address(uint32_t group_number, uint32_t block_number, 
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) &group_number, sizeof(group_number) },
                               { (uint8_t *) &block_number, sizeof(block_number) },
-                              { &bump_seed, sizeof(bump_seed) } };
-
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
-}
-
-
-// Computes an Entry address given given the group number, block number, entry number, and bump seed.
-// This will be a PDA of the nifty stakes program.
-static bool compute_entry_address(uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                  uint8_t bump_seed, SolPubkey *fill_in)
-
-{
-    uint8_t prefix = PDA_Account_Seed_Prefix_Entry;
-    
-    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
-                              { (uint8_t *) &group_number, sizeof(group_number) },
-                              { (uint8_t *) &block_number, sizeof(block_number) },
-                              { (uint8_t *) &entry_index, sizeof(entry_index) },
                               { &bump_seed, sizeof(bump_seed) } };
 
     return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
