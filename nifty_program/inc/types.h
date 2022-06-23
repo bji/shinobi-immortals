@@ -16,4 +16,11 @@ typedef uint8_t sha256_t[32];
 typedef uint64_t salt_t;
 
 
+// XXX move to bid.h when that's ready
+typedef struct
+{
+    uint64_t foo;
+} Bid;
+
+
 #endif // TYPES_H

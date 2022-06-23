@@ -124,6 +124,11 @@ typedef struct __attribute__((packed))
 } util_SetAuthorityData;
 
 
+typedef struct __attribute__((packed))
+{
+    uint64_t amount;
+} util_TransferData;
+
 static uint64_t create_token_mint(SolPubkey *mint_key, SolPubkey *authority_key, SolPubkey *funding_key,
                                   uint32_t group_number, uint32_t block_number, uint16_t entry_index, uint8_t bump_seed,
                                   SolAccountInfo *transaction_accounts, int transaction_accounts_len)
@@ -289,6 +294,41 @@ static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
+
+
+#if 0
+// Transfers token to token account, making the token account if it doesn't exist
+static uint64_t transfer_token(SolAccountInfo *token_source, SolAccountInfo *token_destination, SolPubkey *token_mint)
+{
+    // If the destination account does not exist, then create it
+    if (*(token_destination->lamports) == 0) {
+        
+    }
+
+    SolAccountMeta account_metas[] =
+          ///   0. `[writable]` The source account.
+        { { token_source->key, true, true },
+          ///   1. `[writable]` The destination account.
+          { token_destination->key, true, false },
+          ///   2. `[signer]` The source account's owner/delegate.
+          { token_source->key, true, true } };
+
+    util_TransferData data = {
+        /* amount */ 1
+    };
+
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.spl_token_program_id);
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.data = (uint8_t *) data;
+    instruction.data_len = sizeof(data);
+
+    
+    
+}
+#endif                          
 
 
 #endif // UTIL_TOKEN_C

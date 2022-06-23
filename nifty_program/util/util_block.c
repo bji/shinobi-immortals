@@ -26,4 +26,13 @@ static bool is_complete_block_revealable(const Block *block, const Clock *clock)
 }
 
 
+#if 0
+// This function assumes that the block is complete
+static bool is_complete_block_in_reveal_grace_period(const Block *block, const Clock *clock)
+{
+    
+}
+#endif
+
+
 #endif // UTIL_BLOCK_C

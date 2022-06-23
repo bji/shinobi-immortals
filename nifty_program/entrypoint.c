@@ -39,43 +39,46 @@ typedef enum
     // User functions: end users may perform these actions -------------------------------------------------------------
     // Buy, either before first auction begin, or after most recent auction has ended.
     Instruction_Buy                           =  8,
+    // Request a refund of an entry that was purchased before reveal, and was not revealed before the reveal grace
+    // period completed
+    Instruction_Refund                        =  9,
     // Bid on an entry that is in auction
-    Instruction_Bid                           =  9,
+    Instruction_Bid                           = 10,
     // Claim a winning or losing bid
-    Instruction_Claim                         = 10,
+    Instruction_Claim                         = 11,
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
     // progrmam.
-    Instruction_Stake                         = 11,
+    Instruction_Stake                         = 12,
     // Destake the entry, returning the stake account of the entry.
-    Instruction_Destake                       = 12,
+    Instruction_Destake                       = 13,
     // Merge stake into the stake account backing an entry.  This allows users to put more stake behind
     // an owned entry whenever they want to (presumably to earn Ki faster and level up faster)
-    Instruction_MergeStake                    = 13,
+    Instruction_MergeStake                    = 14,
     // Split stake from the stake account backing an entry.  This allows users to extract stake rewards earned by the
-    // entry.  Only stake rewards may be split off, not principal.
-    Instruction_SplitStake                    = 14,
+    // entry.
+    Instruction_SplitStake                    = 15,
     // Harvest Ki
-    Instruction_Harvest                       = 15,
+    Instruction_Harvest                       = 16,
     // Level up an entry.  This requires as input am amount of Ki, which is burned.
-    Instruction_LevelUp                       = 16,
+    Instruction_LevelUp                       = 17,
     // Once the entry has reached maximum level, the owner may set the art to whichever version they prefer.  Costs the
     // same Ki as the final level up did.
-    Instruction_SetArt                        = 17,
+    Instruction_SetArt                        = 18,
     // Update the metadata program id of an entry.  This will only update to the next metadata entry id from the
     // program config after the current metadata program id (or the first one if the current one is empty).  It will
     // also call that metdata program to do its initial update of the data, and if that succeeds, will set the
     // metaplex metadata update authority to that program.  All future metadata updates will be through that program
-    Instruction_UpdateMetadataProgramId       = 18,
+    Instruction_UpdateMetadataProgramId       = 19,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
     // Take cumulatively earned commission from a stake account.  Owners of stake accounts may wish to do this if they
     // expect commission to rise, so that any already accrued stake rewards are charged the old commission before the
     // commission is updated.
-    Instruction_TakeCommission                = 19,
+    Instruction_TakeCommission                = 20,
     // Perform the next step in redelegation for a stake account: if the stake account is delegated but not to Shinobi
     // Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not delegated, a
     // small fee is taken and the stake account is delegated to Shinobi Systems.
-    Instruction_RedelegateTurnCrank           = 20
+    Instruction_RedelegateTurnCrank           = 21
     
 } Instruction;
 
@@ -90,7 +93,7 @@ typedef enum
 //#include "admin/admin_take_commission.c"
 
 //#include "user/user_bid.c"
-//#include "user/user_buy.c"
+#include "user/user_buy.c"
 //#include "user/user_claim.c"
 //#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
@@ -154,7 +157,7 @@ uint64_t entrypoint(const uint8_t *input)
 //        
 //    case Instruction_Buy:
 //        return user_buy(&params);
-//        
+
 //    case Instruction_Bid:
 //        return user_bid(&params);
 //        

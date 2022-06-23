@@ -2,18 +2,27 @@
 #ifndef ENTRY_H
 #define ENTRY_H
 
+// These are all of the states that an Entry can be in
 typedef enum EntryState
 {
     // Entry has not been revealed yet, and is not yet owned
-    EntryState_PreRevealUnowned  = 0,
-    // Entry has been purchased, but not yet revealed
-    EntryState_PreRevealOwned    = 1,
-    // Entry has been revealed, and is not owned.  If is either in auction (if the auction end time has not
-    // been reached yet) or is post-auction (if the auction timestamp has been reached).
-    EntryState_Unsold            = 2,
-    // Entry is owned and staked
-    EntryState_Staked            = 3
+    EntryState_PreRevealUnowned           = 0,
+    // The block containing the entry has met the reveal criteria, but the entry has not been revealed yet; it's unowned
+    EntryState_WaitingForRevealUnowned    = 1,
+    // The block containing the entry has met the reveal criteria, but the entry has not been revealed yet; it's owned
+    EntryState_WaitingForRevealOwned      = 2,
+    // Entry is in auction
+    EntryState_InAuction                  = 3,
+    // Entry is past its auction and waiting to be claimed
+    EntryState_WaitingToBeClaimed         = 4,
+    // Entry is past its auction end period but is not owned
+    EntryState_Unowned                    = 5,
+    // Entry is owned and revealed, but not staked
+    EntryState_Owned                      = 6,
+    // Entry is owned, revealed, and staked
+    EntryState_OwnedAndStaked             = 7
 } EntryState;
+
 
 typedef struct
 {
@@ -67,10 +76,6 @@ typedef struct
     // This is an indicator that the data is an Entry
     DataType data_type;
     
-    // This is identical to the config values in the block that this entry is a part of.  They are duplicated here
-    // to allow transactions that otherwise do not need the block, to not have to read it.
-    BlockConfiguration block_config;
-
     // Index of this entry within its block
     uint16_t entry_index;
 
@@ -83,19 +88,23 @@ typedef struct
     // Address of the metaplex metadata account
     SolPubkey metaplex_metadata_account;
 
-    // This holds the SHA-256 of the following values concatenated together:
+    // Before the entry is revealed, this holds the SHA-256 of the following values concatenated together:
     // - The SHA-256 of the Entry metadata that will be supplied by the reveal transaction
     // - 8 bytes of salt
+    // After the entry is revealed, this holds all zeroes
     sha256_t reveal_sha256;
 
-    // Overall state of the entry
-    EntryState state;
+    // When an entry is purchased, this is the number of lamports it was purchased for.  If purchased before reveal,
+    // then this number of lamports is temporarily held in the program authority account and returned to the user on a
+    // Refund action, or transferred to the admin account on a reveal action.  If purchased after reveal, then this
+    // number of lamports was transferred directly to the admin account.
+    uint64_t purchase_price_lamports;
 
-    // This is the account holding the SOL used to purchase a mystery entry.  When the entry is revealed, the SOL in
-    // this account is transferred to the admin account.  If the reveal period passes without a reveal, the owner
-    // of the NFT may re-claim the SOL in this account.  If this is nonzero, the entry has been purchased and is
-    // awaiting reveal.
-    SolPubkey reveal_escrow_account;
+    // If the entry was purchased as a mystery, but was not revealed before the end of the reveal grace period, the
+    // user may request a refund, and the lamports that they used to purchase the entry will be returned to them.
+    // If that happens, this value will be set to true.  This will prevent a subsequent attempt to refund the same
+    // entry again.
+    bool refund_awarded;
 
     struct {
         // The auction begin time
@@ -119,8 +128,8 @@ typedef struct
         // Number of lamports in the stake account at the time of its last commission collection
         uint64_t last_commission_charge_stake_account_lamports;
 
-        // Ki which was earned during commission charge and is waiting to be harvested
-        uint64_t earned_ki;
+        // Lamports in the stake account at which Ki was most recently harvested
+        uint64_t last_ki_harvest_lamports;
     } staked;
 
     // Program id of the replacement metadata program which is used to update metadata.  If all zeroes, the nifty

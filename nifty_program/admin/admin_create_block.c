@@ -91,7 +91,8 @@ static uint64_t admin_create_block(SolParameters *params)
             return Error_InvalidData_First + 2;
         }
     }
-    if (config->minimum_bid_lamports == 0) {
+    // Ensure that the minimum bid is at least the rent exempt minimum of a bid account
+    if (config->minimum_bid_lamports < get_rent_exempt_minimum(sizeof(Bid))) {
         return Error_InvalidData_First + 3;
     }
     

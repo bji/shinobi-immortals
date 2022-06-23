@@ -41,6 +41,7 @@ typedef struct
     //   (((initial_mystery_price_lamports - minimum_bid) * (current_time - block_start_time)) /
     //      mystery_phase_duration).  Note that since mystery_phase_duration can be zero, this formula should not be
     //    used in that case.
+    // This value must be at least the rent exempt minimum of a Bid account.
     uint64_t minimum_bid_lamports;
 
     // This is a number of seconds to add to an auction start time to get the end of auction time.

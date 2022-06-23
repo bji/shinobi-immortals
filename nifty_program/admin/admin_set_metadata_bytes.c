@@ -6,6 +6,7 @@
 // 3. `[ENTRY]` -- The entry account
 
 #include "inc/clock.h"
+#include "util/util_accounts.c"
 #include "util/util_block.c"
 
 
@@ -54,17 +55,25 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
         return Error_PermissionDenied;
     }
 
+    // Get the instruction data
+    if (params->data_len < sizeof(SetMetadataBytesData)) {
+        return Error_InvalidDataSize;
+    }
+
+    SetMetadataBytesData *data = (SetMetadataBytesData *) params->data;
+
     // Get the block data
-    if (block_account->data_len < sizeof(Block)) {
+    Block *block = get_validated_block(block_account);
+    if (!block) {
         return Error_InvalidAccount_First + 2;
     }
 
-    Block *block = (Block *) block_account->data;
+    // Get the entry data
+    Entry *entry = get_validated_entry(block, data->entry_index, entry_account);
+    if (!entry) {
+        return Error_InvalidAccount_First + 3;
+    }
     
-    if (block->data_type != DataType_Block) {
-        return Error_InvalidAccount_First + 2;
-    }
-
     // Make sure that the block is complete; can't be setting metadata into blocks for which all the entries
     // have not been added yet
     if (!is_block_complete(block)) {
@@ -81,20 +90,8 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
         return Error_BlockNotRevealable;
     }
 
-    // Get the instruction data
-    if (params->data_len < sizeof(SetMetadataBytesData)) {
-        return Error_InvalidDataSize;
-    }
-
-    SetMetadataBytesData *data = (SetMetadataBytesData *) params->data;
-
     if (params->data_len != compute_set_metadata_bytes_data_size(data->bytes_count)) {
         return Error_InvalidDataSize;
-    }
-
-    // Check the entry index to make sure it's valid
-    if (data->entry_index >= block->config.total_entry_count) {
-        return Error_InvalidData_First;
     }
 
     // Check to make sure that the data written will not go beyond the bounds of the metadata
@@ -102,30 +99,11 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
         return Error_InvalidData_First + 1;
     }
 
-    // Check the Entry account to ensure that it's the correct Entry account for this entry
-    SolPubkey entry_address;
-    if (compute_entry_address(block->config.group_number, block->config.block_number, data->entry_index,
-                              block->entry_bump_seeds[data->entry_index], &entry_address) ||
-        !SolPubkey_same(&entry_address, entry_account->key)) {
-        return Error_InvalidAccount_First + 3;
-    }
-
-    // Get the Entry data
-    if (entry_account->data_len < sizeof(Entry)) {
-        return Error_InvalidData_First + 4;
-    }
-
-    Entry *entry = (Entry *) entry_account->data;
-
-    if (entry->data_type != DataType_Entry) {
-        return Error_InvalidAccount_First + 5;
-    }
-
-    // If the entry has already been revealed, then cannot change its metadata
-    if ((entry->state != EntryState_PreRevealUnowned) && (entry->state != EntryState_PreRevealOwned)) {
+    // The entry can only have its metadata set if it's waiting for reveal
+    if (is_entry_revealed(entry)) {
         return Error_AlreadyRevealed;
     }
-
+    
     // All checks passed, set the data
     uint8_t *metadata_buffer = (uint8_t *) &(entry->metadata);
         

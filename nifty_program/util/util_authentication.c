@@ -21,23 +21,14 @@ static bool is_superuser_authenticated(const SolAccountInfo *superuser_account)
 static bool is_admin_authenticated(const SolAccountInfo *config_account,
                                    const SolAccountInfo *supplied_admin_account)
 {
-    // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
-    // account
-    if (!is_nifty_config_account(config_account->key)) {
-        return false;
-    }
-
-    // The data must be correctly sized -- may be larger than, but never smaller than, the expected size
-    if (config_account->data_len < sizeof(ProgramConfig)) {
-        return false;
-    }
-
     // Get a reference to the admin pubkey from the config
-    ProgramConfig *config = (ProgramConfig *) (config_account->data);
-    SolPubkey *admin_pubkey = &(config->admin_pubkey);
+    SolPubkey admin_pubkey;
+    if (!get_admin_account_address(config_account, &admin_pubkey)) {
+        return false;
+    }
 
     // Now ensure that admin signer account is actually the configured admin account
-    if (!SolPubkey_same(admin_pubkey, supplied_admin_account->key)) {
+    if (!SolPubkey_same(&admin_pubkey, supplied_admin_account->key)) {
         return false;
     }
 

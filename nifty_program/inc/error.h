@@ -61,21 +61,27 @@ typedef enum
     // Attempted an action that requires a completed block, but the block was not complete
     Error_BlockNotComplete                             = 1017,
 
-    // Attempt to purchase a ticket for an entry for which a ticket has already been purchased
-    Error_TicketAlreadyPurchased                       = 1018,
-
-    // Attempt to buy a ticket with a stake account that has an incorrect size
-    Error_IncorrectStakeAccountBalance                 = 1019,
+    // Attempt to purchase an entry which has already been purchased
+    Error_AlreadyPurchased                             = 1018,
 
     // Suppled stake account was not a valid stake account
-    Error_InvalidStakeAccount                          = 1020,
+    Error_InvalidStakeAccount                          = 1019,
 
     // Add entries finished adding all entries for a block but did not supply a link block
-    Error_MissingLinkBlock                             = 1021,
+    Error_MissingLinkBlock                             = 1020,
 
     // Attempt to perform an operation that requires a block to have met its reveal criteria, on a block which hasn't
-    Error_BlockNotRevealable                           = 1022,
+    Error_BlockNotRevealable                           = 1021,
 
+    // Attempt to buy an entry in a block that is in its reveal grace period
+    Error_BlockInRevealGracePeriod                     = 1022,
+
+    // Attempt to buy an entry during an auction
+    Error_EntryInAuction                               = 1023,
+
+    // Insufficient funds provided for operation
+    Error_InsufficientFunds                            = 1024,
+    
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

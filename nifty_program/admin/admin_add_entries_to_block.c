@@ -5,6 +5,7 @@
 #include "util/util_accounts.c"
 #include "util/util_authentication.c"
 #include "util/util_block.c"
+#include "util/util_entry.c"
 #include "util/util_metaplex.c"
 #include "util/util_token.c"
 
@@ -374,8 +375,6 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
 
     entry->data_type = DataType_Entry;
 
-    sol_memcpy(&(entry->block_config), &(block->config), sizeof(block->config));
-
     entry->entry_index = entry_index;
 
     entry->mint_account = *(entry_account->key);
@@ -385,6 +384,11 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     entry->metaplex_metadata_account = *(metaplex_metadata_account->key);
 
     *(entry->reveal_sha256) = *(entry_details->sha256);
+
+    // Ensure that the entry is not revealed already, because a newly added entry must be in a prereveal state
+    if (is_entry_revealed(entry)) {
+        return Error_AlreadyRevealed;
+    }
 
     // Write the entry bump seed
     *destination_entry_bump_seed = entry_details->entry_bump_seed;
