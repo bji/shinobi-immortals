@@ -132,6 +132,18 @@ static bool is_superuser_pubkey(SolPubkey *pubkey)
 }
 
 
+static bool is_master_stake_account(SolPubkey *pubkey)
+{
+    return SolPubkey_same(&(Constants.master_stake_account), pubkey);
+}
+
+
+static bool is_shinobi_systems_vote_account(SolPubkey *pubkey)
+{
+    return SolPubkey_same(&(Constants.shinobi_systems_vote_account), pubkey);
+}
+
+
 static bool is_nifty_config_account(SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.nifty_config_account), pubkey);
@@ -154,6 +166,12 @@ static bool is_system_program(SolPubkey *pubkey)
 {
     // The system program is all zero, and thus the empty pubkey check suffices
     return is_empty_pubkey(pubkey);
+}
+
+
+static bool is_stake_program(SolPubkey *pubkey)
+{
+    return SolPubkey_same(&(Constants.stake_program_id), pubkey);
 }
 
 

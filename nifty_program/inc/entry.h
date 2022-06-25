@@ -129,8 +129,13 @@ typedef struct
         uint64_t last_commission_charge_stake_account_lamports;
 
         // Lamports in the stake account at which Ki was most recently harvested
-        uint64_t last_ki_harvest_lamports;
+        uint64_t last_ki_harvest_stake_account_lamports;
     } staked;
+
+    // Excess commission owed in lamports.  This is added to when the "redelegation crank" is turned on
+    // undelegated or not-delegated-to-Shinobi stake accounts.  Then when commission is next charged, these
+    // lamports are also charged in addition to normal commission.
+    uint64_t extra_commission_lamports;
 
     // Program id of the replacement metadata program which is used to update metadata.  If all zeroes, the nifty
     // program itself updates metadata.  It may be updated only by the owner of the entry, and only to the "next

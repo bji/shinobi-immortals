@@ -6,13 +6,15 @@
 #include "util/util_accounts.c"
 #include "util/util_authentication.c"
 #include "util/util_rent.c"
+#include "util/util_stake.c"
 
 
 // Account references:
 // 0. `[SIGNER]` -- Super user account
 // 1. `[WRITE]` -- The config account
 // 2. `[WRITE]` -- The authority account
-// 3. `[]` -- The system program
+// 3. `[]` -- The master stake account
+// 4. `[]` -- The system program
 
 
 // Data passed to this program for Initialize function
@@ -34,15 +36,16 @@ static uint64_t super_initialize(SolParameters *params)
 
     InitializeData *data = (InitializeData *) params->data;
     
-    // Sanitize the accounts.  There must be exactly 4.
-    if (params->ka_num != 4) {
+    // Sanitize the accounts.  There must be exactly 5.
+    if (params->ka_num != 5) {
         return Error_IncorrectNumberOfAccounts;
     }
 
     SolAccountInfo *superuser_account = &(params->ka[0]);
     SolAccountInfo *config_account = &(params->ka[1]);
     SolAccountInfo *authority_account = &(params->ka[2]);
-    // The system program is index 3, but there's no need to check it, because if it's not the system account,
+    SolAccountInfo *master_stake_account = &(params->ka[3]);
+    // The system program is index 4, but there's no need to check it, because if it's not the system account,
     // then the create_pda call below will fail and the transaction will fail
 
     // This instruction can only be executed by the authenticated superuser
@@ -58,6 +61,34 @@ static uint64_t super_initialize(SolParameters *params)
     // Ensure that the authority account is the third account and that it is writable
     if (!is_nifty_authority_account(authority_account->key) || !authority_account->is_writable) {
         return Error_InvalidAccountPermissions_First + 2;
+    }
+
+    // Check the master stake account to ensure that it has the correct properties:
+    // 1. Is the master stake account (has same pubkey as master stake account)
+    // 2. Is a stake account (owned by the stake program)
+    // 3. Is delegated to Shinobi Systems
+    // 4. Has all authorities set to the nifty program authority
+    if (!is_master_stake_account(master_stake_account->key)) {
+        return Error_InvalidAccount_First + 3;
+    }
+    if (!is_stake_program(master_stake_account->owner)) {
+        return Error_InvalidAccount_First + 3;
+    }
+    {
+        Stake stake;
+        if (!decode_stake_account(master_stake_account, &stake)) {
+            return Error_InvalidAccount_First + 3;
+        }
+        if (stake.state != StakeState_Stake) {
+            return Error_InvalidAccount_First + 3;
+        }
+        if (!is_shinobi_systems_vote_account(&(stake.stake.delegation.voter_pubkey))) {
+            return Error_InvalidAccount_First + 3;
+        }
+        if (!is_nifty_authority_account(&(stake.meta.authorize.staker)) ||
+            !is_nifty_authority_account(&(stake.meta.authorize.withdrawer))) {
+            return Error_InvalidAccount_First + 3;
+        }
     }
     
     // Create the config account.  The config account is derived from a fixed seed.

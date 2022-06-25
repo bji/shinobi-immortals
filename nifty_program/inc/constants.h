@@ -50,6 +50,21 @@ typedef struct
     // These are the seed bytes used to derive the nifty_authority_account address
     uint8_t nifty_authority_seed_bytes[2];
 
+    // The master stake account to be used for commission splits.  This is needed to ensure that splits off of
+    // small amounts of commission is possible, because if there is ever a minimum stake account size, then it
+    // would not be possible to split less than that off of a stake account for commission purposes.  So instead,
+    // commission is charged by: merging the stake account into the master stake account, then splitting off
+    // that same amount minus the commission charge back into the original stake account.  The master stake account
+    // must have all authorities set to the nifty authority account, which will allow the nifty program itself
+    // to have full control over the stake account.  Commission is taken from the master stake account to the
+    // admin account by a separate operation that the admin can run which requests the program to split off SOL
+    // from the master stake account.  ALL authorities for the stake account must be set to the nifty authority
+    // account so that there are no trust issues.
+    SolPubkey master_stake_account;
+
+    // This is the Shinobi Systems vote account address
+    SolPubkey shinobi_systems_vote_account;
+
     // This is the nifty program id.  It is the account address that actually stores this program.
     SolPubkey nifty_program_id;
 
@@ -64,6 +79,9 @@ typedef struct
 
     // This is the Solana Program Library Token program id
     SolPubkey spl_token_program_id;
+
+    // This is the stake program id
+    SolPubkey stake_program_id;
 
 } _Constants;
 
@@ -90,6 +108,16 @@ const _Constants Constants =
     
     // nifty_authority_seed_bytes
     { PDA_Account_Seed_Prefix_Authority, 254 },
+
+    // master_stake_account
+    // DEVNET test value: dmsMXE4pyL7yZ2bmpgamFTuuSWJaDHfoXCMMJGT29RF
+    { 0x09, 0x6b, 0xa4, 0x48, 0x3e, 0x13, 0x4f, 0x64, 0x87, 0x9b, 0x21, 0x17, 0xf5, 0x0b, 0x21, 0x34,
+      0x8b, 0x30, 0x0a, 0xf6, 0xc7, 0x89, 0xe3, 0x5f, 0x4d, 0x56, 0xc8, 0x44, 0x6d, 0x5e, 0x17, 0x06 },
+
+    // shinobi_systems_vote_account
+    // DEVNET test value: vgcDar2pryHvMgPkKaZfh8pQy4BJxv7SpwUG7zinWjG
+    { 0x0d, 0xc0, 0x91, 0x1e, 0x8a, 0x79, 0x90, 0x1e, 0x57, 0xb9, 0xb1, 0xc9, 0x6c, 0xb3, 0xd4, 0xb6,
+      0x8c, 0x4b, 0x93, 0xc1, 0xc0, 0xf2, 0xda, 0x1c, 0x03, 0xa7, 0xb2, 0xf1, 0x77, 0xbe, 0x85, 0xdf },
     
     // nifty_program_id
     // DEVNET test value: dnpziZwxG5f99pEt3RTizWfpeavLDAZQnFShsTUntFL
@@ -114,8 +142,12 @@ const _Constants Constants =
     // spl_token_program_id
     // TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
     { 0x06, 0xdd, 0xf6, 0xe1, 0xd7, 0x65, 0xa1, 0x93, 0xd9, 0xcb, 0xe1, 0x46, 0xce, 0xeb, 0x79, 0xac,
-      0x1c, 0xb4, 0x85, 0xed, 0x5f, 0x5b, 0x37, 0x91, 0x3a, 0x8c, 0xf5, 0x85, 0x7e, 0xff, 0x00, 0xa9 }
-    
+      0x1c, 0xb4, 0x85, 0xed, 0x5f, 0x5b, 0x37, 0x91, 0x3a, 0x8c, 0xf5, 0x85, 0x7e, 0xff, 0x00, 0xa9 },
+
+    // stake_program_id
+    // Stake11111111111111111111111111111111111111
+    { 0x06, 0xa1, 0xd8, 0x17, 0x91, 0x37, 0x54, 0x2a, 0x98, 0x34, 0x37, 0xbd, 0xfe, 0x2a, 0x7a, 0xb2,
+      0x55, 0x7f, 0x53, 0x5c, 0x8a, 0x78, 0x72, 0x2b, 0x68, 0xa4, 0x9d, 0xc0, 0x00, 0x00, 0x00, 0x00 }
 };
 
 

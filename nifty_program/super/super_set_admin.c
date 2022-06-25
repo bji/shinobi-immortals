@@ -9,8 +9,6 @@
 // Account references:
 // 0. `[SIGNER]` -- Super user account
 // 1. `[WRITE]` -- The config account
-// TESTING OPTIONAL:
-// 2. `[WRITE]` -- The authority account
 
 
 // Data passed to this program for UpdateAdmin function

@@ -139,4 +139,93 @@ static uint8_t *borsh_encode_option_some(uint8_t *data)
     return borsh_encode_u8(data, 1);
 }
 
+
+// Returns the number of bytes used in decode, which is nonzero on success, zero on error (short data)
+// Fills in [ret]
+static uint32_t borsh_decode_bool(const uint8_t *data, uint32_t data_len, bool *ret)
+{
+    if (data_len < BORSH_SIZE_BOOL) {
+        return 0;
+    }
+
+    *ret = (bool) *data;
+
+    return BORSH_SIZE_BOOL;
+}
+
+
+// Returns the number of bytes used in decode, which is nonzero on success, zero on error (short data)
+// Fills in [ret]
+static uint32_t borsh_decode_u8(const uint8_t *data, uint32_t data_len, uint8_t *ret)
+{
+    if (data_len < BORSH_SIZE_U8) {
+        return 0;
+    }
+
+    *ret = *data;
+
+    return BORSH_SIZE_U8;
+}
+
+
+// Returns the number of bytes used in decode, which is nonzero on success, zero on error (short data)
+// Fills in [ret]
+static uint32_t borsh_decode_u16(const uint8_t *data, uint32_t data_len, uint16_t *ret)
+{
+    if (data_len < BORSH_SIZE_U16) {
+        return 0;
+    }
+
+    *ret = * (uint16_t *) data;
+
+    return BORSH_SIZE_U16;
+}
+
+
+// Returns the number of bytes used in decode, which is nonzero on success, zero on error (short data)
+// Fills in [ret]
+static uint32_t borsh_decode_u32(const uint8_t *data, uint32_t data_len, uint32_t *ret)
+{
+    if (data_len < BORSH_SIZE_U32) {
+        return 0;
+    }
+
+    *ret = * (uint32_t *) data;
+
+    return BORSH_SIZE_U32;
+}
+
+
+// Returns the number of bytes used in decode, which is nonzero on success, zero on error (short data)
+// Fills in [ret]
+static uint32_t borsh_decode_u64(const uint8_t *data, uint32_t data_len, uint64_t *ret)
+{
+    if (data_len < BORSH_SIZE_U64) {
+        return 0;
+    }
+
+    *ret = * (uint64_t *) data;
+
+    return BORSH_SIZE_U64;
+}
+
+
+// Unimplemented, not needed yet
+//static uint32_t borsh_decode_Vec_u8();
+
+
+// Returns the number of bytes used in decode, which is nonzero on success, zero on error (short data)
+// Fills in [ret]
+static uint32_t borsh_decode_pubkey(const uint8_t *data, uint32_t data_len, SolPubkey *ret)
+{
+    if (data_len < BORSH_SIZE_PUBKEY) {
+        return 0;
+    }
+    
+    sol_memcpy(ret, data, BORSH_SIZE_PUBKEY);
+
+    return BORSH_SIZE_PUBKEY;
+}
+
+
 #endif // UTIL_BORSH_C
