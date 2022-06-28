@@ -1,4 +1,8 @@
 
+#ifndef ADMIN_ADD_ENTRIES_TO_BLOCK_C
+#define ADMIN_ADD_ENTRIES_TO_BLOCK_C
+
+
 #include "inc/block.h"
 #include "inc/clock.h"
 #include "inc/entry.h"
@@ -15,8 +19,8 @@
 // 1. `[SIGNER]` -- This must be the admin account
 // 2. `[WRITE]` -- The funding account
 // 3. `[WRITE]` -- The block account
-// 4. `[]` -- The system program
-// 5. `[]` -- The nifty stakes program (because it needs to be referenced as update authority)
+// 4. `[]` -- The nifty authority account
+// 5. `[]` -- The system program
 // 6. `[]` -- The SPL token program
 // 7. `[]` -- The metaplex metadata program
 // 8. `[]` -- The rent sysvar
@@ -75,9 +79,9 @@ typedef struct
 
 
 // Forward declaration
-static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authority_key, SolPubkey *funding_key,
-                          SolAccountInfo *entry_accounts, AddEntriesToBlockData *data, EntryDetails *entry_details,
-                          uint8_t *destination_entry_bump_seed, SolAccountInfo *transaction_accounts,
+static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authority_key,
+                          SolPubkey *funding_key, SolAccountInfo *entry_accounts, AddEntriesToBlockData *data,
+                          EntryDetails *entry_details, SolAccountInfo *transaction_accounts,
                           int transaction_accounts_len);
 
 
@@ -189,13 +193,14 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         // This is the entry details for the entry
         EntryDetails *entry_details = &(data->entry_details[i]);
 
-        // Destination of the bump seed -- the i'th entry after the first entry
-        uint16_t destination_index = data->first_entry + i;
-        uint8_t *destination_entry_bump_seed = &(block->entry_bump_seeds[destination_index]);
-        
-        uint64_t result = add_entry(block, destination_index, authority_account->key, funding_account->key,
-                                    entry_accounts, data, entry_details, destination_entry_bump_seed, params->ka,
-                                    params->ka_num);
+        uint16_t entry_index = data->first_entry + i;
+
+        // Save the entry bump seed in the block
+        block->entry_bump_seeds[entry_index] = entry_details->entry_bump_seed;
+
+        // Add the entry
+        uint64_t result = add_entry(block, entry_index, authority_account->key, funding_account->key,
+                                    entry_accounts, data, entry_details, params->ka, params->ka_num);
         
         if (result) {
             return result;
@@ -225,8 +230,8 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
 
 static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authority_key,
                           SolPubkey *funding_key, SolAccountInfo *entry_accounts, AddEntriesToBlockData *data,
-                          EntryDetails *entry_details, uint8_t *destination_entry_bump_seed,
-                          SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                          EntryDetails *entry_details, SolAccountInfo *transaction_accounts,
+                          int transaction_accounts_len)
 {
     SolAccountInfo *entry_account =                     &(entry_accounts[0]);
     SolAccountInfo *mint_account =                      &(entry_accounts[1]);
@@ -296,8 +301,8 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     }
 
     // Create the mint
-    uint64_t result = create_token_mint(mint_account->key, authority_key, funding_key, block->config.group_number,
-                                        block->config.block_number, entry_index, entry_details->mint_bump_seed,
+    uint64_t result = create_token_mint(mint_account->key, entry_details->mint_bump_seed, authority_key, funding_key,
+                                        block->config.group_number, block->config.block_number, entry_index,
                                         transaction_accounts, transaction_accounts_len);
 
     if (result) {
@@ -305,17 +310,16 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     }
 
     // Create the token account
-    result = create_token_account(token_account->key, mint_account->key, funding_key, block->config.group_number,
-                                  block->config.block_number, entry_index, entry_details->token_bump_seed,
-                                  transaction_accounts, transaction_accounts_len);
+    result = create_pda_token_account(token_account->key, entry_details->token_bump_seed, mint_account->key,
+                                      funding_key, block->config.group_number, block->config.block_number, entry_index,
+                                      transaction_accounts, transaction_accounts_len);
     
     if (result) {
         return result;
     }
 
     // Mint one instance of the token into the token account
-    result = mint_token(mint_account->key, token_account->key, authority_key, transaction_accounts,
-                        transaction_accounts_len);
+    result = mint_token(mint_account->key, token_account->key, transaction_accounts, transaction_accounts_len);
 
     if (result) {
         return result;
@@ -377,9 +381,11 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
 
     entry->entry_index = entry_index;
 
-    entry->mint_account = *(entry_account->key);
+    entry->mint_account.address = *(mint_account->key);
+    entry->mint_account.bump_seed = entry_details->mint_bump_seed;
     
-    entry->token_account = *(token_account->key);
+    entry->token_account.address = *(token_account->key);
+    entry->token_account.bump_seed = entry_details->token_bump_seed;
     
     entry->metaplex_metadata_account = *(metaplex_metadata_account->key);
 
@@ -390,8 +396,8 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
         return Error_AlreadyRevealed;
     }
 
-    // Write the entry bump seed
-    *destination_entry_bump_seed = entry_details->entry_bump_seed;
-
     return 0;
 }
+
+
+#endif // ADMIN_ADD_ENTRIES_TO_BLOCK_C

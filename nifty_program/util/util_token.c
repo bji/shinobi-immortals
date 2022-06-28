@@ -126,12 +126,15 @@ typedef struct __attribute__((packed))
 
 typedef struct __attribute__((packed))
 {
+    uint8_t instruction_code; // 3 for Transfer
+    
     uint64_t amount;
 } util_TransferData;
 
-static uint64_t create_token_mint(SolPubkey *mint_key, SolPubkey *authority_key, SolPubkey *funding_key,
-                                  uint32_t group_number, uint32_t block_number, uint16_t entry_index, uint8_t bump_seed,
-                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_token_mint(SolPubkey *mint_key, uint8_t mint_bump_seed, SolPubkey *authority_key,
+                                  SolPubkey *funding_key, uint32_t group_number, uint32_t block_number,
+                                  uint16_t entry_index, SolAccountInfo *transaction_accounts,
+                                  int transaction_accounts_len)
 {
     // First create the mint account, with owner as solana token program
     {
@@ -143,7 +146,7 @@ static uint64_t create_token_mint(SolPubkey *mint_key, SolPubkey *authority_key,
                                   { (uint8_t *) &group_number, sizeof(group_number) },
                                   { (uint8_t *) &block_number, sizeof(block_number) },
                                   { (uint8_t *) &entry_index, sizeof(entry_index) },
-                                  { &bump_seed, sizeof(bump_seed) } };
+                                  { &mint_bump_seed, sizeof(mint_bump_seed) } };
 
         uint64_t result = create_pda(mint_key, seeds, sizeof(seeds) / sizeof(seeds[0]), funding_key,
                                      &(Constants.spl_token_program_id), funding_lamports, sizeof(SolanaMintAccountData),
@@ -178,10 +181,11 @@ static uint64_t create_token_mint(SolPubkey *mint_key, SolPubkey *authority_key,
 }
 
 
-static uint64_t create_token_account(SolPubkey *token_key, SolPubkey *mint_key, SolPubkey *funding_key,
-                                     uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                     uint8_t bump_seed, SolAccountInfo *transaction_accounts,
-                                     int transaction_accounts_len)
+static uint64_t create_pda_token_account(SolPubkey *token_key, uint8_t token_bump_seed, SolPubkey *mint_key,
+                                         
+                                         SolPubkey *funding_key, uint32_t group_number, uint32_t block_number,
+                                         uint16_t entry_index, SolAccountInfo *transaction_accounts,
+                                         int transaction_accounts_len)
 {
     // First create the token account, with owner as solana token program
     {
@@ -193,7 +197,7 @@ static uint64_t create_token_account(SolPubkey *token_key, SolPubkey *mint_key, 
                                   { (uint8_t *) &group_number, sizeof(group_number) },
                                   { (uint8_t *) &block_number, sizeof(block_number) },
                                   { (uint8_t *) &entry_index, sizeof(entry_index) },
-                                  { &bump_seed, sizeof(bump_seed) } };
+                                  { &token_bump_seed, sizeof(token_bump_seed) } };
 
         uint64_t result = create_pda(token_key, seeds, sizeof(seeds) / sizeof(seeds[0]), funding_key,
                                      &(Constants.spl_token_program_id), funding_lamports,
@@ -205,7 +209,7 @@ static uint64_t create_token_account(SolPubkey *token_key, SolPubkey *mint_key, 
         }
     }
 
-    // Now initialize the token account
+    // Now initialize the token account, with owner as the authority account
     SolInstruction instruction;
 
     SolAccountMeta account_metas[] = 
@@ -216,7 +220,7 @@ static uint64_t create_token_account(SolPubkey *token_key, SolPubkey *mint_key, 
 
     util_InitializeAccount3Data data = {
         /* instruction_code */ 18,
-        /* owner */ Constants.nifty_program_id
+        /* owner */ Constants.nifty_authority_account
     };
 
     instruction.program_id = &(Constants.spl_token_program_id);
@@ -229,8 +233,8 @@ static uint64_t create_token_account(SolPubkey *token_key, SolPubkey *mint_key, 
 }
 
 
-static uint64_t mint_token(SolPubkey *mint_key, SolPubkey *token_key, SolPubkey *authority_key,
-                           SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t mint_token(SolPubkey *mint_key, SolPubkey *token_key, SolAccountInfo *transaction_accounts,
+                           int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -240,7 +244,7 @@ static uint64_t mint_token(SolPubkey *mint_key, SolPubkey *token_key, SolPubkey 
           ///   1. `[writable]` The account to mint tokens to.
           { /* pubkey */ token_key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The mint's minting authority.
-          { /* pubkey */ authority_key, /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.nifty_authority_account), /* is_writable */ false, /* is_signer */ true } };
 
     util_MintToData data = {
         /* instruction_code */ 7,
@@ -296,24 +300,21 @@ static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_
 }
 
 
-#if 0
-// Transfers token to token account, making the token account if it doesn't exist
-static uint64_t transfer_token(SolAccountInfo *token_source, SolAccountInfo *token_destination, SolPubkey *token_mint)
+// Transfers entry token account to a destination
+static uint64_t transfer_entry_token(Block *block, Entry *entry, SolAccountInfo *token_destination,
+                                     SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    // If the destination account does not exist, then create it
-    if (*(token_destination->lamports) == 0) {
-        
-    }
-
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The source account.
-        { { token_source->key, true, true },
+        { { &(entry->token_account.address), true, false },
           ///   1. `[writable]` The destination account.
           { token_destination->key, true, false },
-          ///   2. `[signer]` The source account's owner/delegate.
-          { token_source->key, true, true } };
+          ///   2. `[signer]` The source account's owner/delegate, which since this is a token owned by the
+          //                  entry, the owner is the authority account
+          { &(Constants.nifty_authority_account), false, true } };
 
     util_TransferData data = {
+        /* instruction_code */ 3,
         /* amount */ 1
     };
 
@@ -322,13 +323,48 @@ static uint64_t transfer_token(SolAccountInfo *token_source, SolAccountInfo *tok
     instruction.program_id = &(Constants.spl_token_program_id);
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
-    instruction.data = (uint8_t *) data;
+    instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    
-    
+    // Must invoke with signed authority account
+    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+
+    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
-#endif                          
+
+
+// Closes an empty token account and transfers the lamports to a destination account
+static uint64_t close_entry_token(Block *block, Entry *entry, SolAccountInfo *lamports_destination,
+                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    SolAccountMeta account_metas[] =
+          ///   0. `[writable]` The account to close.
+        { { &(entry->token_account.address), true, false },
+          ///   1. `[writable]` The destination account.
+          { lamports_destination->key, true, false },
+          ///   2. `[signer]` The owner/delegate of the account to close, which since this is a token owned by the
+          //                  entry, the owner is the authority account
+          { &(Constants.nifty_authority_account), false, true } };
+
+    uint8_t instruction_code = 9; // CloseAccount
+
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.spl_token_program_id);
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.data = &instruction_code;
+    instruction.data_len = sizeof(instruction_code);
+
+    // Must invoke with signed authority account
+    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+
+    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+}
 
 
 #endif // UTIL_TOKEN_C

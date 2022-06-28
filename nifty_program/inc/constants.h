@@ -6,6 +6,10 @@
 #include "solana_sdk.h"
 
 
+// Number of lamports per SOL (1 billion)
+#define LAMPORTS_PER_SOL (1000ull * 1000ull * 1000ull)
+
+
 // Each different PDA type has its own unique prefix, to ensure that even if other seed values between different PDA
 // account types would result in overlapping addresses, the addresses in fact never overlap
 typedef enum 

@@ -1,3 +1,8 @@
+
+#ifndef ENTRYPOINT_C
+#define ENTRYPOINT_C
+
+
 // Include solana SDK
 #include "solana_sdk.h"
 
@@ -154,9 +159,9 @@ uint64_t entrypoint(const uint8_t *input)
 //        
 //    case Instruction_SetBlockCommission:
 //        return admin_set_block_commission(&params);
-//        
-//    case Instruction_Buy:
-//        return user_buy(&params);
+
+    case Instruction_Buy:
+        return user_buy(&params);
 
 //    case Instruction_Bid:
 //        return user_bid(&params);
@@ -198,3 +203,6 @@ uint64_t entrypoint(const uint8_t *input)
         return Error_UnknownInstruction;
     }
 }
+
+
+#endif // ENTRYPOINT_C

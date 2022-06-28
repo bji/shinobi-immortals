@@ -7,20 +7,22 @@ typedef enum EntryState
 {
     // Entry has not been revealed yet, and is not yet owned
     EntryState_PreRevealUnowned           = 0,
+    // Entry is owned, but the containing block has not met its reveal criteria yet
+    EntryState_PreRevealOwned             = 1,
     // The block containing the entry has met the reveal criteria, but the entry has not been revealed yet; it's unowned
-    EntryState_WaitingForRevealUnowned    = 1,
+    EntryState_WaitingForRevealUnowned    = 2,
     // The block containing the entry has met the reveal criteria, but the entry has not been revealed yet; it's owned
-    EntryState_WaitingForRevealOwned      = 2,
+    EntryState_WaitingForRevealOwned      = 3,
     // Entry is in auction
-    EntryState_InAuction                  = 3,
+    EntryState_InAuction                  = 4,
     // Entry is past its auction and waiting to be claimed
-    EntryState_WaitingToBeClaimed         = 4,
+    EntryState_WaitingToBeClaimed         = 5,
     // Entry is past its auction end period but is not owned
-    EntryState_Unowned                    = 5,
+    EntryState_Unowned                    = 6,
     // Entry is owned and revealed, but not staked
-    EntryState_Owned                      = 6,
+    EntryState_Owned                      = 7,
     // Entry is owned, revealed, and staked
-    EntryState_OwnedAndStaked             = 7
+    EntryState_OwnedAndStaked             = 8
 } EntryState;
 
 
@@ -75,15 +77,16 @@ typedef struct
 {
     // This is an indicator that the data is an Entry
     DataType data_type;
-    
+
     // Index of this entry within its block
     uint16_t entry_index;
 
-    // Address of the entry token mint
-    SolPubkey mint_account;
+    // Program Derived Address of the entry token mint
+    ProgramDerivedAddress mint_account;
 
-    // Address of this program's token account for holding the token when the entry is unowned and unsold
-    SolPubkey token_account;
+    // Program Derived Address of this program's token account for holding the token when the entry is unowned and
+    // unsold
+    ProgramDerivedAddress token_account;
     
     // Address of the metaplex metadata account
     SolPubkey metaplex_metadata_account;

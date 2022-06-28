@@ -79,8 +79,11 @@ typedef enum
     // Attempt to buy an entry during an auction
     Error_EntryInAuction                               = 1023,
 
+    // Attempt to buy an entry which was already won in auction
+    Error_EntryWaitingToBeClaimed                      = 1024,
+
     // Insufficient funds provided for operation
-    Error_InsufficientFunds                            = 1024,
+    Error_InsufficientFunds                            = 1025,
     
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

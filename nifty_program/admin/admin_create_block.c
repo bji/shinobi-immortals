@@ -1,4 +1,8 @@
 
+#ifndef ADMIN_CREATE_BLOCK_C
+#define ADMIN_CREATE_BLOCK_C
+
+
 #include "inc/block.h"
 #include "util/util_accounts.c"
 #include "util/util_authentication.c"
@@ -90,6 +94,11 @@ static uint64_t admin_create_block(SolParameters *params)
         if (config->initial_mystery_price_lamports < config->minimum_bid_lamports) {
             return Error_InvalidData_First + 2;
         }
+        // Ensure that the initial mystery price is no more than 100,000 SOL, to avoid rounding errors in mystery
+        // price computation
+        if (config->initial_mystery_price_lamports > (100ull * 1000ull * LAMPORTS_PER_SOL)) {
+            return Error_InvalidData_First + 2;
+        }
     }
     // Ensure that the minimum bid is at least the rent exempt minimum of a bid account
     if (config->minimum_bid_lamports < get_rent_exempt_minimum(sizeof(Bid))) {
@@ -125,3 +134,6 @@ static uint64_t admin_create_block(SolParameters *params)
     
     return 0;
 }
+
+
+#endif // ADMIN_CREATE_BLOCK_C

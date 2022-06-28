@@ -1,4 +1,7 @@
 
+#ifndef ADMIN_ADD_METADATA_PROGRAM_ID_C
+#define ADMIN_ADD_METADATA_PROGRAM_ID_C
+
 
 #include "solana_sdk.h"
 
@@ -85,3 +88,6 @@ static uint64_t admin_add_metadata_program_id(SolParameters *params)
 
     return 0;
 }
+
+
+#endif // ADMIN_ADD_METADATA_PROGRAM_ID_C

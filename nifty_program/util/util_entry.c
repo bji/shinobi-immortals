@@ -48,16 +48,23 @@ static EntryState get_entry_state(Block *block, Entry *entry, Clock *clock)
             return EntryState_Unowned;
         }
     }
-    // Else the entry has not been revealed yet ... if the reveal criteria for the block has been met, then the entry
-    // is waiting for reveal.  If a purchase price has been set, then the entry was purchased, and is owned and
-    // waiting for reveal.
-    else if (entry->purchase_price_lamports) {
-        return EntryState_WaitingForRevealOwned;
-    }
-    // Else the entry has not been revealed and not purchased either.  If the entry's block has reached the reveal
-    // criteria, then it's unowned and waiting for reveal.
+    // Else if the entry's block has reached its reveal criteria, then it's waiting to be revealed
     else if (is_complete_block_revealable(block, clock)) {
-        return EntryState_WaitingForRevealUnowned;
+        // If it's not revealed, but the block has reached reveal criteria, and the entry has a purchase price, then
+        // it's waiting for reveal and owned
+        if (entry->purchase_price_lamports) {
+            return EntryState_WaitingForRevealOwned;
+        }
+        // Else it's not revealed, but the block has reached reveal criteria, and the entry has a purchase price, so
+        // it's waiting for reveal and unowned
+        else {
+            return EntryState_WaitingForRevealUnowned;
+        }
+    }
+    // Else the entry's block has not yet met its reveal criteria; if the entry has been purchased then it's
+    // pre-reveal owned
+    else if (entry->purchase_price_lamports) {
+        return EntryState_PreRevealOwned;
     }
     // Else the entry is not revealed, not purchased, and not yet ready to be revealed
     else {

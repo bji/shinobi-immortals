@@ -63,7 +63,7 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
                  /*   uses total */               BORSH_SIZE_U64)) +
                  /* is_mutable */               BORSH_SIZE_BOOL];
 
-    // The name of the NFT will be "Shinobi LLL-MM-NNNN" where LLL is the group number, MM is the block number,
+    // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
     // and NNNN is the block index (+1).
     uint8_t name[7 + 1 + 3 + 1 + 3 + 1 + 4];
     sol_memcpy(name, "Shinobi", 7);

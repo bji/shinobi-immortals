@@ -1,4 +1,8 @@
 
+#ifndef GET_METAPLEX_METADATA_ACCOUNT_C
+#define GET_METAPLEX_METADATA_ACCOUNT_C
+
+
 static bool get_metaplex_metadata_account(SolPubkey *mint, SolPubkey *fill_in)
 {
     // Metaplex uses ['metadata', metadata_program_id, mint_id] as seeds
@@ -15,3 +19,6 @@ static bool get_metaplex_metadata_account(SolPubkey *mint, SolPubkey *fill_in)
 
     return !sol_try_find_program_address(seeds, 3, &metaplex_program_id, fill_in, &found_bump_seed);
 }
+
+
+#endif // GET_METAPLEX_METADATA_ACCOUNT_C

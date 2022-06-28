@@ -1,4 +1,8 @@
 
+#ifndef ADMIN_REVEAL_ENTRIES_C
+#define ADMIN_REVEAL_ENTRIES_C
+
+
 // Account references:
 // 0. `[]` Program config account -- this must be g_program_config_account_address
 // 1. `[SIGNER]` -- This must be the admin account
@@ -184,3 +188,6 @@ static uint64_t do_reveal_entries(SolParameters *params)
     
     return 0;
 }
+
+
+#endif // ADMIN_REVEAL_ENTRIES_C

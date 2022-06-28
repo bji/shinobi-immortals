@@ -1,4 +1,8 @@
 
+#ifndef TYPES_C
+#define TYPES_C
+
+
 // This is the format of data stored in a bid account, which is the PDA associated with a bid token.
 typedef struct
 {
@@ -160,3 +164,6 @@ typedef struct
     SolPubkey close_authority;
     
 } SolanaTokenProgramTokenData;
+
+
+#endif // TYPES_C

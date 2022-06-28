@@ -132,6 +132,46 @@ static bool is_superuser_pubkey(SolPubkey *pubkey)
 }
 
 
+static bool is_nifty_config_account(SolPubkey *pubkey)
+{
+    return SolPubkey_same(&(Constants.nifty_config_account), pubkey);
+}
+
+
+static bool get_admin_account_address(const SolAccountInfo *config_account, SolPubkey *fill_in)
+{
+    // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
+    // account
+    if (!is_nifty_config_account(config_account->key)) {
+        return false;
+    }
+
+    // The data must be correctly sized -- may be larger than, but never smaller than, the expected size
+    if (config_account->data_len < sizeof(ProgramConfig)) {
+        return false;
+    }
+
+    // Get a reference to the admin pubkey from the config
+    ProgramConfig *config = (ProgramConfig *) (config_account->data);
+
+    *fill_in = config->admin_pubkey;
+
+    return true;
+}
+
+
+static bool is_admin_account(const SolAccountInfo *config_account, SolPubkey *pubkey)
+{
+    // Get a reference to the admin pubkey from the config
+    SolPubkey admin_pubkey;
+    if (!get_admin_account_address(config_account, &admin_pubkey)) {
+        return false;
+    }
+
+    return SolPubkey_same(&admin_pubkey, pubkey);
+}
+
+
 static bool is_master_stake_account(SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.master_stake_account), pubkey);
@@ -141,12 +181,6 @@ static bool is_master_stake_account(SolPubkey *pubkey)
 static bool is_shinobi_systems_vote_account(SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.shinobi_systems_vote_account), pubkey);
-}
-
-
-static bool is_nifty_config_account(SolPubkey *pubkey)
-{
-    return SolPubkey_same(&(Constants.nifty_config_account), pubkey);
 }
 
 
@@ -172,28 +206,6 @@ static bool is_system_program(SolPubkey *pubkey)
 static bool is_stake_program(SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.stake_program_id), pubkey);
-}
-
-
-static bool get_admin_account_address(const SolAccountInfo *config_account, SolPubkey *fill_in)
-{
-    // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
-    // account
-    if (!is_nifty_config_account(config_account->key)) {
-        return false;
-    }
-
-    // The data must be correctly sized -- may be larger than, but never smaller than, the expected size
-    if (config_account->data_len < sizeof(ProgramConfig)) {
-        return false;
-    }
-
-    // Get a reference to the admin pubkey from the config
-    ProgramConfig *config = (ProgramConfig *) (config_account->data);
-
-    *fill_in = config->admin_pubkey;
-
-    return true;
 }
 
 

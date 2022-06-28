@@ -1,62 +1,84 @@
 
-// XXX two states in which buy is possible
-//
-// a. PreRevealUnowned
-//    Preconditions:
-//      -> Block not revealable yet
-//    Price:
-//      -> pct = (now - block->block_start_timestamp) / block->mystery_phase_duration
-//      -> price = block->minimum_bid_lamports + (pct * (block->initial_mystery_price_lamports -
-//                                                       block->minimum_bid_lamports))
-//    -> Lamports are moved from funding account to nifty program holding account
-//    -> Token is moved to destination account
-//    Resulting state:
-//      -> PreRevealOwned
-//      -> mysteries_sold_count++
-//      -> If mysteries_sold_count == block->total_mystery_count, reveal_period_start_timestamp is set
+#ifndef USER_BUY_C
+#define USER_BUY_C
 
-// b. Unsold (if not in auction)
-//    -> Price is minimum bid price
-//    -> Lamports are moved from funding account to admin account
-
+#include "inc/types.h"
+#include "util/util_token.c"
+#include "util/util_transfer_lamports.c"
 
 
 // Account references:
-// 0. `[SIGNER]` -- The funding account to pay all fees associated with this transaction
-// 1. `[]` -- The SPL token program, for cross-program invoke
-// 2. `[WRITE]` -- The block account address
-// 3. `[WRITE]` -- The entry account address
-// 4. `[WRITE]` -- The entry token account (must be a PDA of the nifty program, derived from ticket_token_seed from
+// 0. `[WRITE, SIGNER]` -- The funding account to pay all fees associated with this transaction
+// 1. `[]` -- Program config account
+// 2. `[WRITE]` -- The admin account
+// 3. `[WRITE iff buying mystery]` -- The nifty authority account
+// 4. `[WRITE iff buying mystery]` -- The block account address
+// 5. `[WRITE]` -- The entry account address
+// 6. `[WRITE]` -- The entry token account (must be a PDA of the nifty program, derived from ticket_token_seed from
 //                 instruction data)
-// 5. `[WRITE]` -- The account to give the purchase funds to (for purchase of pre-release entry, this must be the
-//                 nifty program authority account; for purchse of post-release entry, this must be the admin account)
-// 6. `[WRITE]` -- The account to give ownership of the entry to
-// OPTIONAL: 7. `[]` -- The config account, only needed if the account to give ownership to is the admin account
+// 7. `[WRITE]` -- The account to give ownership of the entry (token) to.  It must already exist and be a valid
+//                 token account for the entry mint.
+// 8. `[]` -- The nifty program, for cross-program invoke signature
+// 9. `[]` -- The SPL token program, for cross-program invoke
+// 10. `[]` -- The system program id, for cross-program invoke
 
 typedef struct
 {
     // This is the instruction code for Buy
     uint8_t instruction_code;
+
+    // This is the entry_index of the entry within its block
+    uint16_t entry_index;
     
 } BuyData;
 
 
+// If start_price - end_price > 100,000 SOL, rounding errors could be significant.
+static uint64_t compute_mystery_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
+                                      uint64_t seconds_elapsed)
+{
+    uint64_t delta = start_price - end_price;
+
+    // Sanitize seconds_elapsed
+    if (seconds_elapsed > total_seconds) {
+        seconds_elapsed = total_seconds;
+    }
+
+    // To avoid rounding errors in math, work with lamports / 1000
+    delta /= 1000ull;
+    end_price /= 1000ull;
+
+    uint64_t ac = delta * 101ull;
+
+    uint64_t ab = ((100ull * delta * seconds_elapsed) / total_seconds) + delta;
+
+    uint64_t bc = ((100ull * 101ull * seconds_elapsed) / total_seconds) + 101ull;
+
+    return (end_price + ((ac - ab) / bc)) * 1000ull;
+}
+
+
 static uint64_t user_buy(SolParameters *params)
 {
-    #if 0
-    // Sanitize the accounts.  There must be 7 or 8.
-    if ((params->ka_num != 7) && (params->ka_num != 8)) {
+    // Sanitize the accounts.  There must be exactly 11.
+    if (params->ka_num < 11) {
         return Error_IncorrectNumberOfAccounts;
     }
 
     SolAccountInfo *funding_account = &(params->ka[0]);
-    // The 2nd account must be the SPL token program, but this is not checked; if it's not that program, then the
-    // transaction will simply fail when it is invoked later
-    SolAccountInfo *block_account = &(params->ka[2]);
-    SolAccountInfo *entry_account = &(params->ka[3]);
-    SolAccountInfo *entry_token_account = &(params->ka[4]);
-    SolAccountInfo *funds_destination_account = &(params->ka[5]);
-    SolAccountInfo *token_destination_account = &(params->ka[6]);
+    SolAccountInfo *config_account = &(params->ka[1]);
+    SolAccountInfo *admin_account = &(params->ka[2]);
+    SolAccountInfo *authority_account = &(params->ka[3]);
+    SolAccountInfo *block_account = &(params->ka[4]);
+    SolAccountInfo *entry_account = &(params->ka[5]);
+    SolAccountInfo *entry_token_account = &(params->ka[6]);
+    SolAccountInfo *token_destination_account = &(params->ka[7]);
+    // The account at index 8 must be the nifty program, but this is not checked; if it's not that program, then
+    // the transaction will simply fail when it is used to sign a cross-program invoke later
+    // The account at index 9 must be the SPL token program, but this is not checked; if it's not that program, then
+    // the transaction will simply fail when it is invoked later
+    // The account at index 10 must be the system program, but this is not checked; if it's not that program, then
+    // the transaction will simply fail when the lamports transfer happens later
 
     // Make sure that the input data is the correct size
     if (params->data_len != sizeof(BuyData)) {
@@ -70,42 +92,49 @@ static uint64_t user_buy(SolParameters *params)
     if (!funding_account->is_writable || !funding_account->is_signer) {
         return Error_InvalidAccountPermissions_First;
     }
-    if (!block_account->is_writable) {
+    if (!admin_account->is_writable) {
         return Error_InvalidAccountPermissions_First + 2;
     }
     if (!entry_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 3;
+        return Error_InvalidAccountPermissions_First + 2;
     }
     if (!entry_token_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 4;
-    }
-    if (!funds_destination_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 5;
+        return Error_InvalidAccountPermissions_First + 3;
     }
     if (!token_destination_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 6;
+        return Error_InvalidAccountPermissions_First + 5;
+    }
+
+    // Make sure that the suppled admin account really is the admin account
+    if (!is_admin_account(config_account, admin_account->key)) {
+        return Error_InvalidAccount_First + 2;
+    }
+
+    // Make sure that the suppled authority account is the correct account
+    if (!is_nifty_authority_account(authority_account->key)) {
+        return Error_InvalidAccount_First + 3;
     }
 
     // This is the block data
     Block *block = get_validated_block(block_account);
     if (!block) {
-        return Error_InvalidAccount_First + 2;
-    }
-
-    // This is the entry data
-    Entry *entry = get_validated_entry(block, entry_account);
-    if (!entry) {
-        return Error_InvalidAccount_First + 3;
-    }
-
-    // Check that the correct token account address is supplied
-    if (!SolPubkey_same(entry_token_account->key, &(entry->token_account))) {
         return Error_InvalidAccount_First + 4;
     }
 
     // Ensure that the block is complete; cannot buy anything from a block that is not complete yet
     if (!is_block_complete(block)) {
         return Error_BlockNotComplete;
+    }
+
+    // This is the entry data
+    Entry *entry = get_validated_entry(block, data->entry_index, entry_account);
+    if (!entry) {
+        return Error_InvalidAccount_First + 5;
+    }
+
+    // Check that the correct token account address is supplied
+    if (!SolPubkey_same(entry_token_account->key, &(entry->token_account.address))) {
+        return Error_InvalidAccount_First + 6;
     }
 
     // Get the clock sysvar, needed below
@@ -118,9 +147,10 @@ static uint64_t user_buy(SolParameters *params)
     // invoke of the transfer of the token from the token account to the destination account will simply fail and the
     // transaction will then fail
 
+    SolAccountInfo *funds_destination_account;
     uint64_t purchase_price_lamports;
 
-    switch (get_entry_state(block, entry, clock)) {
+    switch (get_entry_state(block, entry, &clock)) {
     case EntryState_PreRevealOwned:
     case EntryState_WaitingForRevealOwned:
     case EntryState_Owned:
@@ -140,41 +170,49 @@ static uint64_t user_buy(SolParameters *params)
         // Has a winning auction bid, can't be purchased
         return Error_EntryWaitingToBeClaimed;
         
-    case EntryState_PreRevealUnowned: {
-        // Pre-reveal but not owned yet.  Can be purchased.
-        
-        // Ensure that the funds destination account is the authority account
-        if (!is_nifty_authority_account(funds_destination_account->key)) {
-            return Error_InvalidAccount_First + 7;
+    case EntryState_PreRevealUnowned:
+        // Pre-reveal but not owned yet.  Can be purchased as a mystery.
+
+        // The authority account must be writable so that the purchase price lamports can be added to it
+        if (!authority_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 3;
         }
 
-        // Compute price.  It is a linear interpolation over the time range of the mystery period, between the
-        // initial mystery price, and the minimum bid price.
-        uint64_t elapsed_duration = clock.unix_timestamp - block->block_start_timestamp;
-        uint64_t price_spread = block->config.initial_mystery_price_lamports - block->config.minimum_bid_lamports;
-            
-        purchase_price_lamports = (block->config.minimum_bid_lamports + 
-                                   ((price_spread / ((uint64_t) block->mystery_phase_duration)) * elapsed_duration));
+        // The block account must be writable so that the mysteries sold counter can be incremented
+        if (!block_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 4;
+        }
+
+        // The destination of funds is the authority account, which is where the purchase price is stored until
+        // the entry is revealed (and if the entry is never revealed and the user requests a refund, then the
+        // funds are removed from that account and returned back to the user)
+        funds_destination_account = authority_account;
+        
+        // Compute price of mystery
+        purchase_price_lamports = compute_mystery_price(block->config.mystery_phase_duration,
+                                                        block->config.initial_mystery_price_lamports,
+                                                        block->config.minimum_bid_lamports,
+                                                        clock.unix_timestamp - block->state.block_start_timestamp);
+
+        // Update the entry's block to indicate that one more mystery was purchased.  If this is the last
+        // mystery to purchase before the block becomes revealable, then the block reveal period begins.
+        block->state.mysteries_sold_count += 1;
+        if (block->state.mysteries_sold_count == block->config.total_mystery_count) {
+            block->state.reveal_period_start_timestamp = clock.unix_timestamp;
+        }
 
         break;
-    }
 
-    case EntryState_Unowned: {
+    case EntryState_Unowned:
         // Revealed but didn't sell at auction.  Can be purchased.
 
-        // Ensure that the funds destination account is the admin account
-        SolPubkey admin_account_address;
-        if ((params->ka_num != 8) ||
-            !get_admin_account_address(&(params->ka[7]), &admin_account_address) ||
-            !SolPubkey_same(funds_destination_account->key, &admin_account_address)) {
-            return Error_InvalidAccount_First + 7;
-        }
+        // The destination of funds is the admin account
+        funds_destination_account = admin_account;
 
         // Price is the minimum bid.
         purchase_price_lamports = block->config.minimum_bid_lamports;
         
         break;
-    }
     }
 
     // Check to ensure that the funds source has at least the purchase price lamports
@@ -183,82 +221,25 @@ static uint64_t user_buy(SolParameters *params)
     }
 
     // Transfer the purchase price from the funds source to the funds destination account
-    (*(funding_account->lamports)) -= purchase_price_lamports;
-
-    (*(funds_destination_account->lamports)) += purchase_price_lamports;
-
-    // Create the destination token account if it doesn't exist already
-    if (*(token_destination_account->lamports) == 0) {
-        
+    uint64_t ret = util_transfer_lamports(funding_account->key, funds_destination_account->key, purchase_price_lamports,
+                                          params->ka, params->ka_num);
+    if (ret) {
+        return ret;
     }
-
-    // Transfer the token to the token destination account.  If the mints don't match, this will just fail
-    SolInstruction instruction;
-
-    SolAccountMeta account_metas[] =
-        { { 
-          { destination_account },
-          { source_account_owner }
-        };
-
-
-    sol_invoke_signed();
-
-#if 0
     
-    // Ensure that the stake account does not have a lockup period, because it will not be possible to collect
-    // commission on such an account
-    if ((stake_account_data->lockup_unix_timestamp > clock.unix_timestamp) ||
-        (stake_account_data->lockup_epoch > clock.epoch)) {
-        return Error_InvalidStakeAccount;
+    // Set the purchase price in the Entry now that it's been purchased
+    entry->purchase_price_lamports = purchase_price_lamports;
+
+    // Transfer the token to the token destination account
+    ret = transfer_entry_token(block, entry, token_destination_account, params->ka, params->ka_num);
+    if (ret) {
+        return ret;
     }
 
-    // Create a ticket mint
-
-    // Mint a ticket
-
-    // Create ticket metadata
-
-    // Set the ticket address into the entry
-
-    // Cross-program invoke the stake program to re-assign all authorities of the stake account to the nifty program
-
-#endif
-
-#endif
-    
-    // Not done yet ...
-    return 2000;
+    // Finally, close the entry's token account since it will never be used again.  The lamports go to the admin
+    // account.  The seeds to supply for the signing are those of the entry token.
+    return close_entry_token(block, entry, admin_account, params->ka, params->ka_num);
 }
 
 
-static uint64_t do_buy_prerevealunowned(SolAccountInfo *funding_account, SolAccountInfo *block_account,
-                                        SolAccountInfo *entry_account, SolAccountInfo *entry_token_account,
-                                        SolAccountInfo *escrow_account, SolAccountInfo *destination_account,
-                                        Block *block, Entry *entry, uint8_t escrow_account_bump_seed, Clock *clock)
-{
-    // Check block to make sure that it's not already past the prereveal phase
-    if (is_complete_block_revealable(block, clock)) {
-        return 2001;
-    }
-
-    // Compute the price.  It is a linear interpolation between the block's initial_mystery_price_lamports and
-    // the minimum_bid_lamports, interpolated over the time duration of the mystery phase.
-    uint64_t price_range = block->config.initial_mystery_price_lamports - block->config.minimum_bid_lamports;
-
-    uint64_t mystery_phase_completed = clock->unix_timestamp - block->state.reveal_period_start_timestamp;
-
-    uint64_t price = (block->config.initial_mystery_price_lamports -
-                      ((price_range * mystery_phase_completed) / block->config.mystery_phase_duration));
-
-    return 2000;
-}
-
-
-static uint64_t do_buy_unsold(SolAccountInfo *funding_account, SolAccountInfo *block_account,
-                              SolAccountInfo *entry_account, SolAccountInfo *entry_token_account,
-                              SolAccountInfo *escrow_account, SolAccountInfo *destination_account,
-                              Block *block, Entry *entry, Clock *clock)
-{
-    return 2000;
-}
+#endif // USER_BUY_C
