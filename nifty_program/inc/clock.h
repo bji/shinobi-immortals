@@ -1,7 +1,4 @@
-
-#ifndef CLOCK_H
-#define CLOCK_H
-
+#pragma once
 
 #include "inc/types.h"
 
@@ -24,6 +21,3 @@ typedef struct
 
 // Function missing from solana_sdk.h
 extern uint64_t sol_get_clock_sysvar(void *ret);
-
-
-#endif // CLOCK_H

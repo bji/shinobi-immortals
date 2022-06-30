@@ -1,6 +1,4 @@
-
-#ifndef UTIL_RENT_C
-#define UTIL_RENT_C
+#pragma once
 
 // Data structure stored in the Rent sysvar
 typedef struct
@@ -57,12 +55,9 @@ static uint64_t get_rent_exempt_minimum(uint64_t account_size)
     if (round_up) {
         fraction += 1;
     }
-    uint64_t original_fraction = fraction;
+
     fraction *= min;
     fraction /= 0x3FF;
     
     return min + fraction;
 }
-
-
-#endif // UTIL_RENT_C

@@ -1,7 +1,4 @@
-
-#ifndef PUBKEYS_H
-#define PUBKEYS_H
-
+#pragma once
 
 #include "solana_sdk.h"
 
@@ -158,6 +155,3 @@ const _Constants Constants =
 // solana_sdk misses "const" in many places, so de-const to avoid compiler warnings.  The Constants instance
 // is in a read-only data section and instructions which modify it actually have no effect.
 #define Constants (* ((_Constants *) &Constants))
-
-
-#endif // PUBKEYS_H

@@ -1,7 +1,4 @@
-
-#ifndef TYPES_C
-#define TYPES_C
-
+#pragma once
 
 // This is the format of data stored in a bid account, which is the PDA associated with a bid token.
 typedef struct

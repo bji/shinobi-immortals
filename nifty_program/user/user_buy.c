@@ -1,6 +1,4 @@
-
-#ifndef USER_BUY_C
-#define USER_BUY_C
+#pragma once
 
 #include "inc/types.h"
 #include "util/util_token.c"
@@ -18,9 +16,11 @@
 //                 instruction data)
 // 7. `[WRITE]` -- The account to give ownership of the entry (token) to.  It must already exist and be a valid
 //                 token account for the entry mint.
-// 8. `[]` -- The nifty program, for cross-program invoke signature
-// 9. `[]` -- The SPL token program, for cross-program invoke
-// 10. `[]` -- The system program id, for cross-program invoke
+// 8. `[WRITE]` -- The metaplex metadata account for the entry
+// 9. `[]` -- The nifty program, for cross-program invoke signature
+// 10. `[]` -- The SPL token program, for cross-program invoke
+// 11. `[]` -- The metaplex metadata program, for cross-program invoke
+// 12. `[]` -- The system program id, for cross-program invoke
 
 typedef struct
 {
@@ -33,7 +33,7 @@ typedef struct
 } BuyData;
 
 
-// If start_price - end_price > 100,000 SOL, rounding errors could be significant.
+// If start_price > 100,000 SOL, rounding errors could be significant.
 static uint64_t compute_mystery_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
                                       uint64_t seconds_elapsed)
 {
@@ -60,8 +60,8 @@ static uint64_t compute_mystery_price(uint64_t total_seconds, uint64_t start_pri
 
 static uint64_t user_buy(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 11.
-    if (params->ka_num < 11) {
+    // Sanitize the accounts.  There must be exactly 13.
+    if (params->ka_num < 13) {
         return Error_IncorrectNumberOfAccounts;
     }
 
@@ -73,11 +73,14 @@ static uint64_t user_buy(SolParameters *params)
     SolAccountInfo *entry_account = &(params->ka[5]);
     SolAccountInfo *entry_token_account = &(params->ka[6]);
     SolAccountInfo *token_destination_account = &(params->ka[7]);
-    // The account at index 8 must be the nifty program, but this is not checked; if it's not that program, then
+    SolAccountInfo *metaplex_metadata_account = &(params->ka[8]);
+    // The account at index 9 must be the nifty program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 9 must be the SPL token program, but this is not checked; if it's not that program, then
+    // The account at index 10 must be the SPL token program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is invoked later
-    // The account at index 10 must be the system program, but this is not checked; if it's not that program, then
+    // The account at index 11 must be the metaplex metadata program, but this is not checked; if it's not that
+    // program, then the transaction will simply fail when the metadata is updated
+    // The account at index 12 must be the system program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when the lamports transfer happens later
 
     // Make sure that the input data is the correct size
@@ -137,6 +140,11 @@ static uint64_t user_buy(SolParameters *params)
         return Error_InvalidAccount_First + 6;
     }
 
+    // Check that the correct metaplex metadata account is supplied
+    if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_account.address))) {
+        return Error_InvalidAccount_First + 8;
+    }
+
     // Get the clock sysvar, needed below
     Clock clock;
     if (sol_get_clock_sysvar(&clock)) {
@@ -160,7 +168,7 @@ static uint64_t user_buy(SolParameters *params)
 
     case EntryState_WaitingForRevealUnowned:
         // In reveal grace period waiting for reveal, can't be purchased
-        return Error_BlockInRevealGracePeriod;
+        return Error_EntryWaitingForReveal;
 
     case EntryState_InAuction:
         // In auction, can't be purchased
@@ -227,19 +235,23 @@ static uint64_t user_buy(SolParameters *params)
         return ret;
     }
     
-    // Set the purchase price in the Entry now that it's been purchased
-    entry->purchase_price_lamports = purchase_price_lamports;
-
     // Transfer the token to the token destination account
     ret = transfer_entry_token(block, entry, token_destination_account, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }
 
+    // Set the purchase price in the Entry now that it's been purchased
+    entry->purchase_price_lamports = purchase_price_lamports;
+
+    // And set the primary_sale_happened flag on the metaplex metadata, which isn't strictly necessary but just
+    // in case there are UI presentations that care
+    ret = set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
+    if (ret) {
+        return ret;
+    }
+    
     // Finally, close the entry's token account since it will never be used again.  The lamports go to the admin
-    // account.  The seeds to supply for the signing are those of the entry token.
+    // account.
     return close_entry_token(block, entry, admin_account, params->ka, params->ka_num);
 }
-
-
-#endif // USER_BUY_C

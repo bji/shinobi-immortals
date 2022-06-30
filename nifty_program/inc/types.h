@@ -1,6 +1,4 @@
-
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
 // This is a unix timestamp
 typedef int64_t timestamp_t;
@@ -26,6 +24,3 @@ typedef struct
 {
     uint64_t foo;
 } Bid;
-
-
-#endif // TYPES_H

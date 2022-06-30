@@ -1,16 +1,9 @@
-
-#ifndef UTIL_TOKEN_C
-#define UTIL_TOKEN_C
+#pragma once
 
 #include "inc/constants.h"
 #include "util/util_rent.c"
 #include "util/util_token.c"
 
-
-//void *memset(void *b, int c, size_t len)
-//{
-//    return sol_memset(b, c, len);
-//}
 
 // This is the type of data stored in a Solana token program mint account
 typedef struct __attribute__((packed))
@@ -136,7 +129,7 @@ static uint64_t create_token_mint(SolPubkey *mint_key, uint8_t mint_bump_seed, S
                                   uint16_t entry_index, SolAccountInfo *transaction_accounts,
                                   int transaction_accounts_len)
 {
-    // First create the mint account, with owner as solana token program
+    // First create the mint account, with owner as SPL-token program
     {
         uint64_t funding_lamports = get_rent_exempt_minimum(sizeof(SolanaMintAccountData));
 
@@ -187,7 +180,7 @@ static uint64_t create_pda_token_account(SolPubkey *token_key, uint8_t token_bum
                                          uint16_t entry_index, SolAccountInfo *transaction_accounts,
                                          int transaction_accounts_len)
 {
-    // First create the token account, with owner as solana token program
+    // First create the token account, with owner as SPL-token program
     {
         uint64_t funding_lamports = get_rent_exempt_minimum(sizeof(SolanaTokenProgramTokenData));
 
@@ -365,6 +358,3 @@ static uint64_t close_entry_token(Block *block, Entry *entry, SolAccountInfo *la
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
-
-
-#endif // UTIL_TOKEN_C

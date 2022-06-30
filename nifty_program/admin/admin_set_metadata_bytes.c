@@ -1,7 +1,4 @@
-
-#ifndef ADMIN_SET_METADATA_BYTES_C
-#define ADMIN_SET_METADATA_BYTES_C
-
+#pragma once
 
 // Account references:
 // 0. `[]` Program config account
@@ -117,6 +114,3 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
     
     return 0;
 }
-
-
-#endif // ADMIN_SET_METADATA_BYTES_C

@@ -1,6 +1,4 @@
-
-#ifndef ENTRY_H
-#define ENTRY_H
+#pragma once
 
 // These are all of the states that an Entry can be in
 typedef enum EntryState
@@ -88,8 +86,8 @@ typedef struct
     // unsold
     ProgramDerivedAddress token_account;
     
-    // Address of the metaplex metadata account
-    SolPubkey metaplex_metadata_account;
+    // Program Derived Address of the metaplex metadata account
+    ProgramDerivedAddress metaplex_metadata_account;
 
     // Before the entry is revealed, this holds the SHA-256 of the following values concatenated together:
     // - The SHA-256 of the Entry metadata that will be supplied by the reveal transaction
@@ -109,6 +107,7 @@ typedef struct
     // entry again.
     bool refund_awarded;
 
+    // If entry is in or was in auction, then this struct is used
     struct {
         // The auction begin time
         timestamp_t auction_begin_timestamp;
@@ -121,9 +120,9 @@ typedef struct
         // must be at least the minimum bid for all entries of this block (block.minimum_bid_lamports), and 10% higher
         // than the previous bid
         uint64_t highest_bid_lamports;
-    } unsold;
+    } auction;
 
-    // If entry_state is EntryState_Staked, this struct is used
+    // If entry state is EntryState_Staked, this struct is used
     struct {
         // EntryState_Staked: The stake account that this Entry holds, all zeroes if none
         SolPubkey stake_account;
@@ -156,6 +155,3 @@ typedef struct
     uint8_t metadata_expansion[];
     
 } Entry;
-
-
-#endif // ENTRY_H

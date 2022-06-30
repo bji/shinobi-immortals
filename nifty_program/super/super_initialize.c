@@ -1,7 +1,4 @@
-
-#ifndef SUPER_INITIALIZE_C
-#define SUPER_INITIALIZE_C
-
+#pragma once
 
 #include "solana_sdk.h"
 
@@ -138,6 +135,3 @@ static uint64_t super_initialize(SolParameters *params)
 
     return 0;
 }
-
-
-#endif // SUPER_INITIALIZE_C

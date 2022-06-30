@@ -1,9 +1,47 @@
-
-#ifndef UTIL_ENTRY_C
-#define UTIL_ENTRY_C
+#pragma once
 
 #include "inc/types.h"
+#include "util_accounts.c"
 #include "util_token.c"
+
+// Given an entry account, returns the validated Entry or null if the entry account is invalid in some way.
+static Entry *get_validated_entry(Block *block, uint16_t entry_index, SolAccountInfo *entry_account)
+{
+    // Entry must have at least enough data in it to store an Entry
+    if (entry_account->data_len < sizeof(Entry)) {
+        return 0;
+    }
+    
+    Entry *entry = (Entry *) entry_account->data;
+
+    // If the entry does not have the correct data type, then this is an error
+    if (entry->data_type != DataType_Entry) {
+        return 0;
+    }
+
+    // Make sure that the entry account is owned by the nifty stakes program
+    if (!is_nifty_program(entry_account->owner)) {
+        return 0;
+    }
+
+    // Make sure that the entry index is valid
+    if (entry_index >= block->config.total_entry_count) {
+        return 0;
+    }
+
+    // Make sure that the entry address is the correct address for the entry
+    SolPubkey entry_address;
+    if (!compute_entry_address(block->config.group_number, block->config.block_number, entry_index,
+                               block->entry_bump_seeds[entry_index], &entry_address)) {
+        return 0;
+    }
+    if (!SolPubkey_same(&entry_address, entry_account->key)) {
+        return 0;
+    }
+    
+    return entry;
+}
+
 
 static bool is_entry_revealed(Entry *entry)
 {
@@ -14,8 +52,8 @@ static bool is_entry_revealed(Entry *entry)
 // Assumes that the entry is revealed
 static bool is_entry_in_auction(Block *block, Entry *entry, Clock *clock)
 {
-    return (entry->unsold.auction_begin_timestamp &&
-            ((entry->unsold.auction_begin_timestamp + block->config.auction_duration) > clock->unix_timestamp));
+    return (entry->auction.auction_begin_timestamp &&
+            ((entry->auction.auction_begin_timestamp + block->config.auction_duration) > clock->unix_timestamp));
 }
 
 
@@ -40,7 +78,7 @@ static EntryState get_entry_state(Block *block, Entry *entry, Clock *clock)
             return EntryState_InAuction;
         }
         // Else it's no longer in auction, if it was bid on, then it's waiting to be claimed
-        else if (entry->unsold.highest_bid_lamports) {
+        else if (entry->auction.highest_bid_lamports) {
             return EntryState_WaitingToBeClaimed;
         }
         // Else it's no longer in auction, but never bid on.  It's simply not owned.
@@ -71,6 +109,3 @@ static EntryState get_entry_state(Block *block, Entry *entry, Clock *clock)
         return EntryState_PreRevealUnowned;
     }
 }
-
-
-#endif // UTIL_ENTRY_C

@@ -1,8 +1,31 @@
-
-#ifndef UTIL_BLOCK_C
-#define UTIL_BLOCK_C
+#pragma once
 
 #include "inc/block.h"
+#include "util/util_accounts.c"
+
+
+// Given a block account, returns the validated Block or null if the block account is invalid in some way.
+static Block *get_validated_block(SolAccountInfo *block_account)
+{
+    // Block must have at least enough data in it to store a block
+    if (block_account->data_len < sizeof(Block)) {
+        return 0;
+    }
+        
+    Block *block = (Block *) block_account->data;
+
+    // If the block does not have the correct data type, then this is an error
+    if (block->data_type != DataType_Block) {
+        return 0;
+    }
+
+    // Make sure that the block account is owned by the nifty stakes program
+    if (!is_nifty_program(block_account->owner)) {
+        return 0;
+    }
+
+    return block;
+}
 
 
 static bool is_block_complete(const Block *block)
@@ -33,6 +56,3 @@ static bool is_complete_block_in_reveal_grace_period(const Block *block, const C
     
 }
 #endif
-
-
-#endif // UTIL_BLOCK_C

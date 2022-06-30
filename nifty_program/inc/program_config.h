@@ -1,6 +1,4 @@
-
-#ifndef PROGRAM_CONFIG_H
-#define PROGRAM_CONFIG_H
+#pragma once
 
 #include "data_type.h"
 
@@ -23,6 +21,3 @@ typedef struct
     // cause that metadata program to then become responsible for managing the metadata of the entry.
     SolPubkey metadata_program_id[];
 } ProgramConfig;
-
-
-#endif // PROGRAM_CONFIG_H

@@ -1,7 +1,4 @@
-
-#ifndef UTIL_TRANSFER_LAMPORTS_C
-#define UTIL_TRANSFER_LAMPORTS_C
-
+#pragma once
 
 typedef struct __attribute__((packed))
 {
@@ -32,6 +29,3 @@ static uint64_t util_transfer_lamports(SolPubkey *source_account, SolPubkey *des
 
     return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
-
-
-#endif // UTIL_TRANSFER_LAMPORTS_C

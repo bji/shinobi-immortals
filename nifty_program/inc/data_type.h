@@ -1,6 +1,4 @@
-
-#ifndef DATA_TYPE_H
-#define DATA_TYPE_H
+#pragma once
 
 
 // Enum which defines the types of data that may be stored in PDA accounts.  This value is the first value in
@@ -23,6 +21,3 @@ typedef enum
     // Auction bid
     DataType_Bid            = 4
 } DataType;
-
-
-#endif // DATA_TYPE_H

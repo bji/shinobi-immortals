@@ -1,6 +1,4 @@
-
-#ifndef UTIL_ACCOUNTS_C
-#define UTIL_ACCOUNTS_C
+#pragma once
 
 #include "solana_sdk.h"
 
@@ -105,7 +103,7 @@ static bool compute_block_address(uint32_t group_number, uint32_t block_number, 
 }
 
 
-static bool is_all_zeroes(void *data, uint32_t length)
+static bool is_all_zeroes(const void *data, uint32_t length)
 {
     uint8_t *d = (uint8_t *) data;
     
@@ -120,19 +118,19 @@ static bool is_all_zeroes(void *data, uint32_t length)
 
 
 // This function is only called from contexts for which an "all zero pubkey" is considered to be "empty".
-static bool is_empty_pubkey(SolPubkey *pubkey)
+static bool is_empty_pubkey(const SolPubkey *pubkey)
 {
     return is_all_zeroes(pubkey, sizeof(SolPubkey));
 }
 
 
-static bool is_superuser_pubkey(SolPubkey *pubkey)
+static bool is_superuser_pubkey(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.superuser_pubkey), pubkey);
 }
 
 
-static bool is_nifty_config_account(SolPubkey *pubkey)
+static bool is_nifty_config_account(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.nifty_config_account), pubkey);
 }
@@ -172,103 +170,52 @@ static bool is_admin_account(const SolAccountInfo *config_account, SolPubkey *pu
 }
 
 
-static bool is_master_stake_account(SolPubkey *pubkey)
+static bool is_master_stake_account(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.master_stake_account), pubkey);
 }
 
 
-static bool is_shinobi_systems_vote_account(SolPubkey *pubkey)
+static bool is_shinobi_systems_vote_account(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.shinobi_systems_vote_account), pubkey);
 }
 
 
-static bool is_nifty_authority_account(SolPubkey *pubkey)
+static bool is_nifty_authority_account(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.nifty_authority_account), pubkey);
 }
 
 
-static bool is_nifty_program(SolPubkey *pubkey)
+static bool is_nifty_program(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.nifty_program_id), pubkey);
 }
 
 
-static bool is_system_program(SolPubkey *pubkey)
+static bool is_system_program(const SolPubkey *pubkey)
 {
     // The system program is all zero, and thus the empty pubkey check suffices
     return is_empty_pubkey(pubkey);
 }
 
 
-static bool is_stake_program(SolPubkey *pubkey)
+static bool is_stake_program(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.stake_program_id), pubkey);
 }
 
 
-// Given a block account, returns the validated Block or null if the block account is invalid in some way.
-static Block *get_validated_block(SolAccountInfo *block_account)
+static bool is_spl_token_program(const SolPubkey *pubkey)
 {
-    // Block must have at least enough data in it to store a block
-    if (block_account->data_len < sizeof(Block)) {
-        return 0;
-    }
-        
-    Block *block = (Block *) block_account->data;
-
-    // If the block does not have the correct data type, then this is an error
-    if (block->data_type != DataType_Block) {
-        return 0;
-    }
-
-    // Make sure that the block account is owned by the nifty stakes program
-    if (!is_nifty_program(block_account->owner)) {
-        return 0;
-    }
-
-    return block;
+    return SolPubkey_same(&(Constants.spl_token_program_id), pubkey);
 }
 
 
-// Given an entry account, returns the validated Entry or null if the entry account is invalid in some way.
-static Entry *get_validated_entry(Block *block, uint16_t entry_index, SolAccountInfo *entry_account)
+static bool is_metaplex_metadata_program(SolPubkey *pubkey)
 {
-    // Entry must have at least enough data in it to store an Entry
-    if (entry_account->data_len < sizeof(Entry)) {
-        return 0;
-    }
-    
-    Entry *entry = (Entry *) entry_account->data;
-
-    // If the entry does not have the correct data type, then this is an error
-    if (entry->data_type != DataType_Entry) {
-        return 0;
-    }
-
-    // Make sure that the entry account is owned by the nifty stakes program
-    if (!is_nifty_program(entry_account->owner)) {
-        return 0;
-    }
-
-    // Make sure that the entry index is valid
-    if (entry_index >= block->config.total_entry_count) {
-        return 0;
-    }
-
-    // Make sure that the entry address is the correct address for the entry
-    SolPubkey entry_address;
-    if (!compute_entry_address(block->config.group_number, block->config.block_number, entry_index,
-                               block->entry_bump_seeds[entry_index], &entry_address)) {
-        return 0;
-    }
-    if (!SolPubkey_same(&entry_address, entry_account->key)) {
-        return 0;
-    }
-    
-    return entry;
+    return SolPubkey_same(&(Constants.metaplex_program_id), pubkey);
 }
 
 
@@ -318,6 +265,3 @@ static void set_account_size(SolAccountInfo *account, uint64_t size)
 {
     ((uint64_t *) (account->data))[-1] = size;
 }
-
-
-#endif // UTIL_ACCOUNTS_C

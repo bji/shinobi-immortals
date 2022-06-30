@@ -1,7 +1,4 @@
-
-#ifndef SUPER_SET_ADMIN_C
-#define SUPER_SET_ADMIN_C
-
+#pragma once
 
 #include "solana_sdk.h"
 
@@ -70,6 +67,3 @@ static uint64_t super_set_admin(SolParameters *params)
 
     return 0;
 }
-
-
-#endif // SUPER_SET_ADMIN_C

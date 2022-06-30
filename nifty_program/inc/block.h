@@ -1,6 +1,4 @@
-
-#ifndef BLOCK_H
-#define BLOCK_H
+#pragma once
 
 #include "inc/data_type.h"
 #include "inc/types.h"
@@ -100,6 +98,3 @@ typedef struct
     uint8_t entry_bump_seeds[];
     
 } Block;
-
-
-#endif // BLOCK_H

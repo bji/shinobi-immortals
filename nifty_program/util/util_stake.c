@@ -1,6 +1,4 @@
-
-#ifndef UTIL_STAKE_C
-#define UTIL_STAKE_C
+#pragma once
 
 #include "inc/types.h"
 #include "util/util_borsh.c"
@@ -179,6 +177,3 @@ static bool decode_stake_account(const SolAccountInfo *stake_account, Stake *res
         return false;
     }
 }
-
-
-#endif // UTIL_STAKE_C

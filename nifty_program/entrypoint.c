@@ -1,8 +1,4 @@
 
-#ifndef ENTRYPOINT_C
-#define ENTRYPOINT_C
-
-
 // Include solana SDK
 #include "solana_sdk.h"
 
@@ -92,7 +88,7 @@ typedef enum
 #include "admin/admin_add_entries_to_block.c"
 #include "admin/admin_add_metadata_program_id.c"
 #include "admin/admin_create_block.c"
-//#include "admin/admin_reveal_entries.c"
+#include "admin/admin_reveal_entries.c"
 //#include "admin/admin_set_block_commission.c"
 #include "admin/admin_set_metadata_bytes.c"
 //#include "admin/admin_take_commission.c"
@@ -102,7 +98,6 @@ typedef enum
 //#include "user/user_claim.c"
 //#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
-//#include "user/user_set_art.c"
 //#include "user/user_merge_stake.c"
 //#include "user/user_redeem_ticket.c"
 //#include "user/user_return.c"
@@ -153,10 +148,10 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_SetMetadataBytes:
         return admin_set_metadata_bytes(&params);
-        
-//    case Instruction_RevealEntries:
-//        return admin_reveal_entries(&params);
-//        
+
+    case Instruction_RevealEntries:
+        return admin_reveal_entries(&params);
+
 //    case Instruction_SetBlockCommission:
 //        return admin_set_block_commission(&params);
 
@@ -187,9 +182,6 @@ uint64_t entrypoint(const uint8_t *input)
 //    case Instruction_LevelUp:
 //        return user_level_up(&params);
 //        
-//    case Instruction_SetArt:
-//        return user_set_art(&params);
-//        
 //    case Instruction_UpdateEntryMetadataProgramId:
 //        return user_update_metadata_program_id(&params);
 //        
@@ -203,6 +195,3 @@ uint64_t entrypoint(const uint8_t *input)
         return Error_UnknownInstruction;
     }
 }
-
-
-#endif // ENTRYPOINT_C

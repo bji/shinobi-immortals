@@ -1,6 +1,4 @@
-
-#ifndef UTIL_AUTHENTICATION_C
-#define UTIL_AUTHENTICATION_C
+#pragma once
 
 #include "inc/program_config.h"
 #include "util/util_accounts.c"
@@ -36,6 +34,3 @@ static bool is_admin_authenticated(const SolAccountInfo *config_account,
     // All checks passed.  This transaction was signed by the admin account.
     return true;
 }
-
-
-#endif // UTIL_AUTHENTICATION_C

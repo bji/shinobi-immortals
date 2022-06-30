@@ -1,7 +1,4 @@
-
-#ifndef ADMIN_CREATE_BLOCK_C
-#define ADMIN_CREATE_BLOCK_C
-
+#pragma once
 
 #include "inc/block.h"
 #include "util/util_accounts.c"
@@ -134,6 +131,3 @@ static uint64_t admin_create_block(SolParameters *params)
     
     return 0;
 }
-
-
-#endif // ADMIN_CREATE_BLOCK_C

@@ -1,6 +1,4 @@
-
-#ifndef ERROR_H
-#define ERROR_H
+#pragma once
 
 // This is all error codes that can be returned by this program
 typedef enum
@@ -73,17 +71,23 @@ typedef enum
     // Attempt to perform an operation that requires a block to have met its reveal criteria, on a block which hasn't
     Error_BlockNotRevealable                           = 1021,
 
-    // Attempt to buy an entry in a block that is in its reveal grace period
-    Error_BlockInRevealGracePeriod                     = 1022,
+    // Attempt to perform an operation that requires a revealable Entry, for an Entry which is not revealable
+    Error_EntryNotRevealable                           = 1022,
+    
+    // Attempt to buy an entry in a block that is beyond its mystery phase, but the entry has not been revealed yet
+    Error_EntryWaitingForReveal                        = 1023,
 
     // Attempt to buy an entry during an auction
-    Error_EntryInAuction                               = 1023,
+    Error_EntryInAuction                               = 1024,
 
     // Attempt to buy an entry which was already won in auction
-    Error_EntryWaitingToBeClaimed                      = 1024,
+    Error_EntryWaitingToBeClaimed                      = 1025,
 
     // Insufficient funds provided for operation
-    Error_InsufficientFunds                            = 1025,
+    Error_InsufficientFunds                            = 1026,
+
+    // Invalid metaplex metadata in metadata account
+    Error_InvalidMetadataValues                        = 1027,
     
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
@@ -101,6 +105,3 @@ typedef enum
     Error_InvalidData_First                            = 1300,
     Error_InvalidData_Last                             = 1399
 } Error;
-
-
-#endif // ERROR_H
