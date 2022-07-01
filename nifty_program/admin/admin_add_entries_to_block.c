@@ -321,7 +321,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     if (result) {
         return result;
     }
-    
+
     // Create the metaplex metadata
     result = create_metaplex_metadata(metaplex_metadata_account->key, mint_account->key, authority_key, funding_key,
                                       block->config.group_number, block->config.block_number, entry_index,
@@ -332,7 +332,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     if (result) {
         return result;
     }
-    
+
     // Revoke the mint authority so that it is truly an NFT
     result = revoke_mint_authority(mint_account->key, authority_key, transaction_accounts, transaction_accounts_len);
     
@@ -387,7 +387,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     entry->metaplex_metadata_account.address = *(metaplex_metadata_account->key);
     entry->metaplex_metadata_account.bump_seed = entry_details->metaplex_metadata_bump_seed;
 
-    *(entry->reveal_sha256) = *(entry_details->sha256);
+    sol_memcpy(&(entry->reveal_sha256), &(entry_details->sha256), sizeof(entry->reveal_sha256));
 
     // Ensure that the entry is not revealed already, because a newly added entry must be in a prereveal state
     if (is_entry_revealed(entry)) {

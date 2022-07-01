@@ -223,7 +223,7 @@ static const uint32_t borsh_decode_Vec_u8(const uint8_t *data, uint32_t data_len
         return 0;
     }
     
-    sol_memcpy(value, data, *length);
+    sol_memcpy(value, &(data[ret]), *length);
 
     return ret + *length;
 }

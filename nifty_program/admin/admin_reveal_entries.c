@@ -7,11 +7,13 @@
 // 0. `[]` Program config account
 // 1. `[SIGNER]` -- This must be the admin account
 // 2. `[WRITE]` -- The block account address
-// 3. `[]` -- Token mint account
-// 4. `[]` -- Token account
-// 5. `[]` -- Metaplex metadata account
-// 6. `[WRITE]` -- Entry account
-// (Repeat 3-6 for each additional entry in the transaction)
+// 3. `[]` -- nifty authority
+// 4. `[]` -- Metaplex metadata program id (for cross-program invoke)
+// 5. `[]` -- Token mint account
+// 6. `[]` -- Token account
+// 7. `[]` -- Metaplex metadata account
+// 8. `[WRITE]` -- Entry account
+// (Repeat 5-8 for each additional entry in the transaction)
 
 typedef struct
 {
@@ -43,38 +45,41 @@ static uint64_t compute_reveal_entries_data_size(uint16_t entry_count)
 
 static uint8_t index_of_reveal_mint_account(uint8_t entry_index)
 {
-    return (3 + (4 * entry_index));
+    return (5 + (4 * entry_index));
 }
 
 
 static uint8_t index_of_reveal_token_account(uint8_t entry_index)
 {
-    return (4 + (4 * entry_index));
+    return (6 + (4 * entry_index));
 }
 
 
 static uint8_t index_of_reveal_metaplex_metadata_account(uint8_t entry_index)
 {
-    return (5 + (4 * entry_index));
+    return (7 + (4 * entry_index));
 }
 
 
 static uint8_t index_of_reveal_entry_account(uint8_t entry_index)
 {
-    return (6 + (4 * entry_index));
+    return (8 + (4 * entry_index));
 }
 
 
 static uint64_t admin_reveal_entries(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be at least 3
-    if (params->ka_num < 3) {
+    // Sanitize the accounts.  There must be at least 4
+    if (params->ka_num < 4) {
         return Error_IncorrectNumberOfAccounts;
     }
 
     SolAccountInfo *config_account = &(params->ka[0]);
     SolAccountInfo *admin_account = &(params->ka[1]);
     SolAccountInfo *block_account = &(params->ka[2]);
+    SolAccountInfo *authority_account = &(params->ka[3]);
+    // Account index 4 must be the metaplex metadata program account; it is not checked here because if it's not the
+    // correct account, then the cross-program invoke below in reveal_single_entry will just fail the transaction
 
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_authenticated(config_account, admin_account)) {
@@ -86,6 +91,11 @@ static uint64_t admin_reveal_entries(SolParameters *params)
         return Error_BadPermissions;
     }
 
+    // Check the authority account to make sure it's the right one
+    if (!is_nifty_authority_account(authority_account->key)) {
+        return Error_InvalidAccount_First + 3;
+    }
+
     // Data can be used now
     RevealEntriesData *data = (RevealEntriesData *) params->data;
 
@@ -94,10 +104,10 @@ static uint64_t admin_reveal_entries(SolParameters *params)
         return Error_InvalidDataSize;
     }
 
-    // Make sure that the number of accounts in the instruction account list is 3 + (2 * the number of entries in
+    // Make sure that the number of accounts in the instruction account list is 5 + (4 * the number of entries in
     // the transaction), because each NFT account to reveal in sequence has four corresponding accounts from the
-    // instruction accounts array: 1. Mint account, 2. Metaplex metadata account
-    if (params->ka_num != (3 + (4 * data->entry_count))) {
+    // instruction accounts array: 1. Mint account, 2. Token account, 3. Metaplex metadata account, 4. Entry account
+    if (params->ka_num != (5 + (4 * data->entry_count))) {
         return Error_InvalidData_First;
     }
 
@@ -154,6 +164,7 @@ static uint64_t admin_reveal_entries(SolParameters *params)
             return Error_InvalidAccount_First + 6;
         }
 
+
         // Do a single reveal of this entry
         uint64_t result = reveal_single_entry(block, entry, &clock, salt, mint_account, token_account,
                                               metaplex_metadata_account, params->ka, params->ka_num);
@@ -165,6 +176,5 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     }
 
     // All entries revealed successfully
-    
     return 0;
 }

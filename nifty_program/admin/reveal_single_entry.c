@@ -53,13 +53,14 @@ static uint64_t reveal_single_entry(Block *block,
     // these are correct for the reveal of this entry.
     sha256_t computed_sha256;
     
+    SolBytes bytes;
+        
     // The computation of the hash is a two step process:
     // 1. Compute the individual SHA-256 hashe of the entry metadata, into a contiguous buffer of bytes.  Then append
     //    the 8 bytes of salt onto the end.
     // 2. Compute SHA-256 of this buffer
     {
         uint8_t buffer[sizeof(sha256_t) + 8];
-
         {
             SolBytes bytes;
             bytes.addr = (uint8_t *) &(entry->metadata);
@@ -70,7 +71,7 @@ static uint64_t reveal_single_entry(Block *block,
         }
 
         * (salt_t *) &(((sha256_t *) buffer)[1]) = salt;
-        
+
         {
             SolBytes bytes;
             bytes.addr = buffer;
@@ -86,7 +87,7 @@ static uint64_t reveal_single_entry(Block *block,
     if (sol_memcmp(&computed_sha256, &(entry->reveal_sha256), sizeof(sha256_t))) {
         return Error_InvalidHash;
     }
-
+    
     // Update the metaplex metadata for the NFT to include the level 0 state.
     uint64_t ret = set_metaplex_metadata_for_level(entry, 0, metaplex_metadata_account, transaction_accounts,
                                                    transaction_accounts_len);

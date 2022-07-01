@@ -16,8 +16,8 @@ static void number_string(uint8_t *buf, uint32_t number, uint8_t digits)
 
 
 #define METAPLEX_METADATA_DATA_SIZE                                                                                    \
-    (/* name */                     BORSH_SIZE_STRING(200) +                                                           \
-     /* symbol "SHIN" */            BORSH_SIZE_STRING(4) +                                                             \
+    (/* name */                     BORSH_SIZE_STRING(32) +                                                            \
+     /* symbol "SHIN" */            BORSH_SIZE_STRING(10) +                                                            \
      /* uri */                      BORSH_SIZE_STRING(200) +                                                           \
      /* seller_fee_basis_points */  BORSH_SIZE_U16 +                                                                   \
      /* (option) creator vec */     BORSH_SIZE_OPTION(BORSH_SIZE_VEC(2,                                                \
@@ -38,9 +38,9 @@ static void number_string(uint8_t *buf, uint32_t number, uint8_t digits)
 static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, uint8_t name_len, uint8_t *metadata_uri,
                                          SolPubkey *creator_1, SolPubkey *creator_2, SolPubkey *authority_key)
 {
-    uint8_t *encoded = borsh_encode_zero_terminated_string(encoded, name_len, name); // name
+    uint8_t *encoded = borsh_encode_zero_terminated_string(data, 32, name); // name
 
-    encoded = borsh_encode_zero_terminated_string(encoded, 4, (uint8_t *) "SHIN"); // symbol
+    encoded = borsh_encode_zero_terminated_string(encoded, 10, (uint8_t *) "SHIN"); // symbol
 
     encoded = borsh_encode_zero_terminated_string(encoded, 200, metadata_uri); // metadata_uri
 
@@ -76,9 +76,7 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, uin
 
     encoded = borsh_encode_option_none(encoded); // no collections
 
-    encoded = borsh_encode_option_none(encoded); // no uses
-
-    return borsh_encode_bool(encoded, true); // is_mutable
+    return borsh_encode_option_none(encoded); // no uses
 }
 
 
@@ -120,10 +118,13 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     number_string(&(name[16]), entry_index + 1, 4);
 
     // Encoding the data for metaplex requires using Borsch serialize format, eugh.
-    uint8_t data[BORSH_SIZE_U8 /* instruction code */ + METAPLEX_METADATA_DATA_SIZE];
+    uint8_t data[BORSH_SIZE_U8 /* instruction code */ +
+                 METAPLEX_METADATA_DATA_SIZE /* data */ +
+                 BORSH_SIZE_BOOL /* is_mutable */];
     data[0] = 16; // instruction code 16 = CreateMetadataAccountV2
     uint8_t *data_end = encode_metaplex_metadata(&(data[BORSH_SIZE_U8]), name, sizeof(name), metadata_uri, creator_1,
                                                  creator_2, authority_key);
+    data_end = borsh_encode_bool(data_end, true); // is_mutable
     
     SolInstruction instruction;
 
@@ -196,7 +197,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
 
     // Decode the metadata
     uint8_t name[200 + 1];
-    uint8_t symbol[4 + 1];
+    uint8_t symbol[10 + 1];
     uint8_t uri[200 + 1];
 
     uint32_t creator_count;
@@ -205,6 +206,16 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     {
         const uint8_t *data = metaplex_metadata_account->data;
         uint32_t data_len = (uint32_t) metaplex_metadata_account->data_len;
+
+        // Skip these:
+        // pub key: Key,  -- 1 byte
+        // pub update_authority: Pubkey, -- 32 bytes
+        // pub mint: Pubkey, -- 32 bytes
+        if (data_len < (1 + 32 + 32)) {
+            return Error_InvalidMetadataValues;
+        }
+        data = &(data[1 + 32 + 32]);
+        data_len -= (1 + 32 + 32);
         
         // Decode name, string of at most 200 characters
         uint32_t ret = borsh_decode_string(data, data_len, sizeof(name) - 1, name);
@@ -213,9 +224,6 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
         }
         data += ret, data_len -= ret;
 
-        sol_log("Read name:");
-        sol_log((const char *) name);
-        
         // Decode symbol, string of at most 4 characters
         ret = borsh_decode_string(data, data_len, sizeof(symbol) - 1, symbol);
         if (!ret) {
@@ -223,18 +231,12 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
         }
         data += ret, data_len -= ret;
         
-        sol_log("Read symbol:");
-        sol_log((const char *) symbol);
-        
         // Decode uri, string of at most 200 characters
         ret = borsh_decode_string(data, data_len, sizeof(uri) - 1, uri);
         if (!ret) {
             return Error_InvalidMetadataValues;
         }
         data += ret, data_len -= ret;
-        
-        sol_log("Read uri:");
-        sol_log((const char *) uri);
         
         // Decode seller_fee_basis_points, which is ignored
         {
@@ -244,9 +246,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
                 return Error_InvalidMetadataValues;
             }
             data += ret, data_len -= ret;
-        
-            sol_log("Read seller_fee_basis_points:");
-            sol_log_64(seller_fee_basis_points, 0, 0, 0, 0);
+
         }
 
         // Read creators, which may be None or Some(vector of creator)
@@ -268,6 +268,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
             if ((creator_count < 2) || (creator_count > 3)) {
                 return Error_InvalidMetadataValues;
             }
+
             // Read each creator
             for (uint32_t i = 0; i < creator_count; i++) {
                 // Decode creator pubkey
@@ -276,8 +277,6 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
                     return Error_InvalidMetadataValues;
                 }
                 data += ret, data_len -= ret;
-                sol_log("Read creator pubkey");
-                sol_log_pubkey(&(creator_keys[i]));
                 // Decode verified status of creator, which is ignored
                 bool verified;
                 ret = borsh_decode_bool(data, data_len, &verified);
@@ -285,8 +284,6 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
                     return Error_InvalidMetadataValues;
                 }
                 data += ret, data_len -= ret;
-                sol_log("Read creator verified:");
-                sol_log_64(verified, 0, 0, 0, 0);
                 // Decode creator share, which is ignored
                 uint8_t share;
                 ret = borsh_decode_u8(data, data_len, &share);
@@ -294,14 +291,15 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
                     return Error_InvalidMetadataValues;
                 }
                 data += ret, data_len -= ret;
-                sol_log("Read creator share:");
-                sol_log_64(share, 0, 0, 0, 0);
+                i++;
             }
         }
         else {
             creator_count = 0;
         }
     }
+
+    LevelMetadata *level_metadata = &(entry->metadata.level_metadata[level]);
 
     // creator_1 is always the first creator
     SolPubkey *creator_1 = &(creator_keys[0]);
@@ -312,10 +310,19 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     }
 
     // Encoding the data for metaplex requires using Borsch serialize format, eugh.
-    uint8_t data[BORSH_SIZE_U8 /* instruction code */ + METAPLEX_METADATA_DATA_SIZE];
-    data[0] = 15; // instruction code 15 = UpdateMetadataAccountV2
-    uint8_t *data_end = encode_metaplex_metadata(&(data[BORSH_SIZE_U8]), name, sizeof(name), uri, creator_1,
-                                                 creator_2, &(Constants.nifty_authority_account));
+    uint8_t data[BORSH_SIZE_U8 /* instruction code */ +
+                 BORSH_SIZE_OPTION(METAPLEX_METADATA_DATA_SIZE) /* data */ +
+                 BORSH_SIZE_OPTION(0) /* update_authority (None) */ +
+                 BORSH_SIZE_OPTION(0) /* primary_sale_happened (None) */ +
+                 BORSH_SIZE_OPTION(0) /* is_mutable (None) */];
+
+    uint8_t *d = borsh_encode_u8(data, 15); // instruction code 15 = UpdateMetadataAccountV2
+    d = borsh_encode_option_some(d);
+    d = encode_metaplex_metadata(d, level_metadata->name, sizeof(level_metadata->name), level_metadata->uri, creator_1,
+                                 creator_2, &(Constants.nifty_authority_account));
+    d = borsh_encode_option_none(d); // update_authority
+    d = borsh_encode_option_none(d); // primary_sale_happened
+    d = borsh_encode_option_none(d); // is_mutable
     
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
@@ -330,8 +337,12 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = data;
-    instruction.data_len = ((uint64_t) data_end) - ((uint64_t) data);
+    instruction.data_len = ((uint64_t) d) - ((uint64_t) data);
 
+    SolBytes bytes;
+    bytes.addr = instruction.data;
+    bytes.len = instruction.data_len;
+    
     // Must invoke with signed authority account
     uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
