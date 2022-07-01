@@ -166,8 +166,9 @@ static uint64_t admin_reveal_entries(SolParameters *params)
 
 
         // Do a single reveal of this entry
-        uint64_t result = reveal_single_entry(block, entry, &clock, salt, mint_account, token_account,
-                                              metaplex_metadata_account, params->ka, params->ka_num);
+        uint64_t result = reveal_single_entry(block, entry, &clock, salt, admin_account, mint_account,
+                                              token_account, metaplex_metadata_account, params->ka,
+                                              params->ka_num);
 
         // If that reveal failed, then the entire transaction fails
         if (result) {

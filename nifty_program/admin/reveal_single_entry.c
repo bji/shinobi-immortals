@@ -11,6 +11,7 @@ static uint64_t reveal_single_entry(Block *block,
                                     Entry *entry,
                                     Clock *clock,
                                     salt_t salt,
+                                    SolAccountInfo *admin_account,
                                     SolAccountInfo *mint_account,
                                     SolAccountInfo *token_account,
                                     SolAccountInfo *metaplex_metadata_account,
@@ -43,6 +44,19 @@ static uint64_t reveal_single_entry(Block *block,
         entry->auction.auction_begin_timestamp = clock->unix_timestamp;
         break;
     case EntryState_WaitingForRevealOwned:
+        // In this case, the SOL that was originally paid by the purchaser was
+        // moved into the authority account as a form of escrow, in case the
+        // reveal did not happen, the user could request a refund after the
+        // reveal period completed.  If a refund was not completed, then move
+        // the funds from the escrow to the admin account
+        if (!entry->refund_awarded) {
+            uint64_t ret = util_transfer_lamports(&(Constants.nifty_authority_account), admin_account,
+                                                  entry->purchase_price_lamports, transaction_accounts,
+                                                  transaction_accounts_len);
+            if (!ret) {
+                return ret;
+            }
+        }
         break;
     default:
         return Error_EntryNotRevealable;
