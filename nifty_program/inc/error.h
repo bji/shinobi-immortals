@@ -91,6 +91,12 @@ typedef enum
 
     // Attempt to bid on an entry which is not in auction
     Error_EntryNotInAuction                            = 1028,
+
+    // User attempted a bid that was too low
+    Error_BidTooLow                                    = 1029,
+
+    // Attempt to refund an entry that was already refunded
+    Error_AlreadyRefunded                              = 1030,
     
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

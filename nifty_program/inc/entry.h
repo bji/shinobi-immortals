@@ -11,16 +11,18 @@ typedef enum EntryState
     EntryState_WaitingForRevealUnowned    = 2,
     // The block containing the entry has met the reveal criteria, but the entry has not been revealed yet; it's owned
     EntryState_WaitingForRevealOwned      = 3,
-    // Entry is in auction
-    EntryState_InAuction                  = 4,
+    // Entry is in normal auction
+    EntryState_InNormalAuction            = 4,
+    // Entry is in reverse auction
+    EntryState_InReverseAuction           = 5,
     // Entry is past its auction and waiting to be claimed
-    EntryState_WaitingToBeClaimed         = 5,
+    EntryState_WaitingToBeClaimed         = 6,
     // Entry is past its auction end period but is not owned
-    EntryState_Unowned                    = 6,
+    EntryState_Unowned                    = 7,
     // Entry is owned and revealed, but not staked
-    EntryState_Owned                      = 7,
+    EntryState_Owned                      = 8,
     // Entry is owned, revealed, and staked
-    EntryState_OwnedAndStaked             = 8
+    EntryState_OwnedAndStaked             = 9
 } EntryState;
 
 
@@ -97,8 +99,8 @@ typedef struct
 
     // When an entry is purchased, this is the number of lamports it was purchased for.  If purchased before reveal,
     // then this number of lamports is temporarily held in the program authority account and returned to the user on a
-    // Refund action, or transferred to the admin account on a reveal action.  If purchased after reveal, then this
-    // number of lamports was transferred directly to the admin account.
+    // Refund action, or transferred to the admin account on a Reveal action.  If purchased after reveal, then this
+    // number of lamports is transferred directly to the admin account.
     uint64_t purchase_price_lamports;
 
     // If the entry was purchased as a mystery, but was not revealed before the end of the reveal grace period, the
@@ -110,11 +112,12 @@ typedef struct
     // If entry is in or was in auction, then this struct is used
     struct {
         // The auction begin time
-        timestamp_t auction_begin_timestamp;
-        
-        // The current highest auction bid for this entry, or 0 if no bids have been received.  The next highest bid
-        // must be at least the minimum bid for all entries of this block (block.minimum_bid_lamports), and the
-        // "bid increment factor" (which is a function of the time left in the auction) higher than the previous bid
+        timestamp_t begin_timestamp;
+
+        // If this entry is in a normal auction, then this is the current highest auction bid for this entry, or 0 if
+        // no bids have been received.  The next highest bid must be at least the minimum bid for all entries of this
+        // block (block.minimum_bid_lamports), and the "bid increment factor" (which is a function of the time left in
+        // the auction) higher than the previous bid
         uint64_t highest_bid_lamports;
     } auction;
 

@@ -48,6 +48,8 @@ static uint64_t compute_block_size(uint16_t total_entry_count)
 // Creates a new block of entries
 static uint64_t admin_create_block(SolParameters *params)
 {
+    CreateBlockData *cbd = 0;
+
     // Sanitize the accounts.  There must be 5.
     if (params->ka_num != 5) {
         return Error_IncorrectNumberOfAccounts;
@@ -84,27 +86,43 @@ static uint64_t admin_create_block(SolParameters *params)
     CreateBlockData *data = (CreateBlockData *) params->data;
 
     BlockConfiguration *config = &(data->config);
-    
+
     // Sanitize inputs
     if (config->total_entry_count == 0) {
         return Error_InvalidData_First + 0;
     }
-    if (config->total_mystery_count > 0) {
+    // If there are mysteries and a nonzero mystery duration, then mystery values apply
+    if ((config->total_mystery_count > 0) && (config->mystery_phase_duration > 0)) {
         if (config->total_mystery_count > config->total_entry_count) {
             return Error_InvalidData_First + 1;
         }
-        if (config->initial_mystery_price_lamports < config->minimum_bid_lamports) {
-            return Error_InvalidData_First + 2;
-        }
         // Ensure that the initial mystery price is no more than 100,000 SOL, to avoid rounding errors in mystery
         // price computation
-        if (config->initial_mystery_price_lamports > (100ull * 1000ull * LAMPORTS_PER_SOL)) {
+        if (config->mystery_start_price_lamports > (100ull * 1000ull * LAMPORTS_PER_SOL)) {
             return Error_InvalidData_First + 2;
         }
+        // Ensure that the final mystery price is not greater than the initial mystery price
+        if (config->minimum_price_lamports > config->mystery_start_price_lamports) {
+            return Error_InvalidData_First + 3;
+        }
     }
-    // Ensure that the minimum bid is at least the rent exempt minimum of a 0-sized Bid account
-    if (config->minimum_bid_lamports < get_rent_exempt_minimum(0)) {
-        return Error_InvalidData_First + 3;
+
+    // If there is a nonzero auction duration, and it's a reverse auction, then reverse auction values apply
+    if ((config->auction_duration > 0) && config->is_reverse_auction) {
+        // Ensure that the reverse auction start price is no more than 100,000 SOL, to avoid rounding errors in
+        // mystery price computation
+        if (config->reverse_auction_start_price_lamports > (100ull * 1000ull * LAMPORTS_PER_SOL)) {
+            return Error_InvalidData_First + 4;
+        }
+        // Ensure that the reverse auction start price is >= the minimum price
+        if (config->reverse_auction_start_price_lamports < config->minimum_price_lamports) {
+            return Error_InvalidData_First + 5;
+        }
+    }
+    
+    // Ensure that the minimum price of an entry is >= rent exempt minimum of a 0-sized account
+    if (config->minimum_price_lamports < get_rent_exempt_minimum(0)) {
+        return Error_InvalidData_First + 6;
     }
     
     // This is the size that the fully populated block will use.

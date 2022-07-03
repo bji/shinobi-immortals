@@ -94,13 +94,12 @@ typedef enum
 //#include "admin/admin_take_commission.c"
 
 #include "user/user_bid.c"
+#include "user/user_refund.c"
 #include "user/user_buy.c"
 //#include "user/user_claim.c"
 //#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
 //#include "user/user_merge_stake.c"
-//#include "user/user_redeem_ticket.c"
-//#include "user/user_return.c"
 //#include "user/user_split_stake.c"
 //#include "user/user_update_metadata_program_id.c"
 
@@ -157,6 +156,9 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_Buy:
         return user_buy(&params);
+
+    case Instruction_Refund:
+        return user_refund(&params);
 
     case Instruction_Bid:
         return user_bid(&params);

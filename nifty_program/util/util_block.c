@@ -47,12 +47,3 @@ static bool is_complete_block_revealable(const Block *block, const Clock *clock)
     timestamp_t mystery_phase_end = block->state.block_start_timestamp + block->config.mystery_phase_duration;
     return (clock->unix_timestamp > mystery_phase_end);
 }
-
-
-#if 0
-// This function assumes that the block is complete
-static bool is_complete_block_in_reveal_grace_period(const Block *block, const Clock *clock)
-{
-    
-}
-#endif

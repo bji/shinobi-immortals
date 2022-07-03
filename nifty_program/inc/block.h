@@ -24,26 +24,41 @@ typedef struct
     // Number of seconds to the timestamp of last entry add to get the end of the mystery phase.
     uint32_t mystery_phase_duration;
 
+    // If total_mystery_count > 0, this is the cost in lamports of each mystery at the time that the mystery phase
+    // began, and must be >= the minimum_price_lamports
+    uint64_t mystery_start_price_lamports;
+
     // Number of seconds to add to the block state's all_mysteries_sold_timestamp value to get the cutoff period for
     // reveal; any entry which has not been revealed by this point allows zero-penalty return of the purchase price
     // (while retaining the mystery NFT itself).
     uint32_t reveal_period_duration;
 
-    // If total_mystery_count > 0, this is the cost in lamports of each mystery at the time that the mystery phase
-    // began, which must be >= minimum_bid_lamports.
-    uint64_t initial_mystery_price_lamports;
-
-    // Minimum auction bid for each entry.  Cannot be greater than or equal to
-    // initial_mystery_price_lamports.  At any time during the mystery phase, the cost of a mystery is
-    // end_mystery_price_lamports +
-    //   (((initial_mystery_price_lamports - minimum_bid) * (current_time - block_start_time)) /
-    //      mystery_phase_duration).  Note that since mystery_phase_duration can be zero, this formula should not be
-    //    used in that case.
-    // This value must be at least the rent exempt minimum of a Bid account.
-    uint64_t minimum_bid_lamports;
-
-    // This is a number of seconds to add to an auction start time to get the end of auction time.
+    // This is a number of seconds to add to an auction start time to get the end of auction time.  May be 0, in which
+    // case there is no auction at all, and instead the price of revealed Entries is always
+    // auction_end_price_lamports.
     uint32_t auction_duration;
+
+    // If this is true, then a "reverse" auction is performed.  If this is false, then a "normal" auction is
+    // performed.  A normal auction starts with no bids and a minimum bid price of [final_mystery_price_lamports].
+    // Each bid must be some multiple higher than the previous bid; this is determined by a formula that starts
+    // at 1.1 and towards the end of the auction duration rapidly increases; this prevents "sniping" of bids near
+    // the end of the auction.  In a normal auction, once the end of the auction is reached, if there are no bids,
+    // then the price remains at [final_mystery_price_lamports] forever thereafter.
+    // A reverse auction is identical in function to the mystery phase pricing: the price starts at
+    // [reverse_auction_start_price_lamports] and decreases on a curve until it is
+    // [reverse_auction_end_price_lamports]; it stays at that value forever thereafter.  Anyone can instantly buy
+    // an entry during a reverse auction at the current reverse auction price; there is no "bidding", just immediate
+    // purchase.
+    bool is_reverse_auction;
+
+    // In the mystery phase, this is the final price of a mystery.  For a normal auction, this is the minimum initial
+    // bid price.  For a reverse auction, this is the end price.  For both auction types, this is the price of the
+    // entry if the entry was not bid on or did not otherwise sell.  if there is no auction, then this is the price of
+    // the entry.
+    uint64_t minimum_price_lamports;
+
+    // For a reverse auction, this is the start price of the auction in lamports.
+    uint64_t reverse_auction_start_price_lamports;
 
     // This is the extra commission charged when a stake account that is not delegated to Shinobi Systems is
     // either un-delegated or re-delegated via the redelegation crank.

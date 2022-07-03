@@ -357,3 +357,58 @@ static uint64_t close_entry_token(Block *block, Entry *entry, SolAccountInfo *la
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
+
+
+static bool is_token_owner(SolAccountInfo *token_owner_account, SolAccountInfo *token_account, SolPubkey *mint_pubkey)
+{
+    // safety check -- remove this
+    if (sizeof(SolanaTokenProgramTokenData) != 165) {
+        sol_log("HEY BAD SIZE");
+        sol_log_64(sizeof(SolanaTokenProgramTokenData), 0, 0, 0, 0);
+        return false;
+    }
+    // token_account must be owned by the SPL-Token program
+    if (!is_spl_token_program(token_account->owner)) {
+        sol_log("Not SPL-Token program");
+        return false;
+    }
+
+    // token_account must be an SPL-token token account
+    if (token_account->data_len != sizeof(SolanaTokenProgramTokenData)) {
+        sol_log("Bad data len");
+        sol_log_64(token_account->data_len, 0, 0, 0, 0);
+        return false;
+    }
+
+    SolanaTokenProgramTokenData *data = (SolanaTokenProgramTokenData *) token_account->data;
+
+    // token_account must be for the correct mint
+    if (!SolPubkey_same(&(data->mint), mint_pubkey)) {
+        sol_log("Bad mint");
+        sol_log_pubkey(&(data->mint));
+        sol_log_pubkey(mint_pubkey);
+        return false;
+    }
+
+    // token_account must be owned by token_owner_account
+    if (!SolPubkey_same(&(data->owner), token_owner_account->key)) {
+        sol_log("Bad owner");
+        sol_log_pubkey(&(data->owner));
+        sol_log_pubkey(token_owner_account->owner);
+        return false;
+    }
+
+    // token_account must have exactly one token in it
+    if (data->amount != 1) {
+        sol_log("Bad amount");
+        sol_log_64(data->amount, 0, 0, 0, 0);
+        return false;
+    }
+
+    // token_account must be in the Initialized state
+    if (data->account_state != SolanaTokenAccountState_Initialized) {
+        sol_log("Bad state");
+        sol_log_64(data->account_state, 0, 0, 0, 0);
+    }
+    return (data->account_state == SolanaTokenAccountState_Initialized);
+}

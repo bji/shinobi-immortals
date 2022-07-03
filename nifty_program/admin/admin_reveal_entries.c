@@ -257,7 +257,7 @@ static uint64_t reveal_single_entry(Block *block,
     switch (get_entry_state(block, entry, clock)) {
     case EntryState_WaitingForRevealUnowned:
         // When an entry is revealed from an unowned state, it enters auction
-        entry->auction.auction_begin_timestamp = clock->unix_timestamp;
+        entry->auction.begin_timestamp = clock->unix_timestamp;
         break;
     case EntryState_WaitingForRevealOwned:
         // The SOL that was originally paid by the purchaser was moved into the authority account as a form of escrow,

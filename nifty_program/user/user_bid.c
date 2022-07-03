@@ -48,6 +48,17 @@ typedef struct
 } BidData;
 
 
+static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
+                                    uint64_t seconds_elapsed)
+{
+    if (current_max_bid < initial_minimum_bid) {
+        return initial_minimum_bid;
+    }
+
+    // For now, just multiply by 1.1
+    return initial_minimum_bid + (initial_minimum_bid / 10);
+}
+
 
 static uint64_t user_bid(SolParameters *params)
 {
@@ -99,14 +110,11 @@ static uint64_t user_bid(SolParameters *params)
         return Error_InvalidAccount_First + 2;
     }
 
-    // Ensure that the bid account is the correct account for the bid:
-    // - At correct address
-    // - Owned by the nifty program
+    // Ensure that the bid account is the correct address for this bid
     SolPubkey computed_bid_account_address;
     if (!compute_bid_address(bidding_account->key, block->config.group_number, block->config.block_number,
                              entry->entry_index, data->bid_account_bump_seed, &computed_bid_account_address) ||
-        !SolPubkey_same(&computed_bid_account_address, bid_account->key) ||
-        !is_nifty_program(bid_account->owner)) {
+        !SolPubkey_same(&computed_bid_account_address, bid_account->key)) {
         return Error_InvalidAccount_First + 3;
     }
 
@@ -116,10 +124,41 @@ static uint64_t user_bid(SolParameters *params)
         return Error_FailedToGetClock;
     }
     
-    // Check to make sure that the entry is in auction
-    if (get_entry_state(block, entry, &clock) != EntryState_InAuction) {
+    // Check to make sure that the entry is in a normal auction
+    if (get_entry_state(block, entry, &clock) != EntryState_InNormalAuction) {
         return Error_EntryNotInAuction;
     }
+
+    // Compute the minimum auction bid price for the entry
+    uint64_t minimum_bid = compute_minimum_bid(block->config.auction_duration, block->config.minimum_price_lamports,
+                                               entry->auction.highest_bid_lamports,
+                                               clock.unix_timestamp - entry->auction.begin_timestamp);
+
+    // If the minimum bid is greater than the maximum range of this bid, then the bid is not large enough
+    if (minimum_bid > data->maximum_bid_lamports) {
+        return Error_BidTooLow;
+    }
+
+    // Update minimum_bid to hold the minimum bid allowed by the range of this bid
+    if (minimum_bid < data->minimum_bid_lamports) {
+        minimum_bid = data->minimum_bid_lamports;
+    }
+
+    // Now minimum_bid is the actual bid
+
+    // Create a PDA account for the bid holding the lamports of the bid, or update an existing account
+    uint8_t prefix = PDA_Account_Seed_Prefix_Bid;
+    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
+                              { (uint8_t *) bidding_account->key, sizeof(*(bidding_account->key)) },
+                              { (uint8_t *) &(block->config.group_number), sizeof(block->config.group_number) },
+                              { (uint8_t *) &(block->config.block_number), sizeof(block->config.block_number) },
+                              { (uint8_t *) &(entry->entry_index), sizeof(entry->entry_index) },
+                              { &(data->bid_account_bump_seed), sizeof(data->bid_account_bump_seed) } };
+    uint64_t ret = create_pda(bid_account, seeds, sizeof(seeds) / sizeof(seeds[0]), bidding_account->key,
+                              &(Constants.nifty_program_id), minimum_bid, 0, params->ka, params->ka_num);
+
+    // Update the entry's auction details
+    entry->auction.highest_bid_lamports = minimum_bid;
 
     // Not done yet
     return 2000;

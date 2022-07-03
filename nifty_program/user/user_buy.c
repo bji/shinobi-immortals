@@ -34,8 +34,8 @@ typedef struct
 
 
 // If start_price > 100,000 SOL, rounding errors could be significant.
-static uint64_t compute_mystery_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
-                                      uint64_t seconds_elapsed)
+static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
+                              uint64_t seconds_elapsed)
 {
     uint64_t delta = start_price - end_price;
 
@@ -170,10 +170,24 @@ static uint64_t user_buy(SolParameters *params)
         // In reveal grace period waiting for reveal, can't be purchased
         return Error_EntryWaitingForReveal;
 
-    case EntryState_InAuction:
-        // In auction, can't be purchased
+    case EntryState_InNormalAuction:
+        // In normal auction, can't be purchased, can only be bid on
         return Error_EntryInAuction;
 
+    case EntryState_InReverseAuction:
+        // In a reverse auction, it can immediately be purchased for the current reverse auction price
+        
+        // The destination of funds is the admin account
+        funds_destination_account = admin_account;
+        
+        // Compute purchase price
+        purchase_price_lamports = compute_price(block->config.auction_duration,
+                                                block->config.reverse_auction_start_price_lamports,
+                                                block->config.minimum_price_lamports,
+                                                clock.unix_timestamp - entry->auction.begin_timestamp);
+        
+        break;
+            
     case EntryState_WaitingToBeClaimed:
         // Has a winning auction bid, can't be purchased
         return Error_EntryWaitingToBeClaimed;
@@ -197,10 +211,10 @@ static uint64_t user_buy(SolParameters *params)
         funds_destination_account = authority_account;
         
         // Compute price of mystery
-        purchase_price_lamports = compute_mystery_price(block->config.mystery_phase_duration,
-                                                        block->config.initial_mystery_price_lamports,
-                                                        block->config.minimum_bid_lamports,
-                                                        clock.unix_timestamp - block->state.block_start_timestamp);
+        purchase_price_lamports = compute_price(block->config.mystery_phase_duration,
+                                                block->config.mystery_start_price_lamports,
+                                                block->config.minimum_price_lamports,
+                                                clock.unix_timestamp - block->state.block_start_timestamp);
 
         // Update the entry's block to indicate that one more mystery was purchased.  If this is the last
         // mystery to purchase before the block becomes revealable, then the block reveal period begins.
@@ -217,8 +231,8 @@ static uint64_t user_buy(SolParameters *params)
         // The destination of funds is the admin account
         funds_destination_account = admin_account;
 
-        // Price is the minimum bid.
-        purchase_price_lamports = block->config.minimum_bid_lamports;
+        // Price is the minimum price
+        purchase_price_lamports = block->config.minimum_price_lamports;
         
         break;
     }

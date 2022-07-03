@@ -66,8 +66,8 @@ static bool is_entry_revealed(Entry *entry)
 // Assumes that the entry is revealed
 static bool is_entry_in_auction(Block *block, Entry *entry, Clock *clock)
 {
-    return (entry->auction.auction_begin_timestamp &&
-            ((entry->auction.auction_begin_timestamp + block->config.auction_duration) > clock->unix_timestamp));
+    return (entry->auction.begin_timestamp &&
+            ((entry->auction.begin_timestamp + block->config.auction_duration) > clock->unix_timestamp));
 }
 
 
@@ -89,7 +89,12 @@ static EntryState get_entry_state(Block *block, Entry *entry, Clock *clock)
         // Else the entry has not been purchased, but has been revealed.  If the auction is still ongoing, then it's
         // in auction
         else if (is_entry_in_auction(block, entry, clock)) {
-            return EntryState_InAuction;
+            if (block->config.is_reverse_auction) {
+                return EntryState_InReverseAuction;
+            }
+            else {
+                return EntryState_InNormalAuction;
+            }
         }
         // Else it's no longer in auction, if it was bid on, then it's waiting to be claimed
         else if (entry->auction.highest_bid_lamports) {
