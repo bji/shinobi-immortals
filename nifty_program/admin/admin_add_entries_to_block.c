@@ -298,7 +298,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     }
 
     // Create the mint
-    uint64_t result = create_token_mint(mint_account->key, entry_details->mint_bump_seed, authority_key, funding_key,
+    uint64_t result = create_token_mint(mint_account, entry_details->mint_bump_seed, authority_key, funding_key,
                                         block->config.group_number, block->config.block_number, entry_index,
                                         transaction_accounts, transaction_accounts_len);
 
@@ -307,7 +307,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     }
 
     // Create the token account
-    result = create_pda_token_account(token_account->key, entry_details->token_bump_seed, mint_account->key,
+    result = create_pda_token_account(token_account, entry_details->token_bump_seed, mint_account->key,
                                       funding_key, block->config.group_number, block->config.block_number, entry_index,
                                       transaction_accounts, transaction_accounts_len);
     
@@ -366,7 +366,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
                                    { &(entry_details->entry_bump_seed), 1 } };
 
     // Create the entry account
-    if (create_pda(entry_account->key, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_key,
+    if (create_pda(entry_account, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_key,
                    &(Constants.nifty_program_id), get_rent_exempt_minimum(entry_size), entry_size, transaction_accounts,
                    transaction_accounts_len)) {
         return Error_CreateAccountFailed;

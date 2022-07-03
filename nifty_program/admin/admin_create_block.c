@@ -70,6 +70,11 @@ static uint64_t admin_create_block(SolParameters *params)
         return Error_InvalidAccountPermissions_First + 2;
     }
 
+    // If the block exists and is a valid block, then fail - can't re-create a valid block
+    if (get_validated_block(block_account)) {
+        return Error_BlockAlreadyComplete;
+    }
+
     // Ensure that the instruction data is the correct size
     if (params->data_len != sizeof(CreateBlockData)) {
         return Error_InvalidDataSize;
@@ -97,8 +102,8 @@ static uint64_t admin_create_block(SolParameters *params)
             return Error_InvalidData_First + 2;
         }
     }
-    // Ensure that the minimum bid is at least the rent exempt minimum of a bid account
-    if (config->minimum_bid_lamports < get_rent_exempt_minimum(sizeof(Bid))) {
+    // Ensure that the minimum bid is at least the rent exempt minimum of a 0-sized Bid account
+    if (config->minimum_bid_lamports < get_rent_exempt_minimum(0)) {
         return Error_InvalidData_First + 3;
     }
     
@@ -113,7 +118,7 @@ static uint64_t admin_create_block(SolParameters *params)
                                    { &(data->bump_seed), sizeof(data->bump_seed) } };
 
     // Create the block account
-    if (create_pda(block_account->key, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_account->key,
+    if (create_pda(block_account, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_account->key,
                    (SolPubkey *) params->program_id, get_rent_exempt_minimum(total_block_size), total_block_size,
                    params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;

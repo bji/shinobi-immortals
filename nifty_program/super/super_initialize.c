@@ -92,6 +92,12 @@ static uint64_t super_initialize(SolParameters *params)
             return Error_InvalidAccount_First + 3;
         }
     }
+
+    // If the config account already exists and with the correct owner, then fail, because can't re-create the
+    // config account, can only modify it after it's created
+    if ((config_account->data_len > 0) && is_nifty_program(config_account->owner)) {
+        return Error_InvalidAccount_First + 1;
+    }
     
     // Create the config account.  The config account is derived from a fixed seed.
     {
@@ -104,7 +110,7 @@ static uint64_t super_initialize(SolParameters *params)
 
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_config_seed_bytes) };
 
-        if (create_pda(config_account->key, &seed, 1, superuser_account->key, (SolPubkey *) params->program_id,
+        if (create_pda(config_account, &seed, 1, superuser_account->key, (SolPubkey *) params->program_id,
                        get_rent_exempt_minimum(account_size), account_size, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }
@@ -127,7 +133,7 @@ static uint64_t super_initialize(SolParameters *params)
         
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
         
-        if (create_pda(authority_account->key, &seed, 1, superuser_account->key, (SolPubkey *) params->program_id,
+        if (create_pda(authority_account, &seed, 1, superuser_account->key, (SolPubkey *) params->program_id,
                        get_rent_exempt_minimum(account_size), account_size, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }

@@ -61,7 +61,7 @@ static uint64_t compute_mystery_price(uint64_t total_seconds, uint64_t start_pri
 static uint64_t user_buy(SolParameters *params)
 {
     // Sanitize the accounts.  There must be exactly 13.
-    if (params->ka_num < 13) {
+    if (params->ka_num != 13) {
         return Error_IncorrectNumberOfAccounts;
     }
 

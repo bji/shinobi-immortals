@@ -17,10 +17,3 @@ typedef uint64_t salt_t;
 // as it is typically a constant specific to the context in which this program derived address is used.  The
 // bump seed however is included since it is unique to the instance of the address.
 typedef struct { SolPubkey address; uint8_t bump_seed; } ProgramDerivedAddress;
-
-
-// XXX move to bid.h when that's ready
-typedef struct
-{
-    uint64_t foo;
-} Bid;

@@ -12,11 +12,11 @@
 typedef enum 
 {
     PDA_Account_Seed_Prefix_Config = 1,
-    
+
     PDA_Account_Seed_Prefix_Authority = 2,
-    
+
     PDA_Account_Seed_Prefix_Mint = 3,
-    
+
     PDA_Account_Seed_Prefix_Token = 4,
 
     PDA_Account_Seed_Prefix_Block = 5,
@@ -24,7 +24,7 @@ typedef enum
     PDA_Account_Seed_Prefix_Entry = 6,
 
     PDA_Account_Seed_Prefix_Bid = 7
-    
+
 } PDA_Account_Seed_Prefix;
 
 

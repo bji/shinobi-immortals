@@ -93,7 +93,7 @@ typedef enum
 #include "admin/admin_set_metadata_bytes.c"
 //#include "admin/admin_take_commission.c"
 
-//#include "user/user_bid.c"
+#include "user/user_bid.c"
 #include "user/user_buy.c"
 //#include "user/user_claim.c"
 //#include "user/user_harvest.c"
@@ -158,9 +158,9 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_Buy:
         return user_buy(&params);
 
-//    case Instruction_Bid:
-//        return user_bid(&params);
-//        
+    case Instruction_Bid:
+        return user_bid(&params);
+        
 //    case Instruction_Claim:
 //        return user_claim(&params);
 //        

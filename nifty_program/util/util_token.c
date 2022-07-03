@@ -124,7 +124,7 @@ typedef struct __attribute__((packed))
     uint64_t amount;
 } util_TransferData;
 
-static uint64_t create_token_mint(SolPubkey *mint_key, uint8_t mint_bump_seed, SolPubkey *authority_key,
+static uint64_t create_token_mint(SolAccountInfo *mint_account, uint8_t mint_bump_seed, SolPubkey *authority_key,
                                   SolPubkey *funding_key, uint32_t group_number, uint32_t block_number,
                                   uint16_t entry_index, SolAccountInfo *transaction_accounts,
                                   int transaction_accounts_len)
@@ -141,7 +141,7 @@ static uint64_t create_token_mint(SolPubkey *mint_key, uint8_t mint_bump_seed, S
                                   { (uint8_t *) &entry_index, sizeof(entry_index) },
                                   { &mint_bump_seed, sizeof(mint_bump_seed) } };
 
-        uint64_t result = create_pda(mint_key, seeds, sizeof(seeds) / sizeof(seeds[0]), funding_key,
+        uint64_t result = create_pda(mint_account, seeds, sizeof(seeds) / sizeof(seeds[0]), funding_key,
                                      &(Constants.spl_token_program_id), funding_lamports, sizeof(SolanaMintAccountData),
                                      transaction_accounts, transaction_accounts_len);
 
@@ -154,8 +154,8 @@ static uint64_t create_token_mint(SolPubkey *mint_key, uint8_t mint_bump_seed, S
     SolInstruction instruction;
 
     SolAccountMeta account_metas[] = 
-        // Only account to pass to InitializeMint is the mint account to initialize
-        { { /* pubkey */ mint_key, /* is_writable */ true, /* is_signer */ false } };
+        // Only account to pass to InitializeMint2 is the mint account to initialize
+        { { /* pubkey */ mint_account->key, /* is_writable */ true, /* is_signer */ false } };
 
     util_InitializeMint2Data data = {
         /* instruction_code */ 20,
@@ -174,8 +174,7 @@ static uint64_t create_token_mint(SolPubkey *mint_key, uint8_t mint_bump_seed, S
 }
 
 
-static uint64_t create_pda_token_account(SolPubkey *token_key, uint8_t token_bump_seed, SolPubkey *mint_key,
-                                         
+static uint64_t create_pda_token_account(SolAccountInfo *token_account, uint8_t token_bump_seed, SolPubkey *mint_key,
                                          SolPubkey *funding_key, uint32_t group_number, uint32_t block_number,
                                          uint16_t entry_index, SolAccountInfo *transaction_accounts,
                                          int transaction_accounts_len)
@@ -192,7 +191,7 @@ static uint64_t create_pda_token_account(SolPubkey *token_key, uint8_t token_bum
                                   { (uint8_t *) &entry_index, sizeof(entry_index) },
                                   { &token_bump_seed, sizeof(token_bump_seed) } };
 
-        uint64_t result = create_pda(token_key, seeds, sizeof(seeds) / sizeof(seeds[0]), funding_key,
+        uint64_t result = create_pda(token_account, seeds, sizeof(seeds) / sizeof(seeds[0]), funding_key,
                                      &(Constants.spl_token_program_id), funding_lamports,
                                      sizeof(SolanaTokenProgramTokenData), transaction_accounts,
                                      transaction_accounts_len);
@@ -207,7 +206,7 @@ static uint64_t create_pda_token_account(SolPubkey *token_key, uint8_t token_bum
 
     SolAccountMeta account_metas[] = 
           // The account to initialize.
-        { { /* pubkey */ token_key, /* is_writable */ true, /* is_signuer */ false },
+        { { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signuer */ false },
           // The mint this account will be associated with.
           { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false } };
 

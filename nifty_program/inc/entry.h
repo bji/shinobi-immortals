@@ -112,13 +112,9 @@ typedef struct
         // The auction begin time
         timestamp_t auction_begin_timestamp;
         
-        // If the token is not user owned, then if there was a highest bid for the in-progress or ended auction, this
-        // holds the mint of the bid; otherwise all zeroes
-        SolPubkey highest_bid_mint;
-    
         // The current highest auction bid for this entry, or 0 if no bids have been received.  The next highest bid
-        // must be at least the minimum bid for all entries of this block (block.minimum_bid_lamports), and 10% higher
-        // than the previous bid
+        // must be at least the minimum bid for all entries of this block (block.minimum_bid_lamports), and the
+        // "bid increment factor" (which is a function of the time left in the auction) higher than the previous bid
         uint64_t highest_bid_lamports;
     } auction;
 
