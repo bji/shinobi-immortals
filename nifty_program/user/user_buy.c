@@ -37,12 +37,12 @@ typedef struct
 static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
                               uint64_t seconds_elapsed)
 {
-    uint64_t delta = start_price - end_price;
-
-    // Sanitize seconds_elapsed
-    if (seconds_elapsed > total_seconds) {
-        seconds_elapsed = total_seconds;
+    // Once the elapsed seconds hits the total seconds, the result is always end_price 
+    if (seconds_elapsed >= total_seconds) {
+        return end_price;
     }
+
+    uint64_t delta = start_price - end_price;
 
     // To avoid rounding errors in math, work with lamports / 1000
     delta /= 1000ull;
@@ -174,20 +174,6 @@ static uint64_t user_buy(SolParameters *params)
         // In normal auction, can't be purchased, can only be bid on
         return Error_EntryInAuction;
 
-    case EntryState_InReverseAuction:
-        // In a reverse auction, it can immediately be purchased for the current reverse auction price
-        
-        // The destination of funds is the admin account
-        funds_destination_account = admin_account;
-        
-        // Compute purchase price
-        purchase_price_lamports = compute_price(block->config.auction_duration,
-                                                block->config.reverse_auction_start_price_lamports,
-                                                block->config.minimum_price_lamports,
-                                                clock.unix_timestamp - entry->auction.begin_timestamp);
-        
-        break;
-            
     case EntryState_WaitingToBeClaimed:
         // Has a winning auction bid, can't be purchased
         return Error_EntryWaitingToBeClaimed;
@@ -231,8 +217,20 @@ static uint64_t user_buy(SolParameters *params)
         // The destination of funds is the admin account
         funds_destination_account = admin_account;
 
-        // Price is the minimum price
-        purchase_price_lamports = block->config.minimum_price_lamports;
+        // Compute purchase price.
+        if (block->config.auction_duration) {
+            // There was an auction; because this entry state is unowned, it was either a normal auction that
+            // ended already (in which case compute_price will just return block->config.minimum_price_lamports),
+            // or it was a reverse auction, in which case compute_price will just always do the right thing.
+            purchase_price_lamports = compute_price(block->config.auction_duration,
+                                                    block->config.reverse_auction_start_price_lamports,
+                                                    block->config.minimum_price_lamports,
+                                                    clock.unix_timestamp - entry->auction.begin_timestamp);
+        }
+        // If there was no auction, then the purchase price is just the minimum price
+        else {
+            purchase_price_lamports = block->config.minimum_price_lamports;
+        }
         
         break;
     }

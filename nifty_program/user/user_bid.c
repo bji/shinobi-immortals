@@ -3,23 +3,6 @@
 #include "util/util_accounts.c"
 
 
-// Bid:
-// - Check to make sure entry is in auction
-// - Bid will provide a price range.  This is because the time that tx lands is indeterminate and the maximum bid
-//   may increase over time, so need to establish a maximum bid, but allow the bid to be less if possible
-// - So then compute minimum possible bid price.  If the minimum possible price is > the maximum bid, then
-//   fail.  Otherwise, bid price will be the minimum of [minimum possible price] and [supplied minimum bid]
-// - Create a bid account that is a PDA of the bidding account, and write into it the details of the bid.  Transfer
-//   the bid lamports to the bid account (minus the rent exempt minimum so that all lamports are accounted for).
-// - Update the auction maximum bid with the new maximum bidder
-
-// - Note that when outbid, to claim the outbidded-bid, must present the outbidded bid account, which will have
-//   enough details to ensure that it is an outbidded-bid, and reclaim all SOL in that account to the user.
-// - Note that bids are thus associated with specific system accounts, and are not tokens; bids can't be sold or
-//   transferred to another wallet.
-//
-// - Re-bid: if the bid account already exists, then can just update its bid amount
-
 // Account references:
 // 0. `[WRITE, SIGNER]` -- The bidding account (which will supply the SOL for the bid, and also must sign subsequent
 //                         claim re-bid or claim transactions)
@@ -27,6 +10,7 @@
 // 2. `[WRITE]` -- The entry account
 // 3. `[WRITE]` -- The bid PDA account
 // 4. `[]` -- The system program id, for cross-program invoke
+// 5. `[]` -- The nifty program, so it can call itself for create_pda
 
 typedef struct
 {
@@ -56,14 +40,14 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
     }
 
     // For now, just multiply by 1.1
-    return initial_minimum_bid + (initial_minimum_bid / 10);
+    return current_max_bid + (current_max_bid) / 10;
 }
 
 
 static uint64_t user_bid(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 5.
-    if (params->ka_num != 5) {
+    // Sanitize the accounts.  There must be exactly 6.
+    if (params->ka_num != 6) {
         return Error_IncorrectNumberOfAccounts;
     }
 
@@ -81,6 +65,11 @@ static uint64_t user_bid(SolParameters *params)
 
     // Cast to instruction data
     BidData *data = (BidData *) params->data;
+
+    // Check to make sure data is sane
+    if (data->minimum_bid_lamports > data->maximum_bid_lamports) {
+        return Error_InvalidData_First;
+    }
 
     // Check permissions
     if (!bidding_account->is_writable || !bidding_account->is_signer) {
@@ -156,10 +145,15 @@ static uint64_t user_bid(SolParameters *params)
                               { &(data->bid_account_bump_seed), sizeof(data->bid_account_bump_seed) } };
     uint64_t ret = create_pda(bid_account, seeds, sizeof(seeds) / sizeof(seeds[0]), bidding_account->key,
                               &(Constants.nifty_program_id), minimum_bid, 0, params->ka, params->ka_num);
+    if (ret) {
+        return ret;
+    }
 
     // Update the entry's auction details
     entry->auction.highest_bid_lamports = minimum_bid;
 
+    sol_memcpy(&(entry->auction.winning_bid_pubkey), bid_account->key, sizeof(SolPubkey));
+
     // Not done yet
-    return 2000;
+    return 0;
 }

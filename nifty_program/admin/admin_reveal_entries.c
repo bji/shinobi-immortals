@@ -12,7 +12,7 @@
 // 4. `[]` -- System program id (for cross-program invoke)
 // 5. `[]` -- Metaplex metadata program id (for cross-program invoke)
 // 6. `[]` -- Token mint account
-// 7. `[]` -- Token account
+// 7. `[]` -- Entry token account
 // 8. `[]` -- Metaplex metadata account
 // 9. `[WRITE]` -- Entry account
 // (Repeat 6-9 for each additional entry in the transaction)

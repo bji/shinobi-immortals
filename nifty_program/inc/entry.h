@@ -13,16 +13,14 @@ typedef enum EntryState
     EntryState_WaitingForRevealOwned      = 3,
     // Entry is in normal auction
     EntryState_InNormalAuction            = 4,
-    // Entry is in reverse auction
-    EntryState_InReverseAuction           = 5,
     // Entry is past its auction and waiting to be claimed
-    EntryState_WaitingToBeClaimed         = 6,
+    EntryState_WaitingToBeClaimed         = 5,
     // Entry is past its auction end period but is not owned
-    EntryState_Unowned                    = 7,
+    EntryState_Unowned                    = 6,
     // Entry is owned and revealed, but not staked
-    EntryState_Owned                      = 8,
+    EntryState_Owned                      = 7,
     // Entry is owned, revealed, and staked
-    EntryState_OwnedAndStaked             = 9
+    EntryState_OwnedAndStaked             = 8
 } EntryState;
 
 
@@ -119,6 +117,11 @@ typedef struct
         // block (block.minimum_bid_lamports), and the "bid increment factor" (which is a function of the time left in
         // the auction) higher than the previous bid
         uint64_t highest_bid_lamports;
+
+        // Bid account address of the highest bid.  It is necessary to store this here to track what the winning
+        // bid is; cannot rely just on the lamports value of the bid account since someone could send SOL into that
+        // via a system transfer after it is created.
+        SolPubkey winning_bid_pubkey;
     } auction;
 
     // If entry state is EntryState_Staked, this struct is used

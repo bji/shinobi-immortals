@@ -237,12 +237,23 @@ static bool is_metaplex_metadata_program(SolPubkey *pubkey)
 }
 
 
-// To be used as data to pass to the system program when invoking Allocate
+// Updates an account's data size
+static void set_account_size(SolAccountInfo *account, uint64_t size)
+{
+    ((uint64_t *) (account->data))[-1] = size;
+    
+    account->data_len = size;
+}
+
+
+// To be used as data to pass to the system program when invoking CreateAccount
 typedef struct __attribute__((__packed__))
 {
     uint32_t instruction_code;
+    uint64_t lamports;
     uint64_t space;
-} util_AllocateData;
+    SolPubkey owner;
+} util_CreateAccountData;
 
 
 // To be used as data to pass to the system program when invoking Assign
@@ -253,15 +264,8 @@ typedef struct __attribute__((__packed__))
 } util_AssignData;
 
 
-// Creates an account at a Program Derived Address, where the address is derived from the program id and a set
-// of seed bytes.  This is done by:
-// Transfer lamports into the new account to bring it up to rent exempt minimum (which will create the account
-// with a minimum size if it doesn't exist yet)
-// Allocate (which will just make sure that it's the correct size)
-// Assign (which will ensure that the account is owned by the program; in case it wasn't previously)
-// It must be done this way *in case someone has already created this account*, say by sending lamports to create it
-// via the system program.  In that case the CreateAccount instruction would fail (because of already existing
-// account).  But a Transfer + Allocate + Assign + sequence works if there is an account there already or not.
+// Creates an account at a Program Derived Address, where the address is derived from the program id and a set of seed
+// bytes
 static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, int seeds_count,
                            SolPubkey *funding_account_key, SolPubkey *owner_account_key,
                            uint64_t funding_lamports, uint64_t space,
@@ -273,61 +277,66 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
     
     instruction.program_id = (SolPubkey *) &(Constants.system_program_id);
 
-    SolSignerSeeds signer_seeds = { seeds, seeds_count };
+    // If the account to create didn't exist yet, just use CreateAccount to create it
+    if (*(new_account->lamports) == 0) {
+        SolAccountMeta account_metas[] = 
+            // First account to pass to CreateAccount is the funding_account
+            { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
+              // Second account to pass to CreateAccount is the new account to be created
+              { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
+ 
+        instruction.accounts = account_metas;
+        instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
 
-    // Compute rent exempt minimum
-    uint64_t rent_minimum = get_rent_exempt_minimum(space);
+        util_CreateAccountData data = { 0, funding_lamports, space, *owner_account_key };
+ 
+        instruction.data = (uint8_t *) &data;
+        instruction.data_len = sizeof(data);
+ 
+        SolSignerSeeds signer_seeds = { seeds, seeds_count };
+    
+        return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    }
+
+    // Else the account existed already; just ensure that it has the correct owner, lamports, and space
+    
+    // If the owner is not the same, update it by calling the system program with the Assign instruction
+    if (!SolPubkey_same(new_account->owner, owner_account_key)) {
+        SolAccountMeta account_metas[] = 
+            // Assigned account public key
+            { { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
+        
+        instruction.accounts = account_metas;
+        instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+
+        util_AssignData data = { 1, *owner_account_key };
+        
+        instruction.data = (uint8_t *) &data;
+        instruction.data_len = sizeof(data);
+
+        SolSignerSeeds signer_seeds = { seeds, seeds_count };
+
+        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len,
+                                         &signer_seeds, 1);
+        if (ret) {
+            return ret;
+        }
+    }
 
     // If the account doesn't have the required number of lamports yet, transfer the required number
-    if (*(new_account->lamports) < rent_minimum) {
+    if (*(new_account->lamports) < funding_lamports) {
         uint64_t ret = util_transfer_lamports(funding_account_key, new_account->key,
-                                              rent_minimum - *(new_account->lamports), transaction_accounts,
-                                              transaction_accounts_len);
+                                              funding_lamports - *(new_account->lamports),
+                                              transaction_accounts, transaction_accounts_len);
         if (ret) {
             return ret;
         }
     }
 
-    SolAccountMeta account_metas[] = 
-          // New account
-        { { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
-
-    instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
-
-    // Allocate
-    {
-        util_AllocateData data = { 8, space };
-        instruction.data = (uint8_t *) &data;
-        instruction.data_len = sizeof(data);
-
-        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len,
-                                         &signer_seeds, 1);
-        if (ret) {
-            return ret;
-        }
+    // If the account doesn't have the correct data size, "realloc" it
+    if (new_account->data_len != space) {
+        set_account_size(new_account, space);
     }
-
-    // Assign
-    {
-        util_AssignData data = { 1, *owner_account_key };
-
-        instruction.data = (uint8_t *) &data;
-        instruction.data_len = sizeof(data);
-
-        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len,
-                                         &signer_seeds, 1);
-        if (ret) {
-            return ret;
-        }
-    }
-
+    
     return 0;
-}
-
-
-// Updates an account's data size
-static void set_account_size(SolAccountInfo *account, uint64_t size)
-{
-    ((uint64_t *) (account->data))[-1] = size;
 }

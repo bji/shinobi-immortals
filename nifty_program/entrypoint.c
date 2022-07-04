@@ -38,12 +38,12 @@ typedef enum
     Instruction_SetBlockCommission            =  7,
 
     // User functions: end users may perform these actions -------------------------------------------------------------
-    // Buy, either before first auction begin, or after most recent auction has ended.
+    // Buy, either during mystery period, or after end of auction, or during a "reverse" auction
     Instruction_Buy                           =  8,
     // Request a refund of an entry that was purchased before reveal, and was not revealed before the reveal grace
     // period completed
     Instruction_Refund                        =  9,
-    // Bid on an entry that is in auction
+    // Bid on an entry that is in normal auction
     Instruction_Bid                           = 10,
     // Claim a winning or losing bid
     Instruction_Claim                         = 11,
@@ -55,31 +55,27 @@ typedef enum
     // Merge stake into the stake account backing an entry.  This allows users to put more stake behind
     // an owned entry whenever they want to (presumably to earn Ki faster and level up faster)
     Instruction_MergeStake                    = 14,
-    // Split stake from the stake account backing an entry.  This allows users to extract stake rewards earned by the
-    // entry.
+    // Split stake from the stake account backing an entry.  This allows users to remove stake from an entry.
     Instruction_SplitStake                    = 15,
     // Harvest Ki
     Instruction_Harvest                       = 16,
     // Level up an entry.  This requires as input am amount of Ki, which is burned.
     Instruction_LevelUp                       = 17,
-    // Once the entry has reached maximum level, the owner may set the art to whichever version they prefer.  Costs the
-    // same Ki as the final level up did.
-    Instruction_SetArt                        = 18,
     // Update the metadata program id of an entry.  This will only update to the next metadata entry id from the
     // program config after the current metadata program id (or the first one if the current one is empty).  It will
     // also call that metdata program to do its initial update of the data, and if that succeeds, will set the
     // metaplex metadata update authority to that program.  All future metadata updates will be through that program
-    Instruction_UpdateMetadataProgramId       = 19,
+    Instruction_UpdateMetadataProgramId       = 18,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
     // Take cumulatively earned commission from a stake account.  Owners of stake accounts may wish to do this if they
     // expect commission to rise, so that any already accrued stake rewards are charged the old commission before the
     // commission is updated.
-    Instruction_TakeCommission                = 20,
+    Instruction_TakeCommission                = 19,
     // Perform the next step in redelegation for a stake account: if the stake account is delegated but not to Shinobi
     // Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not delegated, a
     // small fee is taken and the stake account is delegated to Shinobi Systems.
-    Instruction_RedelegateTurnCrank           = 21
+    Instruction_RedelegateTurnCrank           = 20
     
 } Instruction;
 
@@ -96,7 +92,7 @@ typedef enum
 #include "user/user_bid.c"
 #include "user/user_refund.c"
 #include "user/user_buy.c"
-//#include "user/user_claim.c"
+#include "user/user_claim.c"
 //#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
 //#include "user/user_merge_stake.c"
@@ -163,9 +159,9 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_Bid:
         return user_bid(&params);
         
-//    case Instruction_Claim:
-//        return user_claim(&params);
-//        
+    case Instruction_Claim:
+        return user_claim(&params);
+
 //    case Instruction_Stake:
 //        return user_stake(&params);
 //

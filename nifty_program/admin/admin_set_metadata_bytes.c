@@ -39,6 +39,15 @@ static uint64_t compute_set_metadata_bytes_data_size(uint16_t bytes_count)
 }
 
 
+// XXX This should be updated to use compression.  It would be best to have a separate on-chain program that
+// does decompression, and then have this program invoke it.  The decompression program would take:
+// - An account with compressed data in it
+// - An account to decompress into
+// - An { offset, length } within the destination account to decompress to
+// - Would decompress the input data into the output
+// With the above, all metadata for an entry could likely be uploaded in a single transaction.
+// It may be possible to upload metadata for multiple entries in a single transaction even.
+
 static uint64_t admin_set_metadata_bytes(SolParameters *params)
 {
     // Sanitize the accounts.  There must be 4.
