@@ -11,9 +11,10 @@
 // 4. `[]` -- The config account
 // 5. `[WRITE]` -- The admin account
 // 6. `[WRITE]` -- Entry token account
-// 7. `[WRITE]` -- The account to give ownership of the entry (token) to.  It must already exist and be a
-//    valid token account for the entry mint.
-// 8. `[]` -- The SPL-Token program id (for cross-program invoke)
+// 7. `[]` -- The nifty authority account
+// 8. `[WRITE]` -- The account to give ownership of the entry (token) to.  It must already exist and be a
+//     valid token account for the entry mint.
+// 9. `[]` -- The SPL-Token program id (for cross-program invoke)
 
 typedef struct
 {
@@ -95,13 +96,14 @@ static uint64_t user_claim(SolParameters *params)
     // the admin account
     if (SolPubkey_same(bid_account->key, &(entry->auction.winning_bid_pubkey))) {
         // The additional accounts must be present
-        if (params->ka_num != 9) {
+        if (params->ka_num != 10) {
             return Error_IncorrectNumberOfAccounts;
         }
         SolAccountInfo *config_account = &(params->ka[4]);
         SolAccountInfo *admin_account = &(params->ka[5]);
         SolAccountInfo *entry_token_account = &(params->ka[6]);
-        SolAccountInfo *token_destination_account = &(params->ka[7]);
+        SolAccountInfo *authority_account = &(params->ka[7]);
+        SolAccountInfo *token_destination_account = &(params->ka[8]);
         // The account at index 8 must be the SPL-Token program, but this is not checked; if it's not that program,
         // then the transaction will simply fail when the token is transferred
 
@@ -132,6 +134,11 @@ static uint64_t user_claim(SolParameters *params)
         // Check to make sure that the entry_token_account is the correct account for this entry
         if (!SolPubkey_same(entry_token_account->key, &(entry->token_account.address))) {
             return Error_InvalidAccount_First + 6;
+        }
+
+        // Check to make sure that the authority account is the correct account
+        if (!is_nifty_authority_account(authority_account->key)) {
+            return Error_InvalidAccount_First + 7;
         }
 
         // Transfer the entry token (NFT) to the destination account.  This will fail if the winning bid was
