@@ -32,6 +32,8 @@ typedef struct
 } BidData;
 
 
+// This is guaranteed accurate for a 3 day auction and a current_max_bid of 10,000 SOL.  Above those values, accuracy
+// is not guaranteed due to overflow.
 static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
                                     uint64_t seconds_elapsed)
 {
@@ -53,7 +55,21 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
     uint64_t b = auction_duration;
     uint64_t p = current_max_bid;
 
-    return (p * (((100 * b) / ((101 * b) - (100 * a))) + 109)) / 100;
+    uint64_t result = (p * (((1000 * b) / ((b + (b / 100)) - a)) + 109000)) / 100000;
+
+    // result can be off if there is overflow.  So bound it by between 1.1 and 2.09 of the current_max_bid
+    uint64_t min_result = current_max_bid + (current_max_bid / 10);
+    uint64_t max_result = (2 * current_max_bid) + ((current_max_bid * 9) / 100);
+    
+    if (result < min_result) {
+        return min_result;
+    }
+    else if (result > max_result) {
+        return max_result;
+    }
+    else {
+        return result;
+    }
 }
 
 
