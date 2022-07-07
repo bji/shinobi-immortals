@@ -35,12 +35,25 @@ typedef struct
 static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
                                     uint64_t seconds_elapsed)
 {
+    // If there have been no bids yet, then the current max bid is the initial minimum
     if (current_max_bid < initial_minimum_bid) {
         return initial_minimum_bid;
     }
 
-    // For now, just multiply by 1.1
-    return current_max_bid + (current_max_bid) / 10;
+    // Sanitize the seconds elapsed
+    if (seconds_elapsed > auction_duration) {
+        seconds_elapsed = auction_duration;
+    }
+
+    // This is a curve based on the formula: y = p * ((1 / (101 - (100 * (a / b)))) + 1.09)
+    // Where a is seconds_elapsed, b is auction_duration, and p is current_max_bid.  This is a curve that goes
+    // from a multiple of 1.1 of the current_max_bid at time 0, up to approx 2x the current_max_bid at the end
+    // of the time range.
+    uint64_t a = seconds_elapsed;
+    uint64_t b = auction_duration;
+    uint64_t p = current_max_bid;
+
+    return (p * (((100 * b) / ((101 * b) - (100 * a))) + 109)) / 100;
 }
 
 

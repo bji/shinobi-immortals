@@ -44,6 +44,7 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
 
     uint64_t delta = start_price - end_price;
 
+    // This is a curve based on the formula: y = (1 / (100x + 1)) - (1 / 101)
     // To avoid rounding errors in math, work with lamports / 1000
     delta /= 1000ull;
     end_price /= 1000ull;
