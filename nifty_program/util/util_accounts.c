@@ -275,8 +275,6 @@ typedef struct __attribute__((__packed__))
 } util_AssignData;
 
 
-#if 1
-
 // Creates an account at a Program Derived Address, where the address is derived from the program id and a set of seed
 // bytes
 static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, int seeds_count,
@@ -352,124 +350,6 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
     }
     
     return 0;
-}
-
-
-#else
-
-// Sets the owner of a PDA account.
-static uint64_t set_pda_account_owner(SolAccountInfo *pda_account, SolSignerSeed *pda_account_seeds,
-                                      int pda_account_seeds_count, SolPubkey *new_owner_key,
-                                      SolAccountInfo *transaction_accounts, int transaction_accounts_len)
-{
-    if (SolPubkey_same(pda_account->owner, new_owner_key)) {
-        return 0;
-    }
-    
-    // If the owner is the System account, then must request it to make the change
-    if (is_system_program(pda_account->owner)) {
-        SolInstruction instruction;
-        
-        instruction.program_id = &(Constants.system_program_id);
-        
-        SolAccountMeta account_metas[] = 
-        // Assigned account public key
-            { { /* pubkey */ pda_account->key, /* is_writable */ true, /* is_signer */ true } };
-        
-        instruction.accounts = account_metas;
-        instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
-        
-        util_AssignData data = { 1, *new_owner_key };
-        
-        instruction.data = (uint8_t *) &data;
-        instruction.data_len = sizeof(data);
-        
-        SolSignerSeeds signer_seeds = { pda_account_seeds, pda_account_seeds_count };
-
-        sol_log("Setting account previously owned by system program to new owner");
-        sol_log_pubkey(pda_account->key);
-        sol_log_pubkey(new_owner_key);
-        for (int i = 0; i < pda_account_seeds_count; i++) {
-            SolBytes bytes = { pda_account_seeds[i].addr, pda_account_seeds[i].len };
-            sol_log_data(&bytes, 1);
-        }
-
-        return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
-    }
-    // Else if the owner is this program, then can just update it directly
-    else if (is_nifty_program(pda_account->owner)) {
-        *(pda_account->owner) = *new_owner_key;
-        return 0;
-    }
-    // Unable to change owner of an account that is not owned by this program!  How did a program other than
-    // the System program create a PDA of this program anyway???
-    else {
-        return Error_CreateAccountFailed;
-    }
-}
-
-// Creates an account at a Program Derived Address, where the address is derived from the program id and a set of seed
-// bytes.
-static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *new_account_seeds, int new_account_seeds_count,
-                           SolPubkey *funding_account_key, SolPubkey *owner_account_key,
-                           uint64_t funding_lamports, uint64_t space,
-                           // All cross-program invocation must pass all account infos through, it's
-                           // the only sane way to cross-program invoke
-                           SolAccountInfo *transaction_accounts, int transaction_accounts_len)
-{
-    // If the account to create didn't exist yet, just use CreateAccount to create it
-    if (*(new_account->lamports) == 0) {
-        SolInstruction instruction;
-    
-        instruction.program_id = &(Constants.system_program_id);
-        
-        SolAccountMeta account_metas[] = 
-            // First account to pass to CreateAccount is the funding_account
-            { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
-              // Second account to pass to CreateAccount is the new account to be created
-              { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
- 
-        instruction.accounts = account_metas;
-        instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
-
-        util_CreateAccountData data = { 0, funding_lamports, space, *owner_account_key };
- 
-        instruction.data = (uint8_t *) &data;
-        instruction.data_len = sizeof(data);
- 
-        SolSignerSeeds signer_seeds = { new_account_seeds, new_account_seeds_count };
-
-        sol_log("create_pda invoke 1");
-        sol_log_pubkey(new_account->key);
-        sol_log_pubkey(owner_account_key);
-        for (int i = 0; i < new_account_seeds_count; i++) {
-            SolBytes bytes = { new_account_seeds[i].addr, new_account_seeds[i].len };
-            sol_log_data(&bytes, 1);
-        }
-
-        return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
-    }
-
-    // Else the account existed already; just ensure that it has the correct owner, lamports, and space
-
-    // If the account doesn't have the required number of lamports yet, transfer the required number
-    if (*(new_account->lamports) < funding_lamports) {
-        uint64_t ret = util_transfer_lamports(funding_account_key, new_account->key,
-                                              funding_lamports - *(new_account->lamports),
-                                              transaction_accounts, transaction_accounts_len);
-        if (ret) {
-            return ret;
-        }
-    }
-
-    // If the account doesn't have the correct data size, "realloc" it
-    if (new_account->data_len != space) {
-        set_account_size(new_account, space);
-    }
-
-    // Now set the owner to the desired value
-    return set_pda_account_owner(new_account, new_account_seeds, new_account_seeds_count, owner_account_key,
-                                 transaction_accounts, transaction_accounts_len);
 }
 
 #endif

@@ -31,20 +31,20 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Authority = 2,
 
-    PDA_Account_Seed_Prefix_Mint = 3,
+    PDA_Account_Seed_Prefix_Master_Stake = 3,
 
-    PDA_Account_Seed_Prefix_Token = 4,
-
-    PDA_Account_Seed_Prefix_Block = 5,
-
-    PDA_Account_Seed_Prefix_Entry = 6,
-
-    PDA_Account_Seed_Prefix_Bid = 7,
-
-    PDA_Account_Seed_Prefix_Master_Stake = 8,
-
-    PDA_Account_Seed_Prefix_Ki_Mint = 9,
+    PDA_Account_Seed_Prefix_Ki_Mint = 4,
     
+    PDA_Account_Seed_Prefix_Mint = 5,
+
+    PDA_Account_Seed_Prefix_Token = 6,
+
+    PDA_Account_Seed_Prefix_Block = 7,
+
+    PDA_Account_Seed_Prefix_Entry = 8,
+
+    PDA_Account_Seed_Prefix_Bid = 9,
+
     PDA_Account_Seed_Prefix_Bridge = 10
     
 } PDA_Account_Seed_Prefix;
