@@ -249,7 +249,7 @@ static uint64_t reveal_single_entry(Block *block,
     SolanaTokenProgramTokenData *token_data = (SolanaTokenProgramTokenData *) token_account->data;
 
     // Ensure that the metaplex metadata account passed in is the actual metaplex metadata account for this token
-    if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_account.address))) {
+    if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_account))) {
         return Error_InvalidNFTAccount;
     }
 

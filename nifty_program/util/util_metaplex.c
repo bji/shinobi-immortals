@@ -286,7 +286,7 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ &(entry->metaplex_metadata_account.address), /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ &(entry->metaplex_metadata_account), /* is_writable */ true, /* is_signer */ false },
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -457,7 +457,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ &(entry->metaplex_metadata_account.address), /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ &(entry->metaplex_metadata_account), /* is_writable */ true, /* is_signer */ false },
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 

@@ -87,7 +87,7 @@ typedef struct
     ProgramDerivedAddress token_account;
     
     // Program Derived Address of the metaplex metadata account
-    ProgramDerivedAddress metaplex_metadata_account;
+    SolPubkey metaplex_metadata_account;
 
     // Before the entry is revealed, this holds the SHA-256 of the following values concatenated together:
     // - The SHA-256 of the Entry metadata that will be supplied by the reveal transaction

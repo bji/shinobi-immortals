@@ -142,7 +142,7 @@ static uint64_t user_buy(SolParameters *params)
     }
 
     // Check that the correct metaplex metadata account is supplied
-    if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_account.address))) {
+    if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_account))) {
         return Error_InvalidAccount_First + 8;
     }
 

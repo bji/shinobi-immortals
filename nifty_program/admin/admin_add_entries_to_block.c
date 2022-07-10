@@ -385,8 +385,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     entry->token_account.address = *(token_account->key);
     entry->token_account.bump_seed = entry_details->token_bump_seed;
     
-    entry->metaplex_metadata_account.address = *(metaplex_metadata_account->key);
-    entry->metaplex_metadata_account.bump_seed = entry_details->metaplex_metadata_bump_seed;
+    entry->metaplex_metadata_account = *(metaplex_metadata_account->key);
 
     sol_memcpy(&(entry->reveal_sha256), &(entry_details->sha256), sizeof(entry->reveal_sha256));
 
