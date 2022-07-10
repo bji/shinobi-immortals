@@ -71,6 +71,9 @@ static uint64_t admin_create_block(SolParameters *params)
     if (!funding_account->is_signer || !funding_account->is_writable || funding_account->executable) {
         return Error_InvalidAccountPermissions_First + 2;
     }
+    if (!block_account->is_writable) {
+        return Error_InvalidAccountPermissions_First + 4;
+    }
 
     // If the block exists and is a valid block, then fail - can't re-create a valid block
     if (get_validated_block(block_account)) {

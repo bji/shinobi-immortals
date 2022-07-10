@@ -186,7 +186,7 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
           { /* pubkey */ &((* (_Constants *) &Constants).system_program_id), /* is_writable */ false,
             /* is_signer */ false },
           // rent
-          { /* pubkey */ &(Constants.rent_program_id), /* is_writable */ false, /* is_signer */ false } };
+          { /* pubkey */ &(Constants.rent_sysvar_id), /* is_writable */ false, /* is_signer */ false } };
     
     // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
     // and NNNN is the entry index (+1).
