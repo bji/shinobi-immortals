@@ -104,7 +104,7 @@ static void number_string(uint8_t *buf, uint32_t number, uint8_t digits)
 
 // [data] must have at least METAPLEX_METADATA_DATA_SIZE bytes in it.  Returns the pointer to the byte immediately
 // after the end of data
-static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, uint8_t name_len, uint8_t *metadata_uri,
+static uint8_t *encode_metaplex_metadata(uint8_t *data, uint8_t *name, uint8_t *symbol, uint8_t *uri,
                                          SolPubkey *creator_1, SolPubkey *creator_2, SolPubkey *authority_key)
 {
     // If the first pubkey is empty swap the pubkeys so that the logic below can readily test on 0, 1 or 2 creators
@@ -118,22 +118,46 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, uin
         MetaplexMetadataZeroCreators *metadata = (MetaplexMetadataZeroCreators *) data;
         sol_memset(metadata, 0, sizeof(*metadata));
         metadata->name_len = 32;
-        sol_memcpy(metadata->name, name, name_len);
+        uint32_t len = sol_strlen((const char *) name);
+        if (len > metadata->name_len) {
+            len = metadata->name_len;
+        }
+        sol_memcpy(metadata->name, name, len);
         metadata->symbol_len = 10;
-        sol_memcpy(metadata->symbol, "SHIN", 4);
+        len = sol_strlen((const char *) symbol);
+        if (len > metadata->symbol_len) {
+            len = metadata->symbol_len;
+        }
+        sol_memcpy(metadata->symbol, symbol, len);
         metadata->uri_len = 200;
-        sol_memcpy(metadata->uri, metadata_uri, sol_strlen((const char *) metadata_uri));
+        len = sol_strlen((const char *) uri);
+        if (len > metadata->uri_len) {
+            len = metadata->uri_len;
+        }
+        sol_memcpy(metadata->uri, uri, len);
         return &(data[sizeof(*metadata)]);
     }
     else if (is_empty_pubkey(creator_2)) {
         MetaplexMetadataTwoCreators *metadata = (MetaplexMetadataTwoCreators *) data;
         sol_memset(metadata, 0, sizeof(*metadata));
         metadata->name_len = 32;
-        sol_memcpy(metadata->name, name, name_len);
+        uint32_t len = sol_strlen((const char *) name);
+        if (len > metadata->name_len) {
+            len = metadata->name_len;
+        }
+        sol_memcpy(metadata->name, name, len);
         metadata->symbol_len = 10;
-        sol_memcpy(metadata->symbol, "SHIN", 4);
+        len = sol_strlen((const char *) symbol);
+        if (len > metadata->symbol_len) {
+            len = metadata->symbol_len;
+        }
+        sol_memcpy(metadata->symbol, symbol, len);
         metadata->uri_len = 200;
-        sol_memcpy(metadata->uri, metadata_uri, sol_strlen((const char *) metadata_uri));
+        len = sol_strlen((const char *) uri);
+        if (len > metadata->uri_len) {
+            len = metadata->uri_len;
+        }
+        sol_memcpy(metadata->uri, uri, len);
         metadata->has_creators = true;
         metadata->creator_count = 2;
         metadata->creator_1_pubkey = *creator_1;
@@ -145,11 +169,23 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, uin
         MetaplexMetadataThreeCreators *metadata = (MetaplexMetadataThreeCreators *) data;
         sol_memset(metadata, 0, sizeof(*metadata));
         metadata->name_len = 32;
-        sol_memcpy(metadata->name, name, name_len);
+        uint32_t len = sol_strlen((const char *) name);
+        if (len > metadata->name_len) {
+            len = metadata->name_len;
+        }
+        sol_memcpy(metadata->name, name, len);
         metadata->symbol_len = 10;
-        sol_memcpy(metadata->symbol, "SHIN", 4);
+        len = sol_strlen((const char *) symbol);
+        if (len > metadata->symbol_len) {
+            len = metadata->symbol_len;
+        }
+        sol_memcpy(metadata->symbol, symbol, len);
         metadata->uri_len = 200;
-        sol_memcpy(metadata->uri, metadata_uri, sol_strlen((const char *) metadata_uri));
+        len = sol_strlen((const char *) uri);
+        if (len > metadata->uri_len) {
+            len = metadata->uri_len;
+        }
+        sol_memcpy(metadata->uri, uri, len);
         metadata->has_creators = true;
         metadata->creator_count = 3;
         metadata->creator_1_pubkey = *creator_1;
@@ -164,8 +200,8 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, uin
 
 static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPubkey *mint_key,
                                          SolPubkey *authority_key, SolPubkey *funding_key,
-                                         uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                         uint8_t *metadata_uri, SolPubkey *creator_1, SolPubkey *creator_2,
+                                         uint8_t *name, uint8_t *symbol, uint8_t *uri, SolPubkey *creator_1,
+                                         SolPubkey *creator_2,
                                          // All cross-program invocation must pass all account infos through, it's
                                          // the only sane way to cross-program invoke
                                          SolAccountInfo *transaction_accounts, int transaction_accounts_len)
@@ -188,25 +224,14 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
           // rent
           { /* pubkey */ &(Constants.rent_sysvar_id), /* is_writable */ false, /* is_signer */ false } };
     
-    // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
-    // and NNNN is the entry index (+1).
-    uint8_t name[7 + 1 + 3 + 1 + 3 + 1 + 4];
-    sol_memcpy(name, "Shinobi", 7);
-    name[7] = ' ';
-    number_string(&(name[8]), group_number, 3);
-    name[11] = '-';
-    number_string(&(name[12]), block_number, 3);
-    name[15] = '-';
-    number_string(&(name[16]), entry_index + 1, 4);
-
     // Encoding the data for metaplex requires using Borsch serialize format, eugh.
     uint8_t data[BORSH_SIZE_U8 /* instruction code */ +
                  METAPLEX_METADATA_DATA_SIZE /* data */ +
                  BORSH_SIZE_BOOL /* is_mutable */];
     uint8_t *d = borsh_encode_u8(data, 16); // instruction code 16 = CreateMetadataAccountV2
-    d = encode_metaplex_metadata(d, name, sizeof(name), metadata_uri, creator_1, creator_2, authority_key);
+    d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, authority_key);
     d = borsh_encode_bool(d, true); // is_mutable
-
+    
     SolInstruction instruction;
 
     instruction.program_id = &(Constants.metaplex_program_id);
@@ -221,6 +246,32 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     SolSignerSeeds signer_seeds = { &seed, 1 };
     
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+}
+
+
+static uint64_t create_entry_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPubkey *mint_key,
+                                               SolPubkey *authority_key, SolPubkey *funding_key,
+                                               uint32_t group_number, uint32_t block_number, uint16_t entry_index,
+                                               uint8_t *uri, SolPubkey *creator_1, SolPubkey *creator_2,
+                                               // All cross-program invocation must pass all account infos through,
+                                               // it's the only sane way to cross-program invoke
+                                               SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+
+{
+    // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
+    // and NNNN is the entry index (+1).
+    uint8_t name[7 + 1 + 3 + 1 + 3 + 1 + 4];
+    sol_memcpy(name, "Shinobi", 7);
+    name[7] = ' ';
+    number_string(&(name[8]), group_number, 3);
+    name[11] = '-';
+    number_string(&(name[12]), block_number, 3);
+    name[15] = '-';
+    number_string(&(name[16]), entry_index + 1, 4);
+
+    return create_metaplex_metadata(metaplex_metadata_key, mint_key, authority_key, funding_key, name,
+                                    (uint8_t *) "SHIN", uri, creator_1, creator_2, transaction_accounts,
+                                    transaction_accounts_len);
 }
 
 
@@ -397,7 +448,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
 
     uint8_t *d = borsh_encode_u8(data, 15); // instruction code 15 = UpdateMetadataAccountV2
     d = borsh_encode_option_some(d);
-    d = encode_metaplex_metadata(d, level_metadata->name, sizeof(level_metadata->name), level_metadata->uri, creator_1,
+    d = encode_metaplex_metadata(d, level_metadata->name, (uint8_t *) "SHIN", level_metadata->uri, creator_1,
                                  creator_2, &(Constants.nifty_authority_account));
     d = borsh_encode_option_none(d); // update_authority
     d = borsh_encode_option_none(d); // primary_sale_happened

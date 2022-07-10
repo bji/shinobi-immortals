@@ -323,11 +323,12 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     }
 
     // Create the metaplex metadata
-    result = create_metaplex_metadata(metaplex_metadata_account->key, mint_account->key, authority_key, funding_key,
-                                      block->config.group_number, block->config.block_number, entry_index,
-                                      data->metaplex_metadata_uri, &(data->metaplex_metadata_creator_1),
-                                      &(data->metaplex_metadata_creator_2), transaction_accounts,
-                                      transaction_accounts_len);
+    result = create_entry_metaplex_metadata(metaplex_metadata_account->key, mint_account->key, authority_key,
+                                            funding_key, block->config.group_number, block->config.block_number,
+                                            entry_index, data->metaplex_metadata_uri,
+                                            &(data->metaplex_metadata_creator_1),
+                                            &(data->metaplex_metadata_creator_2), transaction_accounts,
+                                            transaction_accounts_len);
 
     if (result) {
         return result;
