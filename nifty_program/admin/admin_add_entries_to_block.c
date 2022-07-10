@@ -368,8 +368,8 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
 
     // Create the entry account
     if (create_pda(entry_account, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_key,
-                   &(Constants.nifty_program_id), get_rent_exempt_minimum(entry_size), entry_size, transaction_accounts,
-                   transaction_accounts_len)) {
+                   &(Constants.nifty_program_pubkey), get_rent_exempt_minimum(entry_size), entry_size,
+                   transaction_accounts, transaction_accounts_len)) {
         return Error_CreateAccountFailed;
     }
 

@@ -173,7 +173,7 @@ static uint64_t user_bid(SolParameters *params)
                               { (uint8_t *) &(entry->entry_index), sizeof(entry->entry_index) },
                               { &(data->bid_account_bump_seed), sizeof(data->bid_account_bump_seed) } };
     uint64_t ret = create_pda(bid_account, seeds, sizeof(seeds) / sizeof(seeds[0]), bidding_account->key,
-                              &(Constants.nifty_program_id), minimum_bid, 0, params->ka, params->ka_num);
+                              &(Constants.nifty_program_pubkey), minimum_bid, 0, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

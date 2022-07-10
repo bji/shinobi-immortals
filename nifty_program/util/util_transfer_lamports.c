@@ -21,7 +21,7 @@ static uint64_t util_transfer_lamports(SolPubkey *source_account, SolPubkey *des
 
     SolInstruction instruction;
 
-    instruction.program_id = &(Constants.system_program_id);
+    instruction.program_id = &(Constants.system_program_pubkey);
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) &data;
@@ -45,7 +45,7 @@ static uint64_t util_transfer_lamports_signed(SolPubkey *source_account, SolPubk
 
     SolInstruction instruction;
 
-    instruction.program_id = &(Constants.system_program_id);
+    instruction.program_id = &(Constants.system_program_pubkey);
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) &data;

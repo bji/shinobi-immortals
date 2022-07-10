@@ -22,7 +22,8 @@ static bool compute_entry_address(uint32_t group_number, uint32_t block_number, 
                               { (uint8_t *) &entry_index, sizeof(entry_index) },
                               { &bump_seed, sizeof(bump_seed) } };
 
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
+                                       fill_in);
 }
 
 
@@ -39,7 +40,8 @@ static bool compute_mint_address(uint32_t group_number, uint32_t block_number, u
                               { (uint8_t *) &entry_index, sizeof(entry_index) },
                               { &bump_seed, sizeof(bump_seed) } };
 
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
+                                       fill_in);
 }
 
 
@@ -56,7 +58,8 @@ static bool compute_token_address(uint32_t group_number, uint32_t block_number, 
                               { (uint8_t *) &entry_index, sizeof(entry_index) },
                               { &bump_seed, sizeof(bump_seed) } };
 
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
+                                       fill_in);
 }
 
 
@@ -65,11 +68,11 @@ static bool compute_token_address(uint32_t group_number, uint32_t block_number, 
 static bool compute_metaplex_metadata_address(SolPubkey *mint_address, uint8_t bump_seed, SolPubkey *fill_in)
 {
     SolSignerSeed seeds[] = { { (const uint8_t *) "metadata", 8 },
-                              { (uint8_t *) &(Constants.metaplex_program_id), sizeof(SolPubkey) },
+                              { (uint8_t *) &(Constants.metaplex_program_pubkey), sizeof(SolPubkey) },
                               { (uint8_t *) mint_address, sizeof(*mint_address) },
                               { &bump_seed, sizeof(bump_seed) } };
 
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.metaplex_program_id),
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.metaplex_program_pubkey),
                                        fill_in);
 }
 
@@ -79,12 +82,12 @@ static bool compute_metaplex_metadata_address(SolPubkey *mint_address, uint8_t b
 static bool compute_metaplex_edition_metadata_address(SolPubkey *mint_address, uint8_t bump_seed, SolPubkey *fill_in)
 {
     SolSignerSeed seeds[] = { { (const uint8_t *) "metadata", 8 },
-                              { (uint8_t *) &(Constants.metaplex_program_id), sizeof(SolPubkey) },
+                              { (uint8_t *) &(Constants.metaplex_program_pubkey), sizeof(SolPubkey) },
                               { (uint8_t *) mint_address, sizeof(*mint_address) },
                               { (const uint8_t *) "edition", 7 },
                               { &bump_seed, sizeof(bump_seed) } };
 
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.metaplex_program_id),
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.metaplex_program_pubkey),
                                        fill_in);
 }
 
@@ -101,7 +104,8 @@ static bool compute_block_address(uint32_t group_number, uint32_t block_number, 
                               { (uint8_t *) &block_number, sizeof(block_number) },
                               { &bump_seed, sizeof(bump_seed) } };
 
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
+                                       fill_in);
 }
 
 
@@ -117,7 +121,8 @@ static bool compute_bid_address(SolPubkey *bidder, uint32_t group_number, uint32
                               { (uint8_t *) &entry_index, sizeof(entry_index) },
                               { &bump_seed, sizeof(bump_seed) } };
 
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_id), fill_in);
+    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
+                                       fill_in);
 }
 
 
@@ -150,7 +155,7 @@ static bool is_superuser_pubkey(const SolPubkey *pubkey)
 
 static bool is_nifty_config_account(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.nifty_config_account), pubkey);
+    return SolPubkey_same(&(Constants.nifty_config_pubkey), pubkey);
 }
 
 
@@ -190,25 +195,25 @@ static bool is_admin_account(const SolAccountInfo *config_account, SolPubkey *pu
 
 static bool is_master_stake_account(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.master_stake_account), pubkey);
+    return SolPubkey_same(&(Constants.master_stake_pubkey), pubkey);
 }
 
 
 static bool is_shinobi_systems_vote_account(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.shinobi_systems_vote_account), pubkey);
+    return SolPubkey_same(&(Constants.shinobi_systems_vote_pubkey), pubkey);
 }
 
 
 static bool is_nifty_authority_account(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.nifty_authority_account), pubkey);
+    return SolPubkey_same(&(Constants.nifty_authority_pubkey), pubkey);
 }
 
 
 static bool is_nifty_program(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.nifty_program_id), pubkey);
+    return SolPubkey_same(&(Constants.nifty_program_pubkey), pubkey);
 }
 
 
@@ -221,19 +226,19 @@ static bool is_system_program(const SolPubkey *pubkey)
 
 static bool is_stake_program(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.stake_program_id), pubkey);
+    return SolPubkey_same(&(Constants.stake_program_pubkey), pubkey);
 }
 
 
 static bool is_spl_token_program(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.spl_token_program_id), pubkey);
+    return SolPubkey_same(&(Constants.spl_token_program_pubkey), pubkey);
 }
 
 
 static bool is_metaplex_metadata_program(SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.metaplex_program_id), pubkey);
+    return SolPubkey_same(&(Constants.metaplex_program_pubkey), pubkey);
 }
 
 
@@ -277,7 +282,7 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
 {
     SolInstruction instruction;
     
-    instruction.program_id = (SolPubkey *) &(Constants.system_program_id);
+    instruction.program_id = (SolPubkey *) &(Constants.system_program_pubkey);
 
     // If the account to create didn't exist yet, just use CreateAccount to create it
     if (*(new_account->lamports) == 0) {

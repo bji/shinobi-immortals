@@ -219,10 +219,10 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
           // update authority info
           { /* pubkey */ authority_key, /* is_writable */ false, /* is_signer */ false },
           // system program
-          { /* pubkey */ &((* (_Constants *) &Constants).system_program_id), /* is_writable */ false,
+          { /* pubkey */ &((* (_Constants *) &Constants).system_program_pubkey), /* is_writable */ false,
             /* is_signer */ false },
           // rent
-          { /* pubkey */ &(Constants.rent_sysvar_id), /* is_writable */ false, /* is_signer */ false } };
+          { /* pubkey */ &(Constants.rent_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false } };
     
     // Encoding the data for metaplex requires using Borsch serialize format, eugh.
     uint8_t data[BORSH_SIZE_U8 /* instruction code */ +
@@ -234,7 +234,7 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     
     SolInstruction instruction;
 
-    instruction.program_id = &(Constants.metaplex_program_id);
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = data;
@@ -288,7 +288,7 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
           // Metadata key
         { { /* pubkey */ &(entry->metaplex_metadata_account.address), /* is_writable */ true, /* is_signer */ false },
           // Update authority
-          { /* pubkey */ &(Constants.nifty_authority_account), /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     // The data is a very simple borsh serialized format
     uint8_t data[1 /* Instruction code UpdateMetadataAccountV2 */ +
@@ -300,7 +300,7 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
     
     SolInstruction instruction;
 
-    instruction.program_id = &(Constants.metaplex_program_id);
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) data;
@@ -449,7 +449,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     uint8_t *d = borsh_encode_u8(data, 15); // instruction code 15 = UpdateMetadataAccountV2
     d = borsh_encode_option_some(d);
     d = encode_metaplex_metadata(d, level_metadata->name, (uint8_t *) "SHIN", level_metadata->uri, creator_1,
-                                 creator_2, &(Constants.nifty_authority_account));
+                                 creator_2, &(Constants.nifty_authority_pubkey));
     d = borsh_encode_option_none(d); // update_authority
     d = borsh_encode_option_none(d); // primary_sale_happened
     d = borsh_encode_option_none(d); // is_mutable
@@ -459,11 +459,11 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
           // Metadata key
         { { /* pubkey */ &(entry->metaplex_metadata_account.address), /* is_writable */ true, /* is_signer */ false },
           // Update authority
-          { /* pubkey */ &(Constants.nifty_authority_account), /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     SolInstruction instruction;
 
-    instruction.program_id = &(Constants.metaplex_program_id);
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = data;
