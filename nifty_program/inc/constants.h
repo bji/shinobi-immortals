@@ -6,6 +6,22 @@
 // Number of lamports per SOL (1 billion)
 #define LAMPORTS_PER_SOL (1000ull * 1000ull * 1000ull)
 
+// Minimum number of lamports allowed to be retained staked within the master stake account.  This must be a value
+// that is always 2x greater than the minimum stake size.  Because this is hardcoded, it has to anticipate the
+// maximum possible minimum stake account size.
+//#define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (2 * 10ull * LAMPORTS_PER_SOL)
+// DEVNET test value: 0.1
+#define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (LAMPORTS_PER_SOL / 10ull)
+
+// This is the Ki token name
+#define KI_TOKEN_NAME "Ki"
+
+// This is the Ki token symbol
+#define KI_TOKEN_SYMBOL "KI"
+
+// This is the Ki token metadata uri (to be updated with a permanent uri when one is available_
+#define KI_TOKEN_METADATA_URI "https://www.shinobi-systems.com/nifty_stakes/ki.json"
+
 
 // Each different PDA type has its own unique prefix, to ensure that even if other seed values between different PDA
 // account types would result in overlapping addresses, the addresses in fact never overlap
@@ -23,8 +39,14 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Entry = 6,
 
-    PDA_Account_Seed_Prefix_Bid = 7
+    PDA_Account_Seed_Prefix_Bid = 7,
 
+    PDA_Account_Seed_Prefix_Master_Stake = 8,
+
+    PDA_Account_Seed_Prefix_Ki_Mint = 9,
+    
+    PDA_Account_Seed_Prefix_Bridge = 10
+    
 } PDA_Account_Seed_Prefix;
 
 
@@ -63,26 +85,47 @@ typedef struct
     // account so that there are no trust issues.
     SolPubkey master_stake_pubkey;
 
-    // This is the Shinobi Systems vote account address
+    // These are the seed bytes used to derive the master stake account address
+    uint8_t master_stake_seed_bytes[2];
+
+    // This is the Ki mint pubkey
+    SolPubkey ki_mint_pubkey;
+
+    // These are the seed bytes used to derive the Ki mint account address
+    uint8_t ki_mint_seed_bytes[2];
+
+    // This is the Ki mint metadata pubkey
+    SolPubkey ki_mint_metadata_pubkey;
+
+    // This is the Shinobi Systems vote account pubkey
     SolPubkey shinobi_systems_vote_pubkey;
 
-    // This is the nifty program id.  It is the account address that actually stores this program.
+    // This is the nifty program pubkey.  It is the account address that actually stores this program.
     SolPubkey nifty_program_pubkey;
 
-    // This is the system program id
+    // This is the system program pubkey
     SolPubkey system_program_pubkey;
 
-    // This is the rent sysvar id
-    SolPubkey rent_sysvar_pubkey;
-
-    // This is the metaplex program id
+    // This is the metaplex program pubkey
     SolPubkey metaplex_program_pubkey;
 
-    // This is the Solana Program Library Token program id
+    // This is the Solana Program Library Token program pubkey
     SolPubkey spl_token_program_pubkey;
 
-    // This is the stake program id
+    // This is the stake program pubkey
     SolPubkey stake_program_pubkey;
+
+    // This is the clock sysvar pubkey
+    SolPubkey clock_sysvar_pubkey;
+
+    // This is the rent sysvar pubkey
+    SolPubkey rent_sysvar_pubkey;
+
+    // This is the stake history sysvar pubkey
+    SolPubkey stake_history_sysvar_pubkey;
+
+    // This is the stake config pubkey
+    SolPubkey stake_config_pubkey;
 
 } _Constants;
 
@@ -107,6 +150,18 @@ const _Constants Constants =
     // master_stake_pubkey
     MASTER_STAKE_PUBKEY_ARRAY,
 
+    // master_stake_seed_bytes
+    { PDA_Account_Seed_Prefix_Master_Stake, MASTER_STAKE_BUMP_SEED },
+
+    // ki_mint_pubkey
+    KI_MINT_PUBKEY_ARRAY,
+
+    // ki_mint_seed_bytes
+    { PDA_Account_Seed_Prefix_Ki_Mint, KI_MINT_BUMP_SEED },
+
+    // ki_mint_metadata_pubkey
+    KI_MINT_METADATA_PUBKEY_ARRAY,
+
     // shinobi_systems_vote_pubkey
     SHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY,
     
@@ -116,9 +171,6 @@ const _Constants Constants =
     // system_program_pubkey
     SYSTEM_PROGRAM_PUBKEY_ARRAY,
     
-    // rent_sysvar_pubkey
-    RENT_SYSVAR_PUBKEY_ARRAY,
-    
     // metaplex_program_pubkey
     METAPLEX_PROGRAM_PUBKEY_ARRAY,
     
@@ -126,7 +178,19 @@ const _Constants Constants =
     SPL_TOKEN_PROGRAM_PUBKEY_ARRAY,
 
     // stake_program_pubkey
-    STAKE_PROGRAM_PUBKEY_ARRAY    
+    STAKE_PROGRAM_PUBKEY_ARRAY,
+
+    // clock_sysvar_pubkey
+    CLOCK_SYSVAR_PUBKEY_ARRAY,
+    
+    // rent_sysvar_pubkey
+    RENT_SYSVAR_PUBKEY_ARRAY,
+
+    // stake_history_sysvar_id
+    STAKE_HISTORY_SYSVAR_PUBKEY_ARRAY,
+
+    // stake_config_account
+    STAKE_CONFIG_SYSVAR_PUBKEY_ARRAY
 };
 
 

@@ -298,9 +298,9 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     }
 
     // Create the mint
-    uint64_t result = create_token_mint(mint_account, entry_details->mint_bump_seed, authority_key, funding_key,
-                                        block->config.group_number, block->config.block_number, entry_index,
-                                        transaction_accounts, transaction_accounts_len);
+    uint64_t result = create_entry_token_mint(mint_account, entry_details->mint_bump_seed, authority_key, funding_key,
+                                              block->config.group_number, block->config.block_number, entry_index,
+                                              transaction_accounts, transaction_accounts_len);
 
     if (result) {
         return result;
@@ -316,7 +316,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     }
 
     // Mint one instance of the token into the token account
-    result = mint_token(mint_account->key, token_account->key, transaction_accounts, transaction_accounts_len);
+    result = mint_tokens(mint_account->key, token_account->key, 1, transaction_accounts, transaction_accounts_len);
 
     if (result) {
         return result;

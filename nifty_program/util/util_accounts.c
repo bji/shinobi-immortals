@@ -199,6 +199,12 @@ static bool is_master_stake_account(const SolPubkey *pubkey)
 }
 
 
+static bool is_ki_mint_account(const SolPubkey *pubkey)
+{
+    return SolPubkey_same(&(Constants.ki_mint_pubkey), pubkey);
+}
+
+
 static bool is_shinobi_systems_vote_account(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.shinobi_systems_vote_pubkey), pubkey);

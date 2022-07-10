@@ -101,6 +101,9 @@ typedef enum
     // Attempt to claim when a claim is not possible
     Error_ClaimNotPossible                             = 1031,
     
+    // Delegate stake failed
+    Error_FailedToDelegate                             = 1032,
+    
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

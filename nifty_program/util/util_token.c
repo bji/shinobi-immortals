@@ -124,30 +124,21 @@ typedef struct __attribute__((packed))
     uint64_t amount;
 } util_TransferData;
 
-static uint64_t create_token_mint(SolAccountInfo *mint_account, uint8_t mint_bump_seed, SolPubkey *authority_key,
-                                  SolPubkey *funding_key, uint32_t group_number, uint32_t block_number,
-                                  uint16_t entry_index, SolAccountInfo *transaction_accounts,
-                                  int transaction_accounts_len)
+
+
+
+static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *mint_account_seeds,
+                                  uint8_t mint_account_seed_count, SolPubkey *authority_key, SolPubkey *funding_key,
+                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // First create the mint account, with owner as SPL-token program
-    {
-        uint64_t funding_lamports = get_rent_exempt_minimum(sizeof(SolanaMintAccountData));
+    uint64_t funding_lamports = get_rent_exempt_minimum(sizeof(SolanaMintAccountData));
 
-        uint8_t prefix = PDA_Account_Seed_Prefix_Mint;
-    
-        SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
-                                  { (uint8_t *) &group_number, sizeof(group_number) },
-                                  { (uint8_t *) &block_number, sizeof(block_number) },
-                                  { (uint8_t *) &entry_index, sizeof(entry_index) },
-                                  { &mint_bump_seed, sizeof(mint_bump_seed) } };
-
-        uint64_t result = create_pda(mint_account, seeds, sizeof(seeds) / sizeof(seeds[0]), funding_key,
-                                     &(Constants.spl_token_program_pubkey), funding_lamports,
-                                     sizeof(SolanaMintAccountData), transaction_accounts, transaction_accounts_len);
-
-        if (result) {
-            return result;
-        }
+    uint64_t result = create_pda(mint_account, mint_account_seeds, mint_account_seed_count, funding_key,
+                                 &(Constants.spl_token_program_pubkey), funding_lamports,
+                                 sizeof(SolanaMintAccountData), transaction_accounts, transaction_accounts_len);
+    if (result) {
+        return result;
     }
 
     // Now initialize the mint account
@@ -171,6 +162,24 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, uint8_t mint_bum
     instruction.data_len = sizeof(data);
 
     return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+}
+
+    
+static uint64_t create_entry_token_mint(SolAccountInfo *mint_account, uint8_t mint_bump_seed, SolPubkey *authority_key,
+                                        SolPubkey *funding_key, uint32_t group_number, uint32_t block_number,
+                                        uint16_t entry_index, SolAccountInfo *transaction_accounts,
+                                        int transaction_accounts_len)
+{
+    uint8_t prefix = PDA_Account_Seed_Prefix_Mint;
+    
+    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
+                              { (uint8_t *) &group_number, sizeof(group_number) },
+                              { (uint8_t *) &block_number, sizeof(block_number) },
+                              { (uint8_t *) &entry_index, sizeof(entry_index) },
+                              { &mint_bump_seed, sizeof(mint_bump_seed) } };
+
+    return create_token_mint(mint_account, seeds, sizeof(seeds) / sizeof(seeds[0]), authority_key, funding_key,
+                             transaction_accounts, transaction_accounts_len);
 }
 
 
@@ -225,8 +234,8 @@ static uint64_t create_pda_token_account(SolAccountInfo *token_account, uint8_t 
 }
 
 
-static uint64_t mint_token(SolPubkey *mint_key, SolPubkey *token_key, SolAccountInfo *transaction_accounts,
-                           int transaction_accounts_len)
+static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t amount,
+                            SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -240,7 +249,7 @@ static uint64_t mint_token(SolPubkey *mint_key, SolPubkey *token_key, SolAccount
 
     util_MintToData data = {
         /* instruction_code */ 7,
-        /* amount */ 1
+        /* amount */ amount
     };
 
     instruction.program_id = &(Constants.spl_token_program_pubkey);
@@ -359,24 +368,15 @@ static uint64_t close_entry_token(Block *block, Entry *entry, SolAccountInfo *la
 }
 
 
-static bool is_token_owner(SolAccountInfo *token_owner_account, SolAccountInfo *token_account, SolPubkey *mint_pubkey)
+static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubkey)
 {
-    // safety check -- remove this
-    if (sizeof(SolanaTokenProgramTokenData) != 165) {
-        sol_log("HEY BAD SIZE");
-        sol_log_64(sizeof(SolanaTokenProgramTokenData), 0, 0, 0, 0);
-        return false;
-    }
     // token_account must be owned by the SPL-Token program
     if (!is_spl_token_program(token_account->owner)) {
-        sol_log("Not SPL-Token program");
         return false;
     }
 
     // token_account must be an SPL-token token account
     if (token_account->data_len != sizeof(SolanaTokenProgramTokenData)) {
-        sol_log("Bad data len");
-        sol_log_64(token_account->data_len, 0, 0, 0, 0);
         return false;
     }
 
@@ -384,31 +384,26 @@ static bool is_token_owner(SolAccountInfo *token_owner_account, SolAccountInfo *
 
     // token_account must be for the correct mint
     if (!SolPubkey_same(&(data->mint), mint_pubkey)) {
-        sol_log("Bad mint");
-        sol_log_pubkey(&(data->mint));
-        sol_log_pubkey(mint_pubkey);
-        return false;
-    }
-
-    // token_account must be owned by token_owner_account
-    if (!SolPubkey_same(&(data->owner), token_owner_account->key)) {
-        sol_log("Bad owner");
-        sol_log_pubkey(&(data->owner));
-        sol_log_pubkey(token_owner_account->owner);
         return false;
     }
 
     // token_account must have exactly one token in it
     if (data->amount != 1) {
-        sol_log("Bad amount");
-        sol_log_64(data->amount, 0, 0, 0, 0);
         return false;
     }
 
     // token_account must be in the Initialized state
-    if (data->account_state != SolanaTokenAccountState_Initialized) {
-        sol_log("Bad state");
-        sol_log_64(data->account_state, 0, 0, 0, 0);
-    }
     return (data->account_state == SolanaTokenAccountState_Initialized);
+}
+
+
+static bool is_token_owner(SolAccountInfo *token_owner_account, SolAccountInfo *token_account, SolPubkey *mint_pubkey)
+{
+    // token_account must be a token account for the mint
+    if (!is_token_account(token_account, mint_pubkey)) {
+        return false;
+    }
+    
+    // token_account must be owned by token_owner_account
+    return SolPubkey_same(&(((SolanaTokenProgramTokenData *) token_account->data)->owner), token_owner_account->key);
 }
