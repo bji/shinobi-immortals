@@ -37,10 +37,8 @@ typedef struct
 
     // Special added at this level
     uint8_t special2;
-    
-    // This is the number of "stake earned lamports" per Ki that is earned.  For example, 1000 would mean that for
-    // every 1000 lamports of SOL earned via staking, 1 Ki token is awarded.  If 0, no Ki is earned by staking this
-    // entry.
+
+    // This is the number of Ki tokens earned per 1 SOL of stake rewards earned by stake accounts staked to the entry.
     uint32_t ki_factor;
 
     // Name of the entry at each level (metaplex metadata maximum name length of 32), used to update metaplex

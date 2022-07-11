@@ -9,11 +9,12 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
                            SolPubkey *destination_account_owner_key, SolPubkey *funding_key,
                            SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    // Amount of Ki to harvest is the stake account earnings since the last harvest, divided by this level's ki_factor
+    // Amount of Ki to harvest is the stake account earnings since the last harvest: it is the number of SOL earned
+    // times the ki_factor.
     uint64_t harvest_amount =
-        ((stake->stake.delegation.stake - entry->staked.last_commission_charge_stake_account_lamports) /
-         entry->metadata.level_metadata[entry->metadata.level].ki_factor);
-
+        (((stake->stake.delegation.stake - entry->staked.last_commission_charge_stake_account_lamports) * 
+          entry->metadata.level_metadata[entry->metadata.level].ki_factor) / LAMPORTS_PER_SOL);
+    
     // If there is no ki to harvest, then the harvest is complete.
     if (harvest_amount == 0) {
         return 0;
