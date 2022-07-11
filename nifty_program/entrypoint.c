@@ -36,46 +36,48 @@ typedef enum
     // This command fails if the commission has already been updated in the current epoch, and also if the new
     // commission is more than 2% higher than the old commission.
     Instruction_SetBlockCommission            =  7,
+    // Split stake off of the master stake account
+    Instruction_SplitMasterStake              =  8,
 
     // User functions: end users may perform these actions -------------------------------------------------------------
     // Buy, either during mystery period, or after end of auction, or during a "reverse" auction
-    Instruction_Buy                           =  8,
+    Instruction_Buy                           =  9,
     // Request a refund of an entry that was purchased before reveal, and was not revealed before the reveal grace
     // period completed
-    Instruction_Refund                        =  9,
+    Instruction_Refund                        = 10,
     // Bid on an entry that is in normal auction
-    Instruction_Bid                           = 10,
+    Instruction_Bid                           = 11,
     // Claim a winning or losing bid
-    Instruction_Claim                         = 11,
+    Instruction_Claim                         = 12,
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
     // progrmam.
-    Instruction_Stake                         = 12,
+    Instruction_Stake                         = 13,
     // Destake the entry, returning the stake account of the entry.
-    Instruction_Destake                       = 13,
+    Instruction_Destake                       = 14,
     // Merge stake into the stake account backing an entry.  This allows users to put more stake behind
     // an owned entry whenever they want to (presumably to earn Ki faster and level up faster)
-    Instruction_MergeStake                    = 14,
+    Instruction_MergeStake                    = 15,
     // Split stake from the stake account backing an entry.  This allows users to remove stake from an entry.
-    Instruction_SplitStake                    = 15,
+    Instruction_SplitStake                    = 16,
     // Harvest Ki
-    Instruction_Harvest                       = 16,
+    Instruction_Harvest                       = 17,
     // Level up an entry.  This requires as input am amount of Ki, which is burned.
-    Instruction_LevelUp                       = 17,
+    Instruction_LevelUp                       = 18,
     // Update the metadata program id of an entry.  This will only update to the next metadata entry id from the
     // program config after the current metadata program id (or the first one if the current one is empty).  It will
     // also call that metdata program to do its initial update of the data, and if that succeeds, will set the
     // metaplex metadata update authority to that program.  All future metadata updates will be through that program
-    Instruction_UpdateMetadataProgramId       = 18,
+    Instruction_UpdateMetadataProgramId       = 19,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
     // Take cumulatively earned commission from a stake account.  Owners of stake accounts may wish to do this if they
     // expect commission to rise, so that any already accrued stake rewards are charged the old commission before the
     // commission is updated.
-    Instruction_TakeCommission                = 19,
+    Instruction_TakeCommission                = 20,
     // Perform the next step in redelegation for a stake account: if the stake account is delegated but not to Shinobi
     // Systems, a small fee is taken and the stake account is un-delegated.  If the stake account is not delegated, a
     // small fee is taken and the stake account is delegated to Shinobi Systems.
-    Instruction_RedelegateTurnCrank           = 20
+    Instruction_RedelegateTurnCrank           = 21
     
 } Instruction;
 
