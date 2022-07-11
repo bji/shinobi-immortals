@@ -106,18 +106,7 @@ static uint64_t user_stake(SolParameters *params)
         return Error_NotStakeable;
     }
 
-    // Now check the stake account to ensure that it is a valid stake account for use:
-    // - Must be a stake account (owned by Stake program)
-    if (!is_stake_program(stake_account->owner)) {
-        return Error_InvalidAccount_First + 2;
-    }
-    
-    // - Must have proper size
-    if (stake_account->data_len != STAKE_ACCOUNT_DATA_LEN) {
-        return Error_InvalidAccount_First + 2;
-    }
-
-    // Can now deserialize into a Stake instance
+    // Deserialize the stake account into a Stake instance
     Stake stake;
     if (!decode_stake_account(stake_account, &stake)) {
         return Error_InvalidAccount_First + 2;
@@ -172,7 +161,7 @@ static uint64_t user_stake(SolParameters *params)
     }
     // Else the stake account is delegated (because the only other stake state possible is StakeState_Stake according
     // to the switch done already above), and if it's not delegated to Shinobi Systems, deactivate it, so that in the
-    // next epoch it can be re-delegated to Shinobi Systems
+    // next epoch it can be re-delegated to Shinobi Systems via the redelegate crank.
     else if (!is_shinobi_systems_vote_account(&(stake.stake.delegation.voter_pubkey))) {
         if (!deactivate_stake_signed(stake_account->key, params->ka, params->ka_num)) {
             return Error_FailedToDeactivate;
@@ -182,11 +171,11 @@ static uint64_t user_stake(SolParameters *params)
     // Record the stake account address
     entry->staked.stake_account = *(stake_account->key);
       
-    // Record current lamports in the stake account to be used for commission purposes 
-    entry->staked.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
-
     // Record current lamports in the stake account to be used for ki harvesting purposes
     entry->staked.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
         
+    // Record current lamports in the stake account to be used for commission purposes 
+    entry->staked.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
+    
     return 0;
 }

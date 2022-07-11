@@ -1,6 +1,7 @@
 #pragma once
 
 #include "inc/constants.h"
+#include "inc/entry.h"
 #include "util/util_borsh.c"
 
 

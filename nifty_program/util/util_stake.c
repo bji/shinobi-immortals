@@ -155,9 +155,21 @@ static uint32_t decode_stake_account_stake(const uint8_t *data, uint32_t data_le
 }
 
 
-// Decodes the stake account into [result], returning true on success and false on failure
+// Decodes the stake account into [result], returning true on success and false on failure.  This checks
+// to make sure that the owner of the account is the Stake program and that the account is properly sized and
+// formed to ensure that only a valid stake account is decoded.
 static bool decode_stake_account(const SolAccountInfo *stake_account, Stake *result)
 {
+    // Check the stake account to ensure that it is a valid stake account for use:
+    // - Must be a stake account (owned by Stake program)
+    if (!is_stake_program(stake_account->owner)) {
+        return false;
+    }
+    // - Must have proper size
+    if (stake_account->data_len != STAKE_ACCOUNT_DATA_LEN) {
+        return false;
+    }
+
     uint8_t *data = stake_account->data;
 
     uint32_t data_len = (uint32_t) stake_account->data_len;

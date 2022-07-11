@@ -1,6 +1,8 @@
 #pragma once
 
+#include "inc/block.h"
 #include "inc/constants.h"
+#include "inc/entry.h"
 #include "util/util_rent.c"
 #include "util/util_token.c"
 
@@ -129,17 +131,11 @@ static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubk
 {
     // token_account must be owned by the SPL-Token program
     if (!is_spl_token_program(token_account->owner)) {
-        sol_log("OWNER NOT SPL TOKEN PROGRAM");
-        sol_log_pubkey(token_account->key);
-        sol_log_pubkey(token_account->owner);
         return false;
     }
 
     // token_account must be an SPL-token token account
     if (token_account->data_len != sizeof(SolanaTokenProgramTokenData)) {
-        sol_log("INVALID ACCOUNT SIZE");
-        sol_log_pubkey(token_account->key);
-        sol_log_64(token_account->data_len, sizeof(SolanaTokenProgramTokenData), 0, 0, 0);
         return false;
     }
 
@@ -147,18 +143,11 @@ static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubk
 
     // token_account must be for the correct mint
     if (!SolPubkey_same(&(data->mint), mint_pubkey)) {
-        sol_log("TOKEN ACCOUNT NOT FOR CORRECT MINT");
-        sol_log_pubkey(token_account->key);
-        sol_log_pubkey(&(data->mint));
-        sol_log_pubkey(mint_pubkey);
         return false;
     }
 
     // token_account must have exactly one token in it
     if (data->amount != 1) {
-        sol_log("AMOUNT NOT 1");
-        sol_log_pubkey(token_account->key);
-        sol_log_64(data->amount, 0, 0, 0, 0);
         return false;
     }
 

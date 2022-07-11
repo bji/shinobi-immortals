@@ -64,9 +64,6 @@ typedef struct
 
     // Metadata for each of the 9 levels
     LevelMetadata level_metadata[9];
-
-    // Current stats
-    uint16_t stats[20];
     
 } EntryMetadata;
 
@@ -134,31 +131,15 @@ typedef struct
         // EntryState_Staked: The stake account that this Entry holds, all zeroes if none
         SolPubkey stake_account;
 
-        // Number of lamports in the stake account at the time of its last commission collection
-        uint64_t last_commission_charge_stake_account_lamports;
-
         // Lamports in the stake account at which Ki was most recently harvested
         uint64_t last_ki_harvest_stake_account_lamports;
+        
+        // Number of lamports in the stake account at the time of its last commission collection
+        uint64_t last_commission_charge_stake_account_lamports;
     } staked;
-
-    // Excess commission owed in lamports.  This is added to when the "redelegation crank" is turned on
-    // undelegated or not-delegated-to-Shinobi stake accounts.  Then when commission is next charged, these
-    // lamports are also charged in addition to normal commission.
-    uint64_t extra_commission_lamports;
-
-    // Program id of the replacement metadata program which is used to update metadata.  If all zeroes, the nifty
-    // program itself updates metadata.  It may be updated only by the owner of the entry, and only to the "next
-    // value" in the sequence of metadata program ids listed in the program config.
-    SolPubkey metadata_program;
 
     // These are the Shinobi metadata values for this entry.  These are all zeroes until the entry is revealed,
     // at which point the verified metadata is copied in.
     EntryMetadata metadata;
 
-    // This is a metadata expansion area, which holds any expansion metadata created by an upgraded metadata program.
-    // The entry is allocated with some amount of additional space here, and any replacement metadata program can read
-    // it; it is updated with the results of that metadata program (including re-allocing this Entry if necessary to
-    // accomodate the larger size).
-    uint8_t metadata_expansion[];
-    
 } Entry;

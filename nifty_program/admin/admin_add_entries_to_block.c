@@ -217,7 +217,7 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         // If the number of mysteries is 0, then the mystery phase is already done, and so the reveal phase starts
         // immediately.
         if (block->config.total_mystery_count == 0) {
-            block->state.reveal_period_start_timestamp = clock.unix_timestamp;
+            block->state.mysteries_all_sold_timestamp = clock.unix_timestamp;
         }
     }
     
@@ -355,10 +355,8 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
 
     #endif
 
-    // Create the entry.  Allow 128 bytes of room for "expansion metadata".
-    uint64_t entry_size = sizeof(Entry) + 128;
-
-    // Use the provided bump seed plus the deterministic seed parts to create the entry account address
+    // Create the entry.  Use the provided bump seed plus the deterministic seed parts to create the entry account
+    // address.
     uint8_t prefix = PDA_Account_Seed_Prefix_Entry;
     SolSignerSeed seed_parts[] = { { &prefix, sizeof(prefix) },
                                    { (uint8_t *) &(block->config.group_number), sizeof(block->config.group_number) },
@@ -368,7 +366,7 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
 
     // Create the entry account
     if (create_pda(entry_account, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_key,
-                   &(Constants.nifty_program_pubkey), get_rent_exempt_minimum(entry_size), entry_size,
+                   &(Constants.nifty_program_pubkey), get_rent_exempt_minimum(sizeof(Entry)), sizeof(Entry),
                    transaction_accounts, transaction_accounts_len)) {
         return Error_CreateAccountFailed;
     }
@@ -388,11 +386,6 @@ static uint64_t add_entry(Block *block, uint16_t entry_index, SolPubkey *authori
     entry->metaplex_metadata_account = *(metaplex_metadata_account->key);
 
     sol_memcpy(&(entry->reveal_sha256), &(entry_details->sha256), sizeof(entry->reveal_sha256));
-
-    // Ensure that the entry is not revealed already, because a newly added entry must be in a prereveal state
-    if (is_entry_revealed(entry)) {
-        return Error_AlreadyRevealed;
-    }
 
     return 0;
 }

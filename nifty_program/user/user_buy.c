@@ -219,7 +219,7 @@ static uint64_t user_buy(SolParameters *params)
         // mystery to purchase before the block becomes revealable, then the block reveal period begins.
         block->state.mysteries_sold_count += 1;
         if (block->state.mysteries_sold_count == block->config.total_mystery_count) {
-            block->state.reveal_period_start_timestamp = clock.unix_timestamp;
+            block->state.mysteries_all_sold_timestamp = clock.unix_timestamp;
         }
 
         break;

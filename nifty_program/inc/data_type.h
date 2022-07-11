@@ -16,8 +16,6 @@ typedef enum
     DataType_Block          = 2,
 
     // Entry
-    DataType_Entry          = 3,
+    DataType_Entry          = 3
 
-    // Auction bid
-    DataType_Bid            = 4
 } DataType;

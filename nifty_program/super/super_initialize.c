@@ -8,6 +8,7 @@
 #include "inc/types.h"
 #include "util/util_accounts.c"
 #include "util/util_authentication.c"
+#include "util/util_metaplex.c"
 #include "util/util_rent.c"
 #include "util/util_stake.c"
 #include "util/util_token.c"
@@ -99,16 +100,12 @@ static uint64_t super_initialize(SolParameters *params)
 
     // Ensure that the config account is the second account
     if (!is_nifty_config_account(config_account->key)) {
-        sol_log("A");
-        sol_log_pubkey(&(Constants.nifty_config_pubkey));
-        sol_log_pubkey(config_account->key);
         return Error_InvalidAccount_First + 1;
     }
 
     // If the config account already exists and with the correct owner, then fail, because can't re-create the
     // config account, can only modify it after it's created
     if ((config_account->data_len > 0) && is_nifty_program(config_account->owner)) {
-        sol_log("B");
         return Error_InvalidAccount_First + 1;
     }
     
@@ -159,16 +156,12 @@ static uint64_t super_initialize(SolParameters *params)
     
     // Create the config account.  The config account is derived from a fixed seed.
     {
-        // The config account is allocated at the largest possible PDA account size of 10K.  This is large enough for
-        // 318 metadata program ids to be added.  Surely this is enough for all time, but if this isn't enough, then
-        // hopefully PDA account reallocation will be supported by the network in time.
-        uint64_t account_size = 10 * 1024;
-
         uint8_t *seed_bytes = (uint8_t *) Constants.nifty_config_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_config_seed_bytes) };
 
         if (create_pda(config_account, &seed, 1, superuser_account->key, (SolPubkey *) params->program_id,
-                       get_rent_exempt_minimum(account_size), account_size, params->ka, params->ka_num)) {
+                       get_rent_exempt_minimum(sizeof(ProgramConfig)), sizeof(ProgramConfig), params->ka,
+                       params->ka_num)) {
             return Error_CreateAccountFailed;
         }
 

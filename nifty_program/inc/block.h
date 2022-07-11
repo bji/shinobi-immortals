@@ -60,10 +60,6 @@ typedef struct
     // For a reverse auction, this is the start price of the auction in lamports.
     uint64_t reverse_auction_start_price_lamports;
 
-    // This is the extra commission charged when a stake account that is not delegated to Shinobi Systems is
-    // either un-delegated or re-delegated via the redelegation crank.
-    commission_t redelegate_crank_commission;
-
 } BlockConfiguration;
 
 
@@ -82,7 +78,7 @@ typedef struct
 
     // This is the timestamp that the number of mysteries sold became equal to the total_mystery_count, at which
     // time the reveal grace period begins.
-    timestamp_t reveal_period_start_timestamp;
+    timestamp_t mysteries_all_sold_timestamp;
 
     // Commission currently charged per epoch for staked entries.  This value can be updated but not more often than
     // once per epoch, and it can only be updated in maximum increments of 2%.  For any given entry, the change

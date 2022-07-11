@@ -50,8 +50,8 @@ static uint64_t super_set_admin(SolParameters *params)
         return Error_InvalidAccountPermissions_First + 1;
     }
 
-    // Ensure that the data is of sufficient size
-    if (config_account->data_len < sizeof(ProgramConfig)) {
+    // Ensure that the data is the correct size
+    if (config_account->data_len != sizeof(ProgramConfig)) {
         return Error_InvalidAccount_First + 1;
     }
 

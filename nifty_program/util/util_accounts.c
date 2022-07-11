@@ -274,7 +274,7 @@ typedef struct __attribute__((__packed__))
 
 
 // Creates an account at a Program Derived Address, where the address is derived from the program id and a set of seed
-// bytes
+// bytes.  The account is guaranteed to be zero initialized.
 static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, int seeds_count,
                            SolPubkey *funding_account_key, SolPubkey *owner_account_key,
                            uint64_t funding_lamports, uint64_t space,
@@ -346,6 +346,9 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
     if (new_account->data_len != space) {
         set_account_size(new_account, space);
     }
+
+    // Ensure that the new account data starts out zeroed
+    sol_memset(new_account->data, 0, new_account->data_len);
     
     return 0;
 }
