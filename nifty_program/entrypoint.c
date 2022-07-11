@@ -52,21 +52,16 @@ typedef enum
     Instruction_Stake                         = 12,
     // Destake the entry, returning the stake account of the entry.
     Instruction_Destake                       = 13,
-    // Merge stake into the stake account backing an entry.  This allows users to put more stake behind
-    // an owned entry whenever they want to (presumably to earn Ki faster and level up faster)
-    Instruction_MergeStake                    = 14,
-    // Split stake from the stake account backing an entry.  This allows users to remove stake from an entry.
-    Instruction_SplitStake                    = 15,
     // Harvest Ki
-    Instruction_Harvest                       = 16,
+    Instruction_Harvest                       = 14,
     // Level up an entry.  This requires as input am amount of Ki, which is burned.
-    Instruction_LevelUp                       = 17,
+    Instruction_LevelUp                       = 15,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
     // Take cumulatively earned commission from a stake account
-    Instruction_TakeCommission                = 18,
+    Instruction_TakeCommission                = 16,
     // Delegate a staked stake account to the Shinobi Systems validator if it's not already delegated
-    Instruction_Delegate                      = 19
+    Instruction_Delegate                      = 17
     
 } Instruction;
 
@@ -87,8 +82,6 @@ typedef enum
 #include "user/user_claim.c"
 #include "user/user_stake.c"
 #include "user/user_destake.c"
-//#include "user/user_merge_stake.c"
-//#include "user/user_split_stake.c"
 //#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
 
@@ -158,12 +151,6 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_Destake:
         return user_destake(&params);
 
-//    case Instruction_MergeStake:
-//        return user_merge_stake(&params);
-//        
-//    case Instruction_SplitStake:
-//        return user_split_stake(&params);
-//        
 //    case Instruction_Harvest:
 //        return user_harvest_ki(&params);
 //        
