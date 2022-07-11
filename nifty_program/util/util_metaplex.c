@@ -238,13 +238,13 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = data;
-    instruction.data_len = ((uint64_t) d) - ((uint64_t) data);
+    instruction.data_len = ((uint64_t) d) - ((uint64_t) instruction.data);
 
     // Must invoke with signed authority account
     uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
-    
+
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
@@ -260,7 +260,7 @@ static uint64_t create_entry_metaplex_metadata(SolPubkey *metaplex_metadata_key,
 {
     // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
     // and NNNN is the entry index (+1).
-    uint8_t name[7 + 1 + 3 + 1 + 3 + 1 + 4];
+    uint8_t name[7 + 1 + 3 + 1 + 3 + 1 + 4 + 1];
     sol_memcpy(name, "Shinobi", 7);
     name[7] = ' ';
     number_string(&(name[8]), group_number, 3);
@@ -268,6 +268,7 @@ static uint64_t create_entry_metaplex_metadata(SolPubkey *metaplex_metadata_key,
     number_string(&(name[12]), block_number, 3);
     name[15] = '-';
     number_string(&(name[16]), entry_index + 1, 4);
+    name[sizeof(name) - 1] = 0;
 
     return create_metaplex_metadata(metaplex_metadata_key, mint_key, authority_key, funding_key, name,
                                     (uint8_t *) "SHIN", uri, creator_1, creator_2, transaction_accounts,

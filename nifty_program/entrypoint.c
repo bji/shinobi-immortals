@@ -19,8 +19,8 @@ typedef enum
     Instruction_SetAdmin                      =  1,
 
     // Admin functions: only the admin may perform these actions -------------------------------------------------------
-    // Add metadata program id
-    Instruction_AddMetadataProgramId          =  2,
+    // Add metadata program pubkey
+    Instruction_AddMetadataProgramPubkey      =  2,
     // Create a new block
     Instruction_CreateBlock                   =  3,
     // Add entries to a newly created block.  Is called multiple times in sequence until the block has had all of its
@@ -82,7 +82,7 @@ typedef enum
 
 // The actual instruction processing functions have been split up into separate files for ease of use
 #include "admin/admin_add_entries_to_block.c"
-#include "admin/admin_add_metadata_program_id.c"
+#include "admin/admin_add_metadata_program_pubkey.c"
 #include "admin/admin_create_block.c"
 #include "admin/admin_reveal_entries.c"
 //#include "admin/admin_set_block_commission.c"
@@ -132,8 +132,8 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_SetAdmin:
         return super_set_admin(&params);
         
-    case Instruction_AddMetadataProgramId:
-        return admin_add_metadata_program_id(&params);
+    case Instruction_AddMetadataProgramPubkey:
+        return admin_add_metadata_program_pubkey(&params);
 
     case Instruction_CreateBlock:
         return admin_create_block(&params);

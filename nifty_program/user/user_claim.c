@@ -32,6 +32,10 @@ typedef struct
 
 static uint64_t user_claim(SolParameters *params)
 {
+    Entry *e = 0;
+    sol_log_64((uint64_t) &(e->auction.winning_bid_pubkey), 0, 0, 0, 0);
+    return 0;
+    
     // Sanitize the accounts.  There must be at least 4.
     if (params->ka_num < 4) {
         return Error_IncorrectNumberOfAccounts;

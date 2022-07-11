@@ -278,8 +278,8 @@ static uint64_t reveal_single_entry(Block *block,
     sha256_t computed_sha256;
     
     // The computation of the hash is a two step process:
-    // 1. Compute the individual SHA-256 hashe of the entry metadata, into a contiguous buffer of bytes.  Then append
-    //    the 8 bytes of salt onto the end.
+    // 1. Compute the SHA-256 hash of the entry metadata, into a contiguous buffer of bytes.  Then append the 8 bytes
+    //    of salt onto the end.
     // 2. Compute SHA-256 of this buffer
     {
         uint8_t buffer[sizeof(sha256_t) + 8];

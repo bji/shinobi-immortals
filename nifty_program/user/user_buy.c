@@ -109,7 +109,7 @@ static uint64_t user_buy(SolParameters *params)
         return Error_InvalidAccountPermissions_First + 5;
     }
 
-    // Make sure that the suppled admin account really is the admin account
+    // Make sure that the suppled admin account is the correct account
     if (!is_admin_account(config_account, admin_account->key)) {
         return Error_InvalidAccount_First + 2;
     }
@@ -215,6 +215,17 @@ static uint64_t user_buy(SolParameters *params)
     case EntryState_Unowned:
         // Revealed but didn't sell at auction.  Can be purchased.
 
+        // The write state of the nifty authority and block accounts indicates whether the user intends to buy a
+        // mystery or a non-mystery.  Fail the buy if their desired mystery state doesn't match the state of the
+        // entry, to prevent a user with stale information from buying what they think is a mystery when it no longer
+        // is.
+        if (authority_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 3;
+        }
+        if (block_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 4;
+        }
+        
         // The destination of funds is the admin account
         funds_destination_account = admin_account;
 

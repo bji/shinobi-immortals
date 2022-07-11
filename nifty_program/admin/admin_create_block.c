@@ -48,8 +48,6 @@ static uint64_t compute_block_size(uint16_t total_entry_count)
 // Creates a new block of entries
 static uint64_t admin_create_block(SolParameters *params)
 {
-    CreateBlockData *cbd = 0;
-
     // Sanitize the accounts.  There must be 5.
     if (params->ka_num != 5) {
         return Error_IncorrectNumberOfAccounts;

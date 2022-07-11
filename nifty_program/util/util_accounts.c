@@ -351,5 +351,3 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
     
     return 0;
 }
-
-#endif

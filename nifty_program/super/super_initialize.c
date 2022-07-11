@@ -99,12 +99,16 @@ static uint64_t super_initialize(SolParameters *params)
 
     // Ensure that the config account is the second account
     if (!is_nifty_config_account(config_account->key)) {
+        sol_log("A");
+        sol_log_pubkey(&(Constants.nifty_config_pubkey));
+        sol_log_pubkey(config_account->key);
         return Error_InvalidAccount_First + 1;
     }
 
     // If the config account already exists and with the correct owner, then fail, because can't re-create the
     // config account, can only modify it after it's created
     if ((config_account->data_len > 0) && is_nifty_program(config_account->owner)) {
+        sol_log("B");
         return Error_InvalidAccount_First + 1;
     }
     

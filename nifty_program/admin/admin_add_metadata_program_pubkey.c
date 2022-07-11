@@ -12,7 +12,7 @@
 // 1. `[WRITE]` -- config account
 
 
-// Data passed to this program for AddMetadataProgramId function
+// Data passed to this program for AddMetadataProgramPubkey function
 typedef struct
 {
     uint8_t instruction_code;
@@ -22,7 +22,7 @@ typedef struct
 } AddMetadataProgramIdData;
 
 
-static uint64_t admin_add_metadata_program_id(SolParameters *params)
+static uint64_t admin_add_metadata_program_pubkey(SolParameters *params)
 {
     // Ensure that the input data is the correct size
     if (params->data_len != sizeof(AddMetadataProgramIdData)) {
