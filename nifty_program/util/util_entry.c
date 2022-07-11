@@ -9,8 +9,6 @@ static Entry *get_validated_entry(Block *block, uint16_t entry_index, SolAccount
 {
     // Entry must have at least enough data in it to store an Entry
     if (entry_account->data_len < sizeof(Entry)) {
-        sol_log("bad entry 1");
-        sol_log_64(entry_account->data_len, sizeof(Entry), 0, 0, 0);
         return 0;
     }
     
@@ -18,22 +16,16 @@ static Entry *get_validated_entry(Block *block, uint16_t entry_index, SolAccount
 
     // If the entry does not have the correct data type, then this is an error
     if (entry->data_type != DataType_Entry) {
-        sol_log("bad entry 2");
-        sol_log_64(entry->data_type, DataType_Entry, 0, 0, 0);
         return 0;
     }
 
     // Make sure that the entry account is owned by the nifty stakes program
     if (!is_nifty_program(entry_account->owner)) {
-        sol_log("bad entry 3");
-        sol_log_pubkey(entry_account->owner);
         return 0;
     }
 
     // Make sure that the entry index is valid
     if (entry_index >= block->config.total_entry_count) {
-        sol_log("bad entry 4");
-        sol_log_64(entry_index, block->config.total_entry_count, 0, 0, 0);
         return 0;
     }
 
@@ -41,15 +33,9 @@ static Entry *get_validated_entry(Block *block, uint16_t entry_index, SolAccount
     SolPubkey entry_address;
     if (!compute_entry_address(block->config.group_number, block->config.block_number, entry_index,
                                block->entry_bump_seeds[entry_index], &entry_address)) {
-        sol_log("bad entry 5");
         return 0;
     }
     if (!SolPubkey_same(&entry_address, entry_account->key)) {
-        sol_log("bad entry 6");
-        sol_log_64(block->config.group_number, block->config.block_number, entry_index,
-                   block->entry_bump_seeds[entry_index], 0);
-        sol_log_pubkey(&entry_address);
-        sol_log_pubkey(entry_account->key);
         return 0;
     }
     

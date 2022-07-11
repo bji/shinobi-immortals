@@ -85,7 +85,8 @@ typedef struct
     timestamp_t reveal_period_start_timestamp;
 
     // Commission currently charged per epoch for staked entries.  This value can be updated but not more often than
-    // once per epoch, and it can only be updated in maximum increments of 2%.
+    // once per epoch, and it can only be updated in maximum increments of 2%.  For any given entry, the change
+    // will only take effect after the commission charge *after this change */.
     commission_t commission;
 
     // Epoch of the last time that the commission was changed

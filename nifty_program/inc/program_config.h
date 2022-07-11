@@ -20,4 +20,5 @@ typedef struct
     // list.  Any block entry may be upgraded to the next metadata program id in sequence in this list, which will
     // cause that metadata program to then become responsible for managing the metadata of the entry.
     SolPubkey metadata_program_id[];
+    
 } ProgramConfig;

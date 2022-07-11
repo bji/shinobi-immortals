@@ -181,6 +181,8 @@ static uint64_t user_bid(SolParameters *params)
     // Update the entry's auction details
     entry->auction.highest_bid_lamports = minimum_bid;
 
+    // Save the pubkey of the winning bid account, so that when bid claims are made after the end of auction, this one
+    // will claim the entry.  All others will reclaim the SOL in the bid account.
     sol_memcpy(&(entry->auction.winning_bid_pubkey), bid_account->key, sizeof(SolPubkey));
 
     // Not done yet

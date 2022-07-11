@@ -124,6 +124,11 @@ typedef struct
         SolPubkey winning_bid_pubkey;
     } auction;
 
+    // This is the commission to charge for this entry.  It is copied from the entry's block's commission when the
+    // entry is first created, and after every commission charge to the entry.  This allows the block's commission
+    // to be updated, and only take effect after all owed commission has already been charged at the prior commission.
+    commission_t commission;
+
     // If entry state is EntryState_Staked, this struct is used
     struct {
         // EntryState_Staked: The stake account that this Entry holds, all zeroes if none

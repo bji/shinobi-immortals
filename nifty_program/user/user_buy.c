@@ -14,13 +14,16 @@
 // 5. `[WRITE]` -- The entry account address
 // 6. `[WRITE]` -- The entry token account (must be a PDA of the nifty program, derived from ticket_token_seed from
 //                 instruction data)
-// 7. `[WRITE]` -- The account to give ownership of the entry (token) to.  It must already exist and be a valid
-//                 token account for the entry mint.
-// 8. `[WRITE]` -- The metaplex metadata account for the entry
-// 9. `[]` -- The nifty program, for cross-program invoke signature
-// 10. `[]` -- The SPL token program, for cross-program invoke
-// 11. `[]` -- The metaplex metadata program, for cross-program invoke
-// 12. `[]` -- The system program id, for cross-program invoke
+// 7. `[]` -- The entry mint account
+// 8. `[WRITE]` -- The account to give ownership of the entry (token) to.  It will be created if it doesn't exist.
+// 9. `[]` -- The system account that will own the destination token account if it needs to be created; or currently
+//            owns it if it's already created
+// 10. `[WRITE]` -- The metaplex metadata account for the entry
+// 11. `[]` -- The nifty program, for cross-program invoke signature
+// 12. `[]` -- The SPL token program, for cross-program invoke
+// 13. `[]` -- The SPL associated token account program, for cross-program invoke
+// 14. `[]` -- The metaplex metadata program, for cross-program invoke
+// 15. `[]` -- The system program id, for cross-program invoke
 
 typedef struct
 {
@@ -61,8 +64,8 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
 
 static uint64_t user_buy(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 13.
-    if (params->ka_num != 13) {
+    // Sanitize the accounts.  There must be exactly 16.
+    if (params->ka_num != 16) {
         return Error_IncorrectNumberOfAccounts;
     }
 
@@ -73,15 +76,19 @@ static uint64_t user_buy(SolParameters *params)
     SolAccountInfo *block_account = &(params->ka[4]);
     SolAccountInfo *entry_account = &(params->ka[5]);
     SolAccountInfo *entry_token_account = &(params->ka[6]);
-    SolAccountInfo *token_destination_account = &(params->ka[7]);
-    SolAccountInfo *metaplex_metadata_account = &(params->ka[8]);
-    // The account at index 9 must be the nifty program, but this is not checked; if it's not that program, then
+    SolAccountInfo *entry_mint_account = &(params->ka[7]);
+    SolAccountInfo *token_destination_account = &(params->ka[8]);
+    SolAccountInfo *token_destination_account_owner = &(params->ka[9]);
+    SolAccountInfo *metaplex_metadata_account = &(params->ka[10]);
+    // The account at index 11 must be the nifty program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 10 must be the SPL token program, but this is not checked; if it's not that program, then
+    // The account at index 12 must be the SPL token program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is invoked later
-    // The account at index 11 must be the metaplex metadata program, but this is not checked; if it's not that
+    // The account at index 13 must be the SPL associated token account program, but this is not checked; if it's not
+    // that program, then the transaction will simply fail when it is invoked later
+    // The account at index 14 must be the metaplex metadata program, but this is not checked; if it's not that
     // program, then the transaction will simply fail when the metadata is updated
-    // The account at index 12 must be the system program, but this is not checked; if it's not that program, then
+    // The account at index 15 must be the system program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when the lamports transfer happens later
 
     // Make sure that the input data is the correct size
@@ -141,9 +148,14 @@ static uint64_t user_buy(SolParameters *params)
         return Error_InvalidAccount_First + 6;
     }
 
+    // Check that the correct mint account address is supplied
+    if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_account.address))) {
+        return Error_InvalidAccount_First + 7;
+    }
+    
     // Check that the correct metaplex metadata account is supplied
     if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_account))) {
-        return Error_InvalidAccount_First + 8;
+        return Error_InvalidAccount_First + 9;
     }
 
     // Get the clock sysvar, needed below
@@ -213,7 +225,7 @@ static uint64_t user_buy(SolParameters *params)
         break;
 
     case EntryState_Unowned:
-        // Revealed but didn't sell at auction.  Can be purchased.
+        // Unowned, revealed, and not in a "normal" auction.  Can be purchased.
 
         // The write state of the nifty authority and block accounts indicates whether the user intends to buy a
         // mystery or a non-mystery.  Fail the buy if their desired mystery state doesn't match the state of the
@@ -231,9 +243,9 @@ static uint64_t user_buy(SolParameters *params)
 
         // Compute purchase price.
         if (block->config.auction_duration) {
-            // There was an auction; because this entry state is unowned, it was either a normal auction that
-            // ended already (in which case compute_price will just return block->config.minimum_price_lamports),
-            // or it was a reverse auction, in which case compute_price will just always do the right thing.
+            // There was an auction; because this entry state is unowned, it was either a normal auction that ended
+            // already (in which case compute_price will just return block->config.minimum_price_lamports), or it was
+            // a reverse auction, in which case compute_price will just always do the right thing.
             purchase_price_lamports = compute_price(block->config.auction_duration,
                                                     block->config.reverse_auction_start_price_lamports,
                                                     block->config.minimum_price_lamports,
@@ -258,7 +270,15 @@ static uint64_t user_buy(SolParameters *params)
     if (ret) {
         return ret;
     }
-    
+
+    // Ensure that the token destination account exists
+    ret = create_token_account_idempotent(token_destination_account, token_destination_account_owner->key,
+                                          &(entry->mint_account.address), funding_account->key, params->ka,
+                                          params->ka_num);
+    if (ret) {
+        return ret;
+    }
+                                          
     // Transfer the token to the token destination account
     ret = transfer_entry_token(block, entry, token_destination_account, params->ka, params->ka_num);
     if (ret) {

@@ -112,6 +112,9 @@ typedef struct
     // This is the Solana Program Library Token program pubkey
     SolPubkey spl_token_program_pubkey;
 
+    // This is the SPL Associated Token Account program pubkey
+    SolPubkey spl_associated_token_account_program_pubkey;
+    
     // This is the stake program pubkey
     SolPubkey stake_program_pubkey;
 
@@ -177,6 +180,9 @@ const _Constants Constants =
     // spl_token_program_pubkey
     SPL_TOKEN_PROGRAM_PUBKEY_ARRAY,
 
+    // spl_associated_token_account_program_pubkey
+    SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_PUBKEY_ARRAY,
+    
     // stake_program_pubkey
     STAKE_PROGRAM_PUBKEY_ARRAY,
 

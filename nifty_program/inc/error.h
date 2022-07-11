@@ -103,6 +103,27 @@ typedef enum
     
     // Delegate stake failed
     Error_FailedToDelegate                             = 1032,
+
+    // Attempt to stake when an entry is not in a stakeable state
+    Error_NotStakeable                                 = 1033,
+
+    // Attempt to set stake account authorities to the nifty authority failed during a stake operation
+    Error_SetStakeAuthoritiesFailed                    = 1034,
+
+    // Deactivate stake failed
+    Error_FailedToDeactivate                           = 1035,
+
+    // Attempt to charge commission when there is no commission to charge
+    Error_NoCommissionToCharge                         = 1036,
+
+    // Failed to move stake from master stake account out to entry stake account for commission collection purposes
+    Error_FailedToMoveStakeOut                         = 1037,
+    
+    // Failed to move stake from entry stake account to master stake account for commission collection purposes
+    Error_FailedToMoveStake                            = 1038,
+
+    // An existing token account was passed in as a destination for a token but it was an invalid target
+    Error_InvalidTokenAccount                          = 1039,
     
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

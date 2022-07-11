@@ -125,6 +125,58 @@ typedef struct __attribute__((packed))
 } util_TransferData;
 
 
+static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubkey)
+{
+    // token_account must be owned by the SPL-Token program
+    if (!is_spl_token_program(token_account->owner)) {
+        sol_log("OWNER NOT SPL TOKEN PROGRAM");
+        sol_log_pubkey(token_account->key);
+        sol_log_pubkey(token_account->owner);
+        return false;
+    }
+
+    // token_account must be an SPL-token token account
+    if (token_account->data_len != sizeof(SolanaTokenProgramTokenData)) {
+        sol_log("INVALID ACCOUNT SIZE");
+        sol_log_pubkey(token_account->key);
+        sol_log_64(token_account->data_len, sizeof(SolanaTokenProgramTokenData), 0, 0, 0);
+        return false;
+    }
+
+    SolanaTokenProgramTokenData *data = (SolanaTokenProgramTokenData *) token_account->data;
+
+    // token_account must be for the correct mint
+    if (!SolPubkey_same(&(data->mint), mint_pubkey)) {
+        sol_log("TOKEN ACCOUNT NOT FOR CORRECT MINT");
+        sol_log_pubkey(token_account->key);
+        sol_log_pubkey(&(data->mint));
+        sol_log_pubkey(mint_pubkey);
+        return false;
+    }
+
+    // token_account must have exactly one token in it
+    if (data->amount != 1) {
+        sol_log("AMOUNT NOT 1");
+        sol_log_pubkey(token_account->key);
+        sol_log_64(data->amount, 0, 0, 0, 0);
+        return false;
+    }
+
+    // token_account must be in the Initialized state
+    return (data->account_state == SolanaTokenAccountState_Initialized);
+}
+
+
+static bool is_token_owner(SolAccountInfo *token_account, SolPubkey *token_owner_key, SolPubkey *mint_pubkey)
+{
+    // token_account must be a token account for the mint
+    if (!is_token_account(token_account, mint_pubkey)) {
+        return false;
+    }
+    
+    // token_account must be owned by token_owner_account
+    return SolPubkey_same(&(((SolanaTokenProgramTokenData *) token_account->data)->owner), token_owner_key);
+}
 
 
 static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *mint_account_seeds,
@@ -229,6 +281,51 @@ static uint64_t create_pda_token_account(SolAccountInfo *token_account, uint8_t 
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
+
+    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+}
+
+
+// When this returns, the given token account will exist for the given mint with the given owner.  Only returns
+// an error if it can't make that happen.
+static uint64_t create_token_account_idempotent(SolAccountInfo *token_account, SolPubkey *owner_key,
+                                                SolPubkey *mint_key, SolPubkey *funding_key,
+                                                SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    if (*(token_account->lamports) > 0) {
+        // Make sure that this is a token account for the given mint
+        if (is_token_owner(token_account, owner_key, mint_key)) {
+            // Already exists as a valid account
+            return 0;
+        }
+
+        // Already exists but is not the proper type of token account
+        return Error_InvalidTokenAccount;
+    }
+
+    // Use the Associated Token Account program to create the token account
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.spl_associated_token_account_program_pubkey);
+    
+    SolAccountMeta account_metas[] = 
+          ///   0. `[writeable,signer]` Funding account (must be a system account)
+        { { /* pubkey */ funding_key, /* is_writable */ true, /* is_signuer */ true },
+          ///   1. `[writeable]` Associated token account address to be created
+          { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signer */ false },
+          ///   2. `[]` Wallet address for the new associated token account
+          { /* pubkey */ owner_key, /* is_writable */ false, /* is_signer */ false },
+          ///   3. `[]` The token mint for the new associated token account
+          { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false },
+          ///   4. `[]` System program
+          { /* pubkey */ &(Constants.system_program_pubkey), /* is_writable */ false, /* is_signer */ false },
+          ///   5. `[]` SPL Token program
+          { /* pubkey */ &(Constants.spl_token_program_pubkey), /* is_writable */ false, /* is_signer */ false } };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.data = (uint8_t *) 0;
+    instruction.data_len = 0;
 
     return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
@@ -365,45 +462,4 @@ static uint64_t close_entry_token(Block *block, Entry *entry, SolAccountInfo *la
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
-}
-
-
-static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubkey)
-{
-    // token_account must be owned by the SPL-Token program
-    if (!is_spl_token_program(token_account->owner)) {
-        return false;
-    }
-
-    // token_account must be an SPL-token token account
-    if (token_account->data_len != sizeof(SolanaTokenProgramTokenData)) {
-        return false;
-    }
-
-    SolanaTokenProgramTokenData *data = (SolanaTokenProgramTokenData *) token_account->data;
-
-    // token_account must be for the correct mint
-    if (!SolPubkey_same(&(data->mint), mint_pubkey)) {
-        return false;
-    }
-
-    // token_account must have exactly one token in it
-    if (data->amount != 1) {
-        return false;
-    }
-
-    // token_account must be in the Initialized state
-    return (data->account_state == SolanaTokenAccountState_Initialized);
-}
-
-
-static bool is_token_owner(SolAccountInfo *token_owner_account, SolAccountInfo *token_account, SolPubkey *mint_pubkey)
-{
-    // token_account must be a token account for the mint
-    if (!is_token_account(token_account, mint_pubkey)) {
-        return false;
-    }
-    
-    // token_account must be owned by token_owner_account
-    return SolPubkey_same(&(((SolanaTokenProgramTokenData *) token_account->data)->owner), token_owner_account->key);
 }

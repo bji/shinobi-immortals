@@ -95,6 +95,8 @@ typedef enum
 #include "user/user_refund.c"
 #include "user/user_buy.c"
 #include "user/user_claim.c"
+#include "user/user_stake.c"
+//#include "user/user_destake.c"
 //#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
 //#include "user/user_merge_stake.c"
@@ -164,12 +166,12 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_Claim:
         return user_claim(&params);
 
-//    case Instruction_Stake:
-//        return user_stake(&params);
-//
+    case Instruction_Stake:
+        return user_stake(&params);
+
 //    case Instruction_Destake:
 //        return user_destake(&params);
-//        
+//
 //    case Instruction_MergeStake:
 //        return user_merge_stake(&params);
 //        

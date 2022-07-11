@@ -11,10 +11,14 @@
 // 4. `[]` -- The config account
 // 5. `[WRITE]` -- The admin account
 // 6. `[WRITE]` -- Entry token account
-// 7. `[]` -- The nifty authority account
-// 8. `[WRITE]` -- The account to give ownership of the entry (token) to.  It must already exist and be a
-//     valid token account for the entry mint.
-// 9. `[]` -- The SPL-Token program id (for cross-program invoke)
+// 7. `[]` -- Entry mint account
+// 8. `[]` -- The nifty authority account
+// 9. `[WRITE]` -- The account to give ownership of the entry (token) to.
+// 10. `[]` -- The system account that will own the destination token account if it needs to be created; or currently
+//             owns it if it's already created
+// 11. `[]` -- The system program id (for cross-program invoke)
+// 12. `[]` -- The SPL-Token program id (for cross-program invoke)
+// 13. `[]` -- The SPL associated token account program, for cross-program invoke
 
 typedef struct
 {
@@ -33,7 +37,7 @@ typedef struct
 static uint64_t user_claim(SolParameters *params)
 {
     Entry *e = 0;
-    sol_log_64((uint64_t) &(e->auction.winning_bid_pubkey), 0, 0, 0, 0);
+    sol_log_64((uint64_t) &(e->staked.stake_account), 0, 0, 0, 0);
     return 0;
     
     // Sanitize the accounts.  There must be at least 4.
@@ -48,7 +52,6 @@ static uint64_t user_claim(SolParameters *params)
 
     // Make sure that the input data is the correct size
     if (params->data_len != sizeof(ClaimData)) {
-        sol_log_64(sizeof(ClaimData), params->data_len, 0, 0, 0);
         return Error_InvalidDataSize;
     }
 
@@ -100,16 +103,22 @@ static uint64_t user_claim(SolParameters *params)
     // the admin account
     if (SolPubkey_same(bid_account->key, &(entry->auction.winning_bid_pubkey))) {
         // The additional accounts must be present
-        if (params->ka_num != 10) {
+        if (params->ka_num != 14) {
             return Error_IncorrectNumberOfAccounts;
         }
         SolAccountInfo *config_account = &(params->ka[4]);
         SolAccountInfo *admin_account = &(params->ka[5]);
         SolAccountInfo *entry_token_account = &(params->ka[6]);
-        SolAccountInfo *authority_account = &(params->ka[7]);
-        SolAccountInfo *token_destination_account = &(params->ka[8]);
-        // The account at index 8 must be the SPL-Token program, but this is not checked; if it's not that program,
+        SolAccountInfo *entry_mint_account = &(params->ka[7]);
+        SolAccountInfo *authority_account = &(params->ka[8]);
+        SolAccountInfo *token_destination_account = &(params->ka[9]);
+        SolAccountInfo *token_destination_owner_account = &(params->ka[10]);
+        // The account at index 11 must be the system program, but this is not checked; if it's not that program, then
+        // the transaction will simply fail when the token is transferred
+        // The account at index 12 must be the SPL-Token program, but this is not checked; if it's not that program,
         // then the transaction will simply fail when the token is transferred
+        // The account at index 13 must be the SPL-Associated-Token-Account program, but this is not checked; if it's
+        // not that program, then the transaction will simply fail when the token is transferred
 
         // Check permissions
         if (!entry_account->is_writable) {
@@ -122,7 +131,7 @@ static uint64_t user_claim(SolParameters *params)
             return Error_InvalidAccountPermissions_First + 6;
         }
         if (!token_destination_account->is_writable) {
-            return Error_InvalidAccountPermissions_First + 7;
+            return Error_InvalidAccountPermissions_First + 9;
         }
 
         // Check to make sure that the auction is over
@@ -140,18 +149,35 @@ static uint64_t user_claim(SolParameters *params)
             return Error_InvalidAccount_First + 6;
         }
 
-        // Check to make sure that the authority account is the correct account
-        if (!is_nifty_authority_account(authority_account->key)) {
+        // Check to make sure that the entry_mint_account is the correct account for this entry
+        if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_account.address))) {
             return Error_InvalidAccount_First + 7;
         }
+        
+        // Check to make sure that the authority account is the correct account
+        if (!is_nifty_authority_account(authority_account->key)) {
+            return Error_InvalidAccount_First + 8;
+        }
 
-        // Transfer the entry token (NFT) to the destination account.  This will fail if the winning bid was
-        // already claimed.
-        uint64_t ret = transfer_entry_token(block, entry, token_destination_account, params->ka, params->ka_num);
+        // Ensure that the token destination account exists
+        uint64_t ret = create_token_account_idempotent(token_destination_account, token_destination_owner_account->key,
+                                                       &(entry->mint_account.address), bidding_account->key,
+                                                       params->ka, params->ka_num);
         if (ret) {
             return ret;
         }
 
+        // Transfer the entry token (NFT) to the destination account.  This will fail if the winning bid was
+        // already claimed.
+        ret = transfer_entry_token(block, entry, token_destination_account, params->ka, params->ka_num);
+        if (ret) {
+            return ret;
+        }
+
+        // Set the purchase price on the entry to the winning bid amount, so that the entry now goes into an Owned
+        // state
+        entry->purchase_price_lamports = *(bid_account->lamports);
+            
         // OK transferred the token, so move the bid account lamports to the admin
         *(admin_account->lamports) += *(bid_account->lamports);
         *(bid_account->lamports) = 0;
