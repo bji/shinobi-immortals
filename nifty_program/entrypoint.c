@@ -80,14 +80,13 @@ typedef enum
 #include "admin/admin_reveal_entries.c"
 //#include "admin/admin_set_block_commission.c"
 #include "admin/admin_set_metadata_bytes.c"
-//#include "admin/admin_take_commission.c"
 
 #include "user/user_bid.c"
 #include "user/user_refund.c"
 #include "user/user_buy.c"
 #include "user/user_claim.c"
 #include "user/user_stake.c"
-//#include "user/user_destake.c"
+#include "user/user_destake.c"
 //#include "user/user_merge_stake.c"
 //#include "user/user_split_stake.c"
 //#include "user/user_harvest.c"
@@ -156,9 +155,9 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_Stake:
         return user_stake(&params);
 
-//    case Instruction_Destake:
-//        return user_destake(&params);
-//
+    case Instruction_Destake:
+        return user_destake(&params);
+
 //    case Instruction_MergeStake:
 //        return user_merge_stake(&params);
 //        

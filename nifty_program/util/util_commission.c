@@ -27,9 +27,6 @@ uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolPubkey *
     // entry has had at least one commission collection.
     entry->commission = block->state.commission;
 
-    sol_log("Charge commission:");
-    sol_log_64(commission_lamports, 0, 0, 0, 0);
-
     // If there is commission to take, do so
     if (commission_lamports == 0) {
         return 0;

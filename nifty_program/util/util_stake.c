@@ -308,6 +308,49 @@ static bool set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior_wit
 }
 
 
+static bool set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *prior_withdraw_authority,
+                                         SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
+                                         int transaction_accounts_len)
+{
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.stake_program_pubkey);
+    
+    SolAccountMeta account_metas[] = 
+          // `[WRITE]` Stake account to be updated
+        { { /* pubkey */ stake_account, /* is_writable */ true, /* is_signer */ false },
+          // `[]` Clock sysvar
+          { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
+          // `[SIGNER]` The stake or withdraw authority
+          { /* pubkey */ prior_withdraw_authority, /* is_writable */ false, /* is_signer */ true } };
+    
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    
+    util_StakeInstructionData data = {
+        /* instruction_code */ 1,
+        /* pubkey */ *new_authority,
+        /* stake_authorize */ 0
+    };
+    
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+
+    // Now seed needs to be that of the nifty authority
+    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+    
+    if (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1)) {
+        return false;
+    }
+
+    data.stake_authorize = 1;
+    
+    return (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) == 0);
+}
+
+
 typedef struct
 {
     uint32_t instruction; // Authorize = 1

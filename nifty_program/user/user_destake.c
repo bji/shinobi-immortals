@@ -6,7 +6,7 @@
 
 
 // Account references:
-// 0. `[WRITE]` -- The account to use for temporary funding operations
+// 0. `[WRITE]` -- The account to use for funding operations
 // 1. `[]` -- The block account address
 // 2. `[WRITE]` -- The entry account address
 // 3. `[SIGNER]` -- The entry token owner account
@@ -18,11 +18,13 @@
 //             currently owns it if it's already created
 // 9. `[WRITE]` -- The master stake account
 // 10. `[WRITE]` -- The bridge stake account
-// 11. `[]` -- The nifty authority account (for commission charge splitting/merging)
-// 12. `[]` -- Clock sysvar (required by stake program)
-// 13. `[]` -- The system program id (for cross-program invoke)
-// 14. `[]` -- The stake program id (for cross-program invoke)
-// 15. `[]` -- The SPL associated token account program, for cross-program invoke
+// 11. `[WRITE]` -- The Ki mint account
+// 12. `[]` -- The nifty authority account (for commission charge splitting/merging)
+// 13. `[]` -- Clock sysvar (required by stake program)
+// 14. `[]` -- The system program id (for cross-program invoke)
+// 15. `[]` -- The stake program id (for cross-program invoke)
+// 16. `[]` -- The SPL Token account program
+// 17. `[]` -- The SPL associated token account program, for cross-program invoke
 
 typedef struct
 {
@@ -47,8 +49,8 @@ typedef struct
 
 static uint64_t user_destake(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 16.
-    if (params->ka_num != 16) {
+    // Sanitize the accounts.  There must be exactly 18.
+    if (params->ka_num != 18) {
         return Error_IncorrectNumberOfAccounts;
     }
 
@@ -63,13 +65,16 @@ static uint64_t user_destake(SolParameters *params)
     SolAccountInfo *ki_destination_owner_account = &(params->ka[8]);
     SolAccountInfo *master_stake_account = &(params->ka[9]);
     SolAccountInfo *bridge_stake_account = &(params->ka[10]);
-    SolAccountInfo *authority_account = &(params->ka[11]);
-    SolAccountInfo *clock_sysvar_account = &(params->ka[12]);
-    // The account at index 13 must be the system program, but this is not checked; if it's not that program, then
+    SolAccountInfo *ki_mint_account = &(params->ka[11]);
+    SolAccountInfo *authority_account = &(params->ka[12]);
+    SolAccountInfo *clock_sysvar_account = &(params->ka[13]);
+    // The account at index 14 must be the system program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 14 must be the stake program, but this is not checked; if it's not that program, then
+    // The account at index 15 must be the stake program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 15 must be the SPL associated token account program, but this is not checked; if it's not
+    // The account at index 16 must be the SPL token program, but this is not checked; if it's not that program, then
+    // the transaction will simply fail when it is used to sign a cross-program invoke later
+    // The account at index 17 must be the SPL associated token account program, but this is not checked; if it's not
     // that program, then the transaction will simply fail when it is used to sign a cross-program invoke later
 
     // Make sure that the input data is the correct size
@@ -97,10 +102,13 @@ static uint64_t user_destake(SolParameters *params)
         return Error_InvalidAccountPermissions_First + 7;
     }
     if (!master_stake_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 8;
+        return Error_InvalidAccountPermissions_First + 9;
     }
     if (!bridge_stake_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 9;
+        return Error_InvalidAccountPermissions_First + 10;
+    }
+    if (!ki_mint_account->is_writable) {
+        return Error_InvalidAccountPermissions_First + 11;
     }
 
     // Get validated block and entry, which checks all validity of those accounts
@@ -143,7 +151,7 @@ static uint64_t user_destake(SolParameters *params)
 
     // Check to make sure that the master stake account passed in is actually the master stake account
     if (!is_master_stake_account(master_stake_account->key)) {
-        return Error_InvalidAccount_First + 8;
+        return Error_InvalidAccount_First + 9;
     }
 
     // Check to make sure that the proper bridge account was passed in
@@ -151,17 +159,22 @@ static uint64_t user_destake(SolParameters *params)
     if (!compute_bridge_address(block->config.group_number, block->config.block_number, entry->entry_index,
                                 data->bridge_bump_seed, &bridge_pubkey) ||
         !SolPubkey_same(&bridge_pubkey, bridge_stake_account->key)) {
-        return Error_InvalidAccount_First + 9;
+        return Error_InvalidAccount_First + 10;
     }
 
+    // Check to make sure that the proper Ki mint account was passed in
+    if (!is_ki_mint_account(ki_mint_account->key)) {
+        return Error_InvalidAccount_First + 11;
+    }
+    
     // Check to make sure that the proper nifty program authority account was passed in
     if (!is_nifty_authority_account(authority_account->key)) {
-        return Error_InvalidAccount_First + 10;
+        return Error_InvalidAccount_First + 12;
     }
 
     // Check to make sure that the clock sysvar account really is a reference to that account
     if (!SolPubkey_same(&(Constants.clock_sysvar_pubkey), clock_sysvar_account->key)) {
-        return Error_InvalidAccount_First + 12;
+        return Error_InvalidAccount_First + 13;
     }
 
     // Decode the stake account
@@ -173,7 +186,7 @@ static uint64_t user_destake(SolParameters *params)
     // Harvest Ki.  Must be done before commission is charged since commission charge actually reduces the number of
     // lamports in the stake account, which would affect Ki harvest calculations
     uint64_t ret = harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-                              params->ka, params->ka_num);
+                              funding_account->key, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }
@@ -185,14 +198,15 @@ static uint64_t user_destake(SolParameters *params)
         return ret;
     }
 
-    // Use stake account program to set all authorities to the new authority
-    if (!set_stake_authorities(stake_account->key, &(Constants.nifty_authority_pubkey),
-                               new_withdraw_authority_account->key, params->ka, params->ka_num)) {
+    // Use stake account program to set all authorities to the new authority; must do this signed since the
+    // nifty program authority is currently the withdraw authority of the stake account
+    if (!set_stake_authorities_signed(stake_account->key, &(Constants.nifty_authority_pubkey),
+                                      new_withdraw_authority_account->key, params->ka, params->ka_num)) {
         return Error_SetStakeAuthoritiesFailed;
     }
 
     // No longer staked
     sol_memset(&(entry->staked), 0, sizeof(entry->staked));
     
-    return 2000;
+    return 0;
 }
