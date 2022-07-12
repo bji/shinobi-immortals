@@ -70,19 +70,19 @@ typedef enum
 #include "super/super_initialize.c"
 #include "super/super_set_admin.c"
 
-#include "admin/admin_add_entries_to_block.c"
 #include "admin/admin_create_block.c"
+#include "admin/admin_add_entries_to_block.c"
+#include "admin/admin_set_metadata_bytes.c"
 #include "admin/admin_reveal_entries.c"
 //#include "admin/admin_set_block_commission.c"
-#include "admin/admin_set_metadata_bytes.c"
 
-#include "user/user_bid.c"
-#include "user/user_refund.c"
 #include "user/user_buy.c"
+#include "user/user_refund.c"
+#include "user/user_bid.c"
 #include "user/user_claim.c"
 #include "user/user_stake.c"
 #include "user/user_destake.c"
-//#include "user/user_harvest.c"
+#include "user/user_harvest.c"
 //#include "user/user_level_up.c"
 
 // #include "anyone_take_commission.c"
@@ -151,16 +151,16 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_Destake:
         return user_destake(&params);
 
-//    case Instruction_Harvest:
-//        return user_harvest_ki(&params);
-//        
+    case Instruction_Harvest:
+        return user_harvest(&params);
+
 //    case Instruction_LevelUp:
 //        return user_level_up(&params);
 //        
 //    case Instruction_TakeCommission:
 //        return anyone_take_commission(&params);
 //
-//    case Instruction_RedelegateTurnCrank:
+//    case Instruction_Delegate:
 //        return anyone_delegate(&params);
         
     default:

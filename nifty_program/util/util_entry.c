@@ -1,7 +1,9 @@
 #pragma once
 
+#include "inc/clock.h"
 #include "inc/types.h"
 #include "util_accounts.c"
+#include "util_block.c"
 #include "util_token.c"
 
 // Given an entry account, returns the validated Entry or null if the entry account is invalid in some way.

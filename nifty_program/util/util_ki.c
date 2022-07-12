@@ -14,7 +14,7 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
     uint64_t harvest_amount =
         (((stake->stake.delegation.stake - entry->staked.last_commission_charge_stake_account_lamports) * 
           entry->metadata.level_metadata[entry->metadata.level].ki_factor) / LAMPORTS_PER_SOL);
-    
+
     // If there is no ki to harvest, then the harvest is complete.
     if (harvest_amount == 0) {
         return 0;

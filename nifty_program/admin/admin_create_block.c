@@ -3,6 +3,7 @@
 #include "inc/block.h"
 #include "util/util_accounts.c"
 #include "util/util_authentication.c"
+#include "util/util_entry.c"
 #include "util/util_rent.c"
 
 // Transaction must be signed by the admin address contained within the Admin Identifier Account.

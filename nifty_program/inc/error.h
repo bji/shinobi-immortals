@@ -124,6 +124,9 @@ typedef enum
 
     // An existing token account was passed in as a destination for a token but it was an invalid target
     Error_InvalidTokenAccount                          = 1039,
+
+    // Attempted to harvest Ki from an entry that is not staked
+    Error_NotStaked                                    = 1040,
     
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

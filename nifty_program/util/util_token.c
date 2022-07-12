@@ -146,8 +146,8 @@ static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubk
         return false;
     }
 
-    // token_account must have exactly one token in it
-    if (data->amount != 1) {
+    // token_account must have tokens
+    if (data->amount == 0) {
         return false;
     }
 
