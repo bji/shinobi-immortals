@@ -58,10 +58,20 @@ typedef enum
     Instruction_LevelUp                       = 15,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
-    // Take cumulatively earned commission from a stake account
-    Instruction_TakeCommission                = 16,
-    // Delegate a staked stake account to the Shinobi Systems validator if it's not already delegated
-    Instruction_Delegate                      = 17
+    // If the entry is staked and the stake account is delegated, this pays any commission owed to the admin account.
+    // If the entry is staked and the stake account is not delegated, this delgates the stake account to Shinobi
+    // Systems so that it can start earning Ki
+    Instruction_TakeCommissionOrDelegate      = 16,
+
+    // Special functions -----------------------------------------------------------------------------------------------
+    // This is a special function that can only be called on an entry that is in the Owned or OwnedAndStaked state.
+    // The transaction must be signed by both the admin and the user who owns the entry.  This instruction will reset
+    // the metadata update authority to a new authority, and if the entry is staked, will also set the stake account
+    // stake and withdraw authorities to the new authority.  The goal of this is to allow a safety valve in case of
+    // bugs or problems with this program; or a need to upgrade the program to handle new conditions.  The program
+    // can't be upgraded but a new program can be made and then given authority over all user owned entries via this
+    // instruction (but only if both the user and admin agree to do so).
+    Instruction_ReAuthorize                   = 17
     
 } Instruction;
 
@@ -85,8 +95,7 @@ typedef enum
 #include "user/user_harvest.c"
 #include "user/user_level_up.c"
 
-// #include "anyone_take_commission.c"
-// #include "anyone_delegate.c"
+#include "anyone/anyone_take_commission_or_delegate.c"
 
 
 // Program entrypoint
@@ -157,12 +166,12 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_LevelUp:
         return user_level_up(&params);
         
-//    case Instruction_TakeCommission:
-//        return anyone_take_commission(&params);
-//
-//    case Instruction_Delegate:
-//        return anyone_delegate(&params);
-        
+    case Instruction_TakeCommissionOrDelegate:
+        return anyone_take_commission_or_delegate(&params);
+
+//    case Instruction_ReAuthorize:
+//        return special_reauthorize(&params);
+
     default:
         return Error_UnknownInstruction;
     }

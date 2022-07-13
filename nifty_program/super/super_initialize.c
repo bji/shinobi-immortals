@@ -186,17 +186,17 @@ static uint64_t super_initialize(SolParameters *params)
     {
         uint8_t *seed_bytes = (uint8_t *) Constants.master_stake_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.master_stake_seed_bytes) };
-        
-        if (!create_stake_account(master_stake_account, &seed, 1, superuser_account->key,
-                                  MASTER_STAKE_ACCOUNT_MIN_LAMPORTS, &(Constants.nifty_authority_pubkey),
-                                  &(Constants.nifty_authority_pubkey), params->ka, params->ka_num)) {
+
+        if (create_stake_account(master_stake_account, &seed, 1, superuser_account->key,
+                                 MASTER_STAKE_ACCOUNT_MIN_LAMPORTS, &(Constants.nifty_authority_pubkey),
+                                 &(Constants.nifty_authority_pubkey), params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }
     }
 
     // Delegate master stake account to Shinobi Systems
-    if (!delegate_stake_signed(master_stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
-                               params->ka, params->ka_num)) {
+    if (delegate_stake_signed(master_stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
+                              params->ka, params->ka_num)) {
         return Error_FailedToDelegate;
     }
 

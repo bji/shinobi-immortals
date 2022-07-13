@@ -6,7 +6,7 @@
 
 
 // Account references:
-// 0. `[WRITE]` -- The account to use for funding operations
+// 0. `[WRITE, SIGNER]` -- The account to use for funding operations
 // 1. `[]` -- The block account address
 // 2. `[WRITE]` -- The entry account address
 // 3. `[SIGNER]` -- The token owner account
@@ -23,8 +23,9 @@
 // 13. `[]` -- Clock sysvar (required by stake program)
 // 14. `[]` -- The system program id (for cross-program invoke)
 // 15. `[]` -- The stake program id (for cross-program invoke)
-// 16. `[]` -- The SPL Token account program
-// 17. `[]` -- The SPL associated token account program, for cross-program invoke
+// 16. `[]` -- The stake history id
+// 17. `[]` -- The SPL Token account program
+// 18. `[]` -- The SPL associated token account program, for cross-program invoke
 
 typedef struct
 {
@@ -49,8 +50,8 @@ typedef struct
 
 static uint64_t user_destake(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 18.
-    if (params->ka_num != 18) {
+    // Sanitize the accounts.  There must be exactly 19.
+    if (params->ka_num != 19) {
         return Error_IncorrectNumberOfAccounts;
     }
 
@@ -72,9 +73,11 @@ static uint64_t user_destake(SolParameters *params)
     // the transaction will simply fail when it is used to sign a cross-program invoke later
     // The account at index 15 must be the stake program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 16 must be the SPL token program, but this is not checked; if it's not that program, then
+    // The account at index 16 must be the stake history account, but this is not checked; if it's not that program,
+    // then the transaction will simply fail when it is used to sign a cross-program invoke later
+    // The account at index 17 must be the SPL token program, but this is not checked; if it's not that program, then
     // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 17 must be the SPL associated token account program, but this is not checked; if it's not
+    // The account at index 18 must be the SPL associated token account program, but this is not checked; if it's not
     // that program, then the transaction will simply fail when it is used to sign a cross-program invoke later
 
     // Make sure that the input data is the correct size
@@ -86,7 +89,7 @@ static uint64_t user_destake(SolParameters *params)
     DestakeData *data = (DestakeData *) params->data;
     
     // Check permissions
-    if (!funding_account->is_writable) {
+    if (!funding_account->is_writable || !funding_account->is_signer) {
         return Error_InvalidAccountPermissions_First;
     }
     if (!entry_account->is_writable) {
@@ -200,8 +203,8 @@ static uint64_t user_destake(SolParameters *params)
 
     // Use stake account program to set all authorities to the new authority; must do this signed since the
     // nifty program authority is currently the withdraw authority of the stake account
-    if (!set_stake_authorities_signed(stake_account->key, &(Constants.nifty_authority_pubkey),
-                                      new_withdraw_authority_account->key, params->ka, params->ka_num)) {
+    if (set_stake_authorities_signed(stake_account->key, &(Constants.nifty_authority_pubkey),
+                                     new_withdraw_authority_account->key, params->ka, params->ka_num)) {
         return Error_SetStakeAuthoritiesFailed;
     }
 

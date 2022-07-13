@@ -1,7 +1,7 @@
 #pragma once
 
 // Account references:
-// 0. `[WRITE]` -- The account to use for funding operations
+// 0. `[WRITE, SIGNER]` -- The account to use for funding operations
 // 1. `[]` -- The block account address
 // 2. `[WRITE]` -- The entry account address
 // 3. `[SIGNER]` -- The token owner account
@@ -60,7 +60,7 @@ static uint64_t user_harvest(SolParameters *params)
     HarvestData *data = (HarvestData *) params->data;
     
     // Check permissions
-    if (!funding_account->is_writable) {
+    if (!funding_account->is_writable || !funding_account->is_signer) {
         return Error_InvalidAccountPermissions_First;
     }
     if (!entry_account->is_writable) {

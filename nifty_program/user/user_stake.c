@@ -147,15 +147,15 @@ static uint64_t user_stake(SolParameters *params)
     }
 
     // Use stake account program to set all authorities to the nifty authority
-    if (!set_stake_authorities(stake_account->key, stake_withdraw_authority_account->key,
-                               &(Constants.nifty_authority_pubkey), params->ka, params->ka_num)) {
+    if (set_stake_authorities(stake_account->key, stake_withdraw_authority_account->key,
+                              &(Constants.nifty_authority_pubkey), params->ka, params->ka_num)) {
         return Error_SetStakeAuthoritiesFailed;
     }
 
     // If the stake account is in an initialized state, then it's not delegated, so delegate it to Shinobi Systems
     if (stake.state == StakeState_Initialized) {
-        if (!delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
-                                   params->ka, params->ka_num)) {
+        if (delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
+                                  params->ka, params->ka_num)) {
             return Error_FailedToDelegate;
         }
     }
@@ -163,7 +163,7 @@ static uint64_t user_stake(SolParameters *params)
     // to the switch done already above), and if it's not delegated to Shinobi Systems, deactivate it, so that in the
     // next epoch it can be re-delegated to Shinobi Systems via the redelegate crank.
     else if (!is_shinobi_systems_vote_account(&(stake.stake.delegation.voter_pubkey))) {
-        if (!deactivate_stake_signed(stake_account->key, params->ka, params->ka_num)) {
+        if (deactivate_stake_signed(stake_account->key, params->ka, params->ka_num)) {
             return Error_FailedToDeactivate;
         }
     }

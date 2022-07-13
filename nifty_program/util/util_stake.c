@@ -213,10 +213,10 @@ typedef struct
 } util_StakeInitializeData;
 
 
-static bool create_stake_account(SolAccountInfo *stake_account, SolSignerSeed *seeds, uint8_t seed_count,
-                                 SolPubkey *funding_account_key,  uint64_t stake_lamports,
-                                 SolPubkey *stake_authority_key, SolPubkey *withdraw_authority_key,
-                                 SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_stake_account(SolAccountInfo *stake_account, SolSignerSeed *seeds, uint8_t seed_count,
+                                     SolPubkey *funding_account_key,  uint64_t stake_lamports,
+                                     SolPubkey *stake_authority_key, SolPubkey *withdraw_authority_key,
+                                     SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
     uint64_t rent_exempt_minimum = get_rent_exempt_minimum(200);
@@ -225,10 +225,11 @@ static bool create_stake_account(SolAccountInfo *stake_account, SolSignerSeed *s
     {
         uint8_t prefix = PDA_Account_Seed_Prefix_Master_Stake;
 
-        if (create_pda(stake_account, seeds, seed_count, funding_account_key,
-                       &(Constants.stake_program_pubkey), rent_exempt_minimum + stake_lamports, 200,
-                       transaction_accounts, transaction_accounts_len)) {
-            return false;
+        uint64_t ret = create_pda(stake_account, seeds, seed_count, funding_account_key,
+                                  &(Constants.stake_program_pubkey), rent_exempt_minimum + stake_lamports, 200,
+                                  transaction_accounts, transaction_accounts_len);
+        if (ret) {
+            return ret;
         }
     }
     
@@ -255,7 +256,7 @@ static bool create_stake_account(SolAccountInfo *stake_account, SolSignerSeed *s
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    return (sol_invoke(&instruction, transaction_accounts, transaction_accounts_len) == 0);
+    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
 
 
@@ -270,9 +271,9 @@ typedef struct
 } util_StakeInstructionData;
 
 
-static bool set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior_withdraw_authority,
-                                  SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
-                                  int transaction_accounts_len)
+static uint64_t set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior_withdraw_authority,
+                                      SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
+                                      int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -298,19 +299,20 @@ static bool set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior_wit
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    if (sol_invoke(&instruction, transaction_accounts, transaction_accounts_len)) {
-        return false;
+    uint64_t ret = sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    if (ret) {
+        return ret;
     }
 
     data.stake_authorize = 1;
     
-    return (sol_invoke(&instruction, transaction_accounts, transaction_accounts_len) == 0);
+    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
 
 
-static bool set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *prior_withdraw_authority,
-                                         SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
-                                         int transaction_accounts_len)
+static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *prior_withdraw_authority,
+                                             SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
+                                             int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -340,14 +342,15 @@ static bool set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *pr
     uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
-    
-    if (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1)) {
-        return false;
+
+    uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    if (ret) {
+        return ret;
     }
 
     data.stake_authorize = 1;
     
-    return (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) == 0);
+    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
@@ -362,10 +365,10 @@ typedef struct
 
 // lamports is assumed to be at least the stake account minimum or this will fail
 // moves via [bridge_account] which will be created as a PDA of the nifty_program
-static bool move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *bridge_account,
-                              uint8_t bridge_bump_seed, SolPubkey *to_account_key, uint64_t lamports,
-                              SolPubkey *funding_account_key, SolAccountInfo *transaction_accounts,
-                              int transaction_accounts_len)
+static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *bridge_account,
+                                  uint8_t bridge_bump_seed, SolPubkey *to_account_key, uint64_t lamports,
+                                  SolPubkey *funding_account_key, SolAccountInfo *transaction_accounts,
+                                  int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
     // XXX TRY CREATING THE BRIDGE ACCOUNT WITH 0 LAMPORTS TO ALLOW ALL OF IT TO COME FROM [from_account]
@@ -378,10 +381,11 @@ static bool move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *brid
         SolSignerSeed seed_parts[] = { { &prefix, 1 },
                                        { (uint8_t *) from_account_key, sizeof(SolPubkey) },
                                        { &bridge_bump_seed, 1 } };
-        if (create_pda(bridge_account, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]), funding_account_key,
-                       &(Constants.stake_program_pubkey), rent_exempt_minimum, 200, transaction_accounts,
-                       transaction_accounts_len)) {
-            return false;
+        uint64_t ret = create_pda(bridge_account, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]),
+                                  funding_account_key, &(Constants.stake_program_pubkey), rent_exempt_minimum, 200,
+                                  transaction_accounts, transaction_accounts_len);
+        if (ret) {
+            return ret;
         }
     }
 
@@ -412,9 +416,11 @@ static bool move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *brid
         instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
-        
-        if (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1)) {
-            return false;
+
+        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts,
+                                         transaction_accounts_len, &signer_seeds, 1);
+        if (ret) {
+            return ret;
         }
     }
 
@@ -439,13 +445,13 @@ static bool move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *brid
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
         
-        return (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) == 0);
+        return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
     }
 }
 
 
-static bool delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *vote_account_key,
-                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *vote_account_key,
+                                      SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
     
@@ -477,12 +483,12 @@ static bool delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *vote_
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) == 0);
+    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
-static bool deactivate_stake_signed(SolPubkey *stake_account_key, SolAccountInfo *transaction_accounts,
-                                    int transaction_accounts_len)
+static uint64_t deactivate_stake_signed(SolPubkey *stake_account_key, SolAccountInfo *transaction_accounts,
+                                        int transaction_accounts_len)
 {
     SolInstruction instruction;
     
@@ -508,5 +514,5 @@ static bool deactivate_stake_signed(SolPubkey *stake_account_key, SolAccountInfo
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return (sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) == 0);
+    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
