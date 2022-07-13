@@ -127,6 +127,12 @@ typedef enum
 
     // Attempted to harvest Ki from an entry that is not staked
     Error_NotStaked                                    = 1040,
+
+    // Attempt to level up an entry that is not owned
+    Error_NotOwned                                     = 1041,
+    
+    // Attempt to level up an entry that is already at max level
+    Error_AlreadyAtMaxLevel                            = 1042,
     
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

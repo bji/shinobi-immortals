@@ -127,7 +127,15 @@ typedef struct __attribute__((packed))
 } util_TransferData;
 
 
-static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubkey)
+typedef struct __attribute__((packed))
+{
+    uint8_t instruction_code; // 8 for Burn
+    
+    uint64_t amount;
+} util_BurnData;
+
+
+static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubkey, uint64_t minimum_amount)
 {
     // token_account must be owned by the SPL-Token program
     if (!is_spl_token_program(token_account->owner)) {
@@ -146,8 +154,8 @@ static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubk
         return false;
     }
 
-    // token_account must have tokens
-    if (data->amount == 0) {
+    // token_account must have [minimum_amount] tokens
+    if (data->amount < minimum_amount) {
         return false;
     }
 
@@ -156,10 +164,13 @@ static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubk
 }
 
 
-static bool is_token_owner(SolAccountInfo *token_account, SolPubkey *token_owner_key, SolPubkey *mint_pubkey)
+// Returns true only if [token_account] is a token account of the mint [mint_pubkey] owned by [token_owner_key] and
+// has at least [minimum_amount] of tokens
+static bool is_token_owner(SolAccountInfo *token_account, SolPubkey *token_owner_key, SolPubkey *mint_pubkey,
+                           uint64_t minimum_amount)
 {
     // token_account must be a token account for the mint
-    if (!is_token_account(token_account, mint_pubkey)) {
+    if (!is_token_account(token_account, mint_pubkey, minimum_amount)) {
         return false;
     }
     
@@ -282,8 +293,8 @@ static uint64_t create_token_account_idempotent(SolAccountInfo *token_account, S
                                                 SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     if (*(token_account->lamports) > 0) {
-        // Make sure that this is a token account for the given mint
-        if (is_token_owner(token_account, owner_key, mint_key)) {
+        // Make sure that this is a token account for the given mint, doesn't need to have any tokens in it though
+        if (is_token_owner(token_account, owner_key, mint_key, 0)) {
             // Already exists as a valid account
             return 0;
         }
@@ -395,10 +406,10 @@ static uint64_t transfer_entry_token(Block *block, Entry *entry, SolAccountInfo 
           ///   0. `[writable]` The source account.
         { { &(entry->token_account.address), true, false },
           ///   1. `[writable]` The destination account.
-          { token_destination->key, true, false },
+          { token_destination->key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The source account's owner/delegate, which since this is a token owned by the
           //                  entry, the owner is the authority account
-          { &(Constants.nifty_authority_pubkey), false, true } };
+          { &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     util_TransferData data = {
         /* instruction_code */ 3,
@@ -423,17 +434,17 @@ static uint64_t transfer_entry_token(Block *block, Entry *entry, SolAccountInfo 
 
 
 // Closes an empty token account and transfers the lamports to a destination account
-static uint64_t close_entry_token(Block *block, Entry *entry, SolAccountInfo *lamports_destination,
+static uint64_t close_entry_token(Entry *entry, SolAccountInfo *lamports_destination,
                                   SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The account to close.
-        { { &(entry->token_account.address), true, false },
+        { { &(entry->token_account.address), /* is_writable */ true, /* is_signer */ false },
           ///   1. `[writable]` The destination account.
-          { lamports_destination->key, true, false },
+          { lamports_destination->key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The owner/delegate of the account to close, which since this is a token owned by the
           //                  entry, the owner is the authority account
-          { &(Constants.nifty_authority_pubkey), false, true } };
+          { &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     uint8_t instruction_code = 9; // CloseAccount
 
@@ -452,3 +463,35 @@ static uint64_t close_entry_token(Block *block, Entry *entry, SolAccountInfo *la
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
+
+
+// Burns tokens
+static uint64_t burn_tokens(SolPubkey *token_account_key, SolPubkey *token_owner_account_key, SolPubkey *mint_key,
+                            uint64_t to_burn, SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.spl_token_program_pubkey);
+
+    SolAccountMeta account_metas[] =
+          ///   0. `[writable]` The account to burn from.
+        { { token_account_key, /* is_writable */ true, /* is_signer */ false },
+          ///   1. `[writable]` The token mint.
+          { mint_key, /* is_writable */ true, /* is_signer */ false },
+          ///   2. `[signer]` The account's owner/delegate.
+          { token_owner_account_key, /* is_writable */ false, /* is_signer */ true } };
+
+
+    util_BurnData data = {
+        /* instruction code */ 8,
+        /* amount */ to_burn
+    };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+
+    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+}
+

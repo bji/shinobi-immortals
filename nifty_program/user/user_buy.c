@@ -297,5 +297,5 @@ static uint64_t user_buy(SolParameters *params)
     
     // Finally, close the entry's token account since it will never be used again.  The lamports go to the admin
     // account.
-    return close_entry_token(block, entry, admin_account, params->ka, params->ka_num);
+    return close_entry_token(entry, admin_account, params->ka, params->ka_num);
 }

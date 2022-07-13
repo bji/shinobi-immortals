@@ -83,7 +83,7 @@ typedef enum
 #include "user/user_stake.c"
 #include "user/user_destake.c"
 #include "user/user_harvest.c"
-//#include "user/user_level_up.c"
+#include "user/user_level_up.c"
 
 // #include "anyone_take_commission.c"
 // #include "anyone_delegate.c"
@@ -154,9 +154,9 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_Harvest:
         return user_harvest(&params);
 
-//    case Instruction_LevelUp:
-//        return user_level_up(&params);
-//        
+    case Instruction_LevelUp:
+        return user_level_up(&params);
+        
 //    case Instruction_TakeCommission:
 //        return anyone_take_commission(&params);
 //

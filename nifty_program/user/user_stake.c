@@ -5,8 +5,8 @@
 // Account references:
 // 0. `[]` -- The block account address
 // 1. `[WRITE]` -- The entry account address
-// 2. `[SIGNER]` -- The entry token owner account
-// 3. `[]` -- The entry token account
+// 2. `[SIGNER]` -- The token owner account
+// 3. `[]` -- The token account (holding the entry's token)
 // 4. `[WRITE]` -- The stake account
 // 5. `[SIGNER]` -- The stake account withdraw authority
 // 6. `[]` -- The Shinobi Systems vote account
@@ -36,8 +36,8 @@ static uint64_t user_stake(SolParameters *params)
 
     SolAccountInfo *block_account = &(params->ka[0]);
     SolAccountInfo *entry_account = &(params->ka[1]);
-    SolAccountInfo *entry_token_owner_account = &(params->ka[2]);
-    SolAccountInfo *entry_token_account = &(params->ka[3]);
+    SolAccountInfo *token_owner_account = &(params->ka[2]);
+    SolAccountInfo *token_account = &(params->ka[3]);
     SolAccountInfo *stake_account = &(params->ka[4]);
     SolAccountInfo *stake_withdraw_authority_account = &(params->ka[5]);
     SolAccountInfo *shinobi_systems_vote_account = &(params->ka[6]);
@@ -62,7 +62,7 @@ static uint64_t user_stake(SolParameters *params)
     if (!entry_account->is_writable) {
         return Error_InvalidAccountPermissions_First + 1;
     }
-    if (!entry_token_owner_account->is_signer) {
+    if (!token_owner_account->is_signer) {
         return Error_InvalidAccountPermissions_First + 2;
     }
     if (!stake_account->is_writable) {
@@ -132,7 +132,7 @@ static uint64_t user_stake(SolParameters *params)
     }
 
     // Check to make sure that the entry token is owned by the token owner account
-    if (!is_token_owner(entry_token_account, entry_token_owner_account->key, &(entry->mint_account.address))) {
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_account.address), 1)) {
         return Error_InvalidAccount_First + 3;
     }
 

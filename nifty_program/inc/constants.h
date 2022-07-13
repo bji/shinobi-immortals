@@ -133,7 +133,7 @@ typedef struct
 } _Constants;
 
 
-const _Constants Constants =
+static const _Constants Constants =
 {
     // superuser_pubkey
     SUPERUSER_PUBKEY_ARRAY,

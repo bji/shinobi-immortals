@@ -5,11 +5,11 @@
 // account and mark the entry as refunded
 
 // Account references:
-// 0. `[SIGNER]` -- The entry's token account's owner
+// 0. `[SIGNER]` -- The token account's owner
 // 1. `[]` -- The block account
 // 2. `[WRITE]` -- The entry account
 // 3. `[WRITE]` -- The nifty program authority account
-// 4. `[]` -- The entry token account
+// 4. `[]` -- The token account (holding the entry's token)
 // 5. `[WRITE]` -- The destination account for the refunded lamports
 
 typedef struct
@@ -83,7 +83,7 @@ static uint64_t user_refund(SolParameters *params)
 
     // Check to make sure that the entry token account is the owning token account of the single token of this
     // mint, and that the token_owner_account is the proper owner of that token account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_account.address))) {
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_account.address), 1)) {
         return Error_InvalidAccount_First + 4;
     }
     

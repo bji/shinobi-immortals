@@ -4,10 +4,10 @@
 
 
 // funding_account is only used to provide transient quantities of SOL for a temporary stake account
-uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolPubkey *funding_account_key,
-                           SolAccountInfo *bridge_stake_account, uint8_t bridge_bump_seed, SolPubkey *stake_account_key,
-                           uint64_t minimum_stake_lamports, SolAccountInfo *transaction_accounts,
-                           int transaction_accounts_len)
+static uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolPubkey *funding_account_key,
+                                  SolAccountInfo *bridge_stake_account, uint8_t bridge_bump_seed,
+                                  SolPubkey *stake_account_key, uint64_t minimum_stake_lamports,
+                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute commission to charge.  It is the commission as set in the block, times the difference between
     // the current lamports in the stake account minus the lamports that were in the stake account the last
