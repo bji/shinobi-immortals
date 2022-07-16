@@ -119,6 +119,9 @@ typedef enum
     // Invalid metaplex metadata in metadata account
     Error_InvalidMetadataValues                        = 1045,
     
+    // Failed to get minimum stake delegation
+    Error_FailedToGetMinimumStakeDelegation            = 1046,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

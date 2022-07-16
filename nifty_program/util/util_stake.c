@@ -202,7 +202,42 @@ static bool decode_stake_account(const SolAccountInfo *stake_account, Stake *res
 }
 
 
-typedef struct
+// Returns the minimum delegation allowed in a stake account in [fill_in].  The number of lamports that must be used
+// to create a stake account must be at least this amount + the rent exempt minimum of a 200 byte account.  Returns 0
+// on success, nonzero on error getting the minimum stake delegation.
+static uint64_t get_minimum_stake_delegation(uint64_t *fill_in)
+{
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.stake_program_pubkey);
+    
+    instruction.accounts = 0;
+    instruction.account_len = 0;
+
+    uint32_t data = 13; // GetMinimumDelegation instruction code
+    
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+
+    // Not needed, but passed just in case the runtime wants non-null values
+    SolAccountInfo transaction_accounts[0];
+
+    uint64_t ret = sol_invoke(&instruction, transaction_accounts, 0);
+    if (ret) {
+        return ret;
+    }
+
+    SolPubkey pubkey;
+    ret = sol_get_return_data((uint8_t *) fill_in, sizeof(*fill_in), &pubkey);
+    if (ret != sizeof(*fill_in)) {
+        return Error_FailedToGetMinimumStakeDelegation;
+    }
+
+    return 0;
+}
+
+
+typedef struct __attribute__((__packed__))
 {
     uint32_t instruction; // Initialize = 0
 
@@ -260,7 +295,7 @@ static uint64_t create_stake_account(SolAccountInfo *stake_account, SolSignerSee
 }
 
 
-typedef struct
+typedef struct __attribute__((__packed__))
 {
     uint32_t instruction; // Authorize = 1
 
@@ -310,7 +345,7 @@ static uint64_t set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior
 }
 
 
-static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *prior_withdraw_authority,
+static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *new_withdraw_authority,
                                              SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
                                              int transaction_accounts_len)
 {
@@ -324,7 +359,7 @@ static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey
           // `[]` Clock sysvar
           { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
           // `[SIGNER]` The stake or withdraw authority
-          { /* pubkey */ prior_withdraw_authority, /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ new_withdraw_authority, /* is_writable */ false, /* is_signer */ true } };
     
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
@@ -354,9 +389,9 @@ static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey
 }
 
 
-typedef struct
+typedef struct __attribute__((__packed__))
 {
-    uint32_t instruction; // Authorize = 1
+    uint32_t instruction; // Split = 3
 
     uint64_t lamports;
 
@@ -371,9 +406,7 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
                                   SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
-    // XXX TRY CREATING THE BRIDGE ACCOUNT WITH 0 LAMPORTS TO ALLOW ALL OF IT TO COME FROM [from_account]
-    // If this doesn't work, then have to transfer rent_exempt_minimum from funding_account.
-    uint64_t rent_exempt_minimum = /* get_rent_exempt_minimum(200) */ 0;
+    uint64_t rent_exempt_minimum = get_rent_exempt_minimum(200);
     
     // Create the bridge account as a PDA to ensure that it exist with proper ownership
     uint64_t ret = create_pda(bridge_account, bridge_seeds, bridge_seeds_count, funding_account_key,
@@ -443,6 +476,57 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
 }
 
 
+static uint64_t split_master_stake_signed(SolPubkey *to_account_key, uint64_t lamports, SolPubkey *funding_account_key,
+                                          SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    // Create the to_account using the system program
+    uint64_t ret = create_system_account(to_account_key, funding_account_key, &(Constants.stake_program_pubkey), 200,
+                                         get_rent_exempt_minimum(200), transaction_accounts, transaction_accounts_len);
+    if (ret) {
+        return ret;
+    }
+
+    // Now use the stake program to split
+    
+    SolInstruction instruction;
+    
+    instruction.program_id = &(Constants.stake_program_pubkey);
+
+    SolAccountMeta account_metas[] = 
+          // `[WRITE]` Stake account to be split; must be in the Initialized or Stake state
+        { { /* pubkey */ &(Constants.master_stake_pubkey), /* is_writable */ true, /* is_signer */ false },
+          // `[WRITE]` Uninitialized stake account that will take the split-off amount
+          { /* pubkey */ to_account_key, /* is_writable */ true, /* is_signer */ false },
+          // `[SIGNER]` Stake authority
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+    
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    
+    util_SplitStakeInstructionData data = {
+        /* instruction_code */ 3,
+        /* lamports */ lamports
+    };
+    
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+    
+    // Seed needs to be that of the nifty authority
+    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+    
+    ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    if (ret) {
+        return ret;
+    }
+
+    // Now re-assign authorities of the new account to the funding account
+    return set_stake_authorities_signed(to_account_key, &(Constants.nifty_authority_pubkey), funding_account_key,
+                                        transaction_accounts, transaction_accounts_len);
+}
+
+    
 static uint64_t delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *vote_account_key,
                                       SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {

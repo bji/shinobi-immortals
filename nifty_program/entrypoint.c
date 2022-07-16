@@ -34,7 +34,8 @@ typedef enum
     // This command fails if the commission has already been updated in the current epoch, and also if the new
     // commission is more than 2% higher than the old commission.
     Instruction_SetBlockCommission            =  6,
-    // Split stake off of the master stake account
+    // Split stake off of the master stake account.  Will never split off stake that would leave the master account
+    // at less than 10 SOL staked.
     Instruction_SplitMasterStake              =  7,
 
     // User functions: end users may perform these actions -------------------------------------------------------------
@@ -88,7 +89,7 @@ typedef enum
 #include "admin/admin_set_metadata_bytes.c"
 #include "admin/admin_reveal_entries.c"
 #include "admin/admin_set_block_commission.c"
-//#include "admin/admin_split_master_stake.c"
+#include "admin/admin_split_master_stake.c"
 
 #include "user/user_buy.c"
 #include "user/user_refund.c"
@@ -149,6 +150,9 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_SetBlockCommission:
         return admin_set_block_commission(&params);
 
+    case Instruction_SplitMasterStake:
+        return admin_split_master_stake(&params);
+        
     case Instruction_Buy:
         return user_buy(&params);
 

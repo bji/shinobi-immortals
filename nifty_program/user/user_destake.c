@@ -11,13 +11,6 @@ typedef struct
 
     // This is the new authority to set on the de-staked stake account
     SolPubkey new_withdraw_authority_pubkey;
-
-    // This is the minimum number of lamports allowed to be staked in a stake account.  It's possible that stake
-    // accounts may have minimum stake amounts in the future; this allows the minimum to be specified.  If this is too
-    // low of a value, then the transaction may fail since the bridge account creation during commission charge may
-    // fail.  If this is too high of a value (i.e. this number of lamports is not available in the master stake
-    // account), then the transaction may fail because splitting this amount out for bridging would fail.
-    uint64_t minimum_stake_lamports;
     
 } DestakeData;
 
@@ -109,7 +102,7 @@ static uint64_t user_destake(SolParameters *params)
 
     // Charge commission
     ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, stake_account->key,
-                            data->minimum_stake_lamports, params->ka, params->ka_num);
+                            params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

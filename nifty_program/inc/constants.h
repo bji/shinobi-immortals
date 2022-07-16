@@ -7,11 +7,9 @@
 #define LAMPORTS_PER_SOL (1000ull * 1000ull * 1000ull)
 
 // Minimum number of lamports allowed to be retained staked within the master stake account.  This must be a value
-// that is always 2x greater than the minimum stake size.  Because this is hardcoded, it has to anticipate the
-// maximum possible minimum stake account size.
-//#define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (2 * 10ull * LAMPORTS_PER_SOL)
-// DEVNET test value: 0.1
-#define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (LAMPORTS_PER_SOL / 10ull)
+// that is always 2x greater than the minimum stake size (plus one for good measure!).  Because this is hardcoded, it
+// has to anticipate the maximum possible minimum stake account size. 
+#define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (((2 * 10) + 1) * LAMPORTS_PER_SOL)
 
 // This is the Ki token name
 #define KI_TOKEN_NAME "Ki"

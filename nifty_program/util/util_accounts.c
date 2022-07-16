@@ -155,6 +155,33 @@ typedef struct __attribute__((__packed__))
 } util_CreateAccountData;
 
 
+// The target_account must be a signer
+static uint64_t create_system_account(SolPubkey *target_account_key, SolPubkey *funding_account_key,
+                                      SolPubkey *owner_key, uint64_t space, uint64_t lamports,
+                                      SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    SolInstruction instruction;
+    
+    instruction.program_id = &(Constants.system_program_pubkey);
+
+    SolAccountMeta account_metas[] = 
+          ///   0. `[WRITE, SIGNER]` Funding account
+        { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
+          ///   1. `[WRITE, SIGNER]` New account
+          { /* pubkey */ target_account_key, /* is_writable */ true, /* is_signer */ true } };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    
+    util_CreateAccountData data = { 0, lamports, space, *owner_key };
+    
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+    
+    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+}
+
+
 // To be used as data to pass to the system program when invoking Assign
 typedef struct __attribute__((__packed__))
 {

@@ -1,19 +1,5 @@
 #pragma once
 
-typedef struct
-{
-    // This is the instruction code for TakeCommission
-    uint8_t instruction_code;
-
-    // This is the minimum number of lamports allowed to be staked in a stake account.  It's possible that stake
-    // accounts may have minimum stake amounts in the future; this allows the minimum to be specified.  If this is too
-    // low of a value, then the transaction may fail since the bridge account creation during commission charge may
-    // fail.  If this is too high of a value (i.e. this number of lamports is not available in the master stake
-    // account), then the transaction may fail because splitting this amount out for bridging would fail.
-    uint64_t minimum_stake_lamports;
-    
-} TakeCommissionData;
-
 
 static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
 {
@@ -32,14 +18,6 @@ static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
         DECLARE_ACCOUNT(10, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
     }
     DECLARE_ACCOUNTS_NUMBER(11);
-
-    // Make sure that the input data is the correct size
-    if (params->data_len != sizeof(TakeCommissionData)) {
-        return Error_InvalidDataSize;
-    }
-    
-    // Cast to instruction data
-    TakeCommissionData *data = (TakeCommissionData *) params->data;
 
     // Get validated block and entry, which checks all validity of those accounts
     Block *block = get_validated_block(block_account);
@@ -109,6 +87,6 @@ static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
     // Else, it's initialized, so try charging commission
     else {
         return charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account,
-                                 stake_account->key, data->minimum_stake_lamports, params->ka, params->ka_num);
+                                 stake_account->key, params->ka, params->ka_num);
     }
 }
