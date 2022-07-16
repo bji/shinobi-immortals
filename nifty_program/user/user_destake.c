@@ -45,7 +45,6 @@ static uint64_t user_destake(SolParameters *params)
         DECLARE_ACCOUNT(16,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(17,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
     }
-    
     DECLARE_ACCOUNTS_NUMBER(18);
 
     // Make sure that the input data is the correct size

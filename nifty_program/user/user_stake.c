@@ -20,7 +20,6 @@ static uint64_t user_stake(SolParameters *params)
         DECLARE_ACCOUNT(10, stake_config_account,          ReadOnly,   NotSigner,  KnownAccount_StakeConfig);
         DECLARE_ACCOUNT(11, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
     }
-
     DECLARE_ACCOUNTS_NUMBER(12);
 
     // This is the block data

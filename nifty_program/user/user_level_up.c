@@ -16,7 +16,6 @@ static uint64_t user_level_up(SolParameters *params)
         DECLARE_ACCOUNT(8,   spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(9,   metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
-
     DECLARE_ACCOUNTS_NUMBER(10);
 
     // This is the entry data

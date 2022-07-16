@@ -31,7 +31,6 @@ static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
         DECLARE_ACCOUNT(9,  stake_program_account,         ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
         DECLARE_ACCOUNT(10, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
     }
-    
     DECLARE_ACCOUNTS_NUMBER(11);
 
     // Make sure that the input data is the correct size

@@ -21,7 +21,6 @@ static uint64_t admin_set_block_commission(SolParameters *params)
         DECLARE_ACCOUNT(1,  admin_account,                 ReadOnly,  Signer,      KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,  block_account,                 ReadOnly,  NotSigner,   KnownAccount_NotKnown);
     }
-
     DECLARE_ACCOUNTS_NUMBER(3);
 
     // Ensure the the transaction has been authenticated by the admin

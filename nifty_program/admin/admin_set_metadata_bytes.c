@@ -48,7 +48,6 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
         DECLARE_ACCOUNT(2,   block_account,                 ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,   entry_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
     }
-
     DECLARE_ACCOUNTS_NUMBER(4);
 
     // Ensure the the transaction has been authenticated by the admin

@@ -18,7 +18,6 @@ static uint64_t user_harvest(SolParameters *params)
         DECLARE_ACCOUNT(10,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(11,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
     }
-    
     DECLARE_ACCOUNTS_NUMBER(12);
 
     // This is the entry data

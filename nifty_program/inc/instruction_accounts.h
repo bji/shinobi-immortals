@@ -2,7 +2,6 @@
 
 #include "inc/constants.h"
 
-
 typedef enum
 {
     KnownAccount_NotKnown,

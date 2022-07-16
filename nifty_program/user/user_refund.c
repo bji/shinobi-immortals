@@ -12,7 +12,6 @@ static uint64_t user_refund(SolParameters *params)
         DECLARE_ACCOUNT(4,   token_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   destination_account,              ReadWrite,  NotSigner,  KnownAccount_NotKnown);
     }
-    
     DECLARE_ACCOUNTS_NUMBER(6);
     
     // Get validated block account

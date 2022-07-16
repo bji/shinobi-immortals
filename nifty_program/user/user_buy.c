@@ -31,7 +31,6 @@ static uint64_t user_buy(SolParameters *params)
         DECLARE_ACCOUNT(14,  metaplexprogram_account,          ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
         DECLARE_ACCOUNT(15,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
     }
-    
     DECLARE_ACCOUNTS_NUMBER(16);
     
     // This is the block data
