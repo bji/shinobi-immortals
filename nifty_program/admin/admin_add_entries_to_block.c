@@ -142,7 +142,8 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
     // Now the total number of entries added is increased
     block->added_entries_count += entry_count;
 
-    // If the block has just been completed, then set the block_start_time to the current time.
+    // If the block has just been completed, then set the block_start_time to the current time, and set the
+    // block last_commission_change_epoch so that commission can't be changed this epoch.
     if (is_block_complete(block)) {
         Clock clock;
         if (sol_get_clock_sysvar(&clock)) {
@@ -154,6 +155,7 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         if (block->config.total_mystery_count == 0) {
             block->mystery_phase_end_timestamp = clock.unix_timestamp;
         }
+        block->last_commission_change_epoch = clock.epoch;
     }
     
     return 0;

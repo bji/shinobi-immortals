@@ -87,7 +87,7 @@ typedef enum
 #include "admin/admin_add_entries_to_block.c"
 #include "admin/admin_set_metadata_bytes.c"
 #include "admin/admin_reveal_entries.c"
-//#include "admin/admin_set_block_commission.c"
+#include "admin/admin_set_block_commission.c"
 //#include "admin/admin_split_master_stake.c"
 
 #include "user/user_buy.c"
@@ -146,8 +146,8 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_RevealEntries:
         return admin_reveal_entries(&params);
 
-////    case Instruction_SetBlockCommission:
-////        return admin_set_block_commission(&params);
+    case Instruction_SetBlockCommission:
+        return admin_set_block_commission(&params);
 
     case Instruction_Buy:
         return user_buy(&params);

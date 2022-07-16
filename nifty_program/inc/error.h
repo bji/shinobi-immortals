@@ -94,65 +94,30 @@ typedef enum
     
     // Attempt to set stake account authorities to the nifty authority failed during a stake operation
     Error_SetStakeAuthoritiesFailed                    = 1037,
+
+    // Delegate stake failed
+    Error_FailedToDelegate                             = 1038,
     
     // Attempted to harvest Ki from an entry that is not staked
-    Error_NotStaked                                    = 1038,
+    Error_NotStaked                                    = 1039,
     
     // Attempt to level up an entry that is not owned
-    Error_NotOwned                                     = 1039,
+    Error_NotOwned                                     = 1040,
     
     // Attempt to level up an entry that is already at max level
-    Error_AlreadyAtMaxLevel                            = 1040,
+    Error_AlreadyAtMaxLevel                            = 1041,
     
     // Deactivate stake failed
-    Error_FailedToDeactivate                           = 1041,
+    Error_FailedToDeactivate                           = 1042,
 
-//    // The block account doesn't have the correct number of bytes in it
-//    Error_InvalidDataLen                               = 1007,
-//
-//    // Block parameters would result in a block that exceeds maximum allowed system account size
-//    Error_BlockTooLarge                                = 1008,
-//
-//    // Block account was provided but had bad permissions
-//    Error_BadPermissions                               = 1009,
-//
-//    // Attempting an action that is invalid on a completed block
-//    Error_BlockAlreadyComplete                         = 1010,
-//
-//    // Transaction attempted to use a program derived account of the wrong type
-//    Error_IncorrectAccountType                         = 1012,
-//
-//    // Attempted to reveal an NFT that was not owned by the nifty program
-//    Error_InvalidNFTOwner                              = 1014,
-//
-//    // Attempted to reveal an account that wasn't even a valid NFT
-//    Error_InvalidNFTAccount                            = 1015,
-//
-//    // Suppled stake account was not a valid stake account
-//    Error_InvalidStakeAccount                          = 1019,
-//
-//    // Add entries finished adding all entries for a block but did not supply a link block
-//    Error_MissingLinkBlock                             = 1020,
-//
-//    // Insufficient funds provided for operation
-//    Error_InsufficientFunds                            = 1026,
-//
-//    // Invalid metaplex metadata in metadata account
-    Error_InvalidMetadataValues                        = 1027,
-//
-//    // Attempt to claim when a claim is not possible
-//    Error_ClaimNotPossible                             = 1031,
-//    
-//    // Delegate stake failed
-    Error_FailedToDelegate                             = 1032,
-//
-//
-//    // Attempt to set stake account authorities to the nifty authority failed during a stake operation
-//    Error_SetStakeAuthoritiesFailed                    = 1034,
-//
-//    // Attempt to charge commission when there is no commission to charge
-//    Error_NoCommissionToCharge                         = 1036,
-//
+    // Commission already set this epoch and can't be set again
+    Error_CommissionAlreadySetThisEpoch                = 1043,
+
+    // Attempted to set commission to a value more than 2% higher than current commission
+    Error_CommissionTooHigh                            = 1044,
+    
+    // Invalid metaplex metadata in metadata account
+    Error_InvalidMetadataValues                        = 1045,
     
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

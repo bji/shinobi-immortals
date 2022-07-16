@@ -23,7 +23,7 @@ static uint64_t user_stake(SolParameters *params)
 
     DECLARE_ACCOUNTS_NUMBER(12);
 
-    // This is the entry data
+    // This is the block data
     Block *block = get_validated_block(block_account);
     if (!block) {
         return Error_InvalidAccount_First;
