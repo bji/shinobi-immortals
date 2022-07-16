@@ -4,39 +4,13 @@
 #include "util/util_ki.c"
 #include "util/util_stake.c"
 
-
-// Account references:
-// 0. `[WRITE, SIGNER]` -- The account to use for funding operations
-// 1. `[]` -- The block account address
-// 2. `[WRITE]` -- The entry account address
-// 3. `[SIGNER]` -- The token owner account
-// 4. `[]` -- The token account (holding the entry's token)
-// 5. `[WRITE]` -- The stake account
-// 6. `[]` -- The new authority for the stake account
-// 7. `[WRITE]` -- The destination account for harvested Ki
-// 8. `[]` -- The system account that will own the destination ki token account if it needs to be created; or
-//             currently owns it if it's already created
-// 9. `[WRITE]` -- The master stake account
-// 10. `[WRITE]` -- The bridge stake account
-// 11. `[WRITE]` -- The Ki mint account
-// 12. `[]` -- The nifty authority account (for commission charge splitting/merging)
-// 13. `[]` -- Clock sysvar (required by stake program)
-// 14. `[]` -- The system program id (for cross-program invoke)
-// 15. `[]` -- The stake program id (for cross-program invoke)
-// 16. `[]` -- The stake history id
-// 17. `[]` -- The SPL Token account program
-// 18. `[]` -- The SPL associated token account program, for cross-program invoke
-
 typedef struct
 {
-    // This is the instruction code for Buy
+    // This is the instruction code for Destake
     uint8_t instruction_code;
 
-    // This is the entry_index of the entry within its block
-    uint16_t entry_index;
-
-    // This is the bump seed needed to compute the bridge stake account address for the entry
-    uint8_t bridge_bump_seed;
+    // This is the new authority to set on the de-staked stake account
+    SolPubkey new_withdraw_authority_pubkey;
 
     // This is the minimum number of lamports allowed to be staked in a stake account.  It's possible that stake
     // accounts may have minimum stake amounts in the future; this allows the minimum to be specified.  If this is too
@@ -50,35 +24,29 @@ typedef struct
 
 static uint64_t user_destake(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 19.
-    if (params->ka_num != 19) {
-        return Error_IncorrectNumberOfAccounts;
+    // Declare accounts, which checks the permissions and identity of all accounts
+    DECLARE_ACCOUNTS {
+        DECLARE_ACCOUNT(0,   funding_account,                  ReadWrite,  Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(1,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(2,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(4,   token_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(5,   stake_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(6,   ki_destination_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(7,   ki_destination_owner_account,     ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(8,   master_stake_account,             ReadWrite,  NotSigner,  KnownAccount_MasterStake);
+        DECLARE_ACCOUNT(9,   bridge_stake_account,             ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(10,  ki_mint_account,                  ReadWrite,  NotSigner,  KnownAccount_KiMint);
+        DECLARE_ACCOUNT(11,  authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(12,  clock_sysvar_account,             ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
+        DECLARE_ACCOUNT(13,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(14,  stake_program_account,            ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
+        DECLARE_ACCOUNT(15,  stake_history_sysvar_account,     ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
+        DECLARE_ACCOUNT(16,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
+        DECLARE_ACCOUNT(17,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
     }
-
-    SolAccountInfo *funding_account = &(params->ka[0]);
-    SolAccountInfo *block_account = &(params->ka[1]);
-    SolAccountInfo *entry_account = &(params->ka[2]);
-    SolAccountInfo *token_owner_account = &(params->ka[3]);
-    SolAccountInfo *token_account = &(params->ka[4]);
-    SolAccountInfo *stake_account = &(params->ka[5]);
-    SolAccountInfo *new_withdraw_authority_account = &(params->ka[6]);
-    SolAccountInfo *ki_destination_account = &(params->ka[7]);
-    SolAccountInfo *ki_destination_owner_account = &(params->ka[8]);
-    SolAccountInfo *master_stake_account = &(params->ka[9]);
-    SolAccountInfo *bridge_stake_account = &(params->ka[10]);
-    SolAccountInfo *ki_mint_account = &(params->ka[11]);
-    SolAccountInfo *authority_account = &(params->ka[12]);
-    SolAccountInfo *clock_sysvar_account = &(params->ka[13]);
-    // The account at index 14 must be the system program, but this is not checked; if it's not that program, then
-    // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 15 must be the stake program, but this is not checked; if it's not that program, then
-    // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 16 must be the stake history account, but this is not checked; if it's not that program,
-    // then the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 17 must be the SPL token program, but this is not checked; if it's not that program, then
-    // the transaction will simply fail when it is used to sign a cross-program invoke later
-    // The account at index 18 must be the SPL associated token account program, but this is not checked; if it's not
-    // that program, then the transaction will simply fail when it is used to sign a cross-program invoke later
+    
+    DECLARE_ACCOUNTS_NUMBER(18);
 
     // Make sure that the input data is the correct size
     if (params->data_len != sizeof(DestakeData)) {
@@ -88,32 +56,6 @@ static uint64_t user_destake(SolParameters *params)
     // Cast to instruction data
     DestakeData *data = (DestakeData *) params->data;
     
-    // Check permissions
-    if (!funding_account->is_writable || !funding_account->is_signer) {
-        return Error_InvalidAccountPermissions_First;
-    }
-    if (!entry_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 2;
-    }
-    if (!token_owner_account->is_signer) {
-        return Error_InvalidAccountPermissions_First + 3;
-    }
-    if (!stake_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 5;
-    }
-    if (!ki_destination_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 7;
-    }
-    if (!master_stake_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 9;
-    }
-    if (!bridge_stake_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 10;
-    }
-    if (!ki_mint_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 11;
-    }
-
     // Get validated block and entry, which checks all validity of those accounts
     Block *block = get_validated_block(block_account);
     if (!block) {
@@ -126,7 +68,7 @@ static uint64_t user_destake(SolParameters *params)
     }
 
     // This is the entry data
-    Entry *entry = get_validated_entry(block, data->entry_index, entry_account);
+    Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
         return Error_InvalidAccount_First + 2;
     }
@@ -143,41 +85,13 @@ static uint64_t user_destake(SolParameters *params)
     }
 
     // Check to make sure that the entry token is owned by the token owner account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_account.address), 1)) {
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
         return Error_InvalidAccount_First + 4;
     }
 
     // Check to make sure that the stake account passed in is actually staked in the entry
-    if (!SolPubkey_same(&(entry->staked.stake_account), stake_account->key)) {
+    if (!SolPubkey_same(&(entry->owned.stake_account), stake_account->key)) {
         return Error_InvalidAccount_First + 5;
-    }
-
-    // Check to make sure that the master stake account passed in is actually the master stake account
-    if (!is_master_stake_account(master_stake_account->key)) {
-        return Error_InvalidAccount_First + 9;
-    }
-
-    // Check to make sure that the proper bridge account was passed in
-    SolPubkey bridge_pubkey;
-    if (!compute_bridge_address(block->config.group_number, block->config.block_number, entry->entry_index,
-                                data->bridge_bump_seed, &bridge_pubkey) ||
-        !SolPubkey_same(&bridge_pubkey, bridge_stake_account->key)) {
-        return Error_InvalidAccount_First + 10;
-    }
-
-    // Check to make sure that the proper Ki mint account was passed in
-    if (!is_ki_mint_account(ki_mint_account->key)) {
-        return Error_InvalidAccount_First + 11;
-    }
-    
-    // Check to make sure that the proper nifty program authority account was passed in
-    if (!is_nifty_authority_account(authority_account->key)) {
-        return Error_InvalidAccount_First + 12;
-    }
-
-    // Check to make sure that the clock sysvar account really is a reference to that account
-    if (!SolPubkey_same(&(Constants.clock_sysvar_pubkey), clock_sysvar_account->key)) {
-        return Error_InvalidAccount_First + 13;
     }
 
     // Decode the stake account
@@ -195,8 +109,8 @@ static uint64_t user_destake(SolParameters *params)
     }
 
     // Charge commission
-    ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, data->bridge_bump_seed,
-                            stake_account->key, data->minimum_stake_lamports, params->ka, params->ka_num);
+    ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, stake_account->key,
+                            data->minimum_stake_lamports, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }
@@ -204,12 +118,12 @@ static uint64_t user_destake(SolParameters *params)
     // Use stake account program to set all authorities to the new authority; must do this signed since the
     // nifty program authority is currently the withdraw authority of the stake account
     if (set_stake_authorities_signed(stake_account->key, &(Constants.nifty_authority_pubkey),
-                                     new_withdraw_authority_account->key, params->ka, params->ka_num)) {
+                                     &(data->new_withdraw_authority_pubkey), params->ka, params->ka_num)) {
         return Error_SetStakeAuthoritiesFailed;
     }
 
-    // No longer staked
-    sol_memset(&(entry->staked), 0, sizeof(entry->staked));
+    // No longer staked, all fields in owned should be zeroed out
+    sol_memset(&(entry->owned), 0, sizeof(entry->owned));
     
     return 0;
 }

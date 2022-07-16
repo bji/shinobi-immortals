@@ -45,23 +45,26 @@ typedef enum
     Instruction_Refund                        =  9,
     // Bid on an entry that is in normal auction
     Instruction_Bid                           = 10,
-    // Claim a winning or losing bid
-    Instruction_Claim                         = 11,
+    // Claim a losing bid
+    Instruction_ClaimLosing                   = 11,
+    // Claim a winning bid
+    Instruction_ClaimWinning                  = 12,
+    
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
     // progrmam.
-    Instruction_Stake                         = 12,
+    Instruction_Stake                         = 13,
     // Destake the entry, returning the stake account of the entry.
-    Instruction_Destake                       = 13,
+    Instruction_Destake                       = 14,
     // Harvest Ki
-    Instruction_Harvest                       = 14,
+    Instruction_Harvest                       = 15,
     // Level up an entry.  This requires as input am amount of Ki, which is burned.
-    Instruction_LevelUp                       = 15,
+    Instruction_LevelUp                       = 16,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
     // If the entry is staked and the stake account is delegated, this pays any commission owed to the admin account.
     // If the entry is staked and the stake account is not delegated, this delgates the stake account to Shinobi
     // Systems so that it can start earning Ki
-    Instruction_TakeCommissionOrDelegate      = 16,
+    Instruction_TakeCommissionOrDelegate      = 17,
 
     // Special functions -----------------------------------------------------------------------------------------------
     // This is a special function that can only be called on an entry that is in the Owned or OwnedAndStaked state.
@@ -71,7 +74,7 @@ typedef enum
     // bugs or problems with this program; or a need to upgrade the program to handle new conditions.  The program
     // can't be upgraded but a new program can be made and then given authority over all user owned entries via this
     // instruction (but only if both the user and admin agree to do so).
-    Instruction_ReAuthorize                   = 17
+    Instruction_ReAuthorize                   = 18
     
 } Instruction;
 
@@ -85,17 +88,21 @@ typedef enum
 #include "admin/admin_set_metadata_bytes.c"
 #include "admin/admin_reveal_entries.c"
 //#include "admin/admin_set_block_commission.c"
+//#include "admin/admin_split_master_stake.c"
 
 #include "user/user_buy.c"
 #include "user/user_refund.c"
 #include "user/user_bid.c"
-#include "user/user_claim.c"
+#include "user/user_claim_losing.c"
+#include "user/user_claim_winning.c"
 #include "user/user_stake.c"
 #include "user/user_destake.c"
 #include "user/user_harvest.c"
 #include "user/user_level_up.c"
 
 #include "anyone/anyone_take_commission_or_delegate.c"
+
+// #include "special/special_reauthorize.c"
 
 
 // Program entrypoint
@@ -139,8 +146,8 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_RevealEntries:
         return admin_reveal_entries(&params);
 
-//    case Instruction_SetBlockCommission:
-//        return admin_set_block_commission(&params);
+////    case Instruction_SetBlockCommission:
+////        return admin_set_block_commission(&params);
 
     case Instruction_Buy:
         return user_buy(&params);
@@ -150,9 +157,12 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_Bid:
         return user_bid(&params);
-        
-    case Instruction_Claim:
-        return user_claim(&params);
+
+    case Instruction_ClaimLosing:
+        return user_claim_losing(&params);
+
+    case Instruction_ClaimWinning:
+        return user_claim_winning(&params);
 
     case Instruction_Stake:
         return user_stake(&params);
@@ -165,7 +175,7 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_LevelUp:
         return user_level_up(&params);
-        
+
     case Instruction_TakeCommissionOrDelegate:
         return anyone_take_commission_or_delegate(&params);
 
@@ -175,4 +185,12 @@ uint64_t entrypoint(const uint8_t *input)
     default:
         return Error_UnknownInstruction;
     }
+}
+
+
+// Provide a memcpy implementation; this allows structure assignments that the compiler will turn into
+// memcpy which is safer that calling memcpy directly
+void memcpy(void *dst, const void *src, int len)
+{
+    sol_memcpy(dst, src, len);
 }

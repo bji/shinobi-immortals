@@ -4,14 +4,10 @@
 
 #include "inc/constants.h"
 #include "inc/error.h"
+#include "inc/instruction_accounts.h"
 #include "inc/program_config.h"
 #include "util/util_accounts.c"
 #include "util/util_authentication.c"
-
-// Account references:
-// 0. `[SIGNER]` -- Super user account
-// 1. `[WRITE]` -- The config account
-
 
 // Data passed to this program for UpdateAdmin function
 typedef struct
@@ -25,6 +21,18 @@ typedef struct
 
 static uint64_t super_set_admin(SolParameters *params)
 {
+    // Declare accounts, which checks the permissions and identity of all accounts
+    DECLARE_ACCOUNTS {
+        DECLARE_ACCOUNT(0,   superuser_account,             ReadOnly,   Signer,     KnownAccount_SuperUser);
+        DECLARE_ACCOUNT(1,   config_account,                ReadWrite,  NotSigner,  KnownAccount_ProgramConfig);
+    }
+    DECLARE_ACCOUNTS_NUMBER(2);
+    
+    // This instruction can only be executed by the authenticated superuser
+    if (!is_superuser_authenticated(superuser_account)) {
+        return Error_PermissionDenied;
+    }
+
     // Ensure that the input data is the correct size
     if (params->data_len != sizeof(UpdateAdminData)) {
         return Error_InvalidDataSize;
@@ -32,32 +40,14 @@ static uint64_t super_set_admin(SolParameters *params)
 
     UpdateAdminData *data = (UpdateAdminData *) params->data;
 
-    // Sanitize the accounts.  There must be exactly 2.
-    if (params->ka_num != 2) {
-        return Error_IncorrectNumberOfAccounts;
-    }
-
-    SolAccountInfo *superuser_account = &(params->ka[0]);
-    SolAccountInfo *config_account = &(params->ka[1]);
-
-    // This instruction can only be executed by the authenticated superuser
-    if (!is_superuser_authenticated(superuser_account)) {
-        return Error_PermissionDenied;
-    }
-
-    // Ensure that the config account is the second account and that it is writable
-    if (!is_nifty_config_account(config_account->key) || !config_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 1;
-    }
-
-    // Ensure that the data is the correct size
+    // Ensure that the config account data is the correct size
     if (config_account->data_len != sizeof(ProgramConfig)) {
         return Error_InvalidAccount_First + 1;
     }
 
     ProgramConfig *config = (ProgramConfig *) (config_account->data);
 
-    // Ensure that the account is of the correct type
+    // Ensure that the config account is of the correct type
     if (config->data_type != DataType_ProgramConfig) {
         return Error_InvalidAccount_First + 1;
     }

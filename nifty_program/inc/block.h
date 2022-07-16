@@ -33,62 +33,29 @@ typedef struct
     // (while retaining the mystery NFT itself).
     uint32_t reveal_period_duration;
 
-    // This is a number of seconds to add to an auction start time to get the end of auction time.  May be 0, in which
-    // case there is no auction at all, and instead the price of revealed Entries is always
-    // auction_end_price_lamports.
-    uint32_t auction_duration;
-
-    // If this is true, then a "reverse" auction is performed.  If this is false, then a "normal" auction is
-    // performed.  A normal auction starts with no bids and a minimum bid price of [final_mystery_price_lamports].
-    // Each bid must be some multiple higher than the previous bid; this is determined by a formula that starts
-    // at 1.1 and towards the end of the auction duration rapidly increases; this prevents "sniping" of bids near
-    // the end of the auction.  In a normal auction, once the end of the auction is reached, if there are no bids,
-    // then the price remains at [final_mystery_price_lamports] forever thereafter.
-    // A reverse auction is identical in function to the mystery phase pricing: the price starts at
-    // [reverse_auction_start_price_lamports] and decreases on a curve until it is
-    // [reverse_auction_end_price_lamports]; it stays at that value forever thereafter.  Anyone can instantly buy
-    // an entry during a reverse auction at the current reverse auction price; there is no "bidding", just immediate
-    // purchase.
-    bool is_reverse_auction;
-
-    // In the mystery phase, this is the final price of a mystery.  For a normal auction, this is the minimum initial
-    // bid price.  For a reverse auction, this is the end price.  For both auction types, this is the price of the
-    // entry if the entry was not bid on or did not otherwise sell.  if there is no auction, then this is the price of
-    // the entry.
+    // This value is used in three ways:
+    // - It is the final price of the mystery at the end of this entry's mystery phase
+    // - It is the starting price of an auction for this entry
+    // - It is the final price of the entry if it is unsold and not a mystery and past its auction phase
     uint64_t minimum_price_lamports;
 
-    // For a reverse auction, this is the start price of the auction in lamports.
-    uint64_t reverse_auction_start_price_lamports;
+    // If this is true, then when an entry is first revealed, if it is has not been sold already as a mystery, then it
+    // enters an auction period, with parameters defined by the values in [auction].  If this is false, then when an
+    // entry is first revealed, if it is has not been sold already as a mystery, it is immediately purchasable for a
+    // price that is determined by parameters in [non_auction];
+    bool has_auction;
+
+    // If [has_auction} is true, this is a number of seconds to add to entry reveal time to get the end of auction
+    // time, which must be > 0.
+    // If [has_auction] is false, this is the number of seconds it takes for the entry price to decay from
+    // non_auction_start_price_lamports to minimum_price_lamports
+    uint32_t duration;
+
+    // If [has_auction] is false, this is the initial price to sell revealed entry for, which must be
+    // >= minimum_price_lamports.
+    uint64_t non_auction_start_price_lamports;
 
 } BlockConfiguration;
-
-
-// The state values of a block; these can be updated after a block is created
-typedef struct
-{
-    // This is the total number of entries that have been added to the block thus far.
-    uint16_t added_entries_count;
-
-    // This is the timestamp that the last entry was added to the block and it became complete; at that instant,
-    // the block is complete and the mystery phase begins.
-    timestamp_t block_start_timestamp;
-
-    // This is the total number of mysteries which have been sold
-    uint16_t mysteries_sold_count;
-
-    // This is the timestamp that the number of mysteries sold became equal to the total_mystery_count, at which
-    // time the reveal grace period begins.
-    timestamp_t mysteries_all_sold_timestamp;
-
-    // Commission currently charged per epoch for staked entries.  This value can be updated but not more often than
-    // once per epoch, and it can only be updated in maximum increments of 2%.  For any given entry, the change
-    // will only take effect after the commission charge *after this change */.
-    commission_t commission;
-
-    // Epoch of the last time that the commission was changed
-    uint64_t last_commission_change_epoch;
-
-} BlockState;
 
 
 // This is the format of data stored in a block account
@@ -101,12 +68,27 @@ typedef struct
     // block contains a duplicate of this data in its config.
     BlockConfiguration config;
 
-    // These are the state values of the block.
-    BlockState state;
+    // This is the total number of entries that have been added to the block thus far.
+    uint16_t added_entries_count;
 
-    // These are the bump seeds of the entries of the block, of which there are config.total_entry_count.  Each bump
-    // seed can be used to derive the address of an entry.  These are stored as bump seeds instead of the actual entry
-    // address to save space and thus allow blocks to hold more entries.
-    uint8_t entry_bump_seeds[];
-    
+    // This is the timestamp that the last entry was added to the block and it became complete; at that instant,
+    // the block is complete and the mystery phase begins.
+    timestamp_t block_start_timestamp;
+
+    // This is the total number of mysteries which have been sold
+    uint16_t mysteries_sold_count;
+
+    // This is the timestamp that the number of mysteries sold became equal to the total_mystery_count, at which
+    // time the reveal grace period begins.  If there were no mysteries for this block, then this is the timestamp
+    // at which the last entry was added.
+    timestamp_t mystery_phase_end_timestamp;
+
+    // Commission currently charged per epoch for staked entries.  This value can be updated but not more often than
+    // once per epoch, and it can only be updated in maximum increments of 2%.  For any given entry, the change
+    // will only take effect after the commission charge *after this change*.
+    commission_t commission;
+
+    // Epoch of the last time that the commission was changed
+    uint64_t last_commission_change_epoch;
+
 } Block;

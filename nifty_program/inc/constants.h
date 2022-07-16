@@ -22,6 +22,17 @@
 // This is the Ki token metadata uri (to be updated with a permanent uri when one is available_
 #define KI_TOKEN_METADATA_URI "https://www.shinobi-systems.com/nifty_stakes/ki.json"
 
+// This is the nifty stakes auction token name.  These tokens are used to create "markers" within users token
+// lists that point to bids.  These must use the Metaplex Fungible Token standard, which means having at least
+// one decimal place.
+#define BID_MARKER_TOKEN_NAME "Shinobi Auction Bid Marker"
+
+// Nifty stakes auction token symbol
+#define BID_MARKER_TOKEN_SYMBOL "SHIN-BID"
+
+// Nifty stakes auction token metadata uri
+#define BID_MARKER_TOKEN_METADATA_URI "https://www.shinobi-systems.com/nifty_stakes/bid_marker.json"
+
 
 // Each different PDA type has its own unique prefix, to ensure that even if other seed values between different PDA
 // account types would result in overlapping addresses, the addresses in fact never overlap
@@ -45,8 +56,11 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Bid = 9,
 
-    PDA_Account_Seed_Prefix_Bridge = 10
+    PDA_Account_Seed_Prefix_Bridge = 10,
     
+    PDA_Account_Seed_Prefix_Bid_Marker_Mint = 11,
+    
+    PDA_Account_Seed_Prefix_Bid_Marker_Token = 12
 } PDA_Account_Seed_Prefix;
 
 
@@ -95,8 +109,17 @@ typedef struct
     uint8_t ki_mint_seed_bytes[2];
 
     // This is the Ki mint metadata pubkey
-    SolPubkey ki_mint_metadata_pubkey;
+    SolPubkey ki_metadata_pubkey;
 
+    // This is the Shinobi Bid mint pubkey
+    SolPubkey bid_marker_mint_pubkey;
+
+    // These are the seed bytes used to derive the Shinobi Bid mint account address
+    uint8_t bid_marker_mint_seed_bytes[2];
+
+    // This is the Shinobi Bid mint metadata pubkey
+    SolPubkey bid_marker_metadata_pubkey;
+    
     // This is the Shinobi Systems vote account pubkey
     SolPubkey shinobi_systems_vote_pubkey;
 
@@ -162,9 +185,18 @@ static const _Constants Constants =
     // ki_mint_seed_bytes
     { PDA_Account_Seed_Prefix_Ki_Mint, KI_MINT_BUMP_SEED },
 
-    // ki_mint_metadata_pubkey
-    KI_MINT_METADATA_PUBKEY_ARRAY,
+    // ki_metadata_pubkey
+    KI_METADATA_PUBKEY_ARRAY,
 
+    // bid_marker_mint_pubkey
+    BID_MARKER_MINT_PUBKEY_ARRAY,
+
+    // bid_marker_mint_seed_bytes
+    { PDA_Account_Seed_Prefix_Bid_Marker_Mint, BID_MARKER_MINT_BUMP_SEED },
+
+    // bid_marker_metadata_pubkey
+    BID_MARKER_METADATA_PUBKEY_ARRAY,
+    
     // shinobi_systems_vote_pubkey
     SHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY,
     

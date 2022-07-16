@@ -1,64 +1,20 @@
 #pragma once
 
-// If the user owns the entry, and if the entry is not revealed, and if the reveal grace period has passed,
-// and if the entry has not been refunded yet, then return the price of the entry from the escrow (authority)
-// account and mark the entry as refunded
-
-// Account references:
-// 0. `[SIGNER]` -- The token account's owner
-// 1. `[]` -- The block account
-// 2. `[WRITE]` -- The entry account
-// 3. `[WRITE]` -- The nifty program authority account
-// 4. `[]` -- The token account (holding the entry's token)
-// 5. `[WRITE]` -- The destination account for the refunded lamports
-
-typedef struct
-{
-    // This is the instruction code for Refund
-    uint8_t instruction_code;
-
-    // This is the entry_index of the entry within its block
-    uint16_t entry_index;
-    
-} RefundData;
-
 
 static uint64_t user_refund(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 6.
-    if (params->ka_num != 6) {
-        return Error_IncorrectNumberOfAccounts;
+    // Declare accounts, which checks the permissions and identity of all accounts
+    DECLARE_ACCOUNTS {
+        DECLARE_ACCOUNT(0,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(1,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(2,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,   authority_account,                ReadWrite,  NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(4,   token_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(5,   destination_account,              ReadWrite,  NotSigner,  KnownAccount_NotKnown);
     }
-
-    SolAccountInfo *token_owner_account = &(params->ka[0]);
-    SolAccountInfo *block_account = &(params->ka[1]);
-    SolAccountInfo *entry_account = &(params->ka[2]);
-    SolAccountInfo *authority_account = &(params->ka[3]);
-    SolAccountInfo *token_account = &(params->ka[4]);
-    SolAccountInfo *destination_account = &(params->ka[5]);
-
-    // Make sure that the input data is the correct size
-    if (params->data_len != sizeof(RefundData)) {
-        return Error_InvalidDataSize;
-    }
-
-    // Cast to instruction data
-    RefundData *data = (RefundData *) params->data;
     
-    // Check permissions
-    if (!token_owner_account->is_signer) {
-        return Error_InvalidAccountPermissions_First;
-    }
-    if (!entry_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 2;
-    }
-    if (!authority_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 3;
-    }
-    if (!destination_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 5;
-    }
-
+    DECLARE_ACCOUNTS_NUMBER(6);
+    
     // Get validated block account
     Block *block = get_validated_block(block_account);
     if (!block) {
@@ -71,19 +27,14 @@ static uint64_t user_refund(SolParameters *params)
     }
 
     // Get validated entry account
-    Entry *entry = get_validated_entry(block, data->entry_index, entry_account);
+    Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
         return Error_InvalidAccount_First + 2;
     }
 
-    // Check to make sure that the authority account provided is the correct account
-    if (!is_nifty_authority_account(authority_account->key)) {
-        return Error_InvalidAccount_First + 3;
-    }
-
     // Check to make sure that the entry token account is the owning token account of the single token of this
     // mint, and that the token_owner_account is the proper owner of that token account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_account.address), 1)) {
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
         return Error_InvalidAccount_First + 4;
     }
     
@@ -96,6 +47,11 @@ static uint64_t user_refund(SolParameters *params)
     // Check to make sure that the entry is waiting to be revealed and is owned
     if (get_entry_state(block, entry, &clock) != EntryState_WaitingForRevealOwned) {
         return Error_EntryNotRevealable;
+    }
+
+    // Check to make sure that the block's reveal grace period has passed
+    if ((block->mystery_phase_end_timestamp + block->config.mystery_phase_duration) > clock.unix_timestamp) {
+        return Error_EntryWaitingForReveal;
     }
     
     // Check to make sure that the entry was not already refunded

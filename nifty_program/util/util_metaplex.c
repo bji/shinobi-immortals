@@ -199,8 +199,8 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, uint8_t *name, uint8_t *
 }
 
 
-static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPubkey *mint_key,
-                                         SolPubkey *authority_key, SolPubkey *funding_key,
+// Ensures that the metadata is being created at the correct address, returns an error if not
+static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPubkey *mint_key, SolPubkey *funding_key,
                                          uint8_t *name, uint8_t *symbol, uint8_t *uri, SolPubkey *creator_1,
                                          SolPubkey *creator_2,
                                          // All cross-program invocation must pass all account infos through, it's
@@ -208,17 +208,20 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
                                          SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 
 {
+    // It is not necessary to verify that the metaplex_metadata_key is the correct account for the given mint,
+    // because the Metaplex Metata program already does this
+    
     SolAccountMeta account_metas[] =
           // Metadata key
         { { /* pubkey */ metaplex_metadata_key, /* is_writable */ true, /* is_signer */ false },
           // Mint of token asset
           { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false },
           // Mint authority
-          { /* pubkey */ authority_key, /* is_writable */ false, /* is_signer */ true },
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true },
           // payer
           { /* pubkey */ funding_key, /* is_writable */ true, /* is_signer */ true },
           // update authority info
-          { /* pubkey */ authority_key, /* is_writable */ false, /* is_signer */ false },
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ false },
           // system program
           { /* pubkey */ &((* (_Constants *) &Constants).system_program_pubkey), /* is_writable */ false,
             /* is_signer */ false },
@@ -230,7 +233,7 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
                  METAPLEX_METADATA_DATA_SIZE /* data */ +
                  BORSH_SIZE_BOOL /* is_mutable */];
     uint8_t *d = borsh_encode_u8(data, 16); // instruction code 16 = CreateMetadataAccountV2
-    d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, authority_key);
+    d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, &(Constants.nifty_authority_pubkey));
     d = borsh_encode_bool(d, true); // is_mutable
     
     SolInstruction instruction;
@@ -250,33 +253,6 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
 }
 
 
-static uint64_t create_entry_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPubkey *mint_key,
-                                               SolPubkey *authority_key, SolPubkey *funding_key,
-                                               uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                               uint8_t *uri, SolPubkey *creator_1, SolPubkey *creator_2,
-                                               // All cross-program invocation must pass all account infos through,
-                                               // it's the only sane way to cross-program invoke
-                                               SolAccountInfo *transaction_accounts, int transaction_accounts_len)
-
-{
-    // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
-    // and NNNN is the entry index (+1).
-    uint8_t name[7 + 1 + 3 + 1 + 3 + 1 + 4 + 1];
-    sol_memcpy(name, "Shinobi", 7);
-    name[7] = ' ';
-    number_string(&(name[8]), group_number, 3);
-    name[11] = '-';
-    number_string(&(name[12]), block_number, 3);
-    name[15] = '-';
-    number_string(&(name[16]), entry_index + 1, 4);
-    name[sizeof(name) - 1] = 0;
-
-    return create_metaplex_metadata(metaplex_metadata_key, mint_key, authority_key, funding_key, name,
-                                    (uint8_t *) "SHIN", uri, creator_1, creator_2, transaction_accounts,
-                                    transaction_accounts_len);
-}
-
-
 // Sets the primary_sale_happened metaplex metadata value to true
 static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
                                                             // All cross-program invocation must pass all account
@@ -288,7 +264,7 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ &(entry->metaplex_metadata_account), /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ &(entry->metaplex_metadata_pubkey), /* is_writable */ true, /* is_signer */ false },
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -459,7 +435,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ &(entry->metaplex_metadata_account), /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ &(entry->metaplex_metadata_pubkey), /* is_writable */ true, /* is_signer */ false },
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 

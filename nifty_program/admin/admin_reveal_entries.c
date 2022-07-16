@@ -4,19 +4,6 @@
 #include "util/util_transfer_lamports.c"
 
 
-// Account references:
-// 0. `[]` Program config account
-// 1. `[SIGNER]` -- This must be the admin account
-// 2. `[WRITE]` -- The block account address
-// 3. `[WRITE]` -- nifty authority
-// 4. `[]` -- System program id (for cross-program invoke)
-// 5. `[]` -- Metaplex metadata program id (for cross-program invoke)
-// 6. `[]` -- Token mint account
-// 7. `[]` -- Entry token account
-// 8. `[]` -- Metaplex metadata account
-// 9. `[WRITE]` -- Entry account
-// (Repeat 6-9 for each additional entry in the transaction)
-
 typedef struct
 {
     // This is the instruction code for RevealEntriesData
@@ -24,10 +11,6 @@ typedef struct
 
     // Index within the block account of the first entry included here
     uint16_t first_entry;
-
-    // Total number of entries in the entries array.  This is a u8 because each entry must have four corresponding
-    // accounts in the instruction accounts array, and the entrypoint limits account number to 32, so 8 bits is enough
-    uint8_t entry_count;
 
     // These are the salt values that were used to compute the SHA-256 hash of each entry
     salt_t entry_salt[0];
@@ -60,75 +43,37 @@ static uint64_t compute_reveal_entries_data_size(uint16_t entry_count)
     return ((uint64_t) &(d->entry_salt[entry_count]));
 }
 
-static uint8_t index_of_reveal_mint_account(uint8_t entry_index)
-{
-    return (6 + (4 * entry_index));
-}
-
-
-static uint8_t index_of_reveal_token_account(uint8_t entry_index)
-{
-    return (7 + (4 * entry_index));
-}
-
-
-static uint8_t index_of_reveal_metaplex_metadata_account(uint8_t entry_index)
-{
-    return (8 + (4 * entry_index));
-}
-
-
-static uint8_t index_of_reveal_entry_account(uint8_t entry_index)
-{
-    return (9 + (4 * entry_index));
-}
-
 
 static uint64_t admin_reveal_entries(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be at least 10.
-    if (params->ka_num < 10) {
-        return Error_IncorrectNumberOfAccounts;
+    // Declare accounts, which checks the permissions and identity of all accounts
+    DECLARE_ACCOUNTS {
+        DECLARE_ACCOUNT(0,   config_account,                ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(1,   admin_account,                 ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(2,   block_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(4,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(5,   metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
-
-    SolAccountInfo *config_account = &(params->ka[0]);
-    SolAccountInfo *admin_account = &(params->ka[1]);
-    SolAccountInfo *block_account = &(params->ka[2]);
-    SolAccountInfo *authority_account = &(params->ka[3]);
-    // Account index 4 must be the system program account; it is not checked here because if it's not the
-    // correct account, then the cross-program invoke below in reveal_single_entry will just fail the transaction
-    // Account index 5 must be the metaplex metadata program account; it is not checked here because if it's not the
-    // correct account, then the cross-program invoke below in reveal_single_entry will just fail the transaction
-
+    
+    // There are 4 accounts per entry, following the 6 fixed accounts
+    uint8_t entry_count = (params->ka_num - 6) / 4;
+    
+    // Must be exactly the fixed accounts + 4 accounts per entry
+    DECLARE_ACCOUNTS_NUMBER(6 + (entry_count * 4));
+    
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_authenticated(config_account, admin_account)) {
         return Error_PermissionDenied;
     }
 
-    // Ensure that the block account is writable
-    if (!block_account->is_writable) {
-        return Error_BadPermissions;
-    }
-
-    // Check the authority account to make sure it's the right one
-    if (!is_nifty_authority_account(authority_account->key)) {
-        return Error_InvalidAccount_First + 3;
+    // Make sure that the data is properly sized given the number of entries
+    if (params->data_len != compute_reveal_entries_data_size(entry_count)) {
+        return Error_InvalidDataSize;
     }
 
     // Data can be used now
     RevealEntriesData *data = (RevealEntriesData *) params->data;
-
-    // Make sure that the data is properly sized given the number of entries
-    if (params->data_len != compute_reveal_entries_data_size(data->entry_count)) {
-        return Error_InvalidDataSize;
-    }
-
-    // Make sure that the number of accounts in the instruction account list is 6 + (4 * the number of entries in
-    // the transaction), because each NFT account to reveal in sequence has four corresponding accounts from the
-    // instruction accounts array: 1. Mint account, 2. Token account, 3. Metaplex metadata account, 4. Entry account
-    if (params->ka_num != (6 + (4 * data->entry_count))) {
-        return Error_InvalidData_First;
-    }
 
     // Get the valid block data
     Block *block = get_validated_block(block_account);
@@ -136,26 +81,26 @@ static uint64_t admin_reveal_entries(SolParameters *params)
         return Error_InvalidAccount_First + 2;
     }
 
-    // Make sure that the last entry to reveal does not exceed the number of entries in the block
-    if ((data->first_entry + data->entry_count) > block->config.total_entry_count) {
-        return Error_InvalidData_First + 1;
-    }
-
-    // Ensure that the block is complete; cannot reveal entries of a block that is not complete yet
-    if (!is_block_complete(block)) {
-        return Error_BlockNotComplete;
-    }
-    
-    // Load the clock, which is needed by reveals
+    // Load the clock, which is needed below
     Clock clock;
     if (sol_get_clock_sysvar(&clock)) {
         return Error_FailedToGetClock;
     }
         
+    // Ensure that the block is complete; cannot reveal entries of a block that is not complete yet
+    if (!is_block_complete(block)) {
+        return Error_BlockNotComplete;
+    }
+    
     // Ensure that the block has reached its reveal criteria; cannot reveal entries of a block that has not reached
     // reveal
     if (!is_complete_block_revealable(block, &clock)) {
         return Error_BlockNotRevealable;
+    }
+
+    // Make sure that the last entry to reveal does not exceed the number of entries in the block
+    if ((data->first_entry + entry_count) > block->config.total_entry_count) {
+        return Error_InvalidData_First + 1;
     }
 
     // Keep track of total number of escrow lamports, paid to the authority account by purchasers of "mystery"
@@ -163,32 +108,38 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     uint64_t total_lamports_to_move = 0;
     
     // Reveal entries one by one
-    for (uint16_t i = 0; i < data->entry_count; i++) {
+    for (uint16_t i = 0; i < entry_count; i++) {
         uint16_t destination_index = data->first_entry + i;
 
+        // _account_num is defined by DECLARE_ACCOUNTS
+
         // This is the account info of the NFT mint, as passed into the accounts list
-        SolAccountInfo *mint_account = &(params->ka[index_of_reveal_mint_account(i)]);
+        SolAccountInfo *mint_account = &(params->ka[_account_num++]);
         
         // This is the token account of the NFT, as passed into the accounts list
-        SolAccountInfo *token_account = &(params->ka[index_of_reveal_token_account(i)]);
+        SolAccountInfo *token_account = &(params->ka[_account_num++]);
         
         // This is the account info of the metaplex metadata for the NFT, as passed into the accounts list
-        SolAccountInfo *metaplex_metadata_account = &(params->ka[index_of_reveal_metaplex_metadata_account(i)]);
+        SolAccountInfo *metaplex_metadata_account = &(params->ka[_account_num++]);
 
         // This is the account info of the entry, as passed into the accounts list
-        SolAccountInfo *entry_account = &(params->ka[index_of_reveal_entry_account(i)]);
+        SolAccountInfo *entry_account = &(params->ka[_account_num++]);
         
         // The salt is the corresponding entry in the input data
         salt_t salt = data->entry_salt[i];
 
-        // Get the validated Entry
-        Entry *entry = get_validated_entry(block, destination_index, entry_account);
+        // Get the validated Entry and ensure that it's for the provided block
+        Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
         if (!entry) {
             return Error_InvalidAccount_First + 9;
         }
 
+        // Make sure that it's the correct entry for the index
+        if (entry->entry_index != destination_index) {
+            return Error_InvalidAccount_First + 9;
+        }
 
-        // Do a single reveal of this entry
+        // Do the reveal of this entry
         uint64_t result = reveal_single_entry(block, entry, &clock, salt, admin_account, authority_account,
                                               mint_account, token_account, metaplex_metadata_account, params->ka,
                                               params->ka_num, /* modifies */ &total_lamports_to_move);
@@ -200,7 +151,7 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     }
 
     // All entries revealed successfully.  Move the escrow lamports that needed to move.  This must be done at the end
-    // to avoid errors with modifies accounts used in cross-program invoke elsewhere in the transaction execution.
+    // to avoid errors with modified accounts used in cross-program invoke elsewhere in the transaction execution.
     if (total_lamports_to_move) {
         // Admin account and authority accounts must be writable
         if (!admin_account->is_writable) {
@@ -220,7 +171,6 @@ static uint64_t admin_reveal_entries(SolParameters *params)
 // This function reveals a single entry, which means ensuring that it meets all requirements for being a valid
 // reveal, and then updates the entry state to their post-reveal values.  It returns nonzero on error, zero on
 // success.
-
 static uint64_t reveal_single_entry(Block *block,
                                     Entry *entry,
                                     Clock *clock,
@@ -235,29 +185,27 @@ static uint64_t reveal_single_entry(Block *block,
                                     /* modifies */ uint64_t *total_lamports_to_move)
 {
     // Ensure that the mint is the correct mint account for this Entry
-    if (!SolPubkey_same(mint_account->key, &(entry->mint_account.address))) {
-        return Error_InvalidNFTAccount;
+    if (!SolPubkey_same(mint_account->key, &(entry->mint_pubkey))) {
+        return Error_InvalidMintAccount;
     }
 
     SolanaMintAccountData *mint_data = (SolanaMintAccountData *) mint_account->data;
 
     // Ensure that the token account is the correct token account for this Entry
-    if (!SolPubkey_same(token_account->key, &(entry->token_account.address))) {
-        return Error_InvalidNFTAccount;
+    if (!SolPubkey_same(token_account->key, &(entry->token_pubkey))) {
+        return Error_InvalidTokenAccount;
     }
 
     SolanaTokenProgramTokenData *token_data = (SolanaTokenProgramTokenData *) token_account->data;
 
     // Ensure that the metaplex metadata account passed in is the actual metaplex metadata account for this token
-    if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_account))) {
-        return Error_InvalidNFTAccount;
+    if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
+        return Error_InvalidMetadataAccount;
     }
 
     // Ensure that the entry state is waiting for reveal, which is the only state in which reveal is allowed
     switch (get_entry_state(block, entry, clock)) {
     case EntryState_WaitingForRevealUnowned:
-        // When an entry is revealed from an unowned state, it enters auction
-        entry->auction.begin_timestamp = clock->unix_timestamp;
         break;
     case EntryState_WaitingForRevealOwned:
         // The SOL that was originally paid by the purchaser was moved into the authority account as a form of escrow,
@@ -317,8 +265,9 @@ static uint64_t reveal_single_entry(Block *block,
         return ret;
     }
 
-    // Now that the entry is revealed, its reveal_sha256 is zeroed out, which is what puts the Entry into its
-    // revealed state.
+    // Now that the entry is revealed, set its reveal timestamp, and zero out its reveal_sha256, which is what puts
+    // the Entry into its revealed state.
+    entry->reveal_timestamp = clock->unix_timestamp;
     sol_memset(&(entry->reveal_sha256), 0, sizeof(entry->reveal_sha256));
 
     // That's all that is needed to complete the reveal of an entry

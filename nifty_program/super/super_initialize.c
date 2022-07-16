@@ -4,6 +4,7 @@
 
 #include "inc/constants.h"
 #include "inc/error.h"
+#include "inc/instruction_accounts.h"
 #include "inc/program_config.h"
 #include "inc/types.h"
 #include "util/util_accounts.c"
@@ -12,24 +13,6 @@
 #include "util/util_rent.c"
 #include "util/util_stake.c"
 #include "util/util_token.c"
-
-
-// Account references:
-// 0. `[SIGNER]` -- Super user account
-// 1. `[WRITE]` -- The config account
-// 2. `[WRITE]` -- The authority account
-// 3. `[WRITE]` -- The master stake account
-// 4. `[]` -- The Shinobi systems vote account
-// 5. `[WRITE]` -- The Ki mint account
-// 6. `[WRITE]` -- The Ki mint metadata account
-// 7. `[]` -- The clock sysvar
-// 8. `[]` -- The rent sysvar
-// 9. `[]` -- The stake history sysvar
-// 10. `[]` -- The stake config account
-// 11. `[]` -- The system program
-// 12. `[]` -- The stake program
-// 13. `[]` -- The SPL-token program
-// 14. `[]` -- The Metaplex metadata program
 
 
 // Data passed to this program for Initialize function
@@ -44,30 +27,32 @@ typedef struct
 
 static uint64_t super_initialize(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be exactly 15.
-    if (params->ka_num != 15) {
-        return Error_IncorrectNumberOfAccounts;
+    // Declare accounts, which checks the permissions and identity of all accounts
+    DECLARE_ACCOUNTS {
+        DECLARE_ACCOUNT(0,   superuser_account,             ReadOnly,   Signer,     KnownAccount_SuperUser);
+        DECLARE_ACCOUNT(1,   config_account,                ReadWrite,  NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(2,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(3,   master_stake_account,          ReadWrite,  NotSigner,  KnownAccount_MasterStake);
+        DECLARE_ACCOUNT(4,   shinobi_systems_vote_account,  ReadOnly,   NotSigner,  KnownAccount_ShinobiSystemsVote);
+        DECLARE_ACCOUNT(5,   ki_mint_account,               ReadWrite,  NotSigner,  KnownAccount_KiMint);
+        DECLARE_ACCOUNT(6,   ki_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_KiMetadata);
+        DECLARE_ACCOUNT(7,   bid_marker_mint_account,       ReadWrite,  NotSigner,  KnownAccount_BidMarkerMint);
+        DECLARE_ACCOUNT(8,   bid_marker_metadata_account,   ReadWrite,  NotSigner,  KnownAccount_BidMarkerMetadata);
+        DECLARE_ACCOUNT(9,   clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
+        DECLARE_ACCOUNT(10,  rent_sysvar_account,           ReadOnly,   NotSigner,  KnownAccount_RentSysvar);
+        DECLARE_ACCOUNT(11,  stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
+        DECLARE_ACCOUNT(12,  stake_config_account,          ReadOnly,   NotSigner,  KnownAccount_StakeConfig);
+        DECLARE_ACCOUNT(13,  system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(14,  stake_program_account,         ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
+        DECLARE_ACCOUNT(15,  spl_token_program_account,     ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
+        DECLARE_ACCOUNT(16,  metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
+    DECLARE_ACCOUNTS_NUMBER(17);
 
-    SolAccountInfo *superuser_account = &(params->ka[0]);
-    SolAccountInfo *config_account = &(params->ka[1]);
-    SolAccountInfo *authority_account = &(params->ka[2]);
-    SolAccountInfo *master_stake_account = &(params->ka[3]);
-    SolAccountInfo *shinobi_systems_vote_account = &(params->ka[4]);
-    SolAccountInfo *ki_mint_account = &(params->ka[5]);
-    SolAccountInfo *ki_mint_metadata_account = &(params->ka[6]);
-    SolAccountInfo *clock_sysvar_account = &(params->ka[7]);
-    SolAccountInfo *rent_sysvar_account = &(params->ka[8]);
-    SolAccountInfo *stake_history_sysvar_account = &(params->ka[9]);
-    SolAccountInfo *stake_config_account = &(params->ka[10]);
-    // The system program is index 11, but there's no need to check it, because if it's not the system account,
-    // a cross-program invoke will fail
-    // The stake program is index 12, but there's no need to check it, because if it's not the system account,
-    // a cross-program invoke will fail
-    // The SPL-Token program is index 13, but there's no need to check it, because if it's not the system account,
-    // a cross-program invoke will fail
-    // The Metaplex metadata program is index 14, but there's no need to check it, because if it's not the system
-    // account, a cross-program invoke will fail
+    // This instruction can only be executed by the authenticated superuser
+    if (!is_superuser_authenticated(superuser_account)) {
+        return Error_PermissionDenied;
+    }
 
     // Ensure that the input data is the correct size
     if (params->data_len != sizeof(InitializeData)) {
@@ -76,82 +61,10 @@ static uint64_t super_initialize(SolParameters *params)
 
     InitializeData *data = (InitializeData *) params->data;
     
-    // This instruction can only be executed by the authenticated superuser
-    if (!is_superuser_authenticated(superuser_account)) {
-        return Error_PermissionDenied;
-    }
-
-    // Check remaining account permissions
-    if (!config_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 1;
-    }
-    if (!authority_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 2;
-    }
-    if (!master_stake_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 3;
-    }
-    if (!ki_mint_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 4;
-    }
-    if (!ki_mint_metadata_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 5;
-    }
-
-    // Ensure that the config account is the second account
-    if (!is_nifty_config_account(config_account->key)) {
-        return Error_InvalidAccount_First + 1;
-    }
-
     // If the config account already exists and with the correct owner, then fail, because can't re-create the
     // config account, can only modify it after it's created
     if ((config_account->data_len > 0) && is_nifty_program(config_account->owner)) {
         return Error_InvalidAccount_First + 1;
-    }
-    
-    // Ensure that the correct authority account was provided
-    if (!is_nifty_authority_account(authority_account->key)) {
-        return Error_InvalidAccount_First + 2;
-    }
-
-    // Ensure that the correct master stake account was provided
-    if (!is_master_stake_account(master_stake_account->key)) {
-        return Error_InvalidAccount_First + 3;
-    }
-
-    // Ensure that the correct Shinobi Systems vote account was provided
-    if (!is_shinobi_systems_vote_account(shinobi_systems_vote_account->key)) {
-        return Error_InvalidAccount_First + 4;
-    }
-
-    // Ensure that the correct ki mint account was provided
-    if (!is_ki_mint_account(ki_mint_account->key)) {
-        return Error_InvalidAccount_First + 5;
-    }
-    
-    // Ensure that the correct ki mint metaplex metadata account was provided
-    if (!SolPubkey_same(&(Constants.ki_mint_metadata_pubkey), ki_mint_metadata_account->key)) {
-        return Error_InvalidAccount_First + 6;
-    }
-
-    // Ensure that the correct clock sysvar account was provided
-    if (!SolPubkey_same(&(Constants.clock_sysvar_pubkey), clock_sysvar_account->key)) {
-        return Error_InvalidAccount_First + 7;
-    }
-    
-    // Ensure that the correct rent sysvar account was provided
-    if (!SolPubkey_same(&(Constants.rent_sysvar_pubkey), rent_sysvar_account->key)) {
-        return Error_InvalidAccount_First + 8;
-    }
-    
-    // Ensure that the correct stake history sysvar account was provided
-    if (!SolPubkey_same(&(Constants.stake_history_sysvar_pubkey), stake_history_sysvar_account->key)) {
-        return Error_InvalidAccount_First + 9;
-    }
-    
-    // Ensure that the correct stake config account was provided
-    if (!SolPubkey_same(&(Constants.stake_config_pubkey), stake_config_account->key)) {
-        return Error_InvalidAccount_First + 10;
     }
     
     // Create the config account.  The config account is derived from a fixed seed.
@@ -206,7 +119,7 @@ static uint64_t super_initialize(SolParameters *params)
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.ki_mint_seed_bytes) };
 
         if (create_token_mint(ki_mint_account, &seed, 1, &(Constants.nifty_authority_pubkey), superuser_account->key,
-                              params->ka, params->ka_num)) {
+                              0, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }
     }
@@ -215,12 +128,32 @@ static uint64_t super_initialize(SolParameters *params)
     uint8_t *name = (uint8_t *) KI_TOKEN_NAME;
     uint8_t *symbol = (uint8_t *) KI_TOKEN_SYMBOL;
     uint8_t *uri = (uint8_t *) KI_TOKEN_METADATA_URI;
-    if (create_metaplex_metadata(&(Constants.ki_mint_metadata_pubkey), &(Constants.ki_mint_pubkey),
-                                 &(Constants.nifty_authority_pubkey), superuser_account->key, name, symbol, uri,
-                                 &(Constants.shinobi_systems_vote_pubkey), &(Constants.system_program_pubkey),
-                                 params->ka, params->ka_num)) {
+    if (create_metaplex_metadata(&(Constants.ki_metadata_pubkey), &(Constants.ki_mint_pubkey),
+                                 superuser_account->key, name, symbol, uri, &(Constants.shinobi_systems_vote_pubkey),
+                                 &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
 
+    // Create the Shinobi Bid mint
+    {
+        uint8_t *seed_bytes = (uint8_t *) Constants.bid_marker_mint_seed_bytes;
+        SolSignerSeed seed = { seed_bytes, sizeof(Constants.bid_marker_mint_seed_bytes) };
+
+        if (create_token_mint(bid_marker_mint_account, &seed, 1, &(Constants.nifty_authority_pubkey),
+                              superuser_account->key, 1, params->ka, params->ka_num)) {
+            return Error_CreateAccountFailed;
+        }
+    }
+
+    // Create the metadata for the Bid Marker mint
+    name = (uint8_t *) BID_MARKER_TOKEN_NAME;
+    symbol = (uint8_t *) BID_MARKER_TOKEN_SYMBOL;
+    uri = (uint8_t *) BID_MARKER_TOKEN_METADATA_URI;
+    if (create_metaplex_metadata(&(Constants.bid_marker_metadata_pubkey), &(Constants.bid_marker_mint_pubkey),
+                                 superuser_account->key, name, symbol, uri, &(Constants.shinobi_systems_vote_pubkey),
+                                 &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
+        return Error_CreateAccountFailed;
+    }
+    
     return 0;
 }

@@ -8,122 +8,6 @@
 #include "util/util_transfer_lamports.c"
 
 
-static bool compute_entry_pda_address(uint8_t account_seed_prefix, uint32_t group_number, uint32_t block_number,
-                                      uint16_t entry_index, uint8_t bump_seed, SolPubkey *fill_in)
-{
-    SolSignerSeed seeds[] = { { &account_seed_prefix, sizeof(account_seed_prefix) },
-                              { (uint8_t *) &group_number, sizeof(group_number) },
-                              { (uint8_t *) &block_number, sizeof(block_number) },
-                              { (uint8_t *) &entry_index, sizeof(entry_index) },
-                              { &bump_seed, sizeof(bump_seed) } };
-
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
-                                       fill_in);
-}
-
-
-// Computes an Entry address given given the group number, block number, entry number, and bump seed.
-// This will be a PDA of the nifty stakes program.
-static bool compute_entry_address(uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                  uint8_t bump_seed, SolPubkey *fill_in)
-
-{
-    return compute_entry_pda_address(PDA_Account_Seed_Prefix_Entry, group_number, block_number, entry_index,
-                                     bump_seed, fill_in);
-}
-
-
-// Computes the account address of a mint given the group number, block number, entry number, and bump seed.
-// This will be a PDA of metaplex metadata program.
-static bool compute_mint_address(uint32_t group_number, uint32_t block_number, uint16_t entry_index, uint8_t bump_seed,
-                                 SolPubkey *fill_in)
-{
-    return compute_entry_pda_address(PDA_Account_Seed_Prefix_Mint, group_number, block_number, entry_index,
-                                     bump_seed, fill_in);
-}
-
-
-// Computes the account address for the token associated with a mint given the group number, block number, entry
-// number, and bump seed.  This will be a PDA of nifty stakes program.
-static bool compute_token_address(uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                  uint8_t bump_seed, SolPubkey *fill_in)
-{
-    return compute_entry_pda_address(PDA_Account_Seed_Prefix_Token, group_number, block_number, entry_index,
-                                     bump_seed, fill_in);
-}
-
-
-// Computes the metaplex metadata id address of a mint
-// This will be a PDA of metaplex metadata program.
-static bool compute_metaplex_metadata_address(SolPubkey *mint_address, uint8_t bump_seed, SolPubkey *fill_in)
-{
-    SolSignerSeed seeds[] = { { (const uint8_t *) "metadata", 8 },
-                              { (uint8_t *) &(Constants.metaplex_program_pubkey), sizeof(SolPubkey) },
-                              { (uint8_t *) mint_address, sizeof(*mint_address) },
-                              { &bump_seed, sizeof(bump_seed) } };
-
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.metaplex_program_pubkey),
-                                       fill_in);
-}
-
-
-// Computes the metaplex metadata id edition address of a mint
-// This will be a PDA of metaplex metadata program.
-static bool compute_metaplex_edition_metadata_address(SolPubkey *mint_address, uint8_t bump_seed, SolPubkey *fill_in)
-{
-    SolSignerSeed seeds[] = { { (const uint8_t *) "metadata", 8 },
-                              { (uint8_t *) &(Constants.metaplex_program_pubkey), sizeof(SolPubkey) },
-                              { (uint8_t *) mint_address, sizeof(*mint_address) },
-                              { (const uint8_t *) "edition", 7 },
-                              { &bump_seed, sizeof(bump_seed) } };
-
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.metaplex_program_pubkey),
-                                       fill_in);
-}
-
-
-// Computes a Block address given given the group number, block number, and bump seed.
-// This will be a PDA of the nifty stakes program.
-static bool compute_block_address(uint32_t group_number, uint32_t block_number, uint8_t bump_seed, SolPubkey *fill_in)
-
-{
-    uint8_t prefix = PDA_Account_Seed_Prefix_Block;
-    
-    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
-                              { (uint8_t *) &group_number, sizeof(group_number) },
-                              { (uint8_t *) &block_number, sizeof(block_number) },
-                              { &bump_seed, sizeof(bump_seed) } };
-
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
-                                       fill_in);
-}
-
-
-static bool compute_bid_address(SolPubkey *bidder, uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                uint8_t bump_seed, SolPubkey *fill_in)
-{
-    uint8_t prefix = PDA_Account_Seed_Prefix_Bid;
-
-    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
-                              { (uint8_t *) bidder, sizeof(*bidder) },
-                              { (uint8_t *) &group_number, sizeof(group_number) },
-                              { (uint8_t *) &block_number, sizeof(block_number) },
-                              { (uint8_t *) &entry_index, sizeof(entry_index) },
-                              { &bump_seed, sizeof(bump_seed) } };
-
-    return !sol_create_program_address(seeds, sizeof(seeds) / sizeof(seeds[0]), &(Constants.nifty_program_pubkey),
-                                       fill_in);
-}
-
-
-static bool compute_bridge_address(uint32_t group_number, uint32_t block_number, uint16_t entry_index,
-                                   uint8_t bump_seed, SolPubkey *fill_in)
-{
-    return compute_entry_pda_address(PDA_Account_Seed_Prefix_Bridge, group_number, block_number, entry_index,
-                                     bump_seed, fill_in);
-}
-
-
 static bool is_all_zeroes(const void *data, uint32_t length)
 {
     uint8_t *d = (uint8_t *) data;
@@ -200,6 +84,12 @@ static bool is_master_stake_account(const SolPubkey *pubkey)
 static bool is_ki_mint_account(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.ki_mint_pubkey), pubkey);
+}
+
+
+static bool is_bid_marker_mint_account(const SolPubkey *pubkey)
+{
+    return SolPubkey_same(&(Constants.bid_marker_mint_pubkey), pubkey);
 }
 
 

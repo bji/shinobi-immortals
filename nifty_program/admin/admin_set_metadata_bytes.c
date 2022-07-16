@@ -1,11 +1,5 @@
 #pragma once
 
-// Account references:
-// 0. `[]` Program config account
-// 1. `[SIGNER]` -- This must be the admin account
-// 2. `[WRITE]` -- The block account
-// 3. `[ENTRY]` -- The entry account
-
 #include "inc/clock.h"
 #include "util/util_accounts.c"
 #include "util/util_block.c"
@@ -15,9 +9,6 @@ typedef struct
 {
     // This is the instruction code for SetMetadataBytes
     uint8_t instruction_code;
-
-    // Index of the entry whose metadata bytes are to be set
-    uint16_t entry_index;
 
     // Index of the first byte of metadata to set
     uint16_t start_index;
@@ -50,15 +41,15 @@ static uint64_t compute_set_metadata_bytes_data_size(uint16_t bytes_count)
 
 static uint64_t admin_set_metadata_bytes(SolParameters *params)
 {
-    // Sanitize the accounts.  There must be 4.
-    if (params->ka_num != 4) {
-        return Error_IncorrectNumberOfAccounts;
+    // Declare accounts, which checks the permissions and identity of all accounts
+    DECLARE_ACCOUNTS {
+        DECLARE_ACCOUNT(0,   config_account,                ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(1,   admin_account,                 ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(2,   block_account,                 ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,   entry_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
     }
 
-    SolAccountInfo *config_account = &(params->ka[0]);
-    SolAccountInfo *admin_account = &(params->ka[1]);
-    SolAccountInfo *block_account = &(params->ka[2]);
-    SolAccountInfo *entry_account = &(params->ka[3]);
+    DECLARE_ACCOUNTS_NUMBER(4);
 
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_authenticated(config_account, admin_account)) {
@@ -79,11 +70,11 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
     }
 
     // Get the entry data
-    Entry *entry = get_validated_entry(block, data->entry_index, entry_account);
+    Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
         return Error_InvalidAccount_First + 3;
     }
-    
+
     // Make sure that the block is complete; can't be setting metadata into blocks for which all the entries
     // have not been added yet
     if (!is_block_complete(block)) {
@@ -108,9 +99,10 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
     if (((uint32_t) data->start_index + (uint32_t) data->bytes_count) > sizeof(EntryMetadata)) {
         return Error_InvalidData_First + 1;
     }
-
-    // The entry can only have its metadata set if it's waiting for reveal
-    if (is_entry_revealed(entry)) {
+    
+    // The entry can only have its metadata set if it's waiting for reveal, i.e. in a PreReveal state
+    // Not passing in block because don't care which exact PreReveal state it is
+    if (get_entry_state(0, entry, &clock) != EntryState_PreReveal) {
         return Error_AlreadyRevealed;
     }
     

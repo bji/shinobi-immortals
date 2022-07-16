@@ -366,9 +366,9 @@ typedef struct
 // lamports is assumed to be at least the stake account minimum or this will fail
 // moves via [bridge_account] which will be created as a PDA of the nifty_program
 static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *bridge_account,
-                                  uint8_t bridge_bump_seed, SolPubkey *to_account_key, uint64_t lamports,
-                                  SolPubkey *funding_account_key, SolAccountInfo *transaction_accounts,
-                                  int transaction_accounts_len)
+                                  SolSignerSeed *bridge_seeds, int bridge_seeds_count, SolPubkey *to_account_key,
+                                  uint64_t lamports, SolPubkey *funding_account_key,
+                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
     // XXX TRY CREATING THE BRIDGE ACCOUNT WITH 0 LAMPORTS TO ALLOW ALL OF IT TO COME FROM [from_account]
@@ -376,17 +376,11 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
     uint64_t rent_exempt_minimum = /* get_rent_exempt_minimum(200) */ 0;
     
     // Create the bridge account as a PDA to ensure that it exist with proper ownership
-    {
-        uint8_t prefix = PDA_Account_Seed_Prefix_Bridge;
-        SolSignerSeed seed_parts[] = { { &prefix, 1 },
-                                       { (uint8_t *) from_account_key, sizeof(SolPubkey) },
-                                       { &bridge_bump_seed, 1 } };
-        uint64_t ret = create_pda(bridge_account, seed_parts, sizeof(seed_parts) / sizeof(seed_parts[0]),
-                                  funding_account_key, &(Constants.stake_program_pubkey), rent_exempt_minimum, 200,
-                                  transaction_accounts, transaction_accounts_len);
-        if (ret) {
-            return ret;
-        }
+    uint64_t ret = create_pda(bridge_account, bridge_seeds, bridge_seeds_count, funding_account_key,
+                              &(Constants.stake_program_pubkey), rent_exempt_minimum, 200, transaction_accounts,
+                              transaction_accounts_len);
+    if (ret) {
+        return ret;
     }
 
     SolInstruction instruction;
@@ -417,8 +411,7 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
 
-        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts,
-                                         transaction_accounts_len, &signer_seeds, 1);
+        ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
         if (ret) {
             return ret;
         }
