@@ -7,25 +7,32 @@ static uint64_t user_stake(SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
-        DECLARE_ACCOUNT(0,  entry_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(1,  token_owner_account,           ReadOnly,   Signer,     KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(2,  token_account,                 ReadOnly,   NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(3,  stake_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(4,  withdraw_authority_account,    ReadOnly,   Signer,     KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(5,  shinobi_systems_vote_account,  ReadOnly,   NotSigner,  KnownAccount_ShinobiSystemsVote);
-        DECLARE_ACCOUNT(6,  authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
-        DECLARE_ACCOUNT(7,  clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
-        DECLARE_ACCOUNT(8,  stake_program_account,        ReadOnly,   NotSigner,   KnownAccount_StakeProgram);
-        DECLARE_ACCOUNT(9,  stake_config_account,          ReadOnly,   NotSigner,  KnownAccount_StakeConfig);
-        DECLARE_ACCOUNT(10, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
+        DECLARE_ACCOUNT(0,  block_account,                 ReadOnly,  NotSigner,   KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(1,  entry_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(2,  token_owner_account,           ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,  token_account,                 ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(4,  stake_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(5,  withdraw_authority_account,    ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(6,  shinobi_systems_vote_account,  ReadOnly,   NotSigner,  KnownAccount_ShinobiSystemsVote);
+        DECLARE_ACCOUNT(7,  authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(8,  clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
+        DECLARE_ACCOUNT(9,  stake_program_account,        ReadOnly,   NotSigner,   KnownAccount_StakeProgram);
+        DECLARE_ACCOUNT(10, stake_config_account,          ReadOnly,   NotSigner,  KnownAccount_StakeConfig);
+        DECLARE_ACCOUNT(11, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
     }
 
-    DECLARE_ACCOUNTS_NUMBER(11);
+    DECLARE_ACCOUNTS_NUMBER(12);
+
+    // This is the entry data
+    Block *block = get_validated_block(block_account);
+    if (!block) {
+        return Error_InvalidAccount_First;
+    }
     
     // This is the entry data
-    Entry *entry = get_validated_entry(entry_account);
+    Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
-        return Error_InvalidAccount_First;
+        return Error_InvalidAccount_First + 1;
     }
     
     // Get the clock sysvar, needed below
@@ -43,7 +50,7 @@ static uint64_t user_stake(SolParameters *params)
     // Deserialize the stake account into a Stake instance
     Stake stake;
     if (!decode_stake_account(stake_account, &stake)) {
-        return Error_InvalidAccount_First + 2;
+        return Error_InvalidAccount_First + 3;
     }
     
     // - Must be in Initialized or Stake state
@@ -52,22 +59,22 @@ static uint64_t user_stake(SolParameters *params)
     case StakeState_Stake:
         break;
     default:
-        return Error_InvalidAccount_First + 3;
+        return Error_InvalidAccount_First + 4;
     }
     
     // - Must have a withdraw authority equal to the provided withdraw authority
     if (!SolPubkey_same(&(stake.meta.authorize.withdrawer), withdraw_authority_account->key)) {
-        return Error_InvalidAccount_First + 4;
+        return Error_InvalidAccount_First + 5;
     }
 
     // - Must not be locked.  Don't bother checking custodian, that feature just isn't supported here
     if ((stake.meta.lockup.unix_timestamp > clock.unix_timestamp) || (stake.meta.lockup.epoch > clock.epoch)) {
-        return Error_InvalidAccount_First + 3;
+        return Error_InvalidAccount_First + 4;
     }
 
     // Check to make sure that the entry token is owned by the token owner account
     if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
-        return Error_InvalidAccount_First + 3;
+        return Error_InvalidAccount_First + 4;
     }
 
     // Use stake account program to set all authorities to the nifty authority
@@ -86,7 +93,7 @@ static uint64_t user_stake(SolParameters *params)
 
         // Re-decode the stake account, to get the new delegation information
         if (!decode_stake_account(stake_account, &stake)) {
-            return Error_InvalidAccount_First + 2;
+            return Error_InvalidAccount_First + 4;
         }
 
         // Record current lamports in the stake account to be used for ki harvesting purposes
@@ -109,6 +116,9 @@ static uint64_t user_stake(SolParameters *params)
 
     // Record the stake account address
     entry->owned.stake_account = *(stake_account->key);
+
+    // Update the entry's commission to that of the block
+    entry->commission = block->commission;
       
     return 0;
 }
