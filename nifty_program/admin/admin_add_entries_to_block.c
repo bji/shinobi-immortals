@@ -257,12 +257,9 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, 
 
     entry->has_auction = block->config.has_auction;
 
-    if (entry->has_auction) {
-        entry->duration = block->config.duration;
-    }
-    else {
-        entry->non_auction_start_price_lamports = block->config.non_auction_start_price_lamports;
-    }
+    entry->duration = block->config.duration;
+
+    entry->non_auction_start_price_lamports = block->config.non_auction_start_price_lamports;
 
     entry->reveal_sha256 = *entry_sha256;
 
