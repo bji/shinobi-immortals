@@ -49,9 +49,9 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
         DECLARE_ACCOUNT(0,   config_account,                ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
-        DECLARE_ACCOUNT(1,   admin_account,                 ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(1,   admin_account,                 ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,   block_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(3,   authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(3,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(4,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(5,   metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
@@ -153,13 +153,6 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     // All entries revealed successfully.  Move the escrow lamports that needed to move.  This must be done at the end
     // to avoid errors with modified accounts used in cross-program invoke elsewhere in the transaction execution.
     if (total_lamports_to_move) {
-        // Admin account and authority accounts must be writable
-        if (!admin_account->is_writable) {
-            return Error_InvalidAccountPermissions_First + 1;
-        }
-        if (!authority_account->is_writable) {
-            return Error_InvalidAccountPermissions_First + 3;
-        }
         *(admin_account->lamports) += total_lamports_to_move;
         *(authority_account->lamports) -= total_lamports_to_move;
     }

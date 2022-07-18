@@ -49,7 +49,7 @@ static uint64_t user_refund(SolParameters *params)
     }
 
     // Check to make sure that the block's reveal grace period has passed
-    if ((block->mystery_phase_end_timestamp + block->config.mystery_phase_duration) > clock.unix_timestamp) {
+    if ((block->mystery_phase_end_timestamp + block->config.reveal_period_duration) > clock.unix_timestamp) {
         return Error_EntryWaitingForReveal;
     }
     
