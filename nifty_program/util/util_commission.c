@@ -4,8 +4,11 @@
 
 
 // funding_account is only used to provide transient quantities of SOL for a temporary stake account
+// If 0 is passed in for minimum_stake_lamports, the minimum will be fetched by calling the
+// get_minimum_stake_delegation function.
 static uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolPubkey *funding_account_key,
                                   SolAccountInfo *bridge_stake_account, SolPubkey *stake_account_key,
+                                  uint64_t minimum_stake_lamports,
                                   SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute commission to charge.  It is the commission as set in the block, times the difference between
@@ -15,21 +18,19 @@ static uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolP
         (((stake->stake.delegation.stake - entry->owned.last_commission_charge_stake_account_lamports) *
           entry->commission) / 0xFFFFull);
 
-    // Update the entry's last_commission_charge_stake_account_lamports to the new value.  This is done
-    // unconditionally in case the commission has changed -- even if the old commission was zero and thus no
-    // commission is charged right now, the state needs to be updated so that these earnings are not charged
-    // commission again.
-    entry->owned.last_commission_charge_stake_account_lamports = stake->stake.delegation.stake;
-
-    // If there is commission to take, do so
-    if (commission_lamports == 0) {
-        return 0;
-    }
+    // Update the entry's last_commission_charge_stake_account_lamports to the value it will hold after the commission
+    // has been charged.
+    entry->owned.last_commission_charge_stake_account_lamports = (stake->stake.delegation.stake - commission_lamports);
 
     // Update the entry's commission with the current value from the block, so that the next commission collection
     // will use it.  In this way, when a block's commission is changed, it doesn't affect any given entry until that
     // entry has had at least one commission collection.
     entry->commission = block->commission;
+
+    // If there is commission to take, do so
+    if (commission_lamports == 0) {
+        return 0;
+    }
 
     // Compute the bridge address
     uint8_t prefix = PDA_Account_Seed_Prefix_Bridge;
@@ -52,13 +53,19 @@ static uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolP
         return Error_CreateAccountFailed;
     }
 
-    // Compute the minimum lamports which can be split off into a stake account
-    uint64_t minimum_stake_lamports;
-    ret = get_minimum_stake_delegation(&minimum_stake_lamports);
-    if (ret) {
-        return ret;
+    // Only if minimum_stake_lamports is passed in as 0 should get_minimum_stake_delegation be called.  This is
+    // because that function relies on the currently buggy stake program's GetMinimumDelegation instruction
+    // processing, and until that's fixed, the transaction data is going to have to supply the correct value.  If the
+    // correct value is not supplied, then this transaction may fail because it will try to create a too-small bridge
+    // stake account.  If the value supplied in the transaction is really large, then it will be harmless since the
+    // lamports are always returned to the master stake account in any case.
+    if (minimum_stake_lamports == 0) {
+        ret = get_minimum_stake_delegation(&minimum_stake_lamports);
+        if (ret) {
+            return ret;
+        }
     }
-    
+
     // If the commission to charge is less than the minimum stake in lamports, then it is necessary to use a more
     // complex mechanism to avoid ever having a temporary stake account of less than the minimum:
     // - Split minimum_stake_lamports off of master_stake_account into bridge_stake_account

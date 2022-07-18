@@ -211,6 +211,10 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     // It is not necessary to verify that the metaplex_metadata_key is the correct account for the given mint,
     // because the Metaplex Metata program already does this
     
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
+    
     SolAccountMeta account_metas[] =
           // Metadata key
         { { /* pubkey */ metaplex_metadata_key, /* is_writable */ true, /* is_signer */ false },
@@ -228,6 +232,9 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
           // rent
           { /* pubkey */ &(Constants.rent_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false } };
     
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+    
     // Encoding the data for metaplex requires using Borsch serialize format, eugh.
     uint8_t data[BORSH_SIZE_U8 /* instruction code */ +
                  METAPLEX_METADATA_DATA_SIZE /* data */ +
@@ -236,11 +243,6 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, &(Constants.nifty_authority_pubkey));
     d = borsh_encode_bool(d, true); // is_mutable
     
-    SolInstruction instruction;
-
-    instruction.program_id = &(Constants.metaplex_program_pubkey);
-    instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = data;
     instruction.data_len = ((uint64_t) d) - ((uint64_t) instruction.data);
 
@@ -258,6 +260,10 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
 static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pubkey, SolPubkey *new_authority,
                                                 SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
+    
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
@@ -265,6 +271,9 @@ static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pub
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+    
     // The data is a very simple borsh serialized format
     uint8_t data[1 /* Instruction code UpdateMetadataAccountV2 */ +
                  1 /* None */ +
@@ -276,11 +285,6 @@ static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pub
     data[2] = 1;
     * ((SolPubkey *) &(data[3])) = *new_authority;
     
-    SolInstruction instruction;
-
-    instruction.program_id = &(Constants.metaplex_program_pubkey);
-    instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) data;
     instruction.data_len = sizeof(data);
 
@@ -301,6 +305,10 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
                                                             SolAccountInfo *transaction_accounts,
                                                             int transaction_accounts_len)
 {
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
+    
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
@@ -308,6 +316,9 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+    
     // The data is a very simple borsh serialized format
     uint8_t data[1 /* Instruction code UpdateMetadataAccountV2 */ +
                  1 /* None */ +
@@ -316,11 +327,6 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
                  1 /* None */]
         = { 15, 0, 0, 1, 1, 0 };
     
-    SolInstruction instruction;
-
-    instruction.program_id = &(Constants.metaplex_program_pubkey);
-    instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) data;
     instruction.data_len = sizeof(data);
 
@@ -457,6 +463,20 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
         sol_memset(&(creator_keys[1]), 0, sizeof(creator_keys[1]));
     }
 
+    // UpdateMetadataAccountV2
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
+
+    SolAccountMeta account_metas[] =
+          // Metadata key
+        { { /* pubkey */ &(entry->metaplex_metadata_pubkey), /* is_writable */ true, /* is_signer */ false },
+          // Update authority
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+    
     // Encoding the data for metaplex requires using Borsch serialize format, eugh.
     uint8_t data[BORSH_SIZE_U8 /* instruction code */ +
                  BORSH_SIZE_OPTION(METAPLEX_METADATA_DATA_SIZE) /* data */ +
@@ -472,25 +492,9 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     d = borsh_encode_option_none(d); // primary_sale_happened
     d = borsh_encode_option_none(d); // is_mutable
     
-    // UpdateMetadataAccountV2
-    SolAccountMeta account_metas[] =
-          // Metadata key
-        { { /* pubkey */ &(entry->metaplex_metadata_pubkey), /* is_writable */ true, /* is_signer */ false },
-          // Update authority
-          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
-
-    SolInstruction instruction;
-
-    instruction.program_id = &(Constants.metaplex_program_pubkey);
-    instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = data;
     instruction.data_len = ((uint64_t) d) - ((uint64_t) data);
 
-    SolBytes bytes;
-    bytes.addr = instruction.data;
-    bytes.len = instruction.data_len;
-    
     // Must invoke with signed authority account
     uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };

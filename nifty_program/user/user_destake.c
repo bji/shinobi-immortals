@@ -11,6 +11,11 @@ typedef struct
 
     // This is the new authority to set on the de-staked stake account
     SolPubkey new_withdraw_authority_pubkey;
+
+    // Minimum stake account delegation in lamports.  If this is provided (i.e. is nonzero), no stake account
+    // will be created with a delegation smaller than this.  If not provided, it will be fetched by using the
+    // currently buggy stake program GetMinimumDelegation instruction.
+    uint64_t minimum_stake_lamports;
     
 } DestakeData;
 
@@ -101,8 +106,8 @@ static uint64_t user_destake(SolParameters *params)
     }
 
     // Charge commission
-    ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, stake_account->key,
-                            params->ka, params->ka_num);
+    ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account,
+                            stake_account->key, data->minimum_stake_lamports, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

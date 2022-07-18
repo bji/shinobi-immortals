@@ -109,20 +109,22 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPub
     // Now initialize the token account, with owner as the authority account
     SolInstruction instruction;
 
+    instruction.program_id = &(Constants.spl_token_program_pubkey);
+    
     SolAccountMeta account_metas[] = 
           // The account to initialize.
         { { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signuer */ false },
           // The mint this account will be associated with.
           { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false } };
 
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+    
     util_InitializeAccount3Data data = {
         /* instruction_code */ 18,
         /* owner */ Constants.nifty_authority_pubkey
     };
 
-    instruction.program_id = &(Constants.spl_token_program_pubkey);
-    instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 

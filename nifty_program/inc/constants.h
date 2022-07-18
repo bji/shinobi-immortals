@@ -8,7 +8,7 @@
 
 // Minimum number of lamports allowed to be retained staked within the master stake account.  This must be a value
 // that is always 2x greater than the minimum stake size (plus one for good measure!).  Because this is hardcoded, it
-// has to anticipate the maximum possible minimum stake account size. 
+// has to anticipate the maximum possible minimum stake account size.
 #define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (((2 * 10) + 1) * LAMPORTS_PER_SOL)
 
 // This is the Ki token name

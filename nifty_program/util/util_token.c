@@ -196,10 +196,15 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *m
     // Now initialize the mint account
     SolInstruction instruction;
 
+    instruction.program_id = &(Constants.spl_token_program_pubkey);
+    
     SolAccountMeta account_metas[] = 
         // Only account to pass to InitializeMint2 is the mint account to initialize
         { { /* pubkey */ mint_account->key, /* is_writable */ true, /* is_signer */ false } };
 
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+    
     util_InitializeMint2Data data = {
         /* instruction_code */ 20,
         /* decimals */ decimals,
@@ -207,9 +212,6 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *m
         /* has_freeze_authority */ false
     };
 
-    instruction.program_id = &(Constants.spl_token_program_pubkey);
-    instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
@@ -255,7 +257,8 @@ static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token
           { /* pubkey */ &(Constants.spl_token_program_pubkey), /* is_writable */ false, /* is_signer */ false } };
 
     instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.account_len = ARRAY_LEN(account_metas);
+    
     instruction.data = (uint8_t *) 0;
     instruction.data_len = 0;
 
@@ -286,7 +289,7 @@ static uint64_t create_pda_token_account(SolAccountInfo *token_account, SolSigne
           { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false } };
 
     instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.account_len = ARRAY_LEN(account_metas);
 
     util_InitializeAccount3Data data =
         {
@@ -317,7 +320,7 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.account_len = ARRAY_LEN(account_metas);
     
     util_MintToData data = {
         /* instruction_code */ 7,
@@ -350,7 +353,7 @@ static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_
           { /* pubkey */ authority_key, /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.account_len = ARRAY_LEN(account_metas);
     
     util_SetAuthorityData data = {
         /* instruction_code */ 6,
@@ -389,7 +392,7 @@ static uint64_t transfer_entry_token(Entry *entry, SolAccountInfo *token_destina
           { &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.account_len = ARRAY_LEN(account_metas);
     
     util_TransferData data = {
         /* instruction_code */ 3,
@@ -426,12 +429,12 @@ static uint64_t close_token_account(SolPubkey *token_pubkey, SolPubkey *owner_pu
           { owner_pubkey, /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.account_len = ARRAY_LEN(account_metas);
     
-    uint8_t instruction_code = 9; // CloseAccount
+    uint8_t data = 9; // CloseAccount
 
-    instruction.data = &instruction_code;
-    instruction.data_len = sizeof(instruction_code);
+    instruction.data = &data;
+    instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
     uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
@@ -469,7 +472,7 @@ static uint64_t burn_tokens(SolPubkey *token_account_key, SolPubkey *token_owner
 
 
     instruction.accounts = account_metas;
-    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.account_len = ARRAY_LEN(account_metas);
     
     util_BurnData data = {
         /* instruction code */ 8,
