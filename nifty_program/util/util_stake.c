@@ -345,9 +345,8 @@ static uint64_t set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior
 }
 
 
-static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *new_withdraw_authority,
-                                             SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
-                                             int transaction_accounts_len)
+static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *new_authority,
+                                             SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -359,7 +358,7 @@ static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey
           // `[]` Clock sysvar
           { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
           // `[SIGNER]` The stake or withdraw authority
-          { /* pubkey */ new_withdraw_authority, /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
     
     instruction.accounts = account_metas;
     instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
@@ -522,8 +521,8 @@ static uint64_t split_master_stake_signed(SolPubkey *to_account_key, uint64_t la
     }
 
     // Now re-assign authorities of the new account to the funding account
-    return set_stake_authorities_signed(to_account_key, &(Constants.nifty_authority_pubkey), funding_account_key,
-                                        transaction_accounts, transaction_accounts_len);
+    return set_stake_authorities_signed(to_account_key, funding_account_key, transaction_accounts,
+                                        transaction_accounts_len);
 }
 
     

@@ -11,44 +11,32 @@
 #include "util/util_token.c"
 
 
-// Details provided along with each entry to be added
-typedef struct
-{
-    // The sha256 of the metadata + salt to copy into the entry as reveal_sha256, which will ensure that when the
-    // reveal of the entry occurs, it will reveal metadata which was already determined at the time that the entry was
-    // added
-    sha256_t sha256;
-    
-} EntryDetails;
-
-
 typedef struct
 {
     // This is the instruction code for AddEntriesToBlockData
     uint8_t instruction_code;
 
-    // This is the initial uri to use as the uri member of the metaplex metadata
+    // This is the initial uri to use as the uri member of the metaplex metadata.  Its maximum length is 100.
     uint8_t metaplex_metadata_uri[200];
 
-    // These are the creator pubkeys to add to the metaplex metadata.  Up to 2, and if either is all zeroes,
-    // then it is not used
-    SolPubkey metaplex_metadata_creator_1;
-    SolPubkey metaplex_metadata_creator_2;
+    // This is the additional creator pubkey to add to the meteplex metadata, or all zeroes to add no second
+    // creator.  The Shinobi Systems vote pubkey is always included as the first creator.
+    SolPubkey second_metaplex_metadata_creator;
 
     // Index of first entry included here
     uint16_t first_entry;
 
-    // Each account to be computed requires a bump seed, and those bump seeds are provided in groups of 4 per
-    // entry, with the mint account bump seed first, metaplex metadata account bump seed second, metaplex edition
-    // metadata account bump seed third, and entry account bump seed fourth
-    EntryDetails entry_details[0];
+    // Each account to be computed requires as ha256 of the metadata + salt to copy into the entry as reveal_sha256,
+    // which will ensure that when the reveal of the entry occurs, it will reveal metadata which was already
+    // determined at the time that the entry was added
+    sha256_t entry_sha256s[0];
 
 } AddEntriesToBlockData;
 
 
 // Forward declaration
 static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, Block *block, uint16_t entry_index,
-                          SolPubkey *funding_key, AddEntriesToBlockData *data, EntryDetails *entry_details,
+                          SolPubkey *funding_key, AddEntriesToBlockData *data, sha256_t *entry_sha256,
                           SolAccountInfo *transaction_accounts, int transaction_accounts_len);
 
 
@@ -59,7 +47,7 @@ static uint64_t compute_add_entries_data_size(uint16_t entry_count)
     // The total space needed is from the beginning of AddEntriesToBlockData to the entries element one beyond the
     // total supported (i.e. if there are 100 entries, then then entry at index 100 starts at the first byte beyond
     // the array)
-    return ((uint64_t) &(d->entry_details[entry_count]));
+    return ((uint64_t) &(d->entry_sha256s[entry_count]));
 }
 
     
@@ -81,8 +69,6 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
     // There are 4 accounts per entry following the 9 fixed accounts
     uint8_t entry_count = (params->ka_num - 9) / 4;
 
-    sol_log_64(params->ka_num, entry_count, 9 + (entry_count * 4), _account_num, 0);
-
     // Must be exactly the fixed accounts + 4 accounts per entry
     DECLARE_ACCOUNTS_NUMBER(9 + (entry_count * 4));
 
@@ -98,49 +84,52 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
 
     // Cast to instruction data
     AddEntriesToBlockData *data = (AddEntriesToBlockData *) params->data;
-    
+
     // Get the validated Block data
     Block *block = get_validated_block(block_account);
     if (!block) {
         return Error_InvalidAccount_First + 3;
     }
 
-    // Fail if the block is already complete
+    // If the block is already complete, then there's nothing to do
     if (is_block_complete(block)) {
-        return Error_InvalidData_First;
-    }
-    
-    // Make sure that the first entry supplied is the next entry to be added to the block
-    if (data->first_entry != block->added_entries_count) {
-        return Error_InvalidData_First + 1;
+        return 0;
     }
 
-    // Make sure that the total number of entries to add does not exceed the number of entries in the block.
-    if (entry_count > (block->config.total_entry_count - block->added_entries_count)) {
+    // Make sure that the entry range is within the range of entries in the block
+    if ((data->first_entry + entry_count) > block->config.total_entry_count) {
         return Error_InvalidData_First + 2;
     }
 
     // Add each entry one by one
     for (uint8_t i = 0; i < entry_count; i++) {
+        uint16_t entry_index = ((uint16_t) data->first_entry) + i;
+
+        // If the entry has already been added, ignore this one
+        if (block->entries_added_bitmap[entry_index / 8] & (1 << (entry_index % 8))) {
+            continue;
+        }
+        
         // This is the group of accounts for this entry
         SolAccountInfo *entry_accounts = &(params->ka[9 + (4 * i)]);
 
         // This is the entry details for the entry
-        EntryDetails *entry_details = &(data->entry_details[i]);
-
-        uint16_t entry_index = data->first_entry + i;
+        sha256_t *entry_sha256 = &(data->entry_sha256s[i]);
 
         // Add the entry
         uint64_t result = add_entry(entry_accounts, block_account->key, block, entry_index, funding_account->key,
-                                    data, entry_details, params->ka, params->ka_num);
+                                    data, entry_sha256, params->ka, params->ka_num);
         
         if (result) {
             return result;
         }
-    }
 
-    // Now the total number of entries added is increased
-    block->added_entries_count += entry_count;
+        // Set the bit indicating that the entry was added
+        block->entries_added_bitmap[entry_index / 8] |= (1 << (entry_index % 8));
+
+        // Now the total number of entries added is increased
+        block->added_entries_count += 1;
+    }
 
     // If the block has just been completed, then set the block_start_time to the current time, and set the
     // block last_commission_change_epoch so that commission can't be changed this epoch.
@@ -157,13 +146,13 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         }
         block->last_commission_change_epoch = clock.epoch;
     }
-    
+
     return 0;
 }
 
 
 static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, Block *block, uint16_t entry_index,
-                          SolPubkey *funding_key, AddEntriesToBlockData *data, EntryDetails *entry_details,
+                          SolPubkey *funding_key, AddEntriesToBlockData *data, sha256_t *entry_sha256,
                           SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolAccountInfo *entry_account =                     &(entry_accounts[0]);
@@ -210,7 +199,8 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, 
     ret = create_entry_metaplex_metadata(metaplex_metadata_account->key, mint_account->key,
                                          funding_key, block->config.group_number, block->config.block_number,
                                          entry_index, data->metaplex_metadata_uri,
-                                         &(data->metaplex_metadata_creator_1), &(data->metaplex_metadata_creator_2),
+                                         &(Constants.shinobi_systems_vote_pubkey),
+                                         &(data->second_metaplex_metadata_creator),
                                          transaction_accounts, transaction_accounts_len);
     if (ret) {
         return ret;
@@ -274,7 +264,7 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, 
         entry->non_auction_start_price_lamports = block->config.non_auction_start_price_lamports;
     }
 
-    entry->reveal_sha256 = entry_details->sha256;
+    entry->reveal_sha256 = *entry_sha256;
 
     return 0;
 }

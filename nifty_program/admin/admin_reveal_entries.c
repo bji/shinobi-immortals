@@ -51,7 +51,7 @@ static uint64_t admin_reveal_entries(SolParameters *params)
         DECLARE_ACCOUNT(0,   config_account,                ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
         DECLARE_ACCOUNT(1,   admin_account,                 ReadOnly,   Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,   block_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(3,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(3,   authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(4,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(5,   metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
@@ -203,7 +203,7 @@ static uint64_t reveal_single_entry(Block *block,
         return Error_InvalidMetadataAccount;
     }
 
-    // Ensure that the entry state is waiting for reveal, which is the only state in which reveal is allowed
+    // Only do a reveal if the entry is waiting for reveal
     switch (get_entry_state(block, entry, clock)) {
     case EntryState_WaitingForRevealUnowned:
         break;
@@ -217,7 +217,8 @@ static uint64_t reveal_single_entry(Block *block,
         }
         break;
     default:
-        return Error_EntryNotRevealable;
+        // Already revealed, ignore this request to reveal
+        return 0;
     }
 
     // OK at this point, it is known that the mint account is valid, the token account is valid, the metaplex metadata

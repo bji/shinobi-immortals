@@ -103,7 +103,7 @@ typedef enum
 
 #include "anyone/anyone_take_commission_or_delegate.c"
 
-// #include "special/special_reauthorize.c"
+#include "special/special_reauthorize.c"
 
 
 // Program entrypoint
@@ -183,8 +183,8 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_TakeCommissionOrDelegate:
         return anyone_take_commission_or_delegate(&params);
 
-//    case Instruction_ReAuthorize:
-//        return special_reauthorize(&params);
+    case Instruction_ReAuthorize:
+        return special_reauthorize(&params);
 
     default:
         return Error_UnknownInstruction;

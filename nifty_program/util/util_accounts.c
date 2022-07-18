@@ -205,6 +205,7 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
 
     // If the account to create didn't exist yet, just use CreateAccount to create it
     if (*(new_account->lamports) == 0) {
+
         SolAccountMeta account_metas[] = 
             // First account to pass to CreateAccount is the funding_account
             { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
@@ -220,7 +221,7 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
         instruction.data_len = sizeof(data);
  
         SolSignerSeeds signer_seeds = { seeds, seeds_count };
-    
+
         return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
     }
 

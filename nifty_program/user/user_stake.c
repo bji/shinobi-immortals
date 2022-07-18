@@ -16,7 +16,7 @@ static uint64_t user_stake(SolParameters *params)
         DECLARE_ACCOUNT(6,  shinobi_systems_vote_account,  ReadOnly,   NotSigner,  KnownAccount_ShinobiSystemsVote);
         DECLARE_ACCOUNT(7,  authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(8,  clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
-        DECLARE_ACCOUNT(9,  stake_program_account,        ReadOnly,   NotSigner,   KnownAccount_StakeProgram);
+        DECLARE_ACCOUNT(9,  stake_program_account,         ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
         DECLARE_ACCOUNT(10, stake_config_account,          ReadOnly,   NotSigner,  KnownAccount_StakeConfig);
         DECLARE_ACCOUNT(11, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
     }
@@ -51,7 +51,7 @@ static uint64_t user_stake(SolParameters *params)
     if (!decode_stake_account(stake_account, &stake)) {
         return Error_InvalidAccount_First + 3;
     }
-    
+
     // - Must be in Initialized or Stake state
     switch (stake.state) {
     case StakeState_Initialized:
@@ -94,12 +94,6 @@ static uint64_t user_stake(SolParameters *params)
         if (!decode_stake_account(stake_account, &stake)) {
             return Error_InvalidAccount_First + 4;
         }
-
-        // Record current lamports in the stake account to be used for ki harvesting purposes
-        entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
-        
-        // Record current lamports in the stake account to be used for commission purposes 
-        entry->owned.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
     }
     // Else the stake account is delegated (because the only other stake state possible is StakeState_Stake according
     // to the switch done already above), and if it's not delegated to Shinobi Systems, deactivate it, so that in the
@@ -116,8 +110,14 @@ static uint64_t user_stake(SolParameters *params)
     // Record the stake account address
     entry->owned.stake_account = *(stake_account->key);
 
+    // Record current lamports in the stake account to be used for ki harvesting purposes
+    entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
+    
+    // Record current lamports in the stake account to be used for commission purposes 
+    entry->owned.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
+        
     // Update the entry's commission to that of the block
     entry->commission = block->commission;
-      
+
     return 0;
 }

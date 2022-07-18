@@ -100,7 +100,7 @@ static uint64_t admin_create_block(SolParameters *params)
 
     // Create the block account
     uint64_t ret = create_block_account(block_account, config->group_number, config->block_number,
-                                        funding_account->key, params->ka, params->ka_num);
+                                        config->total_entry_count, funding_account->key, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }
@@ -113,6 +113,6 @@ static uint64_t admin_create_block(SolParameters *params)
     block->config = *config;
 
     block->commission = data->initial_commission;
-    
+
     return 0;
 }

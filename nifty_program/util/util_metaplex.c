@@ -253,6 +253,46 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
 }
 
 
+// Change the update authority for metaplex metadata.  Assumes that the nifty authority is the current authority
+// of the metadata.
+static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pubkey, SolPubkey *new_authority,
+                                                SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    // UpdateMetadataAccountV2
+    SolAccountMeta account_metas[] =
+          // Metadata key
+        { { /* pubkey */ metaplex_metadata_pubkey, /* is_writable */ true, /* is_signer */ false },
+          // Update authority
+          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+
+    // The data is a very simple borsh serialized format
+    uint8_t data[1 /* Instruction code UpdateMetadataAccountV2 */ +
+                 1 /* None */ +
+                 1 + 32 /* Some(new_authority) */ +
+                 1 /* None */ +
+                 1 /* None */];
+    sol_memset(&data, 0, sizeof(data));
+    data[0] = 15;
+    data[2] = 1;
+    * ((SolPubkey *) &(data[3])) = *new_authority;
+    
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.metaplex_program_pubkey);
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+    instruction.data = (uint8_t *) data;
+    instruction.data_len = sizeof(data);
+
+    // Must invoke with signed authority account
+    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+    
+    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+}
+
+
 // Sets the primary_sale_happened metaplex metadata value to true
 static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
                                                             // All cross-program invocation must pass all account

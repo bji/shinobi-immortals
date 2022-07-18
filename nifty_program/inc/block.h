@@ -91,4 +91,8 @@ typedef struct
     // Epoch of the last time that the commission was changed
     uint64_t last_commission_change_epoch;
 
+    // This is a bitmap of all entries which have been added to the block.  If a bit is 1, the entry has been
+    // added already; if it is 0, the entry has not been added.  This allows entries to be added in parallel.
+    uint8_t entries_added_bitmap[0];
+
 } Block;

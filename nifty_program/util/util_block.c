@@ -4,9 +4,16 @@
 #include "util/util_accounts.c"
 
 
+static uint64_t compute_block_size(uint16_t entry_count)
+{
+    Block *b = 0;
+
+    return (uint64_t) &(b->entries_added_bitmap[(((uint32_t) entry_count + 1) / 8) + 1]);
+}
+
 // Returns an error if [block_account] is not the correct account
 static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t group_number, uint32_t block_number,
-                                     SolPubkey *funding_key, SolAccountInfo *transaction_accounts,
+                                     uint16_t entry_count, SolPubkey *funding_key, SolAccountInfo *transaction_accounts,
                                      int transaction_accounts_len)
 {
     // Compute the block address
@@ -30,9 +37,12 @@ static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t gro
     if (!SolPubkey_same(&pubkey, block_account->key)) {
         return Error_CreateAccountFailed;
     }
+
+    // The size of the block to create is the sizeof a block + 1 byte per 8 entries (for the entries added bitmap)
+    uint64_t block_size = compute_block_size(entry_count);
     
     return create_pda(block_account, seeds, ARRAY_LEN(seeds), funding_key, &(Constants.nifty_program_pubkey),
-                      get_rent_exempt_minimum(sizeof(Block)), sizeof(Block), transaction_accounts,
+                      get_rent_exempt_minimum(block_size), block_size, transaction_accounts,
                       transaction_accounts_len);
 }
 
@@ -45,12 +55,17 @@ static Block *get_validated_block(SolAccountInfo *block_account)
         return 0;
     }
     
-    // Block account must have the correct data size
-    if (block_account->data_len != sizeof(Block)) {
+    // Block account must have at least enough size to hold zero entries
+    if (block_account->data_len < sizeof(Block)) {
         return 0;
     }
         
     Block *block = (Block *) block_account->data;
+
+    // Block must be correctly sized for the number of entries it contains
+    if (block_account->data_len != compute_block_size(block->config.total_entry_count)) {
+        return 0;
+    }
 
     // If the block does not have the correct data type, then this is an error
     if (block->data_type != DataType_Block) {
