@@ -38,7 +38,8 @@ static uint64_t mint_bid_marker_token_idempotent(SolAccountInfo *bid_marker_toke
         }
     }
 
-    // Mint a token into it, to prevent the user from cleaning it up because "it's empty"
+    // Mint a token into it, to prevent the user from cleaning it up because "it's empty".  Must mint 10 because the
+    // tokens are stored on-chain as "decitokens", to comply with the metaplex fungible token metadata standard.
     return mint_tokens(&(Constants.bid_marker_mint_pubkey), bid_marker_token_account->key, 10,
                        transaction_accounts, transaction_accounts_len);
 }

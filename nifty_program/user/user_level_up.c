@@ -60,6 +60,10 @@ static uint64_t user_level_up(SolParameters *params)
         ki_to_burn += (ki_to_burn >> 1);
     }
 
+    // Multiply the number of ki to burn by 10 because on-chain Ki are stored with decimal places 1, or in other
+    // words, as "DeciKi"
+    ki_to_burn *= 10;
+
     // Check to make sure that the ki source account passed in is really a ki account owned by the passed in owner
     // and has the required amount of Ki
     if (!is_token_owner(ki_source_account, ki_source_owner_account->key, &(Constants.ki_mint_pubkey), ki_to_burn)) {

@@ -10,7 +10,8 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
                            SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Amount of Ki to harvest is the stake account earnings since the last harvest: it is the number of SOL earned
-    // times the ki_factor.
+    // times the ki_factor.  Note that LAMPORTS_PER_SOL is divided by 10; this is because Ki has a single decimal
+    // place.
     uint64_t harvest_amount =
         (((stake->stake.delegation.stake - entry->owned.last_ki_harvest_stake_account_lamports) * 
           entry->metadata.level_metadata[entry->level].ki_factor) / LAMPORTS_PER_SOL);
@@ -28,8 +29,10 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
         return ret;
     }
 
-    // Mint the harvest_amount to the destination_account
-    ret = mint_tokens(&(Constants.ki_mint_pubkey), destination_account->key, harvest_amount,
+    // Mint the harvest_amount to the destination_account.  Because Ki tokens have a decimal place count of 1, which
+    // is necessary to comply with metaplex metadata standards for fungible tokens, multiply the actual number of Ki
+    // by 10.
+    ret = mint_tokens(&(Constants.ki_mint_pubkey), destination_account->key, harvest_amount * 10,
                       transaction_accounts, transaction_accounts_len);
     if (ret) {
         return ret;

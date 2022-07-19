@@ -119,7 +119,7 @@ static uint64_t super_initialize(SolParameters *params)
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.ki_mint_seed_bytes) };
 
         if (create_token_mint(ki_mint_account, &seed, 1, &(Constants.nifty_authority_pubkey), superuser_account->key,
-                              0, params->ka, params->ka_num)) {
+                              1, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }
     }
@@ -129,7 +129,7 @@ static uint64_t super_initialize(SolParameters *params)
     uint8_t *symbol = (uint8_t *) KI_TOKEN_SYMBOL;
     uint8_t *uri = (uint8_t *) KI_TOKEN_METADATA_URI;
     if (create_metaplex_metadata(&(Constants.ki_metadata_pubkey), &(Constants.ki_mint_pubkey),
-                                 superuser_account->key, name, symbol, uri, &(Constants.shinobi_systems_vote_pubkey),
+                                 superuser_account->key, name, symbol, uri, &(Constants.system_program_pubkey),
                                  &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
@@ -157,3 +157,4 @@ static uint64_t super_initialize(SolParameters *params)
     
     return 0;
 }
+
