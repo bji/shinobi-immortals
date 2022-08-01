@@ -34,12 +34,6 @@ typedef struct
     // Attack and defense skill (top 4 bits = attack, bottom 4 = defense)
     uint8_t skill;
 
-    // Special added at this level
-    uint8_t special1;
-
-    // Special added at this level
-    uint8_t special2;
-
     // This is the number of Ki tokens earned per 1 SOL of stake rewards earned by stake accounts staked to the entry.
     uint32_t ki_factor;
 
@@ -58,6 +52,9 @@ typedef struct
 {
     // Number of ki to achieve level 1.  Each subsequent level requires 50% more Ki to achieve than the previous.
     uint64_t level_1_ki;
+
+    // These are random numbers that can be used by other programs.  These values are randomly generated per entry.
+    uint64_t random[8];
 
     // Metadata for each of the 9 levels
     LevelMetadata level_metadata[9];

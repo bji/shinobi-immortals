@@ -113,7 +113,7 @@ static uint8_t *borsh_encode_zero_terminated_string(uint8_t *data, uint32_t max_
 
 static uint8_t *borsh_encode_pubkey(uint8_t *data, SolPubkey *pubkey)
 {
-    sol_memcpy(data, pubkey, BORSH_SIZE_PUBKEY);
+    * (SolPubkey *) data = *pubkey;
 
     return &(data[BORSH_SIZE_PUBKEY]);
 }
@@ -253,8 +253,8 @@ static const uint32_t borsh_decode_pubkey(const uint8_t *data, uint32_t data_len
     if (data_len < BORSH_SIZE_PUBKEY) {
         return 0;
     }
-    
-    sol_memcpy(&(pubkey->x), data, BORSH_SIZE_PUBKEY);
+
+    *pubkey = * (SolPubkey *) data;
 
     return BORSH_SIZE_PUBKEY;
 }

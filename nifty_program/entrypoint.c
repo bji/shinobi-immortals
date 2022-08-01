@@ -126,8 +126,8 @@ uint64_t entrypoint(const uint8_t *input)
         return Error_InvalidDataSize;
     }
 
-    // The instruction index is the first byte of data.  For each instruction code, call the appropriate do_ function
-    // to handle that instruction, and return its result.
+    // The instruction index is the first byte of data.  For each instruction code, call the appropriate function to
+    // handle that instruction, and return its result.
     switch (params.data[0]) {
     case Instruction_Initialize:
         return super_initialize(&params);
@@ -192,8 +192,8 @@ uint64_t entrypoint(const uint8_t *input)
 }
 
 
-// Provide a memcpy implementation; this allows structure assignments that the compiler will turn into
-// memcpy which is safer that calling memcpy directly
+// Provide a memcpy implementation; this allows structure assignments that the compiler will turn into memcpy which is
+// safer that calling memcpy directly
 void memcpy(void *dst, const void *src, int len)
 {
     sol_memcpy(dst, src, len);
