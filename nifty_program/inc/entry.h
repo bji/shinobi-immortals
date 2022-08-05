@@ -37,13 +37,15 @@ typedef struct
     // This is the number of Ki tokens earned per 1 SOL of stake rewards earned by stake accounts staked to the entry.
     uint32_t ki_factor;
 
-    // Name of the entry at each level (metaplex metadata maximum name length of 32), used to update metaplex
-    // metadata with each level up.
+    // Name of the entry at each level (metaplex metadata maximum name length of 32)
     uint8_t name[32];
 
-    // Image URL of the entry at each level (metaplex metadata uri length is 200), used to update metaplex
-    // metadata with each level up.
+    // Metadata URL of the entry at this level (metaplex metadata uri length is 200)
     uint8_t uri[200];
+
+    // SHA-256 of the contents of the Metadata URL at this level.  Used to both verify the metadata and also
+    // to allow alternate methods (outside of the scope of this program) for fetching metadata
+    sha256_t uri_contents_sha256;
     
 } LevelMetadata;
 
@@ -51,10 +53,10 @@ typedef struct
 typedef struct
 {
     // Number of ki to achieve level 1.  Each subsequent level requires 50% more Ki to achieve than the previous.
-    uint64_t level_1_ki;
+    uint32_t level_1_ki;
 
     // These are random numbers that can be used by other programs.  These values are randomly generated per entry.
-    uint64_t random[8];
+    uint32_t random[16];
 
     // Metadata for each of the 9 levels
     LevelMetadata level_metadata[9];
