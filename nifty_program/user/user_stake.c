@@ -110,6 +110,12 @@ static uint64_t user_stake(SolParameters *params)
     // Record the stake account address
     entry->owned.stake_account = *(stake_account->key);
 
+    // Record initial lamports, to be used to calculate APY if needed
+    entry->owned.stake_initial_lamports = stake.stake.delegation.stake;
+
+    // Record stake epoch, to be used to calculate APY if needed
+    entry->owned.stake_epoch = clock.epoch;
+
     // Record current lamports in the stake account to be used for ki harvesting purposes
     entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
     

@@ -158,6 +158,13 @@ typedef struct
     struct {
         // EntryState_Staked: The stake account that this Entry holds, all zeroes if none
         SolPubkey stake_account;
+
+        // Initial lamports of the stake account at the time that it was staked to the Entry.  Can be used to
+        // calculate APY.
+        uint64_t stake_initial_lamports;
+        
+        // Epoch at the time that it was staked to the Entry.  Can be used to calculate APY.
+        uint64_t stake_epoch;
         
         // Lamports in the stake account at which Ki was most recently harvested
         uint64_t last_ki_harvest_stake_account_lamports;
