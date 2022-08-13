@@ -2,8 +2,19 @@
 
 const SolanaWeb3 = require('@solana/web3.js');
 const Buffer = require('buffer');
+const _buy_tx = require("./tx.js")._buy_tx;
+const _refund_tx = require("./tx.js")._refund_tx;
+const _bid_tx = require("./tx.js")._bid_tx;
+const _claim_losing_tx = require("./tx.js")._claim_losing_tx;
+const _claim_winning_tx = require("./tx.js")._claim_winning_tx;
+const _stake_tx = require("./tx.js")._stake_tx;
+const _destake_tx = require("./tx.js")._destake_tx;
+const _harvest_tx = require("./tx.js")._harvest_tx;
+const _level_up_tx = require("./tx.js")._level_up_tx;
+const _take_commission_or_delegate_tx = require("./tx.js")._take_commission_or_delegate_tx;
 
-const NIFTY_PROGRAM_ADDRESS = "2kvAhdb5V38fWNBinyjKp61656NFpLojeSgvbq1YQgEh";
+
+const NIFTY_PROGRAM_ADDRESS = "ShinboVZNAn1UjpZ3rJsFzLcWMP5JF8LPdHPWaaGYTV";
 const METAPLEX_PROGRAM_ADDRESS = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 const SPL_TOKEN_PROGRAM_ADDRESS = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const SPL_ASSOCIATED_TOKEN_PROGRAM_ADDRESS = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
@@ -72,7 +83,7 @@ class Cluster
         this.on_entry = on_entry;
 
         // Defer loading blocks
-        setTimeout(() => { this.#query_blocks(0, 0); }, 0);
+        setTimeout(() => { this.#query_blocks(0, 200); }, 0);
     }
 
     set_wallet(wallet_pubkey, on_wallet_item)
@@ -90,6 +101,21 @@ class Cluster
 
         // Initiate a query for all stake accounts belonging to wallet
         setTimeout(() => { this.#query_stakes(wallet_pubkey); }, 0);
+    }
+
+    async get_admin_pubkey()
+    {
+        // Read it from the config account via RPC
+        let result = await this.rpc_connection.getAccountInfo(g_config_pubkey,
+                                                              {
+                                                                  dataSlice : { offset : 4,
+                                                                                length : 32 }
+                                                              });
+        if (result == null) {
+            return null;
+        }
+        
+        return new SolanaWeb3.PublicKey(result.data);
     }
 
     shutdown()
@@ -694,11 +720,13 @@ class Entry
     async buy_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
-        let config_pubkey = get_config_pubkey();
+        if (wallet_pubkey == null) {
+            return null;
+        }
         
         return _buy_tx({ funding_pubkey : wallet_pubkey,
-                         config_pubkey : config_pubkey,
-                         admin_pubkey : await get_admin_pubkey(config_pubkey),
+                         config_pubkey : g_config_pubkey,
+                         admin_pubkey : await this.block.cluster.get_admin_pubkey(g_config_pubkey),
                          block_pubkey : this.block.pubkey,
                          entry_pubkey : this.pubkey,
                          entry_token_pubkey : this.token_pubkey,
@@ -711,6 +739,9 @@ class Entry
     refund_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return null;
+        }
         
         return _refund_tx({ token_owner_pubkey : wallet_pubkey,
                             block_pubkey : this.block.pubkey,
@@ -722,6 +753,9 @@ class Entry
     bid_tx(minimum_bid_lamports, maximum_bid_lamports)
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if ((wallet_pubkey == null) || (minimum_bid_lamports == null) || (maximum_bid_lamports == null)) {
+            return null;
+        }
         let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
             
         return _bid_tx({ bidding_pubkey : wallet_pubkey,
@@ -735,6 +769,9 @@ class Entry
     claim_losing_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return null;
+        }
         let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
             
         return _claim_losing_tx({ bidding_pubkey : wallet_pubkey,
@@ -746,15 +783,17 @@ class Entry
     async claim_winning_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
-        let config_pubkey = get_config_pubkey();
+        if (wallet_pubkey == null) {
+            return null;
+        }
         let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
         let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
         
         return _claim_winning_tx({ bidding_pubkey : wallet_pubkey,
                                    entry_pubkey : this.pubkey,
                                    bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
-                                   config_pubkey : config_pubkey,
-                                   admin_pubkey : await get_admin_pubkey(config_pubkey),
+                                   config_pubkey : g_config_pubkey,
+                                   admin_pubkey : await this.block.cluster.get_admin_pubkey(g_config_pubkey),
                                    entry_token_pubkey : this.token_pubkey,
                                    entry_mint_pubkey : this.mint_pubkey,
                                    token_destination_pubkey : token_destination_pubkey,
@@ -765,6 +804,9 @@ class Entry
     stake_tx(stake_account_pubkey)
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if ((wallet_pubkey == null) || (stake_account_pubkey == null)) {
+            return null;
+        }
         
         return _stake_tx({ block_pubkey : this.block.pubkey,
                            entry_pubkey : this.pubkey,
@@ -776,7 +818,11 @@ class Entry
     
     destake_tx()
     {
+        console.log("1");
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return null;
+        }
         
         return _destake_tx({ funding_pubkey : wallet_pubkey,
                              block_pubkey : this.block.pubkey,
@@ -784,40 +830,49 @@ class Entry
                              token_owner_pubkey : wallet_pubkey,
                              token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
                              stake_pubkey : this.owned_stake_account,
-                             ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, get_ki_mint_pubkey()),
+                             ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
                              ki_destination_owner_pubkey : wallet_pubkey,
                              bridge_pubkey : get_entry_bridge_pubkey(this.mint_pubkey),
-                             new_withdraw_authority : wallet_pubkey });
+                             new_withdraw_authority : wallet_pubkey.toBase58() });
     }
     
     harvest_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return null;
+        }
         
         return _harvest_tx({ funding_pubkey : wallet_pubkey,
                              entry_pubkey : this.pubkey,
                              token_owner_pubkey : wallet_pubkey,
                              token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
                              stake_pubkey : this.owned_stake_account,
-                             ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, get_ki_mint_pubkey()),
+                             ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
                              ki_destination_owner_pubkey : wallet_pubkey });
     }
     
     level_up_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return null;
+        }
         
         return _level_up_tx({ entry_pubkey : this.pubkey,
                               token_owner_pubkey : wallet_pubkey,
                               token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
                               entry_metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
-                              ki_source_pubkey : get_associated_token_pubkey(wallet_pubkey, get_ki_mint_pubkey()),
+                              ki_source_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
                               ki_source_owner_pubkey : wallet_pubkey });
     }
     
     take_commission_or_delegate_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return null;
+        }
         
         return _take_commission_or_delegate_tx({ funding_pubkey : wallet_pubkey,
                                                  block_pubkey : this.block.pubkey,
@@ -880,22 +935,6 @@ class Entry
 }
 
 
-async function get_admin_pubkey()
-{
-    // Read it from the config account via RPC
-    let result = await g_rpc_connection.getAccountInfo(g_config_pubkey,
-                                                       {
-                                                           dataSlice : { offset : 4,
-                                                                         length : 32 }
-                                                       });
-    if (result == null) {
-        return null;
-    }
-    
-    return new SolanaWeb3.PublicKey(result.data);
-}
-
-
 function metaplex_metadata_pubkey(mint_pubkey)
 {
     return SolanaWeb3.PublicKey.findProgramAddressSync([ Buffer.Buffer.from("metadata"),
@@ -948,7 +987,7 @@ function get_associated_token_pubkey(token_owner_pubkey, token_mint_pubkey)
 }
 
 
-function get_bid_marker_token_pubkey(entry_mint_pubkey, buyer_pubkey)
+function get_bid_marker_token_pubkey(entry_mint_pubkey, bidder_pubkey)
 {
     return SolanaWeb3.PublicKey.findProgramAddressSync([ [ 12 ],
                                                          entry_mint_pubkey.toBuffer(),
