@@ -3,7 +3,7 @@
     "version" : "0.0.1",
     "description" : "Javascript for interacting with nifty_stakes program",
     "main" : "lib.js",
-    "files" : "lib/cluster.js",
+    "files" : "cluster.js",
     "license" : "GPLv2",
     "dependencies" : {
         "@solana/web3.js" : ">0.0.0",
