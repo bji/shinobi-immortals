@@ -8,7 +8,6 @@
 #include "inc/program_config.h"
 #include "inc/types.h"
 #include "util/util_accounts.c"
-#include "util/util_authentication.c"
 #include "util/util_metaplex.c"
 #include "util/util_rent.c"
 #include "util/util_stake.c"
@@ -48,11 +47,6 @@ static uint64_t super_initialize(SolParameters *params)
         DECLARE_ACCOUNT(16,  metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(17);
-
-    // This instruction can only be executed by the authenticated superuser
-    if (!is_superuser_authenticated(superuser_account)) {
-        return Error_PermissionDenied;
-    }
 
     // Ensure that the input data is the correct size
     if (params->data_len != sizeof(InitializeData)) {

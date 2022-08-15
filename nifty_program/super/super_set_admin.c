@@ -7,7 +7,6 @@
 #include "inc/instruction_accounts.h"
 #include "inc/program_config.h"
 #include "util/util_accounts.c"
-#include "util/util_authentication.c"
 
 // Data passed to this program for UpdateAdmin function
 typedef struct
@@ -28,11 +27,6 @@ static uint64_t super_set_admin(SolParameters *params)
     }
     DECLARE_ACCOUNTS_NUMBER(2);
     
-    // This instruction can only be executed by the authenticated superuser
-    if (!is_superuser_authenticated(superuser_account)) {
-        return Error_PermissionDenied;
-    }
-
     // Ensure that the input data is the correct size
     if (params->data_len != sizeof(UpdateAdminData)) {
         return Error_InvalidDataSize;

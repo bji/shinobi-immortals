@@ -17,7 +17,7 @@ static uint64_t admin_split_master_stake(SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(8);
 
     // Ensure that this transaction is admin authenticated
-    if (!is_admin_authenticated(config_account, admin_account)) {
+    if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
 

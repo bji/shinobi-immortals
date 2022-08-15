@@ -2,7 +2,6 @@
 
 #include "inc/block.h"
 //#include "util/util_accounts.c"
-#include "util/util_authentication.c"
 #include "util/util_entry.c"
 #include "util/util_rent.c"
 
@@ -35,7 +34,7 @@ static uint64_t admin_create_block(SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(5);
     
     // Ensure the the transaction has been authenticated by the admin
-    if (!is_admin_authenticated(config_account, admin_account)) {
+    if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
 

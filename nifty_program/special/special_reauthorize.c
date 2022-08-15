@@ -31,7 +31,7 @@ static uint64_t special_reauthorize(SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(11);
 
     // Ensure that the transaction was authorized by the admin
-    if (!is_admin_authenticated(config_account, admin_account)) {
+    if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
 

@@ -63,7 +63,7 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(6 + (entry_count * 4));
     
     // Ensure the the transaction has been authenticated by the admin
-    if (!is_admin_authenticated(config_account, admin_account)) {
+    if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
 

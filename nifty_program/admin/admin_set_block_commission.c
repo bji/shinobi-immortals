@@ -24,7 +24,7 @@ static uint64_t admin_set_block_commission(SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(3);
 
     // Ensure the the transaction has been authenticated by the admin
-    if (!is_admin_authenticated(config_account, admin_account)) {
+    if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
     

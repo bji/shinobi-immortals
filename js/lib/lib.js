@@ -37,57 +37,11 @@ const g_ki_mint_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 4 ] ], 
 
 const g_ki_metadata_pubkey = metaplex_metadata_pubkey(g_ki_mint_pubkey);
 
-
-const WalletItemType = Object.freeze(
-{
-    Token : Symbol("Token"),
-
-    Stake : Symbol("Stake")
-});
+const g_bid_marker_mint_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 11 ] ], g_nifty_program_pubkey)[0];
 
 
 class Cluster
 {
-    static nifty_program_pubkey()
-    {
-        return g_nifty_program_pubkey;
-    }
-    
-    static config_pubkey()
-    {
-        return onfig_pubkey;
-    }
-    
-    static master_stake_pubkey()
-    {
-        return g_master_stake_pubkey;
-    }
-    
-    static ki_mint_pubkey()
-    {
-        return g_ki_mint_pubkey;
-    }
-    
-    static ki_metadata_pubkey()
-    {
-        return g_ki_metadata_pubkey;
-    }
-    
-    async admin_pubkey()
-    {
-        // Read it from the config account via RPC
-        let result = await this.rpc_connection.getAccountInfo(g_config_pubkey,
-                                                              {
-                                                                  dataSlice : { offset : 4,
-                                                                                length : 32 }
-                                                              });
-        if (result == null) {
-            return null;
-        }
-        
-        return new SolanaWeb3.PublicKey(result.data);
-    }
-
     static create(rpc_endpoint, on_block, on_entry)
     {
         return new Cluster(rpc_endpoint, on_block, on_entry);
@@ -106,25 +60,33 @@ class Cluster
         // Update clock immediately
         this.update_clock();
 
-        // Start loading blocks immediately
+        // Initiate a query for all blocks
         this.query_blocks(0, 200);
     }
 
-    set_wallet(wallet_pubkey, on_wallet_item)
+    set_wallet_pubkey(wallet_pubkey, on_wallet_tokens, on_wallet_stakes)
     {
-        if (on_wallet_item == null) {
+        if ((on_wallet_tokens == null) || (on_wallet_stakes == null)) {
             return;
         }
-        
-        this.wallet_pubkey = wallet_pubkey;
 
-        this.on_wallet_item = on_wallet_item;
+        if (wallet_pubkey == null) {
+            this.wallet_pubkey = null;
 
-        // Initiate a query for all tokens belonging to wallet
-        this.query_tokens(wallet_pubkey);
+            setTimeout(() => {
+                on_wallet_tokens([ ]);
+                on_wallet_stakes([ ]);
+            }, 0);
+        }
+        else {
+            this.wallet_pubkey = new SolanaWeb3.PublicKey(wallet_pubkey);
+            
+            // Initiate a query for all tokens belonging to wallet
+            this.query_tokens(this.wallet_pubkey, on_wallet_tokens);
 
-        // Initiate a query for all stake accounts belonging to wallet
-        //this.query_stakes(wallet_pubkey);
+            // Initiate a query for all stake accounts belonging to wallet
+            this.query_stakes(this.wallet_pubkey, on_wallet_stakes);
+        }
     }
 
     shutdown()
@@ -152,7 +114,7 @@ class Cluster
             return null;
         }
         
-        let now = (new Date()).getTime();
+        let now = Date.now();
         
         let slots_elapsed = ((now - this.confirmed_query_time) / (this.expected_slot_duration_seconds * 1000)) | 0; 
 
@@ -165,8 +127,55 @@ class Cluster
         };
     }
 
+    
     // Private implementation follows ---------------------------------------------------------------------------------
 
+    async admin_pubkey()
+    {
+        // Read it from the config account via RPC
+        let result = await this.rpc_connection.getAccountInfo(g_config_pubkey,
+                                                              {
+                                                                  dataSlice : { offset : 4,
+                                                                                length : 32 }
+                                                              });
+        if (result == null) {
+            return null;
+        }
+        
+        return new SolanaWeb3.PublicKey(result.data);
+    }
+
+    // Given the address of a bid marker token, look up the entry mint of the entry that it is a bid on and call
+    // on_result with that.  If the bid marker token does not correspond to an active bid, then on_result is called
+    // with null.
+    lookup_bid_entry_mint_pubkey(bid_marker_token_account_pubkey)
+    {
+        return this.rpc_connection.getAccountInfo(get_bid_pubkey(bid_marker_token_account_pubkey),
+                                                  {
+                                                      dataSlice : { offset : 4,
+                                                                    length : 32 }
+                                                  })
+            .then((result) =>
+                {
+                    if (this.is_shutdown) {
+                        return;
+                    }
+
+                    return new SolanaWeb3.PublicKey(result.data);
+                })
+            .catch((error) =>
+                {
+                    console.log("Lookup bid mint error " + error);
+
+                    if (this.is_shutdown) {
+                        return;
+                    }
+
+                    setTimeout(() => this.lookup_bid_entry_mint_pubkey(bid_marker_token_account_pubkey),
+                               1000);
+                });
+    }
+    
     update_clock()
     {
         if (this.is_shutdown) {
@@ -195,7 +204,7 @@ class Cluster
                     }
 
                     // Update the current data, but only if it doesn't go backwards
-                    this.confirmed_query_time = (new Date()).getTime();
+                    this.confirmed_query_time = Date.now();
                     this.confirmed_epoch = queried_epoch;
                     this.confirmed_slot = queried_slot;
                     this.confirmed_unix_timestamp = time;
@@ -210,8 +219,7 @@ class Cluster
                     if (this.is_shutdown) {
                         return;
                     }
-                    
-                    // After failure, try again in 1 second
+
                     setTimeout(() => this.update_clock(), 1000);
                 });
     }
@@ -221,7 +229,7 @@ class Cluster
         if (this.is_shutdown) {
             return;
         }
-        
+
         // Compute account keys
         let block_pubkeys = [ ];
 
@@ -241,9 +249,13 @@ class Cluster
                         if (blocks[idx] == null) {
                             break;
                         }
-                        this.on_block(new Block(this, block_pubkeys[idx], blocks[idx].data, true));
-                        if (this.is_shutdown) {
-                            return;
+                        let block = new Block(this, block_pubkeys[idx], blocks[idx].data, true);
+                        // Only call back about blocks that are complete
+                        if (block.added_entries_count == block.total_entry_count) {
+                            this.on_block(block);
+                            if (this.is_shutdown) {
+                                return;
+                            }
                         }
                     }
 
@@ -253,7 +265,9 @@ class Cluster
                     }
                     else if ((block_number == 0) && (idx == 0)) {
                         // An empty group represents the end of all blocks, so start over again in 1 minute
-                        setTimeout(() => this.query_blocks(0, 0), 60 * 1000);
+                        // XXX debugging, make it 5 seconds
+                        //setTimeout(() => this.query_blocks(0, 0), 60 * 1000);
+                        setTimeout(() => this.query_blocks(0, 200), 5 * 1000);
                     }
                     else {
                         // This group is done, but the next group can immediately be queried
@@ -273,9 +287,9 @@ class Cluster
                 });
     }
 
-    query_tokens(wallet_pubkey)
+    query_tokens(wallet_pubkey, on_wallet_tokens)
     {
-        if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
+        if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
             return;
         }
 
@@ -283,9 +297,11 @@ class Cluster
                                                           { programId : g_spl_token_program_pubkey })
             .then((results) =>
                 {
-                    if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
                         return;
                     }
+
+                    let wallet_tokens = [ ];
 
                     for (let idx = 0; idx < results.value.length; idx++) {
                         let account = results.value[idx].account;
@@ -309,44 +325,66 @@ class Cluster
                             continue;
                         }
 
-                        this.on_wallet_item(
-                            {
-                                wallet_item_type : WalletItemType.Token,
+                        wallet_tokens.push({
+                            owner_pubkey : wallet_pubkey,
 
-                                owner_pubkey : wallet_pubkey,
-
-                                mint_pubkey : new SolanaWeb3.PublicKey(account.data.parsed.info.mint),
-                                
-                                account_pubkey : pubkey,
-
-                                amount : account.data.parsed.info.tokenAmount.amount
-                            });
-
-                        if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                            return;
-                        }
+                            mint_pubkey : new SolanaWeb3.PublicKey(account.data.parsed.info.mint),
+                            
+                            account_pubkey : pubkey,
+                            
+                            amount : account.data.parsed.info.tokenAmount.amount
+                        });
                     }
 
-                    // Retry in 1 minute
-                    setTimeout(() => this.query_tokens(wallet_pubkey), 60 * 1000);
+                    // For each wallet token, if it is a bid marker, then look up its bid entry
+                    return Promise.all(wallet_tokens.map((wallet_token) =>
+                        {
+                            if (wallet_token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
+                                return this.lookup_bid_entry_mint_pubkey(wallet_token.account_pubkey)
+                                    .then((bid_entry_mint_pubkey) =>
+                                        {
+                                            wallet_token.bid_entry_mint_pubkey = bid_entry_mint_pubkey;
+                                            return wallet_token;
+                                        });
+                            }
+                            else {
+                                return wallet_token;
+                            }
+                        }));
+                })
+            .then((wallet_tokens) =>
+                {
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                        return;
+                    }
                     
+                    on_wallet_tokens(wallet_tokens);
+                    
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                        return;
+                    }
+                    
+                    // Retry in 1 minute
+                    // XXX debugging
+                    //setTimeout(() => this.query_tokens(wallet_pubkey), 60 * 1000);
+                    setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 5 * 1000);
                 })
             .catch((error) =>
                 {
                     console.log("Query tokens error " + error);
 
-                    if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
                         return;
                     }
                     
                     // Retry in 1 second
-                    setTimeout(() => this.query_tokens(wallet_pubkey), 1000);
+                    setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 1000);
                 });
     }
 
-    query_stakes(wallet_pubkey)
+    query_stakes(wallet_pubkey, on_wallet_stakes)
     {
-        if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
+        if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
             return true;
         }
 
@@ -365,9 +403,11 @@ class Cluster
                                                      })
             .then((results) =>
                 {
-                    if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
                         return;
                     }
+
+                    let wallet_stakes = [ ];
 
                     for (let idx = 0; idx < results.length; idx++) {
                         let account = results[idx].account;
@@ -394,8 +434,6 @@ class Cluster
                         let withdrawer = account.data.parsed.info.meta.authorized.withdrawer;
                         
                         let item = {
-                            wallet_item_type : WalletItemType.Stake,
-
                             account_pubkey : pubkey,
 
                             withdraw_authority_pubkey : new SolanaWeb3.PublicKey(withdrawer)
@@ -408,26 +446,30 @@ class Cluster
                             item.vote_account_pubkey = new SolanaWeb3.PublicKey(delegation.voter);
                         }
 
-                        this.on_wallet_item(item);
-
-                        if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                            return;
-                        }
+                        wallet_stakes.push(item);
                     }
 
+                    on_wallet_stakes(wallet_stakes);
+                
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                        return;
+                    }
+                    
                     // Retry in 1 minute
-                    setTimeout(() => this.query_stakes(wallet_pubkey), 60 * 1000);
+                    // xxx debugging
+                    //setTimeout(() => this.query_stakes(wallet_pubkey), 60 * 1000);
+                    setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 5 * 1000);
                 })
             .catch((error) =>
                 {
                     console.log("Query stakes error " + error);
 
-                    if (this.is_shutdown || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
                         return;
                     }
                     
                     // Retry in 5 seconds
-                    setTimeout(() => this.query_stakes(wallet_pubkey), 5 * 1000);
+                    setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 5 * 1000);
                 });
     }
 }
@@ -451,13 +493,14 @@ class Block
         this.duration = buffer_le_u32(data, 52);
         this.non_auction_start_price_lamports = buffer_le_u64(data, 56);
         this.added_entries_count = buffer_le_u16(data, 64);
-        this.block_start_timestamp = buffer_le_s64(data, 72);
+        this.block_start_timestamp = Number(buffer_le_s64(data, 72));
         this.mysteries_sold_count = buffer_le_u16(data, 80);
-        this.mystery_phase_end_timestamp = buffer_le_s64(data, 88);
+        this.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 88));
         this.commission = buffer_le_u16(data, 96);
-        this.last_commission_change_epoch = buffer_le_u64(data, 104);
+        this.last_commission_change_epoch = Number(buffer_le_u64(data, 104));
 
-        if (load_entries) {
+        // Only load entries for complete blocks
+        if (load_entries && (this.added_entries_count == this.total_entry_count)) {
             this.query_entries(0);
         }
     }
@@ -490,19 +533,13 @@ class Block
                 });
     }
 
-    // If a Block is not complete, it should never be shown to the user.  It should be hidden until it is complete.
-    is_complete()
-    {
-        return this.added_entries_count == this.total_entry_count;
-    }
-
     is_revealable(clock)
     {
         if (this.mysteries_sold_count == this.total_mystery_count) {
             return true;
         }
         
-        let mystery_phase_end = block.block_start_timestamp + block.mystery_phase_duration;
+        let mystery_phase_end = this.block_start_timestamp + this.mystery_phase_duration;
 
         return (clock.unix_timestamp > mystery_phase_end);
     }
@@ -539,10 +576,6 @@ class Block
                     if (idx == ENTRIES_AT_ONCE) {
                         // All entries were loaded, so try to get more for this block
                         this.query_entries(entry_index + ENTRIES_AT_ONCE);
-                    }
-                    else {
-                        // An empty entry represents the end of block entries, so start over again in 1 minute
-                        setTimeout(() => this.query_entries(0), 60 * 1000);
                     }
                 })
             .catch((error) =>
@@ -601,7 +634,7 @@ class Entry
         this.duration = buffer_le_u32(data, 156);
         this.non_auction_start_price_lamports = buffer_le_u64(data, 160);
         this.reveal_sha256 = buffer_sha256(data, 168);
-        this.reveal_timestamp = buffer_le_s64(data, 200);
+        this.reveal_timestamp = Number(buffer_le_s64(data, 200));
         this.purchase_price_lamports = buffer_le_u64(data, 208);
         this.refund_awarded = data[216];
         this.commission = buffer_le_u16(data, 218);
@@ -609,7 +642,7 @@ class Entry
         this.auction_winning_bid_pubkey = buffer_pubkey(data, 232);
         this.owned_stake_account = buffer_pubkey(data, 264);
         this.owned_stake_initial_lamports = buffer_le_u64(data, 296);
-        this.owned_stake_epoch = buffer_le_u64(data, 304);
+        this.owned_stake_epoch = Number(buffer_le_u64(data, 304));
         this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 312);
         this.owned_last_commission_charge_stake_account_lamports = buffer_le_u64(data, 320);
         this.level = data[328];
@@ -688,7 +721,7 @@ class Entry
             }
             else {
                 if (this.has_auction) {
-                    if ((this.reveal_timestamp + this.duration) > ((Date.now().getTime() / 1000) | 0)) {
+                    if ((this.reveal_timestamp + this.duration) > ((Date.now() / 1000) | 0)) {
                         return EntryState.InAuction;
                     }
                     else if (this.auction.highest_bid_lamports > 0) {
@@ -714,14 +747,14 @@ class Entry
         }
     }
 
-    // This only returns a valid value if the entry state is EntryState.PreRevealUnowned or EntryState.Unowned
+    // This only returns a valid value if the entry state is PreRevealUnowned or Unowned
     get_price(clock)
     {
         if (this.get_entry_state(this.block, clock) == EntryState.PreRevealUnowned) {
             return Entry.compute_price(BigInt(this.block.mystery_phase_duration),
                                        BigInt(this.block.mystery_start_price_lamports),
                                        BigInt(this.block.minimum_price_lamports),
-                                       BigInt(clock.unix_timestamp) - BigInt(this.block.block_start_timestamp));
+                                       BigInt(clock.unix_timestamp - this.block.block_start_timestamp));
         }
         else if (this.has_auction) {
             return this.block.minimum_price_lamports;
@@ -730,17 +763,41 @@ class Entry
             return Entry.compute_price(BigInt(this.duration),
                                        BigInt(this.non_auction_start_price_lamports),
                                        BigInt(this.minimum_price_lamports),
-                                       BigInt(clock.unix_timestamp) - BigInt(this.reveal_timestamp));
+                                       BigInt(clock.unix_timestamp - this.reveal_timestamp));
         }
     }
 
-    // This only returns a valid value if the entry state is EntryState.InAuction
+    // This only returns a valid value if the entry state is InAuction
     get_auction_minimum_bid_lamports(clock)
     {
         return Entry.compute_minimum_bid(BigInt(this.duration),
                                          BigInt(this.minimum_price_lamports),
                                          BigInt(this.auction_highest_bid_lamports),
-                                         BigInt(clock.unix_timestamp) - BigInt(this.reveal_timestamp));
+                                         BigInt(clock.unix_timestamp - this.reveal_timestamp));
+    }
+
+    // This only returns a valid value if the entry state is InAuction
+    get_auction_end_unix_timestamp(clock)
+    {
+        return this.reveal_timestamp + this.duration;
+    }
+
+    // This only returns a valid value if the entry state is WaitingForRevealOwned
+    get_reveal_deadline()
+    {
+        return (this.block.mystery_phase_end_timestamp + this.block.reveal_period_duration);
+    }
+
+    // Returns the pubkey of a bid marker for an auction bid for this Entry.  Only returns a value if
+    // The cluster has a wallet_pubkey set, as the pubkey returned will be associated with that wallet.
+    get_bid_marker_token_pubkey()
+    {
+        let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return null;
+        }
+
+        return get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
     }
 
     // All _tx functions require that the cluster of this Entry have a valid wallet pubkey set.
@@ -1113,3 +1170,9 @@ exports.Cluster = Cluster;
 exports.Block = Block;
 exports.EntryState = EntryState;
 exports.Entry = Entry;
+exports.nifty_program_pubkey = () => g_nifty_program_pubkey;
+exports.config_pubkey = () => g_config_pubkey;
+exports.master_stake_pubkey = () => g_master_stake_pubkey;
+exports.ki_mint_pubkey = () => g_ki_mint_pubkey;
+exports.ki_metadata_pubkey = () => g_ki_metadata_pubkey;
+exports.bid_marker_mint_pubkey = () => g_bid_marker_mint_pubkey;
