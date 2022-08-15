@@ -306,7 +306,7 @@ class Cluster
                     for (let idx = 0; idx < results.value.length; idx++) {
                         let account = results.value[idx].account;
                         let pubkey = results.value[idx].pubkey;
-                        
+
                         if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
                             (account.data.parsed.info == null)) {
                             continue;
@@ -724,7 +724,7 @@ class Entry
                     if ((this.reveal_timestamp + this.duration) > ((Date.now() / 1000) | 0)) {
                         return EntryState.InAuction;
                     }
-                    else if (this.auction.highest_bid_lamports > 0) {
+                    else if (this.auction_highest_bid_lamports > 0) {
                         return EntryState.WaitingToBeClaimed;
                     }
                 }
@@ -752,8 +752,8 @@ class Entry
     {
         if (this.get_entry_state(this.block, clock) == EntryState.PreRevealUnowned) {
             return Entry.compute_price(BigInt(this.block.mystery_phase_duration),
-                                       BigInt(this.block.mystery_start_price_lamports),
-                                       BigInt(this.block.minimum_price_lamports),
+                                       this.block.mystery_start_price_lamports,
+                                       this.block.minimum_price_lamports,
                                        BigInt(clock.unix_timestamp - this.block.block_start_timestamp));
         }
         else if (this.has_auction) {
@@ -761,8 +761,8 @@ class Entry
         }
         else {
             return Entry.compute_price(BigInt(this.duration),
-                                       BigInt(this.non_auction_start_price_lamports),
-                                       BigInt(this.minimum_price_lamports),
+                                       this.non_auction_start_price_lamports,
+                                       this.minimum_price_lamports,
                                        BigInt(clock.unix_timestamp - this.reveal_timestamp));
         }
     }
@@ -771,8 +771,8 @@ class Entry
     get_auction_minimum_bid_lamports(clock)
     {
         return Entry.compute_minimum_bid(BigInt(this.duration),
-                                         BigInt(this.minimum_price_lamports),
-                                         BigInt(this.auction_highest_bid_lamports),
+                                         this.minimum_price_lamports,
+                                         this.auction_highest_bid_lamports,
                                          BigInt(clock.unix_timestamp - this.reveal_timestamp));
     }
 
@@ -999,7 +999,7 @@ class Entry
     static compute_minimum_bid(auction_duration, initial_minimum_bid, current_max_bid, seconds_elapsed)
     {
         if (current_max_bid < initial_minimum_bid) {
-            return initial_minimum_bid;
+            current_max_bid = initial_minimum_bid;
         }
 
         if (seconds_elapsed > auction_duration) {
@@ -1010,10 +1010,10 @@ class Entry
         let b = auction_duration;
         let p = current_max_bid;
 
-        let result = (p * (((1000n * b) / ((b + (b / 100n)) - a)) + 109000n)) / 100000n;
+        let result = (p * (((1000n * b) / ((b + (b / 100n)) - a)) + 101000n)) / 100000n;
 
-        let min_result = current_max_bid + (current_max_bid / 10n);
-        let max_result = (2n * current_max_bid) + ((current_max_bid * 9n) / 100n);
+        let min_result = current_max_bid + (current_max_bid / 50n);
+        let max_result = (2n * current_max_bid) + (current_max_bid / 100n);
     
         if (result < min_result) {
             return min_result;

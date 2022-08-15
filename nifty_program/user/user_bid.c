@@ -119,9 +119,9 @@ static uint64_t user_bid(SolParameters *params)
 static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
                                     uint64_t seconds_elapsed)
 {
-    // If there have been no bids yet, then the current max bid is the initial minimum
+    // If there have been no bids yet, then start with the initial minimum
     if (current_max_bid < initial_minimum_bid) {
-        return initial_minimum_bid;
+        current_max_bid = initial_minimum_bid;
     }
 
     // Sanitize the seconds elapsed
@@ -129,19 +129,19 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
         seconds_elapsed = auction_duration;
     }
 
-    // This is a curve based on the formula: y = p * ((1 / (101 - (100 * (a / b)))) + 1.09)
+    // This is a curve based on the formula: y = p * ((1 / (101 - (100 * (a / b)))) + 1.01)
     // Where a is seconds_elapsed, b is auction_duration, and p is current_max_bid.  This is a curve that goes
-    // from a multiple of 1.1 of the current_max_bid at time 0, up to approx 2x the current_max_bid at the end
+    // from a multiple of 1.02 of the current_max_bid at time 0, up to 2.01x the current_max_bid at the end
     // of the time range.
     uint64_t a = seconds_elapsed;
     uint64_t b = auction_duration;
     uint64_t p = current_max_bid;
 
-    uint64_t result = (p * (((1000 * b) / ((b + (b / 100)) - a)) + 109000)) / 100000;
+    uint64_t result = (p * (((1000 * b) / ((b + (b / 100)) - a)) + 101000)) / 100000;
 
-    // result can be off if there is overflow.  So bound it by between 1.1 and 2.09 of the current_max_bid
-    uint64_t min_result = current_max_bid + (current_max_bid / 10);
-    uint64_t max_result = (2 * current_max_bid) + ((current_max_bid * 9) / 100);
+    // result can be off if there is overflow.  So bound it by between 1.02 and 2.1 of the current_max_bid
+    uint64_t min_result = current_max_bid + (current_max_bid / 50);
+    uint64_t max_result = (2 * current_max_bid) + (current_max_bid / 100);
     
     if (result < min_result) {
         return min_result;
