@@ -800,6 +800,16 @@ class Entry
         return get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
     }
 
+    get_bid_pubkey()
+    {
+        let bid_marker_token_pubkey = this.get_bid_marker_token_pubkey();
+        if (bid_marker_token_pubkey == null) {
+            return null;
+        }
+
+        return get_bid_pubkey(bid_marker_token_pubkey);
+    }
+
     // All _tx functions require that the cluster of this Entry have a valid wallet pubkey set.
     async buy_tx()
     {
