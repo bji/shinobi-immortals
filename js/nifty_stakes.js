@@ -13,7 +13,6 @@ const _harvest_tx = require("./tx.js")._harvest_tx;
 const _level_up_tx = require("./tx.js")._level_up_tx;
 const _take_commission_or_delegate_tx = require("./tx.js")._take_commission_or_delegate_tx;
 
-
 const NIFTY_PROGRAM_ADDRESS = "ShinboVZNAn1UjpZ3rJsFzLcWMP5JF8LPdHPWaaGYTV";
 const METAPLEX_PROGRAM_ADDRESS = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 const SPL_TOKEN_PROGRAM_ADDRESS = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
