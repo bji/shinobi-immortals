@@ -147,329 +147,313 @@ class Cluster
     // Given the address of a bid marker token, look up the entry mint of the entry that it is a bid on and call
     // on_result with that.  If the bid marker token does not correspond to an active bid, then on_result is called
     // with null.
-    lookup_bid_entry_mint_pubkey(bid_marker_token_account_pubkey)
+    async lookup_bid_entry_mint_pubkey(bid_marker_token_account_pubkey)
     {
-        return this.rpc_connection.getAccountInfo(get_bid_pubkey(bid_marker_token_account_pubkey),
-                                                  {
-                                                      dataSlice : { offset : 4,
-                                                                    length : 32 }
-                                                  })
-            .then((result) =>
-                {
-                    if (this.is_shutdown) {
-                        return;
-                    }
+        try {
+            let result = await this.rpc_connection.getAccountInfo(get_bid_pubkey(bid_marker_token_account_pubkey),
+                                                                  {
+                                                                      dataSlice : { offset : 4,
+                                                                                    length : 32 }
+                                                                  });
+            if (this.is_shutdown) {
+                return null;
+            }
 
-                    return new SolanaWeb3.PublicKey(result.data);
-                })
-            .catch((error) =>
-                {
-                    console.log("Lookup bid mint error " + error);
+            return new SolanaWeb3.PublicKey(result.data);
+        }
+        catch (error) {
+            console.log("Lookup bid mint error " + error);
 
-                    if (this.is_shutdown) {
-                        return;
-                    }
+            if (this.is_shutdown) {
+                return null;
+            }
 
-                    setTimeout(() => this.lookup_bid_entry_mint_pubkey(bid_marker_token_account_pubkey),
-                               1000);
-                });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
     }
     
-    update_clock()
+    async update_clock()
     {
-        if (this.is_shutdown) {
-            return;
+        try {
+            if (this.is_shutdown) {
+                return;
+            }
+
+            let queried_epoch;
+            let queried_slot;
+
+            let epoch_info = await this.rpc_connection.getEpochInfo();
+
+            if (this.is_shutdown) {
+                return;
+            }
+                    
+            queried_epoch = epoch_info.epoch;
+            queried_slot = epoch_info.absoluteSlot;
+
+            let block_time = await this.rpc_connection.getBlockTime(queried_slot);
+
+            if (this.is_shutdown) {
+                return;
+            }
+
+            // Update the current data, but only if it doesn't go backwards
+            this.confirmed_query_time = Date.now();
+            this.confirmed_epoch = queried_epoch;
+            this.confirmed_slot = queried_slot;
+            this.confirmed_unix_timestamp = block_time;
+            
+            // After successful fetch of clock, can wait 5 seconds before fetching again
+            setTimeout(() => this.update_clock(), 5 * 1000);
         }
+        catch (error) {
+            console.log("Update clock error " + error);
 
-        let queried_epoch;
-        let queried_slot;
-        
-        this.rpc_connection.getEpochInfo()
-            .then((epoch_info) =>
-                {
-                    if (this.is_shutdown) {
-                        return;
-                    }
-                    
-                    queried_epoch = epoch_info.epoch;
-                    queried_slot = epoch_info.absoluteSlot;
-                    
-                    return this.rpc_connection.getBlockTime(queried_slot);
-                })
-            .then((time) =>
-                {
-                    if (this.is_shutdown) {
-                        return;
-                    }
-
-                    // Update the current data, but only if it doesn't go backwards
-                    this.confirmed_query_time = Date.now();
-                    this.confirmed_epoch = queried_epoch;
-                    this.confirmed_slot = queried_slot;
-                    this.confirmed_unix_timestamp = time;
-
-                    // After successful fetch of clock, can wait 5 seconds before fetching again
-                    setTimeout(() => this.update_clock(), 5 * 1000);
-                })
-            .catch((error) =>
-                {
-                    console.log("Update clock error " + error);
-
-                    if (this.is_shutdown) {
-                        return;
-                    }
-
-                    setTimeout(() => this.update_clock(), 1000);
-                });
+            if (this.is_shutdown) {
+                return;
+            }
+            
+            setTimeout(() => this.update_clock(), 1000);
+        }
     }
 
-    query_blocks(group_number, block_number)
+    async query_blocks(group_number, block_number)
     {
-        if (this.is_shutdown) {
-            return;
-        }
+        try {
+            if (this.is_shutdown) {
+                return;
+            }
 
-        // Compute account keys
-        let block_pubkeys = [ ];
+            // Compute account keys
+            let block_pubkeys = [ ];
+            
+            for (let i = 0; i < BLOCKS_AT_ONCE; i++) {
+                block_pubkeys.push(get_block_pubkey(group_number, block_number + i));
+            }
+            
+            let blocks = await this.rpc_connection.getMultipleAccountsInfo(block_pubkeys);
 
-        for (let i = 0; i < BLOCKS_AT_ONCE; i++) {
-            block_pubkeys.push(get_block_pubkey(group_number, block_number + i));
-        }
-
-        this.rpc_connection.getMultipleAccountsInfo(block_pubkeys)
-            .then((blocks) =>
-                {
+            if (this.is_shutdown) {
+                return;
+            }
+            
+            let idx;
+            for (idx = 0; idx < blocks.length; idx += 1) {
+                if (blocks[idx] == null) {
+                    break;
+                }
+                let block = new Block(this, block_pubkeys[idx], blocks[idx].data, true);
+                // Only call back about blocks that are complete
+                if (block.added_entries_count == block.total_entry_count) {
+                    this.on_block(block);
                     if (this.is_shutdown) {
                         return;
                     }
+                }
+            }
+            
+            if (idx == BLOCKS_AT_ONCE) {
+                // All blocks were loaded, so immediately try to get more for this group
+                this.query_blocks(group_number, block_number + BLOCKS_AT_ONCE);
+            }
+            else if ((block_number == 0) && (idx == 0)) {
+                // An empty group represents the end of all blocks, so start over again in 1 minute
+                // XXX debugging, make it 5 seconds
+                //setTimeout(() => this.query_blocks(0, 0), 60 * 1000);
+                setTimeout(() => this.query_blocks(0, 200), 5 * 1000);
+            }
+            else {
+                // This group is done, but the next group can immediately be queried
+                this.query_blocks(group_number + 1, 0);
+            }
+        }
+        catch(error) {
+            console.log("Query block error " + error);
+            
+            if (this.is_shutdown) {
+                return;
+            }
                     
-                    let idx;
-                    for (idx = 0; idx < blocks.length; idx += 1) {
-                        if (blocks[idx] == null) {
-                            break;
-                        }
-                        let block = new Block(this, block_pubkeys[idx], blocks[idx].data, true);
-                        // Only call back about blocks that are complete
-                        if (block.added_entries_count == block.total_entry_count) {
-                            this.on_block(block);
-                            if (this.is_shutdown) {
-                                return;
-                            }
-                        }
-                    }
-
-                    if (idx == BLOCKS_AT_ONCE) {
-                        // All blocks were loaded, so immediately try to get more for this group
-                        this.query_blocks(group_number, block_number + BLOCKS_AT_ONCE);
-                    }
-                    else if ((block_number == 0) && (idx == 0)) {
-                        // An empty group represents the end of all blocks, so start over again in 1 minute
-                        // XXX debugging, make it 5 seconds
-                        //setTimeout(() => this.query_blocks(0, 0), 60 * 1000);
-                        setTimeout(() => this.query_blocks(0, 200), 5 * 1000);
-                    }
-                    else {
-                        // This group is done, but the next group can immediately be queried
-                        this.query_blocks(group_number + 1, 0);
-                    }
-                })
-            .catch((error) =>
-                {
-                    console.log("Query block error " + error);
-                    
-                    if (this.is_shutdown) {
-                        return;
-                    }
-                    
-                    // Issue the same query again in 5 seconds
-                    setTimeout(() => this.query_blocks(group_number, block_number), 5 * 1000);
-                });
+            // Issue the same query again in 5 seconds
+            setTimeout(() => this.query_blocks(group_number, block_number), 5 * 1000);
+        }
     }
 
-    query_tokens(wallet_pubkey, on_wallet_tokens)
+    async query_tokens(wallet_pubkey, on_wallet_tokens)
     {
-        if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-            return;
-        }
+        try {
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return;
+            }
+            
+            let results = await
+                this.rpc_connection.getParsedTokenAccountsByOwner
+                    (this.wallet_pubkey, { programId : g_spl_token_program_pubkey });
 
-        this.rpc_connection.getParsedTokenAccountsByOwner(this.wallet_pubkey,
-                                                          { programId : g_spl_token_program_pubkey })
-            .then((results) =>
-                {
-                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                        return;
-                    }
-
-                    let wallet_tokens = [ ];
-
-                    for (let idx = 0; idx < results.value.length; idx++) {
-                        let account = results.value[idx].account;
-                        let pubkey = results.value[idx].pubkey;
-
-                        if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
-                            (account.data.parsed.info == null)) {
-                            continue;
-                        }
-                        
-                        if (account.data.parsed.info.state != "initialized") {
-                            continue;
-                        }
-
-                        if (account.data.parsed.info.tokenAmount.amount == 0) {
-                            continue;
-                        }
-
-                        // Should never happen but just in case
-                        if (account.data.parsed.info.owner != wallet_pubkey.toBase58()) {
-                            continue;
-                        }
-
-                        wallet_tokens.push({
-                            owner_pubkey : wallet_pubkey,
-
-                            mint_pubkey : new SolanaWeb3.PublicKey(account.data.parsed.info.mint),
-                            
-                            account_pubkey : pubkey,
-                            
-                            amount : account.data.parsed.info.tokenAmount.amount
-                        });
-                    }
-
-                    // For each wallet token, if it is a bid marker, then look up its bid entry
-                    return Promise.all(wallet_tokens.map((wallet_token) =>
-                        {
-                            if (wallet_token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
-                                return this.lookup_bid_entry_mint_pubkey(wallet_token.account_pubkey)
-                                    .then((bid_entry_mint_pubkey) =>
-                                        {
-                                            wallet_token.bid_entry_mint_pubkey = bid_entry_mint_pubkey;
-                                            return wallet_token;
-                                        });
-                            }
-                            else {
-                                return wallet_token;
-                            }
-                        }));
-                })
-            .then((wallet_tokens) =>
-                {
-                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                        return;
-                    }
-                    
-                    on_wallet_tokens(wallet_tokens);
-                    
-                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                        return;
-                    }
-                    
-                    // Retry in 1 minute
-                    // XXX debugging
-                    //setTimeout(() => this.query_tokens(wallet_pubkey), 60 * 1000);
-                    setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 5 * 1000);
-                })
-            .catch((error) =>
-                {
-                    console.log("Query tokens error " + error);
-
-                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                        return;
-                    }
-                    
-                    // Retry in 1 second
-                    setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 1000);
-                });
-    }
-
-    query_stakes(wallet_pubkey, on_wallet_stakes)
-    {
-        if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-            return true;
-        }
-
-        // getProgramAccounts comparing the stake account withdraw authority with the wallet pubkey
-        this.rpc_connection.getParsedProgramAccounts(g_stake_program_pubkey,
-                                                     {
-                                                         filters : [
-                                                             {
-                                                                 memcmp :
-                                                                 {
-                                                                     offset : 44,
-                                                                     bytes : wallet_pubkey.toBase58()
-                                                                 }
-                                                             }
-                                                         ]
-                                                     })
-            .then((results) =>
-                {
-                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                        return;
-                    }
-
-                    let wallet_stakes = [ ];
-
-                    for (let idx = 0; idx < results.length; idx++) {
-                        let account = results[idx].account;
-                        let pubkey = results[idx].pubkey;
-
-                        if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
-                            (account.data.parsed.info == null)) {
-                            continue;
-                        }
-
-                        // Ignore stake accounts that are not initialized or delegated
-                        if ((account.data.parsed.type != "initialized") &&
-                            (account.data.parsed.type != "delegated")) {
-                            continue;
-                        }
-
-                        // Ignore stake accounts with lockup
-                        if (account.data.parsed.info.lockup &&
-                            ((account.data.parsed.info.lockup.epoch != 0) ||
-                             (account.data.parsed.info.lockup.unixTimestamp != 0))) {
-                            continue;
-                        }
-                        
-                        let withdrawer = account.data.parsed.info.meta.authorized.withdrawer;
-                        
-                        let item = {
-                            account_pubkey : pubkey,
-
-                            withdraw_authority_pubkey : new SolanaWeb3.PublicKey(withdrawer)
-                        };
-
-                        if ((account.data.parsed.info.stake != null) &&
-                            (account.data.parsed.info.stake.delegation != null)) {
-                            let delegation = account.data.parsed.info.stake.delegation;
-                            item.stake_lamports = BigInt(delegation.stake);
-                            item.vote_account_pubkey = new SolanaWeb3.PublicKey(delegation.voter);
-                        }
-
-                        wallet_stakes.push(item);
-                    }
-
-                    on_wallet_stakes(wallet_stakes);
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return;
+            }
+            
+            let wallet_tokens = [ ];
+            
+            for (let idx = 0; idx < results.value.length; idx++) {
+                let account = results.value[idx].account;
+                let pubkey = results.value[idx].pubkey;
                 
-                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                        return;
-                    }
+                if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
+                    (account.data.parsed.info == null)) {
+                    continue;
+                }
+                
+                if (account.data.parsed.info.state != "initialized") {
+                    continue;
+                }
+                
+                if (account.data.parsed.info.tokenAmount.amount == 0) {
+                    continue;
+                }
+                
+                // Should never happen but just in case
+                if (account.data.parsed.info.owner != wallet_pubkey.toBase58()) {
+                    continue;
+                }
+                
+                wallet_tokens.push({
+                    owner_pubkey : wallet_pubkey,
                     
-                    // Retry in 1 minute
-                    // xxx debugging
-                    //setTimeout(() => this.query_stakes(wallet_pubkey), 60 * 1000);
-                    setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 5 * 1000);
-                })
-            .catch((error) =>
-                {
-                    console.log("Query stakes error " + error);
-
-                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-                        return;
-                    }
+                    mint_pubkey : new SolanaWeb3.PublicKey(account.data.parsed.info.mint),
                     
-                    // Retry in 5 seconds
-                    setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 5 * 1000);
+                    account_pubkey : pubkey,
+                    
+                    amount : account.data.parsed.info.tokenAmount.amount
                 });
+            }
+            
+            // For each wallet token, if it is a bid marker, then look up its bid entry
+            for (let idx = 0; idx < wallet_tokens.length; idx++) {
+                let wallet_token = wallet_tokens[idx];
+
+                if (wallet_token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
+                    wallet_token.bid_entry_mint_pubkey =
+                        await this.lookup_bid_entry_mint_pubkey(wallet_token.account_pubkey);
+                    if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                        return;
+                    }
+                }
+            }
+
+            on_wallet_tokens(wallet_tokens);
+                    
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return;
+            }
+                    
+            // Retry in 1 minute
+            // XXX debugging
+            //setTimeout(() => this.query_tokens(wallet_pubkey), 60 * 1000);
+            setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 5 * 1000);
+        }
+        catch(error) {
+            console.log("Query tokens error " + error);
+
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return;
+            }
+                    
+            // Retry in 1 second
+            setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 1000);
+        }
+    }
+
+    async query_stakes(wallet_pubkey, on_wallet_stakes)
+    {
+        try {
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return true;
+            }
+
+            // getProgramAccounts comparing the stake account withdraw authority with the wallet pubkey
+            let results = await this.rpc_connection.getParsedProgramAccounts
+                 (g_stake_program_pubkey,
+                  {
+                      filters : [
+                          {
+                              memcmp :
+                              {
+                                  offset : 44,
+                                  bytes : wallet_pubkey.toBase58()
+                              }
+                          }
+                      ]
+                  });
+
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return;
+            }
+
+            let wallet_stakes = [ ];
+
+            for (let idx = 0; idx < results.length; idx++) {
+                let account = results[idx].account;
+                let pubkey = results[idx].pubkey;
+                
+                if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
+                    (account.data.parsed.info == null)) {
+                    continue;
+                }
+                
+                // Ignore stake accounts that are not initialized or delegated
+                if ((account.data.parsed.type != "initialized") &&
+                    (account.data.parsed.type != "delegated")) {
+                    continue;
+                }
+                
+                // Ignore stake accounts with lockup
+                if (account.data.parsed.info.lockup &&
+                    ((account.data.parsed.info.lockup.epoch != 0) ||
+                     (account.data.parsed.info.lockup.unixTimestamp != 0))) {
+                    continue;
+                }
+                
+                let withdrawer = account.data.parsed.info.meta.authorized.withdrawer;
+                
+                let item = {
+                    account_pubkey : pubkey,
+                    
+                    withdraw_authority_pubkey : new SolanaWeb3.PublicKey(withdrawer)
+                };
+                
+                if ((account.data.parsed.info.stake != null) &&
+                    (account.data.parsed.info.stake.delegation != null)) {
+                    let delegation = account.data.parsed.info.stake.delegation;
+                    item.stake_lamports = BigInt(delegation.stake);
+                    item.vote_account_pubkey = new SolanaWeb3.PublicKey(delegation.voter);
+                }
+                
+                wallet_stakes.push(item);
+            }
+            
+            on_wallet_stakes(wallet_stakes);
+            
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return;
+            }
+            
+            // Retry in 1 minute
+            // xxx debugging
+            //setTimeout(() => this.query_stakes(wallet_pubkey), 60 * 1000);
+            setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 5 * 1000);
+        }
+        catch(error) {
+            console.log("Query stakes error " + error);
+            
+            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+                return;
+            }
+            
+            // Retry in 5 seconds
+            setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 5 * 1000);
+        }
     }
 }
 
@@ -505,31 +489,30 @@ class Block
     }
 
     // Causes a query that will populate an up-to-date version of this Block and call back the onBlock call with it
-    refresh()
+    async refresh()
     {
-        if (this.cluster.is_shutdown) {
-            return;
+        try {
+            if (this.cluster.is_shutdown) {
+                return;
+            }
+
+            let block = await this.rpc_connection.getAccountInfo(this.pubkey);
+
+            if (this.cluster.is_shutdown) {
+                return;
+            }
+
+            return this.cluster.on_block(new Block(this.cluster, this.pubkey, block.data, false));
         }
+        catch (error) {
+            console.log("Refresh block error " + error);
 
-        this.rpc_connection.getAccountInfo(this.pubkey)
-            .then((block) =>
-                {
-                    if (this.cluster.is_shutdown) {
-                        return;
-                    }
-
-                    this.cluster.on_block(new Block(this.cluster, this.pubkey, block.data, false));
-                })
-            .catch((error) =>
-                {
-                    console.log("Refresh block error " + error);
-
-                    if (this.cluster.is_shutdown) {
-                        return;
-                    }
+            if (this.cluster.is_shutdown) {
+                return;
+            }
                     
-                    setTimeout(() => this.refresh(), 1000);
-                });
+            return setTimeout(() => this.refresh(), 1000);
+        }
     }
 
     is_revealable(clock)
@@ -545,49 +528,48 @@ class Block
 
     // Private implementation follows ---------------------------------------------------------------------------------
 
-    query_entries(entry_index)
+    async query_entries(entry_index)
     {
-        // Compute account keys
-        let entry_pubkeys = [ ];
+        try {
+            // Compute account keys
+            let entry_pubkeys = [ ];
 
-        for (let i = 0; i < ENTRIES_AT_ONCE; i++) {
-            entry_pubkeys.push(get_entry_pubkey(get_entry_mint_pubkey(this.pubkey, entry_index + i)));
+            for (let i = 0; i < ENTRIES_AT_ONCE; i++) {
+                entry_pubkeys.push(get_entry_pubkey(get_entry_mint_pubkey(this.pubkey, entry_index + i)));
+            }
+
+            let entries = await this.cluster.rpc_connection.getMultipleAccountsInfo(entry_pubkeys);
+
+            if (this.cluster.is_shutdown) {
+                return;
+            }
+
+            let idx;
+            for (idx = 0; idx < entries.length; idx += 1) {
+                if (entries[idx] == null) {
+                    break;
+                }
+                this.cluster.on_entry(new Entry(this, entry_pubkeys[idx], entries[idx].data));
+                if (this.cluster.is_shutdown) {
+                    return;
+                }
+            }
+
+            if (idx == ENTRIES_AT_ONCE) {
+                // All entries were loaded, so try to get more for this block
+                this.query_entries(entry_index + ENTRIES_AT_ONCE);
+            }
         }
-
-        this.cluster.rpc_connection.getMultipleAccountsInfo(entry_pubkeys)
-            .then((entries) =>
-                {
-                    if (this.cluster.is_shutdown) {
-                        return;
-                    }
-
-                    let idx;
-                    for (idx = 0; idx < entries.length; idx += 1) {
-                        if (entries[idx] == null) {
-                            break;
-                        }
-                        this.cluster.on_entry(new Entry(this, entry_pubkeys[idx], entries[idx].data));
-                        if (this.cluster.is_shutdown) {
-                            return;
-                        }
-                    }
-
-                    if (idx == ENTRIES_AT_ONCE) {
-                        // All entries were loaded, so try to get more for this block
-                        this.query_entries(entry_index + ENTRIES_AT_ONCE);
-                    }
-                })
-            .catch((error) =>
-                {
-                    console.log("Query entries error " + error);
+        catch (error) {
+            console.log("Query entries error " + error);
                     
-                    if (this.cluster.is_shutdown) {
-                        return;
-                    }
+            if (this.cluster.is_shutdown) {
+                return;
+            }
 
-                    // Issue the same query again in 5 seconds
-                    setTimeout(() => this.query_entries(entry_index), 5 * 1000);
-                });
+            // Issue the same query again in 5 seconds
+            setTimeout(() => this.query_entries(entry_index), 5 * 1000);
+        }
     }
 }
 
@@ -678,32 +660,31 @@ class Entry
     }
 
     // Causes a query that will populate an up-to-date version of this Entry and call back the onEntry call with it
-    refresh()
+    async refresh()
     {
-        if (this.block.cluster.is_shutdown) {
-            return;
+        try {
+            if (this.block.cluster.is_shutdown) {
+                return;
+            }
+
+            let entry = await this.rpc_connection.getAccountInfo(this.pubkey);
+
+            if (this.block.cluster.is_shutdown) {
+                return;
+            }
+            
+            this.cluster.on_entry(new Entry(this.block, this.pubkey, entry.data));
         }
+        catch (error) {
+            console.log("Refresh entry error " + error);
 
-        this.rpc_connection.getAccountInfo(this.pubkey)
-            .then((entry) =>
-                {
-                    if (this.block.cluster.is_shutdown) {
-                        return;
-                    }
-
-                    this.cluster.on_entry(new Entry(this.block, this.pubkey, entry.data));
-                })
-            .catch(() =>
-                {
-                    console.log("Refresh entry error " + error);
-
-                    if (this.block.cluster.is_shutdown) {
-                        return;
-                    }
+            if (this.block.cluster.is_shutdown) {
+                return;
+            }
                     
-                    // Try again after 1 second
-                    setTimeout(() => this.refresh(), 1000);
-                });
+            // Try again after 1 second
+            return setTimeout(() => this.refresh(), 1000);
+        }
     }
     
     // Cribbed from the nifty program's get_entry_state() function
@@ -809,26 +790,35 @@ class Entry
         return get_bid_pubkey(bid_marker_token_pubkey);
     }
 
-    // All _tx functions require that the cluster of this Entry have a valid wallet pubkey set.
+    // For all _tx functions, the resulting transaction does not have its recent_blockhash set
     async buy_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
         if (wallet_pubkey == null) {
-            return null;
+            console.log("NO WALLET PUBKEY");
+            return;
         }
-        
+
+        let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
+        if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
+            console.log("SHUTDOWN ETC");
+            return;
+        }
+
+        let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
+
         return _buy_tx({ funding_pubkey : wallet_pubkey,
                          config_pubkey : g_config_pubkey,
-                         admin_pubkey : await this.block.cluster.admin_pubkey(g_config_pubkey),
+                         admin_pubkey : admin_pubkey,
                          block_pubkey : this.block.pubkey,
                          entry_pubkey : this.pubkey,
                          entry_token_pubkey : this.token_pubkey,
                          entry_mint_pubkey : this.mint_pubkey,
-                         token_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
+                         token_destination_pubkey : token_destination_pubkey,
                          token_destination_owner_pubkey : wallet_pubkey,
                          metaplex_metadata_pubkey : this.metaplex_metadata_pubkey });
     }
-    
+
     refund_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
@@ -879,6 +869,12 @@ class Entry
         if (wallet_pubkey == null) {
             return null;
         }
+
+        let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
+        if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
+            return;
+        }
+        
         let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
         let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
         
@@ -886,7 +882,7 @@ class Entry
                                    entry_pubkey : this.pubkey,
                                    bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
                                    config_pubkey : g_config_pubkey,
-                                   admin_pubkey : await this.block.cluster.admin_pubkey(g_config_pubkey),
+                                   admin_pubkey : admin_pubkey,
                                    entry_token_pubkey : this.token_pubkey,
                                    entry_mint_pubkey : this.mint_pubkey,
                                    token_destination_pubkey : token_destination_pubkey,
