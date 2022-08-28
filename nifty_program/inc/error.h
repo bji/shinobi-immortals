@@ -122,6 +122,9 @@ typedef enum
     // Failed to get minimum stake delegation
     Error_FailedToGetMinimumStakeDelegation            = 1046,
 
+    // User requested a buy but privided a maximum allowed price that is lower than the actual price
+    Error_PriceTooHigh                                 = 1047,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

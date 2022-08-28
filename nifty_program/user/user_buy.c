@@ -5,6 +5,19 @@
 #include "util/util_transfer_lamports.c"
 
 
+typedef struct
+{
+    // This is the instruction code for Buy
+    uint8_t instruction_code;
+
+    // Maximum price to pay in lamports.  Needed because the user may otherwise be shown a buy price that is less
+    // than the actual price if their queries of chain state show a later block height than the actual block
+    // height.  That would be rare, but users should be protected.
+    uint64_t maximum_price_lamports;
+    
+} BuyData;
+
+
 // If start_price > 100,000 SOL, rounding errors could be significant.
 static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
                               uint64_t seconds_elapsed);
@@ -32,6 +45,14 @@ static uint64_t user_buy(SolParameters *params)
         DECLARE_ACCOUNT(15,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(16);
+
+    // Make sure that the input data is the correct size
+    if (params->data_len != sizeof(BuyData)) {
+        return Error_InvalidDataSize;
+    }
+
+    // Cast to instruction data
+    BuyData *data = (BuyData *) params->data;
     
     // This is the block data
     Block *block = get_validated_block(block_account);
@@ -165,6 +186,12 @@ static uint64_t user_buy(SolParameters *params)
     case EntryState_PreReveal:
         // This case isn't possible because a block was provided to get_entry_state
         return Error_InternalProgrammingError;
+    }
+
+    // Check to make sure that the actual price is not higher than the price that the user has indicated willingness
+    // to pay
+    if (data->maximum_price_lamports < purchase_price_lamports) {
+        return Error_PriceTooHigh;
     }
 
     // Check to ensure that the funds source has at least the purchase price lamports

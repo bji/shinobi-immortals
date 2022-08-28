@@ -3,6 +3,7 @@
 const SolanaWeb3 = require('@solana/web3.js');
 const Buffer = require('buffer');
 const _buy_tx = require("./tx.js")._buy_tx;
+const _buy_mystery_tx = require("./tx.js")._buy_mystery_tx;
 const _refund_tx = require("./tx.js")._refund_tx;
 const _bid_tx = require("./tx.js")._bid_tx;
 const _claim_losing_tx = require("./tx.js")._claim_losing_tx;
@@ -60,7 +61,7 @@ class Cluster
         this.update_clock();
 
         // Initiate a query for all blocks
-        this.query_blocks(0, 200);
+        this.query_blocks(0, 0);
     }
 
     set_wallet_pubkey(wallet_pubkey, on_wallet_tokens, on_wallet_stakes)
@@ -68,6 +69,9 @@ class Cluster
         if ((on_wallet_tokens == null) || (on_wallet_stakes == null)) {
             return;
         }
+
+        this.on_wallet_tokens = on_wallet_tokens;
+        this.on_wallet_stakes = on_wallet_stakes;
 
         if (wallet_pubkey == null) {
             this.wallet_pubkey = null;
@@ -81,11 +85,25 @@ class Cluster
             this.wallet_pubkey = new SolanaWeb3.PublicKey(wallet_pubkey);
             
             // Initiate a query for all tokens belonging to wallet
-            this.query_tokens(this.wallet_pubkey, on_wallet_tokens);
+            this.query_tokens(this.wallet_pubkey, on_wallet_tokens, true);
 
             // Initiate a query for all stake accounts belonging to wallet
-            this.query_stakes(this.wallet_pubkey, on_wallet_stakes);
+            this.query_stakes(this.wallet_pubkey, on_wallet_stakes, true);
         }
+    }
+
+    // Causes a query that will populate an up-to-date version of the wallet's tokens via the on_wallet_tokens callback
+    // with it
+    refresh_tokens()
+    {
+        this.query_tokens(this.wallet_pubkey, this.on_wallet_tokens, false);
+    }
+
+    // Causes a query that will populate an up-to-date version of the wallet's stakes via the on_wallet_stakes callback
+    // with it
+    refresh_stakes()
+    {
+        this.query_stakes(this.wallet_pubkey, this.on_wallet_stakes, false);
     }
 
     shutdown()
@@ -230,7 +248,7 @@ class Cluster
             for (let i = 0; i < BLOCKS_AT_ONCE; i++) {
                 block_pubkeys.push(get_block_pubkey(group_number, block_number + i));
             }
-            
+
             let blocks = await this.rpc_connection.getMultipleAccountsInfo(block_pubkeys);
 
             if (this.is_shutdown) {
@@ -258,9 +276,7 @@ class Cluster
             }
             else if ((block_number == 0) && (idx == 0)) {
                 // An empty group represents the end of all blocks, so start over again in 1 minute
-                // XXX debugging, make it 5 seconds
-                //setTimeout(() => this.query_blocks(0, 0), 60 * 1000);
-                setTimeout(() => this.query_blocks(0, 200), 5 * 1000);
+                setTimeout(() => this.query_blocks(0, 0), 60 * 1000);
             }
             else {
                 // This group is done, but the next group can immediately be queried
@@ -279,7 +295,7 @@ class Cluster
         }
     }
 
-    async query_tokens(wallet_pubkey, on_wallet_tokens)
+    async query_tokens(wallet_pubkey, on_wallet_tokens, repeat)
     {
         try {
             if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
@@ -349,9 +365,9 @@ class Cluster
             }
                     
             // Retry in 1 minute
-            // XXX debugging
-            //setTimeout(() => this.query_tokens(wallet_pubkey), 60 * 1000);
-            setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 5 * 1000);
+            if (repeat) {
+                setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 60 * 1000);
+            }
         }
         catch(error) {
             console.log("Query tokens error " + error);
@@ -440,9 +456,7 @@ class Cluster
             }
             
             // Retry in 1 minute
-            // xxx debugging
-            //setTimeout(() => this.query_stakes(wallet_pubkey), 60 * 1000);
-            setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 5 * 1000);
+            setTimeout(() => this.query_stakes(wallet_pubkey, on_wallet_stakes), 60 * 1000);
         }
         catch(error) {
             console.log("Query stakes error " + error);
@@ -496,7 +510,7 @@ class Block
                 return;
             }
 
-            let block = await this.rpc_connection.getAccountInfo(this.pubkey);
+            let block = await this.cluster.rpc_connection.getAccountInfo(this.pubkey);
 
             if (this.cluster.is_shutdown) {
                 return;
@@ -667,13 +681,13 @@ class Entry
                 return;
             }
 
-            let entry = await this.rpc_connection.getAccountInfo(this.pubkey);
+            let entry = await this.block.cluster.rpc_connection.getAccountInfo(this.pubkey);
 
             if (this.block.cluster.is_shutdown) {
                 return;
             }
             
-            this.cluster.on_entry(new Entry(this.block, this.pubkey, entry.data));
+            this.block.cluster.on_entry(new Entry(this.block, this.pubkey, entry.data));
         }
         catch (error) {
             console.log("Refresh entry error " + error);
@@ -791,17 +805,22 @@ class Entry
     }
 
     // For all _tx functions, the resulting transaction does not have its recent_blockhash set
+
+    // maximum_price_lamports should be the price that was shown to the user
     async buy_tx()
     {
+        // Get the current price of the entry; the user is willing to pay this much.  This maximum is guaranteed to be
+        // no higher than any value that was presented to them (since clock only moves forwards and thus entry price
+        // can only go down).
+        let maximum_price_lamports = this.get_price(this.block.cluster.get_clock());
+
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
         if (wallet_pubkey == null) {
-            console.log("NO WALLET PUBKEY");
             return;
         }
 
         let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
         if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
-            console.log("SHUTDOWN ETC");
             return;
         }
 
@@ -816,9 +835,43 @@ class Entry
                          entry_mint_pubkey : this.mint_pubkey,
                          token_destination_pubkey : token_destination_pubkey,
                          token_destination_owner_pubkey : wallet_pubkey,
-                         metaplex_metadata_pubkey : this.metaplex_metadata_pubkey });
+                         metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
+                         maximum_price_lamports : maximum_price_lamports });
     }
 
+    // maximum_price_lamports should be the price that was shown to the user
+    async buy_mystery_tx()
+    {
+        // Get the current price of the entry; the user is willing to pay this much.  This maximum is guaranteed to be
+        // no higher than any value that was presented to them (since clock only moves forwards and thus entry price
+        // can only go down).
+        let maximum_price_lamports = this.get_price(this.block.cluster.get_clock());
+        
+        let wallet_pubkey = this.block.cluster.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            return;
+        }
+
+        let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
+        if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
+            return;
+        }
+
+        let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
+
+        return _buy_mystery_tx({ funding_pubkey : wallet_pubkey,
+                                 config_pubkey : g_config_pubkey,
+                                 admin_pubkey : admin_pubkey,
+                                 block_pubkey : this.block.pubkey,
+                                 entry_pubkey : this.pubkey,
+                                 entry_token_pubkey : this.token_pubkey,
+                                 entry_mint_pubkey : this.mint_pubkey,
+                                 token_destination_pubkey : token_destination_pubkey,
+                                 token_destination_owner_pubkey : wallet_pubkey,
+                                 metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
+                                 maximum_price_lamports : maximum_price_lamports });
+    }
+    
     refund_tx()
     {
         let wallet_pubkey = this.block.cluster.wallet_pubkey;
