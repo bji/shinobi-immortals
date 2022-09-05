@@ -21,13 +21,17 @@ typedef struct __attribute__((__packed__))
 
     uint16_t seller_fee_basis_points;
 
-    bool has_creators; // Always set to false
-
+    bool has_creators; // Always set to true
+    uint32_t creator_count; // Always set to 1
+    SolPubkey creator_1_pubkey;
+    bool creator_1_verified;
+    uint8_t creator_1_share;
+    
     bool has_collections; // Always set to false
     
     bool has_uses; // Always set to false
     
-} MetaplexMetadataZeroCreators;
+} MetaplexMetadataOneCreator;
 
 typedef struct __attribute__((__packed__))
 {
@@ -116,7 +120,7 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, uint8_t *name, uint8_t *
     }
 
     if (is_empty_pubkey(creator_1)) {
-        MetaplexMetadataZeroCreators *metadata = (MetaplexMetadataZeroCreators *) data;
+        MetaplexMetadataOneCreator *metadata = (MetaplexMetadataOneCreator *) data;
         sol_memset(metadata, 0, sizeof(*metadata));
         metadata->name_len = 32;
         uint32_t len = sol_strlen((const char *) name);
@@ -136,6 +140,10 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, uint8_t *name, uint8_t *
             len = metadata->uri_len;
         }
         sol_memcpy(metadata->uri, uri, len);
+        metadata->has_creators = true;
+        metadata->creator_count = 1;
+        metadata->creator_1_pubkey = *authority_key;
+        metadata->creator_1_share = 100;
         return &(data[sizeof(*metadata)]);
     }
     else if (is_empty_pubkey(creator_2)) {

@@ -144,7 +144,7 @@ static uint64_t super_initialize(SolParameters *params)
     symbol = (uint8_t *) BID_MARKER_TOKEN_SYMBOL;
     uri = (uint8_t *) BID_MARKER_TOKEN_METADATA_URI;
     if (create_metaplex_metadata(&(Constants.bid_marker_metadata_pubkey), &(Constants.bid_marker_mint_pubkey),
-                                 superuser_account->key, name, symbol, uri, &(Constants.shinobi_systems_vote_pubkey),
+                                 superuser_account->key, name, symbol, uri, &(Constants.system_program_pubkey),
                                  &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
