@@ -191,27 +191,27 @@ class RpcConnections
 
 class Cluster
 {
-    // If expected_slot_duration_seconds is null, a default is used.
-    static create(rpc_connections, expected_slot_duration_seconds, callbacks)
+    // If default_slot_duration_seconds is null, a default is used.
+    static create(rpc_connections, default_slot_duration_seconds, callbacks)
     {
-        return new Cluster(rpc_connections, expected_slot_duration_seconds, callbacks);
+        return new Cluster(rpc_connections, default_slot_duration_seconds, callbacks);
     }
 
-    constructor(rpc_connections, expected_slot_duration_seconds, callbacks)
+    constructor(rpc_connections, default_slot_duration_seconds, callbacks)
     {
         this.rpc_connections = rpc_connections;
 
-        if (expected_slot_duration_seconds == null) {
+        if (default_slot_duration_seconds == null) {
             if ((rpc_connections.array.length == 1) &&
                 (rpc_connections.array[0].rpcEndpoint == "http://localhost:8899")) {
-                expected_slot_duration_seconds = 0.1;
+                default_slot_duration_seconds = 0.1;
             }
             else {
-                expected_slot_duration_seconds = 0.62;
+                default_slot_duration_seconds = 0.62;
             }
         }
 
-        this.expected_slot_duration_seconds = expected_slot_duration_seconds;
+        this.default_slot_duration_seconds = default_slot_duration_seconds;
         
         this.callbacks = callbacks;
 
@@ -246,12 +246,20 @@ class Cluster
     }
 
     /**
+     * Gets the cluster default slot_duration_seconds
+     **/
+    get_default_slot_duration_seconds()
+    {
+        return this.default_slot_duration_seconds;
+    }
+
+    /**
      * Returns { confirmed_epoch, confirmed_slot, confirmed_unix_timestamp,
      *           slot, unix_timestamp }
      *
      * or null if there is no available clock yet
      *
-     * If expected_slot_duration_seconds is provided it is used, otherwise the value provided to the constructor is
+     * If slot_duration_seconds is provided it is used, otherwise the value provided to the constructor is
      * used.
      *
      * confirmed_epoch is the epoch at the most recently confirmed slot known to the client.
@@ -262,19 +270,19 @@ class Cluster
      *
      * slot and unix_timestamp MAY GO BACKWARDS in between subsequent calls, beware!
      **/
-    get_clock(expected_slot_duration_seconds)
+    get_clock(slot_duration_seconds)
     {
         if (this.confirmed_query_time == null) {
             return null;
         }
 
-        if (expected_slot_duration_seconds == null) {
-            expected_slot_duration_seconds = this.expected_slot_duration_seconds;
+        if (slot_duration_seconds == null) {
+            slot_duration_seconds = this.default_slot_duration_seconds;
         }
         
         let now = Date.now();
         
-        let slots_elapsed = ((now - this.confirmed_query_time) / (expected_slot_duration_seconds * 1000)) | 0; 
+        let slots_elapsed = ((now - this.confirmed_query_time) / (slot_duration_seconds * 1000)) | 0; 
 
         return {
             confirmed_epoch : this.confirmed_epoch,
@@ -477,6 +485,7 @@ class Cluster
 }
 
 
+// All pubkeys are SolanaWeb3.PublicKey objects.  To display them, use .toBase58().
 class Block
 {
     constructor(entries, pubkey, data)
@@ -575,6 +584,7 @@ const EntryState = Object.freeze(
 });
 
 
+// All pubkeys are SolanaWeb3.PublicKey objects.  To display them, use .toBase58().
 class Entry
 {
     constructor(block, pubkey, data)
@@ -709,6 +719,41 @@ class Entry
         }
 
         return changed;
+    }
+
+    // Returns the metaplex metadata URI for the entry, as stored in the metaplex metadata of the entry
+    async get_metaplex_metadata_uri(rpc_connections)
+    {
+        return rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getAccountInfo(this.metaplex_metadata_pubkey);
+        }, "fetch metaplex metadata").then((result) =>
+            {
+                let data = result.data;
+                
+                // Skip key, update_authority, mint
+                let offset = 1 + 32 + 32;
+                // name_len
+                let len = buffer_le_u32(data, offset);
+                if (len > 200) {
+                    // Bogus data
+                    throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+                }
+                // Skip name
+                offset += 4 + len;
+                // Symbol, string of at most 4 characters
+                len = buffer_le_u32(data, offset);
+                if (len > 10) {
+                    throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+                }
+                // Skip symbol;
+                offset += 4 + len;
+                // Uri, string of at most 200 characters
+                len = buffer_le_u32(data, offset);
+                if (len > 200) {
+                    throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+                }
+                return buffer_string(data, offset + 4, len);
+            });
     }
 
     // Cribbed from the nifty program's get_entry_state() function
@@ -910,52 +955,128 @@ const WalletItemType = Object.freeze(
 });
 
 
-// xxx can I make a cancellable promise?  One that awaits the result of another Promise, and if a cancel has occurred
-// in the meantime, just throws an exception?  Then use that ...
-
-
 // View of a Cluster that supplies information about the contents of the wallet, and provides wallet-specific actions
-//class Wallet
-//{
-//    // callbacks.submit_tx must be a function which accepts a Transaction that has no recent_blockhash set, and sets
-//    // the the recent_blockhash on the Transaction and submits it, returning a Promise
-//    static create(rpc_connections, wallet_pubkey, callbacks)
-//    {
-//        return new Wallet(rpc_connections, wallet_pubkey, callbacks);
-//    }
-//    
-//    constructor(rpc_connections, wallet_pubkey, callbacks)
-//    {
-//        this.rpc_connections = rpc_connections;
-//        
-//        this.wallet_pubkey_holder = { wallet_pubkey : null };
-//
-//        this.callbacks = callbacks;
-//
-//        this.set_wallet_pubkey(wallet_pubkey);
-//    }
-//        
-//    set_wallet_pubkey(new_wallet_pubkey)
-//    {
-//        if (this.wallet_pubkey_holder.wallet_pubkey == new_wallet_pubkey) {
-//            return;
-//        }
-//
-//        this.wallet_pubkey_holder = { wallet_pubkey : new_wallet_pubkey };
-//
-//        this.query_wallet();
-//    }
-//
-//    get_wallet_pubkey()
-//    {
-//        return this.wallet_pubkey_holder.wallet_pubkey;
-//    }
-//
-//    get_sol_balance()
-//    {
-//        return this.sol_balance;
-//    }
-//
+// All pubkeys passed into and returned from Wallet are strings.
+class Wallet
+{
+    // callbacks.submit_tx must be a function which accepts a Transaction that has no recent_blockhash set, and sets
+    // the the recent_blockhash on the Transaction and submits it, returning a Promise
+    static create(rpc_connections, wallet_pubkey, callbacks)
+    {
+        return new Wallet(rpc_connections, wallet_pubkey, callbacks);
+    }
+
+    // wallet_pubkey is a base-58 string
+    constructor(rpc_connections, wallet_pubkey, callbacks)
+    {
+        this.rpc_connections = rpc_connections;
+
+        this.wallet_pubkey_holder = { wallet_pubkey : null };
+        
+        this.callbacks = callbacks;
+
+        this.set_wallet_pubkey(wallet_pubkey);
+
+        // Fetch SOL balance only twice every 5 seconds
+        // this.last_balance_fetch_time = 0;
+        // this.last_balance_fetch_count = 0;
+        // this.sol_balance = null;
+
+        // Fetch wallet tokens only twice every 60 seconds
+        // this.last_tokens_fetch_time = 0;
+        // this.last_tokens_fetch_count = 0;
+        // xxx tokens
+
+        // Fetch wallet stakes only twice every 60 seconds
+        // this.last_stakes_fetch_time = 0;
+        // this.last_stakes_fetch_count = 0;
+        // xxx stakes
+    }
+
+    set_wallet_pubkey(new_wallet_pubkey)
+    {
+        if (new_wallet_pubkey == null) {
+            if (this.wallet_pubkey_holder.wallet_pubkey == null) {
+                return;
+            }
+        }
+        else {
+            new_wallet_pubkey = new SolanaWeb3.PublicKey(new_wallet_pubkey);
+
+            if ((this.wallet_pubkey_holder.wallet_pubkey != null) &&
+                (this.wallet_pubkey_holder.wallet_pubkey.equals(new_wallet_pubkey))) {
+                return;
+            }
+        }
+
+        this.wallet_pubkey_holder = { wallet_pubkey : new_wallet_pubkey };
+
+        // Reset saved state because the wallet pubkey has changed
+        this.last_balance_fetch_time = null;
+        this.last_balance_fetch_count = 0;
+        this.sol_balance = null;
+        this.last_tokens_fetch_time = null;
+        this.last_tokens_fetch_count = 0;
+        this.last_stakes_fetch_time = null;
+        this.last_stakes_fetch_count = 0;
+    }
+
+    // Returns a string, or null
+    get_wallet_pubkey()
+    {
+        if (this.wallet_pubkey_holder.wallet_pubkey == null) {
+            return null;
+        }
+
+        return this.wallet_pubkey_holder.wallet_pubkey.toBase58();
+    }
+    
+    async get_sol_balance()
+    {
+        // Save wallet_pubkey_holder so that we know if it changed
+        let wallet_pubkey_holder = this.wallet_pubkey_holder;
+        let wallet_pubkey = this.wallet_pubkey_holder.wallet_pubkey;
+        
+        // If the wallet has been "shut down", don't query
+        if (wallet_pubkey == null) {
+            return null;
+        }
+
+        let now = Date.now();
+
+        // If never fetched balance, fetch it
+        if ((this.last_balance_fetch_time == null) ||
+            // If haven't fetched balance for 5 seconds, fetch it
+            ((now - this.last_balance_fetch_time) > 15000) ||
+            // If fetched balance twice already in the previous 5 seconds, fetch it
+            (this.last_balance_fetch_count == 3)) {
+
+            // Wait on getting SOL balance of wallet
+            let sol_balance = await this.rpc_connections.run((rpc_connection) => {
+                return rpc_connection.getBalance(wallet_pubkey);
+            }, "update sol balance");
+            
+            if (wallet_pubkey_holder == this.wallet_pubkey_holder) {
+                this.sol_balance = sol_balance;
+                this.last_balance_fetch_time = Date.now();
+                this.last_balance_fetch_count = 1;
+            }
+        }
+        else {
+            this.last_balance_fetch_count += 1;
+        }
+            
+        return this.sol_balance;
+    }
+
+    async update_tokens()
+    {
+    }
+
+    async update_stakes()
+    {
+    }
+    
 //    async query_wallet()
 //    {
 //        try {
@@ -963,22 +1084,22 @@ const WalletItemType = Object.freeze(
 //            // Save wallet_pubkey_holder so that we know if it changed
 //            let wallet_pubkey_holder = this.wallet_pubkey_holder;
 //            let wallet_pubkey = this.wallet_pubkey_holder.pubkey;
-//
+//            
 //            // Create promises to wait on
 //            let promises = [ ];
-//
+//            
 //            let sol_balance;
-//
+//            
 //            // Wait on getting SOL balance of wallet
 //            let result = await rpc_connection.getBalance(entry.block.pubkey).then((b) => sol_balance = b);
-//
+//            
 //            await Promises.all(promises);
-//
+//            
 //            // If the rpc or wallet config has changed, ignore results
 //            if (!this.rpc_connections.has(rpc_connection) || (this.wallet_pubkey_holder != wallet_pubkey_holder)) {
 //                return;
 //            }
-//
+//            
 //            // If the balance has changed, callback to indicate this
 //            if ((sol_balance != null) && (sol_balance != this.sol_balance)) {
 //                this.sol_balance = sol_balance;
@@ -992,390 +1113,389 @@ const WalletItemType = Object.freeze(
 //                }
 //            }
 //        }
-        
-//            // Wait on getting results of all token accounts owned by the wallet
-//            promises.push(this.rpc_connection.getParsedTokenAccountsByOwner
-//                          (this.wallet_pubkey, { programId : g_spl_token_program_pubkey }).then(() results = r));
-//
-//            await Promises.all(promises);
-//            
-//            // After async call, check to make sure that rpc connection is still valid, and that the wallet pubkey
-//            // holder has not changed to a new one
-//            if (!this.rpc_connections.has(rpc_connection) || (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
-//                // Try again immediately
-//                setTimeout(() => this.query_wallet(), 0);
-//                return;
-//            }
-//
-//            // Promises to wait on to complete remaining operationsn
-//            promises = [ ];
-//
-//            // Wallet-owned entries
-//            let entries = [ ];
-//
-//            // Wallet-owned bids
-//            let bids = [ ];
-//
-//            for (let idx = 0; idx < results.value.length; idx++) {
-//                let account = results.value[idx].account;
-//                let pubkey = results.value[idx].pubkey;
-//                
-//                if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
-//                    (account.data.parsed.info == null)) {
-//                    continue;
-//                }
-//                
-//                if (account.data.parsed.info.state != "initialized") {
-//                    continue;
-//                }
-//                
-//                if (account.data.parsed.info.tokenAmount.amount == 0) {
-//                    continue;
-//                }
-//                
-//                // Should never happen but just in case
-//                if (account.data.parsed.info.owner != wallet_pubkey.toBase58()) {
-//                    continue;
-//                }
-//
-//                let mint_pubkey = new SolanaWeb3.PublicKey(account.data.parsed.info.mint);
-//
-//                let amount = 
-//                
-//                let token = {
-//                    mint_pubkey : ),
-//                    
-//                    account_pubkey : pubkey,
-//                    
-//                    amount : account.data.parsed.info.tokenAmount.amount
-//                };
-//
-//                tokens.push(token);
-//
-//                if (token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
-//                    promises.push(this.lookup_bid_entry_mint_pubkey(pubkey)
-//                                  .then((bid_entry_mint_pubkey) =>
-//                                      {
-//                                          if (bid_entry_mint_pubkey == null) {
-//                                              return;
-//                                          }
-//                                          
-//                                          return this.get_entry(get_entry_pubkey(bid_entry_mint_pubkey));
-//                                      })
-//                                  .then((entry) =>
-//                                      {
-//                                          entries.push(entry);
-//                                      }));
-//                }
-//                else {
-//                    promises.push(this.lookup_mint_update_authority(account.data.parsed.info.mint
-//                }
-//            }
-//
-//            // Now await all results
-//            await Promise.all(promises);
-//
-//            // After async call, check to make sure that rpc connection is still valid, and that the wallet pubkey
-//            // holder has not changed to a new one
-//            if (!this.rpc_connections.has(rpc_connection) || (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
-//                // Try again immediately
-//                setTimeout(() => this.query_tokens(), 0);
-//                return;
-//            }
-//
-//            // For each token:
-//            // - If it has bid_entry_mint_pubkey set, then it's a bid
-//            // - Else if it has 
-//            for (let token in tokens) {
-//                
-//            }
-//            
-//            
-//            // For each wallet token, if it is a bid marker, then look up its bid entry
-//            for (let idx = 0; idx < wallet_tokens.length; idx++) {
-//                let wallet_token = wallet_tokens[idx];
-//
-//                if (wallet_token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
-//                    wallet_token.bid_entry_mint_pubkey =
-//                        await this.lookup_bid_entry_mint_pubkey(wallet_token.account_pubkey);
-//                    // After async call, check to make sure that rpc connection is still valid, and that the wallet
-//                    // pubkey holder has not changed to a new one
-//                    if (!this.rpc_connections.has(rpc_connection) ||
-//                        (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
-//                        // Try again immediately
-//                        setTimeout(() => this.query_tokens(), 0);
-//                        return;
-//                    }
-//                }
-//            }
-//
-//            on_wallet_tokens(wallet_tokens);
-//                    
-//            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-//                return;
-//            }
-//                    
-//            // Retry in 1 minute
-//            if (repeat) {
-//                setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 60 * 1000);
-//            }
-//        }
-//        catch(error) {
-//            console.log("Query tokens error " + error);
-//
-//            if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-//                return;
-//            }
-//                    
-//            // Retry in 1 second
-//            setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 1000);
-//        }
-//    }
-//        catch (error) {
-//            console.log("query_wallet error: " + error);
-//
-//            // Re-try wallet query after 1 second
-//            setTimeout(() => this.query_wallet(), 1000);
-//        }
-//    }
-    
-//    // maximum_price_lamports should be the price that was shown to the user
-//    async buy_entry(entry, clock, maximum_price_lamports)
-//    {
-//        while (true) {
-//            try {
-//                let rpc_connection this.rpc_connections.get();
-//
-//                let wallet_holder = this.wallet_holder;
-//
-//                // If maximum_price_lamports was not passed in, then get it.  This maximum is
-//                // guaranteed to be no higher than any value that was presented to them (since clock only moves
-//                // forwards and thus entry price can only go down).
-//                if (maximum_price_lamports == null) {
-//                    maximum_price_lamports = entry.get_price(clock);
-//                }
-//
-//                let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
-//
-//                // If wallet pubkey changed, then abort
-//                if (wallet_holder != this.wallet_holder) {
-//                    break;
-//                }
-//
-//                // If rpc connections changed, then try again
-//                if (!this.rpc_connections.has(rpc_connection)) {
-//                    continue;
-//                }
-//
-//                let token_destination_pubkey = get_associated_token_pubkey(this.wallet_pubkey, entry.mint_pubkey);
-//
-//                let tx = _buy_tx({ funding_pubkey : this.wallet_pubkey,
-//                                   config_pubkey : g_config_pubkey,
-//                                   admin_pubkey : admin_pubkey,
-//                                   block_pubkey : entry.block.pubkey,
-//                                   entry_pubkey : entry.pubkey,
-//                                   entry_token_pubkey : entry.token_pubkey,
-//                                   entry_mint_pubkey : entry.mint_pubkey,
-//                                   token_destination_pubkey : token_destination_pubkey,
-//                                   token_destination_owner_pubkey : wallet_pubkey,
-//                                   metaplex_metadata_pubkey : entry.metaplex_metadata_pubkey,
-//                                   maximum_price_lamports : maximum_price_lamports });
-//
-//                return this.callbacks.submit_tx(tx);
-//            }
-//            catch (error) {
-//                console.log("buy_entry error " + error);
-//
-//                // Try again after 5 seconds
-//                return setTimeout(() => this.buy_entry(entry, clock, maximum_price_lamports));
-//            }
-//        }
-//    }
-//
-//    // maximum_price_lamports should be the price that was shown to the user
-//    async buy_mystery(entry, clock, maximum_price_lamports)
-//    {
-//        // Get the current price of the entry; the user is willing to pay this much.  This maximum is guaranteed to be
-//        // no higher than any value that was presented to them (since clock only moves forwards and thus entry price
-//        // can only go down).
-//        let maximum_price_lamports = this.get_price(this.block.cluster.get_clock());
 //        
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
+//        // Wait on getting results of all token accounts owned by the wallet
+//        promises.push(this.rpc_connection.getParsedTokenAccountsByOwner
+//                      (this.wallet_pubkey, { programId : g_spl_token_program_pubkey }).then(() results = r));
+//        
+//        await Promises.all(promises);
+//        
+//        // After async call, check to make sure that rpc connection is still valid, and that the wallet pubkey
+//        // holder has not changed to a new one
+//        if (!this.rpc_connections.has(rpc_connection) || (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
+//            // Try again immediately
+//            setTimeout(() => this.query_wallet(), 0);
 //            return;
 //        }
+//        
+//        // Promises to wait on to complete remaining operationsn
+//        promises = [ ];
+//        
+//        // Wallet-owned entries
+//        let entries = [ ];
+//        
+//        // Wallet-owned bids
+//        let bids = [ ];
+//        
+//        for (let idx = 0; idx < results.value.length; idx++) {
+//            let account = results.value[idx].account;
+//            let pubkey = results.value[idx].pubkey;
+//            
+//            if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
+//                (account.data.parsed.info == null)) {
+//                continue;
+//            }
+//            
+//            if (account.data.parsed.info.state != "initialized") {
+//                continue;
+//            }
+//            
+//            if (account.data.parsed.info.tokenAmount.amount == 0) {
+//                continue;
+//            }
+//            
+//            // Should never happen but just in case
+//            if (account.data.parsed.info.owner != wallet_pubkey.toBase58()) {
+//                continue;
+//            }
+//            
+//            let mint_pubkey = new SolanaWeb3.PublicKey(account.data.parsed.info.mint);
+//            
+//            let amount = 
+//                
+//            let token = {
+//                mint_pubkey : ),
+//                
+//                account_pubkey : pubkey,
+//                
+//                amount : account.data.parsed.info.tokenAmount.amount
+//        };
+//        
+//        tokens.push(token);
+//        
+//        if (token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
+//            promises.push(this.lookup_bid_entry_mint_pubkey(pubkey)
+//                          .then((bid_entry_mint_pubkey) =>
+//                              {
+//                                  if (bid_entry_mint_pubkey == null) {
+//                                      return;
+//                                  }
+//                                  
+//                                  return this.get_entry(get_entry_pubkey(bid_entry_mint_pubkey));
+//                              })
+//                          .then((entry) =>
+//                                     {
+//                                         entries.push(entry);
+//                                     }));
+//               }
+//               else {
+//                   promises.push(this.lookup_mint_update_authority(account.data.parsed.info.mint
+//               }
+//           }
 //
-//        let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
-//        if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
-//            return;
-//        }
+//           // Now await all results
+//           await Promise.all(promises);
 //
-//        let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
+//           // After async call, check to make sure that rpc connection is still valid, and that the wallet pubkey
+//           // holder has not changed to a new one
+//           if (!this.rpc_connections.has(rpc_connection) || (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
+//               // Try again immediately
+//               setTimeout(() => this.query_tokens(), 0);
+//               return;
+//           }
 //
-//        return _buy_mystery_tx({ funding_pubkey : wallet_pubkey,
-//                                 config_pubkey : g_config_pubkey,
-//                                 admin_pubkey : admin_pubkey,
-//                                 block_pubkey : this.block.pubkey,
+//           // For each token:
+//           // - If it has bid_entry_mint_pubkey set, then it's a bid
+//           // - Else if it has 
+//           for (let token in tokens) {
+//               
+//           }
+//           
+//           
+//           // For each wallet token, if it is a bid marker, then look up its bid entry
+//           for (let idx = 0; idx < wallet_tokens.length; idx++) {
+//               let wallet_token = wallet_tokens[idx];
+//
+//               if (wallet_token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
+//                   wallet_token.bid_entry_mint_pubkey =
+//                       await this.lookup_bid_entry_mint_pubkey(wallet_token.account_pubkey);
+//                   // After async call, check to make sure that rpc connection is still valid, and that the wallet
+//                   // pubkey holder has not changed to a new one
+//                   if (!this.rpc_connections.has(rpc_connection) ||
+//                       (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
+//                       // Try again immediately
+//                       setTimeout(() => this.query_tokens(), 0);
+//                       return;
+//                   }
+//               }
+//           }
+//
+//           on_wallet_tokens(wallet_tokens);
+//                   
+//           if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+//               return;
+//           }
+//                   
+//           // Retry in 1 minute
+//           if (repeat) {
+//               setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 60 * 1000);
+//           }
+//       }
+//       catch(error) {
+//           console.log("Query tokens error " + error);
+//
+//           if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
+//               return;
+//           }
+//                   
+//           // Retry in 1 second
+//           setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 1000);
+//       }
+//   }
+//       catch (error) {
+//           console.log("query_wallet error: " + error);
+//
+//           // Re-try wallet query after 1 second
+//           setTimeout(() => this.query_wallet(), 1000);
+//       }
+//   }
+// 
+//   // maximum_price_lamports should be the price that was shown to the user
+//   async buy_entry(entry, clock, maximum_price_lamports)
+//   {
+//       while (true) {
+//           try {
+//               let rpc_connection this.rpc_connections.get();
+//
+//               let wallet_holder = this.wallet_holder;
+//
+//               // If maximum_price_lamports was not passed in, then get it.  This maximum is
+//               // guaranteed to be no higher than any value that was presented to them (since clock only moves
+//               // forwards and thus entry price can only go down).
+//               if (maximum_price_lamports == null) {
+//                   maximum_price_lamports = entry.get_price(clock);
+//               }
+//
+//               let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
+//
+//               // If wallet pubkey changed, then abort
+//               if (wallet_holder != this.wallet_holder) {
+//                   break;
+//               }
+//
+//               // If rpc connections changed, then try again
+//               if (!this.rpc_connections.has(rpc_connection)) {
+//                   continue;
+//               }
+//
+//               let token_destination_pubkey = get_associated_token_pubkey(this.wallet_pubkey, entry.mint_pubkey);
+//
+//               let tx = _buy_tx({ funding_pubkey : this.wallet_pubkey,
+//                                  config_pubkey : g_config_pubkey,
+//                                  admin_pubkey : admin_pubkey,
+//                                  block_pubkey : entry.block.pubkey,
+//                                  entry_pubkey : entry.pubkey,
+//                                  entry_token_pubkey : entry.token_pubkey,
+//                                  entry_mint_pubkey : entry.mint_pubkey,
+//                                  token_destination_pubkey : token_destination_pubkey,
+//                                  token_destination_owner_pubkey : wallet_pubkey,
+//                                  metaplex_metadata_pubkey : entry.metaplex_metadata_pubkey,
+//                                  maximum_price_lamports : maximum_price_lamports });
+//
+//               return this.callbacks.submit_tx(tx);
+//           }
+//           catch (error) {
+//               console.log("buy_entry error " + error);
+//
+//               // Try again after 5 seconds
+//               return setTimeout(() => this.buy_entry(entry, clock, maximum_price_lamports));
+//           }
+//       }
+//   }
+//
+//   // maximum_price_lamports should be the price that was shown to the user
+//   async buy_mystery(entry, clock, maximum_price_lamports)
+//   {
+//       // Get the current price of the entry; the user is willing to pay this much.  This maximum is guaranteed to be
+//       // no higher than any value that was presented to them (since clock only moves forwards and thus entry price
+//       // can only go down).
+//       let maximum_price_lamports = this.get_price(this.block.cluster.get_clock());
+//       
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return;
+//       }
+//
+//       let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
+//       if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
+//           return;
+//       }
+//
+//       let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
+//
+//       return _buy_mystery_tx({ funding_pubkey : wallet_pubkey,
+//                                config_pubkey : g_config_pubkey,
+//                                admin_pubkey : admin_pubkey,
+//                                block_pubkey : this.block.pubkey,
+//                                entry_pubkey : this.pubkey,
+//                                entry_token_pubkey : this.token_pubkey,
+//                                entry_mint_pubkey : this.mint_pubkey,
+//                                token_destination_pubkey : token_destination_pubkey,
+//                                token_destination_owner_pubkey : wallet_pubkey,
+//                                metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
+//                                maximum_price_lamports : maximum_price_lamports });
+//   }
+//   
+//   refund_tx()
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return null;
+//       }
+//       
+//       return _refund_tx({ token_owner_pubkey : wallet_pubkey,
+//                           block_pubkey : this.block.pubkey,
+//                           entry_pubkey : this.pubkey,
+//                           buyer_token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
+//                           refund_destination_pubkey : wallet_pubkey });
+//   }
+//   
+//   bid_tx(minimum_bid_lamports, maximum_bid_lamports)
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if ((wallet_pubkey == null) || (minimum_bid_lamports == null) || (maximum_bid_lamports == null)) {
+//           return null;
+//       }
+//       let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
+//           
+//       return _bid_tx({ bidding_pubkey : wallet_pubkey,
+//                        entry_pubkey : this.pubkey,
+//                        bid_marker_token_pubkey : bid_marker_token_pubkey,
+//                        bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
+//                        minimum_bid_lamports : minimum_bid_lamports,
+//                        maximum_bid_lamports : maximum_bid_lamports });
+//   }
+//   
+//   claim_losing_tx()
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return null;
+//       }
+//       let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
+//           
+//       return _claim_losing_tx({ bidding_pubkey : wallet_pubkey,
 //                                 entry_pubkey : this.pubkey,
-//                                 entry_token_pubkey : this.token_pubkey,
-//                                 entry_mint_pubkey : this.mint_pubkey,
-//                                 token_destination_pubkey : token_destination_pubkey,
-//                                 token_destination_owner_pubkey : wallet_pubkey,
-//                                 metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
-//                                 maximum_price_lamports : maximum_price_lamports });
-//    }
-//    
-//    refund_tx()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//        
-//        return _refund_tx({ token_owner_pubkey : wallet_pubkey,
-//                            block_pubkey : this.block.pubkey,
-//                            entry_pubkey : this.pubkey,
-//                            buyer_token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                            refund_destination_pubkey : wallet_pubkey });
-//    }
-//    
-//    bid_tx(minimum_bid_lamports, maximum_bid_lamports)
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if ((wallet_pubkey == null) || (minimum_bid_lamports == null) || (maximum_bid_lamports == null)) {
-//            return null;
-//        }
-//        let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
-//            
-//        return _bid_tx({ bidding_pubkey : wallet_pubkey,
-//                         entry_pubkey : this.pubkey,
-//                         bid_marker_token_pubkey : bid_marker_token_pubkey,
-//                         bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
-//                         minimum_bid_lamports : minimum_bid_lamports,
-//                         maximum_bid_lamports : maximum_bid_lamports });
-//    }
-//    
-//    claim_losing_tx()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//        let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
-//            
-//        return _claim_losing_tx({ bidding_pubkey : wallet_pubkey,
+//                                 bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
+//                                 bid_marker_token_pubkey : bid_marker_token_pubkey });
+//   }
+//   
+//   async claim_winning_tx()
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return null;
+//       }
+//
+//       let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
+//       if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
+//           return;
+//       }
+//       
+//       let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
+//       let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
+//       
+//       return _claim_winning_tx({ bidding_pubkey : wallet_pubkey,
 //                                  entry_pubkey : this.pubkey,
 //                                  bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
+//                                  config_pubkey : g_config_pubkey,
+//                                  admin_pubkey : admin_pubkey,
+//                                  entry_token_pubkey : this.token_pubkey,
+//                                  entry_mint_pubkey : this.mint_pubkey,
+//                                  token_destination_pubkey : token_destination_pubkey,
+//                                  token_destination_owner_pubkey : wallet_pubkey,
 //                                  bid_marker_token_pubkey : bid_marker_token_pubkey });
-//    }
-//    
-//    async claim_winning_tx()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//
-//        let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
-//        if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
-//            return;
-//        }
-//        
-//        let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
-//        let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
-//        
-//        return _claim_winning_tx({ bidding_pubkey : wallet_pubkey,
-//                                   entry_pubkey : this.pubkey,
-//                                   bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
-//                                   config_pubkey : g_config_pubkey,
-//                                   admin_pubkey : admin_pubkey,
-//                                   entry_token_pubkey : this.token_pubkey,
-//                                   entry_mint_pubkey : this.mint_pubkey,
-//                                   token_destination_pubkey : token_destination_pubkey,
-//                                   token_destination_owner_pubkey : wallet_pubkey,
-//                                   bid_marker_token_pubkey : bid_marker_token_pubkey });
-//    }
-//    
-//    stake_tx(stake_account_pubkey)
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if ((wallet_pubkey == null) || (stake_account_pubkey == null)) {
-//            return null;
-//        }
-//        
-//        return _stake_tx({ block_pubkey : this.block.pubkey,
-//                           entry_pubkey : this.pubkey,
-//                           token_owner_pubkey : wallet_pubkey,
-//                           token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                           stake_pubkey : stake_account_pubkey,
-//                           withdraw_authority : wallet_pubkey });
-//    }
-//    
-//    destake_tx()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//        
-//        return _destake_tx({ funding_pubkey : wallet_pubkey,
-//                             block_pubkey : this.block.pubkey,
-//                             entry_pubkey : this.pubkey,
+//   }
+//   
+//   stake_tx(stake_account_pubkey)
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if ((wallet_pubkey == null) || (stake_account_pubkey == null)) {
+//           return null;
+//       }
+//       
+//       return _stake_tx({ block_pubkey : this.block.pubkey,
+//                          entry_pubkey : this.pubkey,
+//                          token_owner_pubkey : wallet_pubkey,
+//                          token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
+//                          stake_pubkey : stake_account_pubkey,
+//                          withdraw_authority : wallet_pubkey });
+//   }
+//   
+//   destake_tx()
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return null;
+//       }
+//       
+//       return _destake_tx({ funding_pubkey : wallet_pubkey,
+//                            block_pubkey : this.block.pubkey,
+//                            entry_pubkey : this.pubkey,
+//                            token_owner_pubkey : wallet_pubkey,
+//                            token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
+//                            stake_pubkey : this.owned_stake_account,
+//                            ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
+//                            ki_destination_owner_pubkey : wallet_pubkey,
+//                            bridge_pubkey : get_entry_bridge_pubkey(this.mint_pubkey),
+//                            new_withdraw_authority : wallet_pubkey.toBase58() });
+//   }
+//   
+//   harvest_tx()
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return null;
+//       }
+//       
+//       return _harvest_tx({ funding_pubkey : wallet_pubkey,
+//                            entry_pubkey : this.pubkey,
+//                            token_owner_pubkey : wallet_pubkey,
+//                            token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
+//                            stake_pubkey : this.owned_stake_account,
+//                            ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
+//                            ki_destination_owner_pubkey : wallet_pubkey });
+//   }
+//   
+//   level_up_tx()
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return null;
+//       }
+//       
+//       return _level_up_tx({ entry_pubkey : this.pubkey,
 //                             token_owner_pubkey : wallet_pubkey,
 //                             token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                             stake_pubkey : this.owned_stake_account,
-//                             ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
-//                             ki_destination_owner_pubkey : wallet_pubkey,
-//                             bridge_pubkey : get_entry_bridge_pubkey(this.mint_pubkey),
-//                             new_withdraw_authority : wallet_pubkey.toBase58() });
-//    }
-//    
-//    harvest_tx()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//        
-//        return _harvest_tx({ funding_pubkey : wallet_pubkey,
-//                             entry_pubkey : this.pubkey,
-//                             token_owner_pubkey : wallet_pubkey,
-//                             token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                             stake_pubkey : this.owned_stake_account,
-//                             ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
-//                             ki_destination_owner_pubkey : wallet_pubkey });
-//    }
-//    
-//    level_up_tx()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//        
-//        return _level_up_tx({ entry_pubkey : this.pubkey,
-//                              token_owner_pubkey : wallet_pubkey,
-//                              token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                              entry_metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
-//                              ki_source_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
-//                              ki_source_owner_pubkey : wallet_pubkey });
-//    }
-//    
-//    take_commission_or_delegate_tx()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//        
-//        return _take_commission_or_delegate_tx({ funding_pubkey : wallet_pubkey,
-//                                                 block_pubkey : this.block.pubkey,
-//                                                 entry_pubkey : this.pubkey,
-//                                                 stake_pubkey : this.owned_stake_account,
-//                                                 bridge_pubkey : get_entry_bridge_pubkey(this.mint_pubkey) });
-//    }
-
-// }
+//                             entry_metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
+//                             ki_source_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
+//                             ki_source_owner_pubkey : wallet_pubkey });
+//   }
+//   
+//   take_commission_or_delegate_tx()
+//   {
+//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
+//       if (wallet_pubkey == null) {
+//           return null;
+//       }
+//       
+//       return _take_commission_or_delegate_tx({ funding_pubkey : wallet_pubkey,
+//                                                block_pubkey : this.block.pubkey,
+//                                                entry_pubkey : this.pubkey,
+//                                                stake_pubkey : this.owned_stake_account,
+//                                                bridge_pubkey : get_entry_bridge_pubkey(this.mint_pubkey) });
+//   }
+}
 
 
 function metaplex_metadata_pubkey(mint_pubkey)
@@ -1531,8 +1651,8 @@ exports.Cluster = Cluster;
 exports.Block = Block;
 exports.EntryState = EntryState;
 exports.Entry = Entry;
+exports.Wallet = Wallet;
 exports.WalletItemType = WalletItemType;
-//exports.Wallet = Wallet;
 exports.nifty_program_pubkey = () => g_nifty_program_pubkey;
 exports.config_pubkey = () => g_config_pubkey;
 exports.master_stake_pubkey = () => g_master_stake_pubkey;

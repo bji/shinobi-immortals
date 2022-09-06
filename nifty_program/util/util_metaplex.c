@@ -431,7 +431,6 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
                 return Error_InvalidMetadataValues;
             }
             data += ret, data_len -= ret;
-
         }
 
         // Read creators, which may be None or Some(vector of creator)
