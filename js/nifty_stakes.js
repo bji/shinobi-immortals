@@ -30,6 +30,9 @@ const g_spl_token_program_pubkey = new SolanaWeb3.PublicKey(SPL_TOKEN_PROGRAM_AD
 const g_spl_associated_token_program_pubkey = new SolanaWeb3.PublicKey(SPL_ASSOCIATED_TOKEN_PROGRAM_ADDRESS);
 const g_stake_program_pubkey = new SolanaWeb3.PublicKey(STAKE_PROGRAM_ADDRESS);
 
+const g_nifty_program_authority_pubkey =
+      SolanaWeb3.PublicKey.findProgramAddressSync([ [ 2 ] ], g_nifty_program_pubkey)[0];
+      
 const g_config_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 1 ] ], g_nifty_program_pubkey)[0];
 
 const g_master_stake_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 3 ] ], g_nifty_program_pubkey)[0];
@@ -724,36 +727,36 @@ class Entry
     // Returns the metaplex metadata URI for the entry, as stored in the metaplex metadata of the entry
     async get_metaplex_metadata_uri(rpc_connections)
     {
-        return rpc_connections.run((rpc_connection) => {
+        let result = rpc_connections.run((rpc_connection) => {
             return rpc_connection.getAccountInfo(this.metaplex_metadata_pubkey);
-        }, "fetch metaplex metadata").then((result) =>
-            {
-                let data = result.data;
+        }, "fetch metaplex metadata");
+
+        let data = result.data;
                 
-                // Skip key, update_authority, mint
-                let offset = 1 + 32 + 32;
-                // name_len
-                let len = buffer_le_u32(data, offset);
-                if (len > 200) {
-                    // Bogus data
-                    throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
-                }
-                // Skip name
-                offset += 4 + len;
-                // Symbol, string of at most 4 characters
-                len = buffer_le_u32(data, offset);
-                if (len > 10) {
-                    throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
-                }
-                // Skip symbol;
-                offset += 4 + len;
-                // Uri, string of at most 200 characters
-                len = buffer_le_u32(data, offset);
-                if (len > 200) {
-                    throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
-                }
-                return buffer_string(data, offset + 4, len);
-            });
+        // Skip key, update_authority, mint
+        let offset = 1 + 32 + 32;
+        // name_len
+        let len = buffer_le_u32(data, offset);
+        if (len > 200) {
+            // Bogus data
+            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+        }
+        // Skip name
+        offset += 4 + len;
+        // Symbol, string of at most 4 characters
+        len = buffer_le_u32(data, offset);
+        if (len > 10) {
+            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+        }
+        // Skip symbol;
+        offset += 4 + len;
+        // Uri, string of at most 200 characters
+        len = buffer_le_u32(data, offset);
+        if (len > 200) {
+            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+        }
+        
+        return buffer_string(data, offset + 4, len);
     }
 
     // Cribbed from the nifty program's get_entry_state() function
@@ -913,48 +916,6 @@ class Entry
 }
 
 
-// Enumeration of wallet item types
-const WalletItemType = Object.freeze(
-{
-    // Lamports owned by wallet.  wallet_item is:
-    // {
-    //     wallet_item_type : WalletItemType.Lamports,
-    //     lamports : int
-    // }
-    Lamports        : Symbol("Lamports"),
-    // Ki owned by wallet.  wallet_item is:
-    // {
-    //     wallet_item_type : WalletItemType.Ki,
-    //     ki_account_pubkey : pubkey,
-    //     ki : int
-    // }
-    Ki              : Symbol("Ki"),
-    // Entry owned by the wallet.  wallet_item is:
-    // {
-    //     wallet_item_type : WalletItemType.Entry,
-    //     entry : Entry
-    // }
-    Entry           : Symbol("Entry"),
-    // Bid by the wallet.  wallet_item is:
-    // {
-    //     wallet_item_type : WalletItemType.Bid,
-    //     bid_marker_pubkey : pubkey,
-    //     bid_account_pubkey : pubkey,
-    //     entry : Entry
-    // }
-    Bid             : Symbol("Bid"),
-    // Entry is in a stake account whose withdraw authority is the user.  wallet_item is:
-    // {
-    //     wallet_item_type : WalletItemType.Stake,
-    //     stake_account_pubkey : pubkey,
-    //     balance_lamports : int,
-    //     delegated_lamports : int, // Only set if stake is delegated
-    //     delegated_vote_account_pubkey : pubkey // Only set if stake is delegated
-    // }
-    Stake           : Symbol("Stake")
-});
-
-
 // View of a Cluster that supplies information about the contents of the wallet, and provides wallet-specific actions
 // All pubkeys passed into and returned from Wallet are strings.
 class Wallet
@@ -982,12 +943,12 @@ class Wallet
         // this.last_balance_fetch_count = 0;
         // this.sol_balance = null;
 
-        // Fetch wallet tokens only twice every 60 seconds
+        // Fetch wallet tokens only once every 30 seconds
         // this.last_tokens_fetch_time = 0;
         // this.last_tokens_fetch_count = 0;
         // xxx tokens
 
-        // Fetch wallet stakes only twice every 60 seconds
+        // Fetch wallet stakes only once every 30 seconds
         // this.last_stakes_fetch_time = 0;
         // this.last_stakes_fetch_count = 0;
         // xxx stakes
@@ -1047,9 +1008,9 @@ class Wallet
         // If never fetched balance, fetch it
         if ((this.last_balance_fetch_time == null) ||
             // If haven't fetched balance for 5 seconds, fetch it
-            ((now - this.last_balance_fetch_time) > 15000) ||
+            ((now - this.last_balance_fetch_time) > 5000) ||
             // If fetched balance twice already in the previous 5 seconds, fetch it
-            (this.last_balance_fetch_count == 3)) {
+            (this.last_balance_fetch_count == 2)) {
 
             // Wait on getting SOL balance of wallet
             let sol_balance = await this.rpc_connections.run((rpc_connection) => {
@@ -1069,14 +1030,180 @@ class Wallet
         return this.sol_balance;
     }
 
-    async update_tokens()
+    async get_ki_balance()
     {
+        await this.update_token_data();
+
+        return this.ki_balance;
     }
 
-    async update_stakes()
+    // Returns the string pubkeys of entries owned by this 
+    async get_entry_pubkeys()
     {
+        await this.update_token_data();
+
+        return this.entry_pubkeys.values();
+    }
+
+    // Returns an interator over { entry_pubkey, lamports }.  lamports is the number of lamports in the bid account,
+    // which could be more than the bid if lamports were added post-bid.
+    async get_bids()
+    {
+        await this.update_token_data();
+
+        return this.bids_by_entry_pubkey.values();
+    }
+
+    async get_stakes()
+    {
+        await this.update_stakes();
+
+        return this.stakes;
+    }
+
+    // Returns true if the wallet owns the entry with the given string entry pubkey, false if not
+    async owns_entry(entry_pubkey)
+    {
+        await this.update_token_data();
+
+        return this.entry_pubkeys.has(entry_pubkey);
+    }
+
+    // Returns undefined if the wallet has no bid for the string entry pubkey, or the lamports of the bid if it does
+    async get_bid(entry_pubkey)
+    {
+        await this.update_token_data();
+
+        return this.bids_by_mint.get(entry.mint_pubkey.toBase58());
     }
     
+    async update_token_data()
+    {
+        // Save wallet_pubkey_holder so that we know if it changed
+        let wallet_pubkey_holder = this.wallet_pubkey_holder;
+        let wallet_pubkey = this.wallet_pubkey_holder.wallet_pubkey;
+        
+        // If the wallet has been "shut down", don't query
+        if (wallet_pubkey == null) {
+            return null;
+        }
+
+        let now = Date.now();
+
+        // If never fetched balance, fetch it
+        if ((this.last_tokens_fetch_time == null) ||
+            // If haven't fetched tokens in 30 seconds, fetch them
+            ((now - this.last_tokens_fetch_time) > 30000) ||
+            // If fetched balance already in the previous 30 seconds, fetch it
+            (this.last_tokens_fetch_count == 1)) {
+
+            let results = await this.rpc_connections.run((rpc_connection) =>
+                {
+                    return rpc_connection.getParsedTokenAccountsByOwner(wallet_pubkey,
+                                                                        { programId : g_spl_token_program_pubkey });
+                }, "update token data token accounts");
+
+            let new_ki_balance = 0;
+
+            let new_entry_pubkeys = new Set();
+
+            let new_bids_by_entry_pubkey = new Map();
+
+            let promises = [ ];
+
+            for (let idx = 0; idx < results.value.length; idx++) {
+                let account = results.value[idx].account;
+                let pubkey = results.value[idx].pubkey;
+                
+                if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
+                    (account.data.parsed.info == null)) {
+                    continue;
+                }
+                
+                if (account.data.parsed.info.state != "initialized") {
+                    continue;
+                }
+                
+                if (account.data.parsed.info.tokenAmount.amount == 0) {
+                    continue;
+                }
+                
+                // Should never happen but just in case
+                if (account.data.parsed.info.owner != wallet_pubkey.toBase58()) {
+                    continue;
+                }
+
+                let mint_pubkey = new SolanaWeb3.PublicKey(account.data.parsed.info.mint);
+
+                // If its mint is the bid mint, then it's a bid token, so add an async function to fetch the
+                // details of the bid and add it to new_bids_by_entry_pubkey
+                if (mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
+                    pubkey = new SolanaWeb3.PublicKey(pubkey);
+                    promises.push(this.add_bid_by_entry_pubkey(pubkey, new_bids_by_entry_pubkey));
+                }
+                // Else if its mint is the ki mint, then add its ki tokens to the total
+                else if (mint_pubkey.equals(g_ki_mint_pubkey)) {
+                    new_ki_balance += account.data.parsed.info.tokenAmount.amount;
+                }
+                else {
+                    // Add an async function to check to see if its update authority is the Shinobi Immortals program
+                    // authority, and if so, add it to new_entries.
+                    promises.push(this.check_update_authority(mint_pubkey, new_entry_pubkeys));
+                }
+            }
+
+            await Promise.all(promises);
+
+            // Now rebuild this.ki_balance, this.entry_pubkeys, and this.bids_by_entry_pubkey from the resulting data
+            if (wallet_pubkey_holder == this.wallet_pubkey_holder) {
+                this.ki_balance = new_ki_balance;
+                this.entry_pubkeys = new_entry_pubkeys;
+                this.bids_by_entry_pubkey = new_bids_by_entry_pubkey;
+                
+                this.last_tokens_fetch_time = Date.now();
+                this.last_tokens_fetch_count = 1;
+            }
+        }
+        else {
+            this.last_tokens_fetch_count += 1;
+        }
+    }
+
+    async add_bid_by_entry_pubkey(bid_marker_token_pubkey, bids_by_entry_pubkey)
+    {
+        let result = this.rpc_connections.run((rpc_connection) =>
+            {
+                return rpc_connection.getAccountInfo(get_bid_pubkey(bid_marker_token_pubkey),
+                                                     {
+                                                         dataSlice : { offset : 4,
+                                                                       length : 32 }
+                                                     });
+            }, "update token data bid data");
+
+        let entry_pubkey = get_entry_pubkey(/* entry mint pubkey */ new SolanaWeb3.PublicKey(result.data)).toBase58();
+
+        bids_by_entry_pubkey.set(entry_pubkey, { entry_pubkey : entry_pubkey, lamports : result.lamports });
+    }
+
+    async check_update_authority(mint_pubkey, new_entry_pubkeys)
+    {
+        // Load the metaplex metadata
+        let result = await this.rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getAccountInfo(metaplex_metadata_pubkey(mint_pubkey));
+        }, "fetch metaplex metadata");
+
+        if (result == null) {
+            // No metadata at all
+            return;
+        }
+
+        let update_authority = buffer_pubkey(result.data, 1);
+
+        if (update_authority.equals(g_nifty_program_authority_pubkey)) {
+            new_entry_pubkeys.add(get_entry_pubkey(mint_pubkey).toBase58());
+        }
+    }
+
 //    async query_wallet()
 //    {
 //        try {
@@ -1652,7 +1779,6 @@ exports.Block = Block;
 exports.EntryState = EntryState;
 exports.Entry = Entry;
 exports.Wallet = Wallet;
-exports.WalletItemType = WalletItemType;
 exports.nifty_program_pubkey = () => g_nifty_program_pubkey;
 exports.config_pubkey = () => g_config_pubkey;
 exports.master_stake_pubkey = () => g_master_stake_pubkey;
