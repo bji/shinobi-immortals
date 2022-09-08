@@ -1528,7 +1528,7 @@ class Wallet
             
             // Return value 0 means abort
             if (result == 0) {
-                throw new Error("Aborted by user");
+                return null;
             }
             // Return value 1 means repeat with new recent blockhash
             else if (result == 1) {
