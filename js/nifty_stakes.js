@@ -1,7 +1,8 @@
 'use strict';
 
-const SolanaWeb3 = require('@solana/web3.js');
-const Buffer = require('buffer');
+const SolanaWeb3 = require("@solana/web3.js");
+const Buffer = require("buffer");
+const bs58 = require("bs58");
 const { _buy_tx,
         _buy_mystery_tx,
         _refund_tx,
@@ -21,8 +22,8 @@ const SPL_TOKEN_PROGRAM_ADDRESS = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const SPL_ASSOCIATED_TOKEN_PROGRAM_ADDRESS = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
 const STAKE_PROGRAM_ADDRESS = "Stake11111111111111111111111111111111111111";
 
-const BLOCKS_AT_ONCE = 5;
-const ENTRIES_AT_ONCE = 25;
+const BLOCKS_AT_ONCE = 3;
+const ENTRIES_AT_ONCE = 20;
 
 const g_nifty_program_pubkey = new SolanaWeb3.PublicKey(NIFTY_PROGRAM_ADDRESS);
 const g_metaplex_program_pubkey = new SolanaWeb3.PublicKey(METAPLEX_PROGRAM_ADDRESS);
@@ -44,15 +45,205 @@ const g_ki_metadata_pubkey = metaplex_metadata_pubkey(g_ki_mint_pubkey);
 const g_bid_marker_mint_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 11 ] ], g_nifty_program_pubkey)[0];
 
 
-function delayed_promise(resolve, delay_ms)
+function delay(delay_ms)
 {
-    return new Promise(() => setTimeout(resolve, delay_ms));
+    return new Promise((resolve) => setTimeout(resolve, delay_ms));
+}
+
+
+// Single possibly rate-limited RPC connection.  If a rate limit is set, it will observe it, and throw an error
+// for any request that would exceed the limit
+class RpcConnection
+{
+    static create(rpc_endpoint, max_requests, max_data)
+    {
+        return new RpcConnections(rpc_endpoint, max_requests, max_data);
+    }
+
+    constructor(rpc_endpoint, max_requests, max_data)
+    {
+        this.requests_array = [ ];
+
+        this.data_array = [ ];
+
+        this.data_sum = 0;
+
+        this.connection = new SolanaWeb3.Connection(rpc_endpoint, "confirmed");
+
+        this.update(max_requests, max_data);
+    }
+
+    update(max_requests, max_data)
+    {
+        if ((max_requests != null) && ((max_requests.limit == null) || (max_requests.duration == null))) {
+            max_requests = null;
+        }
+            
+        if ((max_data != null) && ((max_data.limit == null) || (max_data.duration == null))) {
+            max_data = null;
+        }
+        
+        this.max_requests = max_requests;
+
+        this.max_data = max_data;
+    }
+
+    async getGenesisHash()
+    {
+        return this.execute(() => { return this.connection.getGenesisHash(); }, 1024);
+    }
+
+    async getAccountInfo(pubkey, config)
+    {
+        return this.execute(() => { return this.connection.getAccountInfo(pubkey, config); }, 10 * 1024);
+    }
+
+    async getEpochInfo()
+    {
+        return this.execute(() => { return this.connection.getEpochInfo(); }, 1024);
+    }
+
+    async getBlockTime(absoluteSlot)
+    {
+        return this.execute(() => { return this.connection.getBlockTime(absoluteSlot); }, 1024);
+    }
+
+    async getMultipleAccountsInfo(block_pubkeys)
+    {
+        return this.execute(() => { return this.connection.getMultipleAccountsInfo(block_pubkeys); },
+                            block_pubkeys.length * 10 * 1024);
+    }
+
+    async getBalance(wallet_pubkey)
+    {
+        return this.execute(() => { return this.connection.getBalance(wallet_pubkey); }, 1024);
+    }
+    
+    async getParsedTokenAccountsByOwner(wallet_pubkey, config)
+    {
+        return this.execute(() => { return this.connection.getParsedTokenAccountsByOwner(wallet_pubkey, config); },
+                            20 * 1024);
+    }
+    
+    async getLatestBlockhash()
+    {
+        return this.execute(() => { return this.connection.getLatestBlockhash(); }, 1024);
+    }
+
+    async sendRawTransaction(raw_tx)
+    {
+        return this.execute(() => { return this.connection.sendRawTransaction(raw_tx); }, 5 * 1024);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Private implementation details follows -------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------------------------------
+
+    async execute(f, data_size)
+    {
+        // Remove already expired request timeouts
+        let now = Date.now();
+        while (this.requests_array.length > 0) {
+            let entry = this.requests_array[0];
+            if (entry.until > now) {
+                break;
+            }
+            this.requests_array.shift();
+        }
+
+        // Remove already expired data timeouts
+        while (this.data_array.length > 0) {
+            let entry = this.data_array[0];
+            if (entry.until > now) {
+                break;
+            }
+            this.data_sum -= entry.data_size;
+            this.data_array.shift();
+        }
+
+        // If there is a limit on the maximum number of requests, make sure that limit is not exceeded
+        if ((this.max_requests != null) && (this.requests_array.length >= this.max_requests.limit)) {
+            throw new Error(this.connection.rpcEndpoint + ": Too many outstanding requests");
+        }
+
+        // If there is a limit on the maximum amount of data, make sure that limit is not exceeded
+        if ((this.max_data != null) && ((this.data_sum + data_size) > this.max_data.limit)) {
+            throw new Error(this.connection.rpcEndpoint + ": Too much request data");
+        }
+
+        // Add timeouts for some huge number we call "long enough" -- 10 years
+        let future = now + (10 * 365 * 24 * 60 * 60 * 1000);
+        let request_until = { until : future };
+        let data_until = { until : future, data_size : data_size };
+        
+        // Since these are the most recent they definitely go at the end
+        this.requests_array.push(request_until);
+        this.data_array.push(data_until);
+        this.data_sum += data_size;
+
+        try {
+            return await(f());
+        }
+        finally {
+            now = Date.now();
+            this.finish_request_until(now, request_until);
+            this.finish_data_until(now, data_until);
+        }
+    }
+
+    finish_request_until(now, until)
+    {
+        // Remove until
+        this.requests_array.splice(this.requests_array.indexOf(until), 1);
+
+        // If there is no limit, then there is nothing else to do
+        if (this.max_requests == null) {
+            return;
+        }
+
+        // Add in sorted order a new timeout that is +duration away
+        until = { until : now + this.max_requests.duration };
+
+        for (let i = 0; i < this.requests_array.length; i++) {
+            if (this.requests_array[i].until > now) {
+                this.requests_array.splice(i, 0, until);
+                return;
+            }
+        }
+
+        this.requests_array.push(until);
+    }
+
+    finish_data_until(now, until)
+    {
+        // Remove until
+        this.data_array.splice(this.data_array.indexOf(until), 1);
+
+        // If there is no limit, then there is nothing else to do, except remove the data_size since it
+        // wasn't used
+        if (this.max_data == null) {
+            this.data_sum -= until.data_size;
+            return;
+        }
+
+        // Add in sorted order a new timeout that is +duration away
+        until = { until : now + this.max_data.duration, data_size : until.data_size };
+
+        for (let i = 0; i < this.data_array.length; i++) {
+            if (this.data_array[i].until > until.until) {
+                this.data_array.splice(i, 0, until);
+                return;
+            }
+        }
+
+        this.data_array.push(until);
+    }
 }
 
 
 // RpcConnections holds a set of endpoints connecting to a single cluster.  It provides functions for executing
 // functions against a cluster in a round-robin fashion; and running a function repeatedly on the cluster, until
-// stopped.
+// stopped.  It also supports rate limits on requests so as not to exceed limits imposed by the RPC server.
 class RpcConnections
 {
     static create()
@@ -63,7 +254,7 @@ class RpcConnections
     // Do not use until the successful completion of the first update() call.
     constructor()
     {
-        // Map from rpc_endpoint to rpc_connection
+        // Map from rpc_endpoint to { rpc_connection, queued_requests }
         this.map = new Map();
 
         // List of rpc_connections (not set here since initialized in update)
@@ -73,28 +264,56 @@ class RpcConnections
         // this.index = 0;
     }
 
-    // If rpc_endpoints is null, a default is used.  Throws an error if it failed because any one of new_rpc_endpoints
-    // was not for the same cluster as this RpcConnections instance.
-    async update(new_rpc_endpoints)
+    // new_rpcpoint_descriptors is either a single string, a single object, or an array of strings and objects.
+    // The strings are endpoint URLs with no query limits.  The objects are of this form:
+    // {
+    //    rpc_endpoint : String,
+    //    max_requests : { limit : int, duration (milliseconds) : int },
+    //    max_data : { limit : int, duration (bytes) : int },
+    // }
+    // If max_requests is non-null, it places a maximum of limit requests per duration milliseconds.
+    // If max_data is non-null, it places a maximum of limit bytes per duration milliseconds.
+    // If rpc_endpoint_descriptors is null, a default is used.  Throws an error if any one of rpc_endpoint_descriptors
+    // is not for the same cluster as this RpcConnections instance.
+    async update(rpc_endpoint_descriptors)
     {
         // If new_rpc_endpoints is null, then use default set of rpc endpoints
-        if (new_rpc_endpoints == null) {
-            new_rpc_endpoints = [ "https://api.mainnet-beta.solana.com", "https://ssc-dao.genesysgo.net" ];
+        if (rpc_endpoint_descriptors == null) {
+            rpc_endpoint_descriptors =
+                [
+                    {
+                        rpc_endpoint : "https://api.mainnet-beta.solana.com",
+                        max_requests : { limit : 40, duration : 10 * 1000 },
+                        max_data : { limit : 100 * 1000 * 1000, duration : 30 * 1000 }
+                    },
+                    "https://ssc-dao.genesysgo.net"
+                ];
         }
-        else if (!Array.isArray(new_rpc_endpoints)) {
-            new_rpc_endpoints = [ new_rpc_endpoints ];
+        else if (!Array.isArray(rpc_endpoint_descriptors)) {
+            rpc_endpoint_descriptors = [ rpc_endpoint_descriptors ];
         }
 
         // Create a new map and array from new_rpc_endpoints (re-using existing RPC connections)
         let new_map = new Map();
         let new_array = [ ];
         
-        for (let rpc_endpoint of new_rpc_endpoints) {
-            let rpc_connection = this.map.get(rpc_endpoint);
+        for (let descriptor of rpc_endpoint_descriptors) {
+            if (typeof(descriptor) == "string") {
+                // Not an object, must be a string, so make it into an object
+                descriptor = {
+                    rpc_endpoint : descriptor,
+                    max_requests : null,
+                    max_data : null
+                };
+            }
+
+            let rpc_connection = this.map.get(descriptor.rpc_endpoint);
 
             if (rpc_connection == null) {
-                rpc_connection = new SolanaWeb3.Connection(rpc_endpoint, "confirmed");
-
+                rpc_connection = new RpcConnection(descriptor.rpc_endpoint,
+                                                   descriptor.max_requests,
+                                                   descriptor.max_data);
+                
                 // Check to make sure that the genesis hash is consistent
                 let genesis_hash = await rpc_connection.getGenesisHash();
                 
@@ -105,10 +324,14 @@ class RpcConnections
                     throw new Error("invalid rpc_endpoint");
                 }
             }
-
+            else if ((descriptor.max_requests != null) &&
+                     (descriptor.max_data != null)) {
+                rpc_connection.update(descriptor.max_requests, descriptor.max_data);
+            }
+            
             new_array.push(rpc_connection);
             
-            new_map.set(rpc_endpoint, rpc_connection);
+            new_map.set(descriptor.rpc_endpoint, rpc_connection);
         }
 
         this.map = new_map;
@@ -120,47 +343,54 @@ class RpcConnections
     
     // Runs the async function, passing it an rpc_connection to use, and returning the result.  If the function throws
     // an error, retries it after 1 second.  If the RpcConnections is shut down, throws an error.
+    // If the request cannot be run because the connection is overloaded, throws an error.
     async run(func, error_prefix)
     {
-        try {
-            let result = await func(this.get());
+        let rpc_connection = this.get();
 
-            if (this.is_shutdown) {
-                throw new Error("shutdown");
+        while (true) {
+            try {
+                return await func(this.get());
             }
-
-            return result;
-        }
-        catch (error) {
-            if (this.is_shutdown) {
-                throw new Error("shutdown");
+            catch (error) {
+                if (this.is_shutdown) {
+                    throw new Error("shutdown");
+                }
+                
+                await delay(1 * 1000);
             }
-            
-            console.log("error " + error_prefix + ": " + error);
-
-            return delayed_promise(() => { return this.run(func, error_prefix); }, 1 * 1000);
         }
     }
 
+    // Runs the async function, passing it an rpc_connection to use, and returning the result.  If the function throws
+    // an error or is shut down, throws an error.
+    async run_once(func, error_prefix)
+    {
+        return func(this.get());
+    }
+    
     // Runs an async function at fixed intervals until the RpcConnections is shutdown.
     // - When the function throws an error, re-runs it after 1 second
     // - When the function completes successfully, re-runs it after 1 minute
     async loop(func, interval_milliseconds)
     {
-        // Exit the loop when the RpcConnections is shut down
-        if (this.is_shutdown) {
-            return;
-        }
+        while (true) {
+            // Exit the loop when the RpcConnections is shut down
+            if (this.is_shutdown) {
+                return;
+            }
         
-        try {
-            await func();
+            try {
+                await func();
 
-            // On success, re-run the loop after [interval_milliseconds]
-            return delayed_promise(() => { return this.loop(func, interval_milliseconds); }, interval_milliseconds);
-        }
-        catch (error) {
-            // On error, re-run the loop after 1 second
-            return delayed_promise(() => { return this.loop(func, interval_milliseconds); }, 1 * 1000);
+                // On success, re-run the loop after [interval_milliseconds]
+                await delay(interval_milliseconds);
+            }
+            catch (error) {
+                // On error, re-run the loop after 1 second
+                console.log("Loop error: " + error);
+                await delay(1 * 1000);
+            }
         }
     }
 
@@ -183,11 +413,6 @@ class RpcConnections
         this.index = (this.index + 1) % this.array.length;
 
         return this.array[this.index];
-    }
-
-    has(rpc_connection)
-    {
-        return this.map.has(rpc_connection.rpcEndpoint);
     }
 }
 
@@ -327,6 +552,8 @@ class Cluster
         };
     }
 
+    // Causes an entry to be immediately refreshed.  If this causes the Entry to change, asynchronously a callback
+    // into the callbacks' on_entry_changed function will be made.
     async refresh_entry(entry)
     {
         let block_result = await this.rpc_connections.run((rpc_connection) => {
@@ -727,12 +954,12 @@ class Entry
     // Returns the metaplex metadata URI for the entry, as stored in the metaplex metadata of the entry
     async get_metaplex_metadata_uri(rpc_connections)
     {
-        let result = rpc_connections.run((rpc_connection) => {
+        let result = await rpc_connections.run((rpc_connection) => {
             return rpc_connection.getAccountInfo(this.metaplex_metadata_pubkey);
         }, "fetch metaplex metadata");
 
         let data = result.data;
-                
+
         // Skip key, update_authority, mint
         let offset = 1 + 32 + 32;
         // name_len
@@ -840,28 +1067,8 @@ class Entry
         return (this.block.mystery_phase_end_timestamp + this.block.reveal_period_duration);
     }
 
-    // Returns the pubkey of a bid marker for an auction bid for this Entry.  Only returns a value if
-    // The cluster has a wallet_pubkey set, as the pubkey returned will be associated with that wallet.
-//    get_bid_marker_token_pubkey()
-//    {
-//        let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//        if (wallet_pubkey == null) {
-//            return null;
-//        }
-//
-//        return get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
-//    }
-//
-//    get_bid_pubkey()
-//    {
-//        let bid_marker_token_pubkey = this.get_bid_marker_token_pubkey();
-//        if (bid_marker_token_pubkey == null) {
-//            return null;
-//        }
-//
-//        return get_bid_pubkey(bid_marker_token_pubkey);
-//    }
-
+    // Private implementation follows ---------------------------------------------------------------------------------
+    
     // Cribbed from user_buy.c
     static compute_price(total_seconds, start_price, end_price, seconds_elapsed)
     {
@@ -920,9 +1127,7 @@ class Entry
 // All pubkeys passed into and returned from Wallet are strings.
 class Wallet
 {
-    // callbacks.submit_tx must be a function which accepts a Transaction that has no recent_blockhash set, and sets
-    // the the recent_blockhash on the Transaction and submits it, returning a Promise
-    static create(rpc_connections, wallet_pubkey, callbacks)
+    static create(rpc_connections, wallet_pubkey)
     {
         return new Wallet(rpc_connections, wallet_pubkey, callbacks);
     }
@@ -934,23 +1139,18 @@ class Wallet
 
         this.wallet_pubkey_holder = { wallet_pubkey : null };
         
-        this.callbacks = callbacks;
-
         this.set_wallet_pubkey(wallet_pubkey);
 
         // Fetch SOL balance only twice every 5 seconds
         // this.last_balance_fetch_time = 0;
-        // this.last_balance_fetch_count = 0;
         // this.sol_balance = null;
 
         // Fetch wallet tokens only once every 30 seconds
         // this.last_tokens_fetch_time = 0;
-        // this.last_tokens_fetch_count = 0;
         // xxx tokens
 
         // Fetch wallet stakes only once every 30 seconds
         // this.last_stakes_fetch_time = 0;
-        // this.last_stakes_fetch_count = 0;
         // xxx stakes
     }
 
@@ -974,12 +1174,14 @@ class Wallet
 
         // Reset saved state because the wallet pubkey has changed
         this.last_balance_fetch_time = null;
-        this.last_balance_fetch_count = 0;
         this.sol_balance = null;
+        this.ki_balance = null;
+        this.entry_pubkeys = new Set();
+        this.bids_by_entry_pubkey = new Map();
+        this.bids_by_entry_mint = new Map();
+        this.stakes = [ ];
         this.last_tokens_fetch_time = null;
-        this.last_tokens_fetch_count = 0;
         this.last_stakes_fetch_time = null;
-        this.last_stakes_fetch_count = 0;
     }
 
     // Returns a string, or null
@@ -1008,9 +1210,7 @@ class Wallet
         // If never fetched balance, fetch it
         if ((this.last_balance_fetch_time == null) ||
             // If haven't fetched balance for 5 seconds, fetch it
-            ((now - this.last_balance_fetch_time) > 5000) ||
-            // If fetched balance twice already in the previous 5 seconds, fetch it
-            (this.last_balance_fetch_count == 2)) {
+            ((now - this.last_balance_fetch_time) > 5000)) {
 
             // Wait on getting SOL balance of wallet
             let sol_balance = await this.rpc_connections.run((rpc_connection) => {
@@ -1020,11 +1220,7 @@ class Wallet
             if (wallet_pubkey_holder == this.wallet_pubkey_holder) {
                 this.sol_balance = sol_balance;
                 this.last_balance_fetch_time = Date.now();
-                this.last_balance_fetch_count = 1;
             }
-        }
-        else {
-            this.last_balance_fetch_count += 1;
         }
             
         return this.sol_balance;
@@ -1074,7 +1270,7 @@ class Wallet
     {
         await this.update_token_data();
 
-        return this.bids_by_mint.get(entry.mint_pubkey.toBase58());
+        return this.bids_by_entry_mint.get(entry.mint_pubkey.toBase58());
     }
     
     async update_token_data()
@@ -1093,10 +1289,7 @@ class Wallet
         // If never fetched balance, fetch it
         if ((this.last_tokens_fetch_time == null) ||
             // If haven't fetched tokens in 30 seconds, fetch them
-            ((now - this.last_tokens_fetch_time) > 30000) ||
-            // If fetched balance already in the previous 30 seconds, fetch it
-            (this.last_tokens_fetch_count == 1)) {
-
+            ((now - this.last_tokens_fetch_time) > 30000)) {
             let results = await this.rpc_connections.run((rpc_connection) =>
                 {
                     return rpc_connection.getParsedTokenAccountsByOwner(wallet_pubkey,
@@ -1109,6 +1302,8 @@ class Wallet
 
             let new_bids_by_entry_pubkey = new Map();
 
+            let new_bids_by_entry_mint = new Map();
+            
             let promises = [ ];
 
             for (let idx = 0; idx < results.value.length; idx++) {
@@ -1139,7 +1334,7 @@ class Wallet
                 // details of the bid and add it to new_bids_by_entry_pubkey
                 if (mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
                     pubkey = new SolanaWeb3.PublicKey(pubkey);
-                    promises.push(this.add_bid_by_entry_pubkey(pubkey, new_bids_by_entry_pubkey));
+                    promises.push(this.process_bid(pubkey, new_bids_by_entry_pubkey, new_bids_by_entry_mint));
                 }
                 // Else if its mint is the ki mint, then add its ki tokens to the total
                 else if (mint_pubkey.equals(g_ki_mint_pubkey)) {
@@ -1148,28 +1343,26 @@ class Wallet
                 else {
                     // Add an async function to check to see if its update authority is the Shinobi Immortals program
                     // authority, and if so, add it to new_entries.
-                    promises.push(this.check_update_authority(mint_pubkey, new_entry_pubkeys));
+                    promises.push(this.process_mint(mint_pubkey, new_entry_pubkeys));
                 }
             }
 
             await Promise.all(promises);
 
-            // Now rebuild this.ki_balance, this.entry_pubkeys, and this.bids_by_entry_pubkey from the resulting data
+            // Now rebuild this.ki_balance, this.entry_pubkeys, this.bids_by_entry_pubkey, and this.bids_by_entry_mint
+            // from the resulting data
             if (wallet_pubkey_holder == this.wallet_pubkey_holder) {
                 this.ki_balance = new_ki_balance;
                 this.entry_pubkeys = new_entry_pubkeys;
                 this.bids_by_entry_pubkey = new_bids_by_entry_pubkey;
+                this.bids_by_entry_mint = new_bids_by_entry_mint;
                 
                 this.last_tokens_fetch_time = Date.now();
-                this.last_tokens_fetch_count = 1;
             }
-        }
-        else {
-            this.last_tokens_fetch_count += 1;
         }
     }
 
-    async add_bid_by_entry_pubkey(bid_marker_token_pubkey, bids_by_entry_pubkey)
+    async process_bid(bid_marker_token_pubkey, bids_by_entry_pubkey, bids_by_entry_mint)
     {
         let result = this.rpc_connections.run((rpc_connection) =>
             {
@@ -1178,14 +1371,20 @@ class Wallet
                                                          dataSlice : { offset : 4,
                                                                        length : 32 }
                                                      });
-            }, "update token data bid data");
+            }, "fetch bid account");
 
-        let entry_pubkey = get_entry_pubkey(/* entry mint pubkey */ new SolanaWeb3.PublicKey(result.data)).toBase58();
+        let entry_mint_pubkey = new SolanaWeb3.PublicKey(result.data);
 
-        bids_by_entry_pubkey.set(entry_pubkey, { entry_pubkey : entry_pubkey, lamports : result.lamports });
+        let entry_pubkey = get_entry_pubkey(entry_mint_pubkey).toBase58();
+
+        let value = { entry_pubkey : entry_pubkey, lamports : result.lamports };
+
+        bids_by_entry_pubkey.set(entry_pubkey, value);
+        
+        bids_by_entry_mint.set(entry_mint_pubkey.toBase58(), value);
     }
 
-    async check_update_authority(mint_pubkey, new_entry_pubkeys)
+    async process_mint(mint_pubkey, new_entry_pubkeys)
     {
         // Load the metaplex metadata
         let result = await this.rpc_connections.run((rpc_connection) => {
@@ -1204,242 +1403,178 @@ class Wallet
         }
     }
 
-//    async query_wallet()
-//    {
-//        try {
-//            let rpc_connection = this.rpc_connections.get();
-//            // Save wallet_pubkey_holder so that we know if it changed
-//            let wallet_pubkey_holder = this.wallet_pubkey_holder;
-//            let wallet_pubkey = this.wallet_pubkey_holder.pubkey;
-//            
-//            // Create promises to wait on
-//            let promises = [ ];
-//            
-//            let sol_balance;
-//            
-//            // Wait on getting SOL balance of wallet
-//            let result = await rpc_connection.getBalance(entry.block.pubkey).then((b) => sol_balance = b);
-//            
-//            await Promises.all(promises);
-//            
-//            // If the rpc or wallet config has changed, ignore results
-//            if (!this.rpc_connections.has(rpc_connection) || (this.wallet_pubkey_holder != wallet_pubkey_holder)) {
-//                return;
-//            }
-//            
-//            // If the balance has changed, callback to indicate this
-//            if ((sol_balance != null) && (sol_balance != this.sol_balance)) {
-//                this.sol_balance = sol_balance;
-//                if ((callbacks != null) && (callbacks.on_sol_balance_changed != null)) {
-//                    callbacks.on_sol_balance_changed(sol_balance);
-//                    // If the state changed such that this query is out of date, stop querying the wallet
-//                    if (!rpc_connections.has(rpc_connection) || (this.wallet_pubkey_holder != wallet_pubkey_holder)) {
-//                        // Restart the query
-//                        
-//                    }
-//                }
-//            }
-//        }
-//        
-//        // Wait on getting results of all token accounts owned by the wallet
-//        promises.push(this.rpc_connection.getParsedTokenAccountsByOwner
-//                      (this.wallet_pubkey, { programId : g_spl_token_program_pubkey }).then(() results = r));
-//        
-//        await Promises.all(promises);
-//        
-//        // After async call, check to make sure that rpc connection is still valid, and that the wallet pubkey
-//        // holder has not changed to a new one
-//        if (!this.rpc_connections.has(rpc_connection) || (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
-//            // Try again immediately
-//            setTimeout(() => this.query_wallet(), 0);
-//            return;
-//        }
-//        
-//        // Promises to wait on to complete remaining operationsn
-//        promises = [ ];
-//        
-//        // Wallet-owned entries
-//        let entries = [ ];
-//        
-//        // Wallet-owned bids
-//        let bids = [ ];
-//        
-//        for (let idx = 0; idx < results.value.length; idx++) {
-//            let account = results.value[idx].account;
-//            let pubkey = results.value[idx].pubkey;
-//            
-//            if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
-//                (account.data.parsed.info == null)) {
-//                continue;
-//            }
-//            
-//            if (account.data.parsed.info.state != "initialized") {
-//                continue;
-//            }
-//            
-//            if (account.data.parsed.info.tokenAmount.amount == 0) {
-//                continue;
-//            }
-//            
-//            // Should never happen but just in case
-//            if (account.data.parsed.info.owner != wallet_pubkey.toBase58()) {
-//                continue;
-//            }
-//            
-//            let mint_pubkey = new SolanaWeb3.PublicKey(account.data.parsed.info.mint);
-//            
-//            let amount = 
-//                
-//            let token = {
-//                mint_pubkey : ),
-//                
-//                account_pubkey : pubkey,
-//                
-//                amount : account.data.parsed.info.tokenAmount.amount
-//        };
-//        
-//        tokens.push(token);
-//        
-//        if (token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
-//            promises.push(this.lookup_bid_entry_mint_pubkey(pubkey)
-//                          .then((bid_entry_mint_pubkey) =>
-//                              {
-//                                  if (bid_entry_mint_pubkey == null) {
-//                                      return;
-//                                  }
-//                                  
-//                                  return this.get_entry(get_entry_pubkey(bid_entry_mint_pubkey));
-//                              })
-//                          .then((entry) =>
-//                                     {
-//                                         entries.push(entry);
-//                                     }));
-//               }
-//               else {
-//                   promises.push(this.lookup_mint_update_authority(account.data.parsed.info.mint
-//               }
-//           }
-//
-//           // Now await all results
-//           await Promise.all(promises);
-//
-//           // After async call, check to make sure that rpc connection is still valid, and that the wallet pubkey
-//           // holder has not changed to a new one
-//           if (!this.rpc_connections.has(rpc_connection) || (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
-//               // Try again immediately
-//               setTimeout(() => this.query_tokens(), 0);
-//               return;
-//           }
-//
-//           // For each token:
-//           // - If it has bid_entry_mint_pubkey set, then it's a bid
-//           // - Else if it has 
-//           for (let token in tokens) {
-//               
-//           }
-//           
-//           
-//           // For each wallet token, if it is a bid marker, then look up its bid entry
-//           for (let idx = 0; idx < wallet_tokens.length; idx++) {
-//               let wallet_token = wallet_tokens[idx];
-//
-//               if (wallet_token.mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
-//                   wallet_token.bid_entry_mint_pubkey =
-//                       await this.lookup_bid_entry_mint_pubkey(wallet_token.account_pubkey);
-//                   // After async call, check to make sure that rpc connection is still valid, and that the wallet
-//                   // pubkey holder has not changed to a new one
-//                   if (!this.rpc_connections.has(rpc_connection) ||
-//                       (wallet_pubkey_holder != this.wallet_pubkey_holder)) {
-//                       // Try again immediately
-//                       setTimeout(() => this.query_tokens(), 0);
-//                       return;
-//                   }
-//               }
-//           }
-//
-//           on_wallet_tokens(wallet_tokens);
-//                   
-//           if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-//               return;
-//           }
-//                   
-//           // Retry in 1 minute
-//           if (repeat) {
-//               setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 60 * 1000);
-//           }
-//       }
-//       catch(error) {
-//           console.log("Query tokens error " + error);
-//
-//           if (this.is_shutdown || (this.wallet_pubkey == null) || !wallet_pubkey.equals(this.wallet_pubkey)) {
-//               return;
-//           }
-//                   
-//           // Retry in 1 second
-//           setTimeout(() => this.query_tokens(wallet_pubkey, on_wallet_tokens), 1000);
-//       }
-//   }
-//       catch (error) {
-//           console.log("query_wallet error: " + error);
-//
-//           // Re-try wallet query after 1 second
-//           setTimeout(() => this.query_wallet(), 1000);
-//       }
-//   }
-// 
-//   // maximum_price_lamports should be the price that was shown to the user
-//   async buy_entry(entry, clock, maximum_price_lamports)
-//   {
-//       while (true) {
-//           try {
-//               let rpc_connection this.rpc_connections.get();
-//
-//               let wallet_holder = this.wallet_holder;
-//
-//               // If maximum_price_lamports was not passed in, then get it.  This maximum is
-//               // guaranteed to be no higher than any value that was presented to them (since clock only moves
-//               // forwards and thus entry price can only go down).
-//               if (maximum_price_lamports == null) {
-//                   maximum_price_lamports = entry.get_price(clock);
-//               }
-//
-//               let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
-//
-//               // If wallet pubkey changed, then abort
-//               if (wallet_holder != this.wallet_holder) {
-//                   break;
-//               }
-//
-//               // If rpc connections changed, then try again
-//               if (!this.rpc_connections.has(rpc_connection)) {
-//                   continue;
-//               }
-//
-//               let token_destination_pubkey = get_associated_token_pubkey(this.wallet_pubkey, entry.mint_pubkey);
-//
-//               let tx = _buy_tx({ funding_pubkey : this.wallet_pubkey,
-//                                  config_pubkey : g_config_pubkey,
-//                                  admin_pubkey : admin_pubkey,
-//                                  block_pubkey : entry.block.pubkey,
-//                                  entry_pubkey : entry.pubkey,
-//                                  entry_token_pubkey : entry.token_pubkey,
-//                                  entry_mint_pubkey : entry.mint_pubkey,
-//                                  token_destination_pubkey : token_destination_pubkey,
-//                                  token_destination_owner_pubkey : wallet_pubkey,
-//                                  metaplex_metadata_pubkey : entry.metaplex_metadata_pubkey,
-//                                  maximum_price_lamports : maximum_price_lamports });
-//
-//               return this.callbacks.submit_tx(tx);
-//           }
-//           catch (error) {
-//               console.log("buy_entry error " + error);
-//
-//               // Try again after 5 seconds
-//               return setTimeout(() => this.buy_entry(entry, clock, maximum_price_lamports));
-//           }
-//       }
-//   }
-//
+    async fetch_admin_pubkey()
+    {
+        let result = await this.rpc_connections.run((rpc_connection) =>
+            {
+                return rpc_connection.getAccountInfo(g_config_pubkey,
+                                                     {
+                                                         dataSlice : { offset : 4,
+                                                                       length : 32 }
+                                                     });
+            }, "fetch admin pubkey");
+        
+        if (result == null) {
+            return null;
+        }
+        
+        return new SolanaWeb3.PublicKey(result.data);
+    }
+
+    // For all of the following, sign_callback must be an async function with this signature:
+    //    async sign_callback(tx_base64_string, slots_until_expiry);
+    // where:
+    //    tx_base64_string -- is a base64 encoded transaction ready to be offline-signed
+    //    slots_until_expiry -- is the number of slots until the tx expires and must be re-submitted
+    //
+    // The return value of sign_callback must be one of:
+    // a. a base64 encoded string version of signed tx
+    // b. 0 -- to cancel the transaction
+    // c. 1 -- to re-try with a new recent blockhash (i.e. a new expiration_slot); which call back into sign_tx again
+    //         with an updated version of the transaction
+    
+    // maximum_price_lamports should be the price that was shown to the user, but null can be passed in and it will
+    // be fetched from current data.
+    // Returns the string transaction id of the completed transaction.  Throws an error on all failures.
+    async buy_entry(entry, clock, maximum_price_lamports, mystery, sign_callback)
+    {
+        return this.complete_tx((wallet_pubkey) => {
+            return this.make_buy_tx(entry, clock, maximum_price_lamports, mystery, wallet_pubkey);
+        }, sign_callback);
+    }
+
+    async make_buy_tx(entry, clock, maximum_price_lamports, mystery, wallet_pubkey)
+    {
+        if (maximum_price_lamports == null) {
+            maximum_price_lamports = entry.get_price(clock);
+        }
+        
+        let admin_pubkey = await this.fetch_admin_pubkey();
+
+        let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, entry.mint_pubkey);
+
+        return mystery ?
+            _buy_mystery_tx({ funding_pubkey : wallet_pubkey,
+                              config_pubkey : g_config_pubkey,
+                              admin_pubkey : admin_pubkey,
+                              block_pubkey : entry.block.pubkey,
+                              entry_pubkey : entry.pubkey,
+                              entry_token_pubkey : entry.token_pubkey,
+                              entry_mint_pubkey : entry.mint_pubkey,
+                              token_destination_pubkey : token_destination_pubkey,
+                              token_destination_owner_pubkey : wallet_pubkey,
+                              metaplex_metadata_pubkey : entry.metaplex_metadata_pubkey,
+                              maximum_price_lamports : maximum_price_lamports }) :
+            _buy_tx({ funding_pubkey : wallet_pubkey,
+                      config_pubkey : g_config_pubkey,
+                      admin_pubkey : admin_pubkey,
+                      block_pubkey : entry.block.pubkey,
+                      entry_pubkey : entry.pubkey,
+                      entry_token_pubkey : entry.token_pubkey,
+                      entry_mint_pubkey : entry.mint_pubkey,
+                      token_destination_pubkey : token_destination_pubkey,
+                      token_destination_owner_pubkey : wallet_pubkey,
+                      metaplex_metadata_pubkey : entry.metaplex_metadata_pubkey,
+                      maximum_price_lamports : maximum_price_lamports });
+    }
+
+    
+    async complete_tx(tx_maker_func, sign_callback)
+    {
+        let wallet_pubkey_holder = this.wallet_pubkey_holder;
+        let wallet_pubkey = wallet_pubkey_holder.wallet_pubkey;
+        if (wallet_pubkey == null) {
+            throw new Error("No wallet");
+        }
+
+        while (true) {
+            let tx = await tx_maker_func(wallet_pubkey);
+
+            if (wallet_pubkey_holder != this.wallet_pubkey_holder) {
+                // Wallet pubkey changed, so abort
+                throw new Error("Wallet change");
+            }
+            
+            let recent_blockhash_result = await this.rpc_connections.run((rpc_connection) =>
+                {
+                    return rpc_connection.getLatestBlockhash();
+                }, "fetch recent blockhash");
+
+            if (wallet_pubkey_holder != this.wallet_pubkey_holder) {
+                // Wallet pubkey changed, so abort
+                throw new Error("Wallet change");
+            }
+
+            if (recent_blockhash_result == null) {
+                throw new Error("Failed to fetch recent_blockhash_values");
+            }
+            
+            let recent_blockhash = recent_blockhash_result.blockhash;
+            // It appears that last valid block height is not reported correctly!  Use 120 ...
+            // let recent_blockhash_expiry = recent_blockhash_result.lastValidBlockHeight;
+            let recent_blockhash_expiry = 120;
+                
+            tx.feePayer = wallet_pubkey;
+            tx.recentBlockhash = recent_blockhash;
+
+            let tx_base64 = Buffer.Buffer.from(tx.serialize({ verifySignatures : false })).toString("base64");
+            
+            let result = await sign_callback(tx_base64, recent_blockhash_expiry);
+
+            if (wallet_pubkey_holder != this.wallet_pubkey_holder) {
+                // Wallet pubkey changed, so abort
+                throw new Error("Wallet change");
+            }
+            
+            // Return value 0 means abort
+            if (result == 0) {
+                throw new Error("Aborted by user");
+            }
+            // Return value 1 means repeat with new recent blockhash
+            else if (result == 1) {
+                continue;
+            }
+
+            // Else return value is base64 encoded signature to use
+            try {
+                tx.addSignature(wallet_pubkey, bs58.decode(result));
+            }
+            catch (error) {
+                throw new Error("Invalid signature: " + error);
+            }
+
+            let raw_tx;
+            try {
+                raw_tx = tx.serialize();
+            }
+            catch (error) {
+                throw new Error("Invalid transaction: " + error);
+            }
+            
+            // Submit the tx
+            return this.submit_tx(raw_tx);
+        }
+    }
+
+    async submit_tx(raw_tx)
+    {
+        // Retry up to 4 times with a 1 second delay in between each retry
+        let retry_count = 0;
+        while (true) {
+            try {
+                return await this.rpc_connections.run_once((rpc_connection) => {
+                    return rpc_connection.sendRawTransaction(raw_tx);
+                }, "submit tx");
+            }
+            catch (error) {
+                if (retry_count++ == 4) {
+                    throw new Error("Failed to submit transaction: " + error);
+                }
+                await delay(1000);
+            }
+        }
+    }
+
 //   // maximum_price_lamports should be the price that was shown to the user
 //   async buy_mystery(entry, clock, maximum_price_lamports)
 //   {
