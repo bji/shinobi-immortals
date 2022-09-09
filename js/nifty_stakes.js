@@ -16,38 +16,63 @@ const { _buy_tx,
         _take_commission_or_delegate_tx
       } = require("./tx.js");
 
-const NIFTY_PROGRAM_ADDRESS = "ShinboVZNAn1UjpZ3rJsFzLcWMP5JF8LPdHPWaaGYTV";
-const METAPLEX_PROGRAM_ADDRESS = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
-const SPL_TOKEN_PROGRAM_ADDRESS = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-const SPL_ASSOCIATED_TOKEN_PROGRAM_ADDRESS = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-const STAKE_PROGRAM_ADDRESS = "Stake11111111111111111111111111111111111111";
-
 const BLOCKS_AT_ONCE = 3;
 const ENTRIES_AT_ONCE = 20;
 
-const g_nifty_program_pubkey = new SolanaWeb3.PublicKey(NIFTY_PROGRAM_ADDRESS);
-const g_metaplex_program_pubkey = new SolanaWeb3.PublicKey(METAPLEX_PROGRAM_ADDRESS);
-const g_spl_token_program_pubkey = new SolanaWeb3.PublicKey(SPL_TOKEN_PROGRAM_ADDRESS);
-const g_spl_associated_token_program_pubkey = new SolanaWeb3.PublicKey(SPL_ASSOCIATED_TOKEN_PROGRAM_ADDRESS);
-const g_stake_program_pubkey = new SolanaWeb3.PublicKey(STAKE_PROGRAM_ADDRESS);
+// Turns an address into a SolanaWeb3.PublicKey
+function make_pubkey(address)
+{
+    return new SolanaWeb3.PublicKey(address);
+}
 
-const g_nifty_program_authority_pubkey =
-      SolanaWeb3.PublicKey.findProgramAddressSync([ [ 2 ] ], g_nifty_program_pubkey)[0];
+// Finds a Program Derived Address
+function find_pda(seeds, program_id)
+{
+    return SolanaWeb3.PublicKey.findProgramAddressSync(seeds, program_id);
+}
+
+const g_nifty_program_address = "ShinboVZNAn1UjpZ3rJsFzLcWMP5JF8LPdHPWaaGYTV";
+const g_nifty_program_pubkey = make_pubkey(g_nifty_program_address);
+
+const g_metaplex_program_address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
+const g_metaplex_program_pubkey = make_pubkey(g_metaplex_program_address);
+
+const g_spl_token_program_address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const g_spl_token_program_pubkey = make_pubkey(g_spl_token_program_address);
+
+const g_spl_associated_token_program_address = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+const g_spl_associated_token_program_pubkey = make_pubkey(g_spl_associated_token_program_address);
+
+const g_stake_program_address = "Stake11111111111111111111111111111111111111";
+const g_stake_program_pubkey = make_pubkey(g_stake_program_address);
+
+const g_nifty_program_authority_pubkey = find_pda([ [ 2 ] ], g_nifty_program_pubkey)[0];
+const g_nifty_program_authority_address = g_nifty_program_authority_pubkey.toBase58();
       
-const g_config_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 1 ] ], g_nifty_program_pubkey)[0];
+const g_config_pubkey = find_pda([ [ 1 ] ], g_nifty_program_pubkey)[0];
+const g_config_address = g_config_pubkey.toBase58();
 
-const g_master_stake_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 3 ] ], g_nifty_program_pubkey)[0];
+const g_master_stake_pubkey = find_pda([ [ 3 ] ], g_nifty_program_pubkey)[0];
+const g_master_stake_address = g_master_stake_pubkey.toBase58();
 
-const g_ki_mint_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 4 ] ], g_nifty_program_pubkey)[0];
+const g_ki_mint_pubkey = find_pda([ [ 4 ] ], g_nifty_program_pubkey)[0];
+const g_ki_mint_address = g_ki_mint_pubkey.toBase58();
 
-const g_ki_metadata_pubkey = metaplex_metadata_pubkey(g_ki_mint_pubkey);
+const g_ki_metadata_address = get_metaplex_metadata_address(g_ki_mint_address);
+const g_ki_metadata_pubkey = make_pubkey(g_ki_metadata_address);
 
-const g_bid_marker_mint_pubkey = SolanaWeb3.PublicKey.findProgramAddressSync([ [ 11 ] ], g_nifty_program_pubkey)[0];
+const g_bid_marker_mint_pubkey = find_pda([ [ 11 ] ], g_nifty_program_pubkey)[0];
+const g_bid_marker_mint_address = g_bid_marker_mint_pubkey.toBase58();
 
 
 function delay(delay_ms)
 {
     return new Promise((resolve) => setTimeout(resolve, delay_ms));
+}
+
+function address_to_buffer(address)
+{
+    return Buffer.Buffer.from(bs58.decode(address));
 }
 
 
@@ -93,8 +118,9 @@ class RpcConnection
         return this.execute(() => { return this.connection.getGenesisHash(); }, 1024);
     }
 
-    async getAccountInfo(pubkey, config)
+    async getAccountInfo(address, config)
     {
+        let pubkey = make_pubkey(address);
         return this.execute(() => { return this.connection.getAccountInfo(pubkey, config); }, 10 * 1024);
     }
 
@@ -108,20 +134,37 @@ class RpcConnection
         return this.execute(() => { return this.connection.getBlockTime(absoluteSlot); }, 1024);
     }
 
-    async getMultipleAccountsInfo(block_pubkeys)
+    async getMultipleAccountsInfo(block_addresses)
     {
+        let block_pubkeys = block_addresses.map((address) => { return make_pubkey(address); });
         return this.execute(() => { return this.connection.getMultipleAccountsInfo(block_pubkeys); },
                             block_pubkeys.length * 10 * 1024);
     }
 
-    async getBalance(wallet_pubkey)
+    async getBalance(wallet_address)
     {
+        let wallet_pubkey = make_pubkey(wallet_address);
         return this.execute(() => { return this.connection.getBalance(wallet_pubkey); }, 1024);
     }
     
-    async getParsedTokenAccountsByOwner(wallet_pubkey, config)
+    async getParsedTokenAccountsByOwner(wallet_address, program_address)
     {
+        let wallet_pubkey = make_pubkey(wallet_address);
+        let config;
+        if (program_address == null) {
+            config = null;
+        }
+        else {
+            config = { programId : make_pubkey(program_address) };
+        }
         return this.execute(() => { return this.connection.getParsedTokenAccountsByOwner(wallet_pubkey, config); },
+                            20 * 1024);
+    }
+
+    async getParsedProgramAccounts(program_address, config)
+    {
+        let program_pubkey = make_pubkey(program_address);
+        return this.execute(() => { return this.connection.getParsedProgramAccounts(program_pubkey, config); },
                             20 * 1024);
     }
     
@@ -205,7 +248,7 @@ class RpcConnection
         until = { until : now + this.max_requests.duration };
 
         for (let i = 0; i < this.requests_array.length; i++) {
-            if (this.requests_array[i].until > now) {
+            if (this.requests_array[i].until > until.until) {
                 this.requests_array.splice(i, 0, until);
                 return;
             }
@@ -356,6 +399,8 @@ class RpcConnections
                 if (this.is_shutdown) {
                     throw new Error("shutdown");
                 }
+
+                console.log("Run error (" + error_prefix + "): " + error);
                 
                 await delay(1 * 1000);
             }
@@ -389,6 +434,7 @@ class RpcConnections
             catch (error) {
                 // On error, re-run the loop after 1 second
                 console.log("Loop error: " + error);
+                
                 await delay(1 * 1000);
             }
         }
@@ -443,14 +489,14 @@ class Cluster
         
         this.callbacks = callbacks;
 
-        // Map from block pubkey to block
+        // Map from block address to block
         this.blocks = new Map();
 
-        // Map from entry pubkey to entry
+        // Map from entry address to entry
         this.entries = new Map();
 
-        // In-order array of entry pubkeys
-        this.entry_pubkeys = [ ];
+        // In-order array of entry addresses
+        this.entry_addresses = [ ];
 
         // Each query for an entry increments an index.  This allows background queries for entries to ignore their
         // results if a refresh occurred since the background query started.
@@ -524,13 +570,13 @@ class Cluster
     // Get the entry count
     entry_count()
     {
-        return this.entry_pubkeys.length;
+        return this.entry_addresses.length;
     }
 
     // Get the entry at a given index
     entry_at(index)
     {
-        return this.entries.get(this.entry_pubkeys[index]);
+        return this.entries.get(this.entry_addresses[index]);
     }
 
     // Return an iterator over all entries
@@ -557,11 +603,11 @@ class Cluster
     async refresh_entry(entry)
     {
         let block_result = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(entry.block.pubkey);
+            return rpc_connection.getAccountInfo(entry.block.address);
         }, "refresh entry update block");
 
         let entry_result = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(entry.pubkey);
+            return rpc_connection.getAccountInfo(entry.address);
         }, "refresh entry update entry");
 
         let block_updated = entry.block.update(block_result.data);
@@ -599,15 +645,15 @@ class Cluster
 
     async update_blocks(group_number, block_number)
     {
-        let block_pubkeys = [ ];
-        
+        let block_addresses = [ ];
+
         for (let i = 0; i < BLOCKS_AT_ONCE; i++) {
-            block_pubkeys.push(get_block_pubkey(group_number, block_number + i));
+            block_addresses.push(get_block_address(group_number, block_number + i));
         }
 
         let results = await this.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getMultipleAccountsInfo(block_pubkeys);
+                return rpc_connection.getMultipleAccountsInfo(block_addresses);
             }, "update blocks get accounts");
         
         let entries_promises = [ ];
@@ -617,17 +663,16 @@ class Cluster
             if (results[idx] == null) {
                 break;
             }
-            let block_pubkey = block_pubkeys[idx];
-            let block_pubkey_string = block_pubkey.toBase58();
-            let block = this.blocks.get(block_pubkey_string);
+            let block_address = block_addresses[idx];
+            let block = this.blocks.get(block_address);
             let block_changed;
             if (block == null) {
-                block = new Block(this, block_pubkeys[idx], results[idx].data);
+                block = new Block(this, block_addresses[idx], results[idx].data);
                 // Ignore blocks that are not complete
                 if (block.added_entries_count < block.total_entry_count) {
                     continue;
                 }
-                this.blocks.set(block_pubkey_string, block);
+                this.blocks.set(block_address, block);
                 block_changed = false;
             }
             else {
@@ -665,15 +710,15 @@ class Cluster
     async update_entries(block, entry_index, block_changed)
     {
         // Compute account keys
-        let entry_pubkeys = [ ];
+        let entry_addresses = [ ];
         
         for (let i = 0; i < ENTRIES_AT_ONCE; i++) {
-            entry_pubkeys.push(get_entry_pubkey(get_entry_mint_pubkey(block.pubkey, entry_index + i)));
+            entry_addresses.push(get_entry_address(get_entry_mint_address(block.address, entry_index + i)));
         }
         
         let results = await this.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getMultipleAccountsInfo(entry_pubkeys);
+                return rpc_connection.getMultipleAccountsInfo(entry_addresses);
             }, "update entries query accounts");
 
         let idx;
@@ -681,13 +726,12 @@ class Cluster
             if (results[idx] == null) {
                 break;
             }
-            let entry_pubkey = entry_pubkeys[idx];
-            let entry_pubkey_string = entry_pubkey.toBase58();
-            let entry = this.entries.get(entry_pubkey_string);
+            let entry_address = entry_addresses[idx];
+            let entry = this.entries.get(entry_address);
             if (entry == null) {
-                entry = new Entry(block, entry_pubkeys[idx], results[idx].data);
-                this.entries.set(entry_pubkey_string, entry);
-                this.entry_pubkeys.push(entry_pubkey);
+                entry = new Entry(block, entry_addresses[idx], results[idx].data);
+                this.entries.set(entry_address, entry);
+                this.entry_addresses.push(entry_address);
                 if ((this.callbacks != null) && (this.callbacks.on_new_entry != null)) {
                     setTimeout(() => {
                         if (!this.is_shutdown) {
@@ -715,13 +759,12 @@ class Cluster
 }
 
 
-// All pubkeys are SolanaWeb3.PublicKey objects.  To display them, use .toBase58().
 class Block
 {
-    constructor(entries, pubkey, data)
+    constructor(entries, address, data)
     {
         this.entries = entries;
-        this.pubkey = pubkey;
+        this.address = address;
         this.group_number = buffer_le_u32(data, 8);
         this.block_number = buffer_le_u32(data, 12);
         this.total_entry_count = buffer_le_u16(data, 16);
@@ -743,7 +786,7 @@ class Block
 
     update(data)
     {
-        let new_block = new Block(this.entries, this.pubkey, data);
+        let new_block = new Block(this.entries, this.address, data);
 
         // Only check for changes to fields that can change
         let changed = false;
@@ -783,9 +826,13 @@ class Block
             return true;
         }
         
-        let mystery_phase_end = this.block_start_timestamp + this.mystery_phase_duration;
+        return (clock.unix_timestamp > this.get_mystery_deadline());
+    }
 
-        return (clock.unix_timestamp > mystery_phase_end);
+    // Only returns a meaningful value if the block has not yet reached its reveal criteria
+    get_mystery_deadline()
+    {
+        return this.block_start_timestamp + this.mystery_phase_duration;
     }
 }
 
@@ -814,19 +861,18 @@ const EntryState = Object.freeze(
 });
 
 
-// All pubkeys are SolanaWeb3.PublicKey objects.  To display them, use .toBase58().
 class Entry
 {
-    constructor(block, pubkey, data)
+    constructor(block, address, data)
     {
         this.block = block;
-        this.pubkey = pubkey;
+        this.address = address;
         this.group_number = buffer_le_u32(data, 36);
         this.block_number = buffer_le_u32(data, 40);
         this.entry_index = buffer_le_u16(data, 44);
-        this.mint_pubkey = buffer_pubkey(data, 46);
-        this.token_pubkey = buffer_pubkey(data, 78);
-        this.metaplex_metadata_pubkey = buffer_pubkey(data, 110);
+        this.mint_address = buffer_address(data, 46);
+        this.token_address = buffer_address(data, 78);
+        this.metaplex_metadata_address = buffer_address(data, 110);
         this.minimum_price_lamports = buffer_le_u64(data, 144);
         this.has_auction = data[152];
         this.duration = buffer_le_u32(data, 156);
@@ -837,8 +883,8 @@ class Entry
         this.refund_awarded = data[216];
         this.commission = buffer_le_u16(data, 218);
         this.auction_highest_bid_lamports = buffer_le_u64(data, 224);
-        this.auction_winning_bid_pubkey = buffer_pubkey(data, 232);
-        this.owned_stake_account = buffer_pubkey(data, 264);
+        this.auction_winning_bid_address = buffer_address(data, 232);
+        this.owned_stake_account = buffer_address(data, 264);
         this.owned_stake_initial_lamports = buffer_le_u64(data, 296);
         this.owned_stake_epoch = Number(buffer_le_u64(data, 304));
         this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 312);
@@ -878,7 +924,7 @@ class Entry
 
     update(data)
     {
-        let new_entry = new Entry(this.block, this.pubkey, data);
+        let new_entry = new Entry(this.block, this.address, data);
 
         // Only check for changes to fields that can change
         let changed = false;
@@ -910,12 +956,12 @@ class Entry
             changed = true;
         }
         
-        if (!new_entry.auction_winning_bid_pubkey.equals(this.auction_winning_bid_pubkey)) {
-            this.auction_winning_bid_pubkey = new_entry.auction_winning_bid_pubkey;
+        if (new_entry.auction_winning_bid_address != this.auction_winning_bid_address) {
+            this.auction_winning_bid_address = new_entry.auction_winning_bid_address;
             changed = true;
         }
         
-        if (!new_entry.owned_stake_account.equals(this.owned_stake_account)) {
+        if (new_entry.owned_stake_account != this.owned_stake_account) {
             this.owned_stake_account = new_entry.owned_stake_account;
             changed = true;
         }
@@ -955,7 +1001,7 @@ class Entry
     async get_metaplex_metadata_uri(rpc_connections)
     {
         let result = await rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(this.metaplex_metadata_pubkey);
+            return rpc_connection.getAccountInfo(this.metaplex_metadata_address);
         }, "fetch metaplex metadata");
 
         let data = result.data;
@@ -966,21 +1012,21 @@ class Entry
         let len = buffer_le_u32(data, offset);
         if (len > 200) {
             // Bogus data
-            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_address);
         }
         // Skip name
         offset += 4 + len;
         // Symbol, string of at most 4 characters
         len = buffer_le_u32(data, offset);
         if (len > 10) {
-            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_address);
         }
         // Skip symbol;
         offset += 4 + len;
         // Uri, string of at most 200 characters
         len = buffer_le_u32(data, offset);
         if (len > 200) {
-            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_pubkey.toBase58());
+            throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_address);
         }
         
         return buffer_string(data, offset + 4, len);
@@ -1124,22 +1170,22 @@ class Entry
 
 
 // View of a Cluster that supplies information about the contents of the wallet, and provides wallet-specific actions
-// All pubkeys passed into and returned from Wallet are strings.
+// All addresss passed into and returned from Wallet are strings.
 class Wallet
 {
-    static create(rpc_connections, wallet_pubkey)
+    static create(rpc_connections, wallet_address)
     {
-        return new Wallet(rpc_connections, wallet_pubkey, callbacks);
+        return new Wallet(rpc_connections, wallet_address, callbacks);
     }
 
-    // wallet_pubkey is a base-58 string
-    constructor(rpc_connections, wallet_pubkey, callbacks)
+    // wallet_address is a base-58 string
+    constructor(rpc_connections, wallet_address, callbacks)
     {
         this.rpc_connections = rpc_connections;
 
-        this.wallet_pubkey_holder = { wallet_pubkey : null };
+        this.wallet_address_holder = { wallet_address : null };
         
-        this.set_wallet_pubkey(wallet_pubkey);
+        this.set_wallet_address(wallet_address);
 
         // Fetch SOL balance only twice every 5 seconds
         // this.last_balance_fetch_time = 0;
@@ -1154,30 +1200,28 @@ class Wallet
         // xxx stakes
     }
 
-    set_wallet_pubkey(new_wallet_pubkey)
+    set_wallet_address(new_wallet_address)
     {
-        if (new_wallet_pubkey == null) {
-            if (this.wallet_pubkey_holder.wallet_pubkey == null) {
+        if (new_wallet_address == null) {
+            if (this.wallet_address_holder.wallet_address == null) {
                 return;
             }
         }
         else {
-            new_wallet_pubkey = new SolanaWeb3.PublicKey(new_wallet_pubkey);
-
-            if ((this.wallet_pubkey_holder.wallet_pubkey != null) &&
-                (this.wallet_pubkey_holder.wallet_pubkey.equals(new_wallet_pubkey))) {
+            if ((this.wallet_address_holder.wallet_address != null) &&
+                (this.wallet_address_holder.wallet_address == new_wallet_address)) {
                 return;
             }
         }
 
-        this.wallet_pubkey_holder = { wallet_pubkey : new_wallet_pubkey };
+        this.wallet_address_holder = { wallet_address : new_wallet_address };
 
-        // Reset saved state because the wallet pubkey has changed
+        // Reset saved state because the wallet address has changed
         this.last_balance_fetch_time = null;
         this.sol_balance = null;
         this.ki_balance = null;
-        this.entry_pubkeys = new Set();
-        this.bids_by_entry_pubkey = new Map();
+        this.entry_addresses = new Set();
+        this.bids_by_entry_address = new Map();
         this.bids_by_entry_mint = new Map();
         this.stakes = [ ];
         this.last_tokens_fetch_time = null;
@@ -1185,23 +1229,19 @@ class Wallet
     }
 
     // Returns a string, or null
-    get_wallet_pubkey()
+    get_wallet_address()
     {
-        if (this.wallet_pubkey_holder.wallet_pubkey == null) {
-            return null;
-        }
-
-        return this.wallet_pubkey_holder.wallet_pubkey.toBase58();
+        return (this.wallet_address_holder == null) ? null : this.wallet_address_holder.wallet_address;
     }
     
     async get_sol_balance()
     {
-        // Save wallet_pubkey_holder so that we know if it changed
-        let wallet_pubkey_holder = this.wallet_pubkey_holder;
-        let wallet_pubkey = this.wallet_pubkey_holder.wallet_pubkey;
+        // Save wallet_address_holder so that we know if it changed
+        let wallet_address_holder = this.wallet_address_holder;
+        let wallet_address = this.wallet_address_holder.wallet_address;
         
         // If the wallet has been "shut down", don't query
-        if (wallet_pubkey == null) {
+        if (wallet_address == null) {
             return null;
         }
 
@@ -1214,10 +1254,10 @@ class Wallet
 
             // Wait on getting SOL balance of wallet
             let sol_balance = await this.rpc_connections.run((rpc_connection) => {
-                return rpc_connection.getBalance(wallet_pubkey);
+                return rpc_connection.getBalance(wallet_address);
             }, "update sol balance");
             
-            if (wallet_pubkey_holder == this.wallet_pubkey_holder) {
+            if (wallet_address_holder == this.wallet_address_holder) {
                 this.sol_balance = sol_balance;
                 this.last_balance_fetch_time = Date.now();
             }
@@ -1233,23 +1273,24 @@ class Wallet
         return this.ki_balance;
     }
 
-    // Returns the string pubkeys of entries owned by this 
-    async get_entry_pubkeys()
+    // Returns the addresses of entries owned by this 
+    async get_entry_addresses()
     {
         await this.update_token_data();
 
-        return this.entry_pubkeys.values();
+        return this.entry_addresses.values();
     }
 
-    // Returns an interator over { entry_pubkey, lamports }.  lamports is the number of lamports in the bid account,
-    // which could be more than the bid if lamports were added post-bid.
+    // Returns an interator over { entry_address, bid_address, lamports }.  lamports is the number of lamports in the
+    // bid account, which could be more than the bid if lamports were added post-bid.
     async get_bids()
     {
         await this.update_token_data();
 
-        return this.bids_by_entry_pubkey.values();
+        return this.bids_by_entry_address.values();
     }
 
+    // Stakes are { address : string, lamports : int, delegation : null or { lamports : int, vote_account : string } }
     async get_stakes()
     {
         await this.update_stakes();
@@ -1257,50 +1298,49 @@ class Wallet
         return this.stakes;
     }
 
-    // Returns true if the wallet owns the entry with the given string entry pubkey, false if not
-    async owns_entry(entry_pubkey)
+    // Returns true if the wallet owns the entry with the given string entry address, false if not
+    async owns_entry(entry_address)
     {
         await this.update_token_data();
 
-        return this.entry_pubkeys.has(entry_pubkey);
+        return this.entry_addresses.has(entry_address);
     }
 
-    // Returns undefined if the wallet has no bid for the string entry pubkey, or the lamports of the bid if it does
-    async get_bid(entry_pubkey)
+    // Returns undefined if the wallet has no bid for the string entry address, or the lamports of the bid if it does
+    async get_bid(entry_address)
     {
         await this.update_token_data();
 
-        return this.bids_by_entry_mint.get(entry.mint_pubkey.toBase58());
+        return this.bids_by_entry_address.get(entry_address);
     }
     
     async update_token_data()
     {
-        // Save wallet_pubkey_holder so that we know if it changed
-        let wallet_pubkey_holder = this.wallet_pubkey_holder;
-        let wallet_pubkey = this.wallet_pubkey_holder.wallet_pubkey;
-        
+        // Save wallet_address_holder so that we know if it changed
+        let wallet_address_holder = this.wallet_address_holder;
+        let wallet_address = this.wallet_address_holder.wallet_address;
+
         // If the wallet has been "shut down", don't query
-        if (wallet_pubkey == null) {
+        if (wallet_address == null) {
             return null;
         }
 
         let now = Date.now();
 
-        // If never fetched balance, fetch it
+        // If never fetched tokens, fetch them
         if ((this.last_tokens_fetch_time == null) ||
             // If haven't fetched tokens in 30 seconds, fetch them
             ((now - this.last_tokens_fetch_time) > 30000)) {
             let results = await this.rpc_connections.run((rpc_connection) =>
                 {
-                    return rpc_connection.getParsedTokenAccountsByOwner(wallet_pubkey,
-                                                                        { programId : g_spl_token_program_pubkey });
+                    return rpc_connection.getParsedTokenAccountsByOwner(wallet_address, g_spl_token_program_address);
                 }, "update token data token accounts");
 
             let new_ki_balance = 0;
 
-            let new_entry_pubkeys = new Set();
+            let new_entry_addresses = new Set();
 
-            let new_bids_by_entry_pubkey = new Map();
+            let new_bids_by_entry_address = new Map();
 
             let new_bids_by_entry_mint = new Map();
             
@@ -1308,8 +1348,8 @@ class Wallet
 
             for (let idx = 0; idx < results.value.length; idx++) {
                 let account = results.value[idx].account;
-                let pubkey = results.value[idx].pubkey;
-                
+                let address = results.value[idx].pubkey.toBase58();
+
                 if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
                     (account.data.parsed.info == null)) {
                     continue;
@@ -1324,37 +1364,36 @@ class Wallet
                 }
                 
                 // Should never happen but just in case
-                if (account.data.parsed.info.owner != wallet_pubkey.toBase58()) {
+                if (account.data.parsed.info.owner != wallet_address) {
                     continue;
                 }
 
-                let mint_pubkey = new SolanaWeb3.PublicKey(account.data.parsed.info.mint);
+                let mint_address = account.data.parsed.info.mint;
 
                 // If its mint is the bid mint, then it's a bid token, so add an async function to fetch the
-                // details of the bid and add it to new_bids_by_entry_pubkey
-                if (mint_pubkey.equals(g_bid_marker_mint_pubkey)) {
-                    pubkey = new SolanaWeb3.PublicKey(pubkey);
-                    promises.push(this.process_bid(pubkey, new_bids_by_entry_pubkey, new_bids_by_entry_mint));
+                // details of the bid and add it to new_bids_by_entry_address
+                if (mint_address == g_bid_marker_mint_address) {
+                    promises.push(this.process_bid(address, new_bids_by_entry_address, new_bids_by_entry_mint));
                 }
                 // Else if its mint is the ki mint, then add its ki tokens to the total
-                else if (mint_pubkey.equals(g_ki_mint_pubkey)) {
+                else if (mint_address == g_ki_mint_address) {
                     new_ki_balance += account.data.parsed.info.tokenAmount.amount;
                 }
                 else {
                     // Add an async function to check to see if its update authority is the Shinobi Immortals program
                     // authority, and if so, add it to new_entries.
-                    promises.push(this.process_mint(mint_pubkey, new_entry_pubkeys));
+                    promises.push(this.process_mint(mint_address, new_entry_addresses));
                 }
             }
 
             await Promise.all(promises);
 
-            // Now rebuild this.ki_balance, this.entry_pubkeys, this.bids_by_entry_pubkey, and this.bids_by_entry_mint
-            // from the resulting data
-            if (wallet_pubkey_holder == this.wallet_pubkey_holder) {
+            // Now rebuild this.ki_balance, this.entry_addresses, this.bids_by_entry_address, and
+            // this.bids_by_entry_mint from the resulting data
+            if (wallet_address_holder == this.wallet_address_holder) {
                 this.ki_balance = new_ki_balance;
-                this.entry_pubkeys = new_entry_pubkeys;
-                this.bids_by_entry_pubkey = new_bids_by_entry_pubkey;
+                this.entry_addresses = new_entry_addresses;
+                this.bids_by_entry_address = new_bids_by_entry_address;
                 this.bids_by_entry_mint = new_bids_by_entry_mint;
                 
                 this.last_tokens_fetch_time = Date.now();
@@ -1362,33 +1401,119 @@ class Wallet
         }
     }
 
-    async process_bid(bid_marker_token_pubkey, bids_by_entry_pubkey, bids_by_entry_mint)
+    async update_stakes()
     {
-        let result = this.rpc_connections.run((rpc_connection) =>
+        // Save wallet_address_holder so that we know if it changed
+        let wallet_address_holder = this.wallet_address_holder;
+        let wallet_address = this.wallet_address_holder.wallet_address;
+
+        // If the wallet has been "shut down", don't query
+        if (wallet_address == null) {
+            return null;
+        }
+
+        let wallet_pubkey = make_pubkey(wallet_address);
+
+        // If never fetched stakes, fetch them
+        if ((this.last_stakes_fetch_time == null) ||
+            // If haven't fetched stakes in 30 seconds, fetch them
+            ((now - this.last_stakes_fetch_time) > 30000)) {
+            let results = await this.rpc_connections.run((rpc_connection) =>
+                {
+                    return rpc_connection.getParsedProgramAccounts(g_stake_program_address,
+                                                                   {
+                                                                       filters : [
+                                                                           {
+                                                                               memcmp :
+                                                                               {
+                                                                                   offset : 44,
+                                                                                   bytes : wallet_pubkey.toBase58()
+                                                                               }
+                                                                           }
+                                                                       ]
+                                                                   });
+                }, "update token data token accounts");
+
+            if (wallet_address_holder != this.wallet_address_holder) {
+                return;
+            }
+
+            this.stakes = [ ];
+            
+            for (let idx = 0; idx < results.length; idx++) {
+                let account = results[idx].account;
+                let pubkey = results[idx].pubkey;
+                
+                if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
+                    (account.data.parsed.info == null)) {
+                    continue;
+                }
+                
+                // Ignore stake accounts that are not initialized or delegated
+                if ((account.data.parsed.type != "initialized") &&
+                    (account.data.parsed.type != "delegated")) {
+                    continue;
+                }
+                
+                // Ignore stake accounts with lockup
+                if (account.data.parsed.info.lockup &&
+                    ((account.data.parsed.info.lockup.epoch != 0) ||
+                     (account.data.parsed.info.lockup.unixTimestamp != 0))) {
+                    continue;
+                }
+                
+                let withdrawer = account.data.parsed.info.meta.authorized.withdrawer;
+
+                if (withdrawer != wallet_address) {
+                    continue;
+                }
+
+                let stake = { address : pubkey.toBase58() };
+                
+                if ((account.data.parsed.info.stake == null) ||
+                    (account.data.parsed.info.stake.delegation == null)) {
+                    stake.lamports = account.lamports;
+                }
+                else {
+                    let delegation = account.data.parsed.info.stake.delegation;
+                    stake.delegation = { lamports : delegation.stake, vote_account : delegation.voter };
+                }
+                
+                this.stakes.push(stake);
+            }
+        }
+    }
+
+    async process_bid(bid_marker_token_address, bids_by_entry_address, bids_by_entry_mint)
+    {
+        let bid_address = get_bid_address(bid_marker_token_address);
+        
+        // Read the mint out of the bid account
+        let result = await this.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getAccountInfo(get_bid_pubkey(bid_marker_token_pubkey),
+                return rpc_connection.getAccountInfo(bid_address,
                                                      {
                                                          dataSlice : { offset : 4,
                                                                        length : 32 }
                                                      });
             }, "fetch bid account");
 
-        let entry_mint_pubkey = new SolanaWeb3.PublicKey(result.data);
+        let entry_mint_address = buffer_address(result.data, 0);
 
-        let entry_pubkey = get_entry_pubkey(entry_mint_pubkey).toBase58();
+        let entry_address = get_entry_address(entry_mint_address);
 
-        let value = { entry_pubkey : entry_pubkey, lamports : result.lamports };
+        let value = { entry_address : entry_address, bid_address : bid_address, lamports : result.lamports };
 
-        bids_by_entry_pubkey.set(entry_pubkey, value);
+        bids_by_entry_address.set(entry_address, value);
         
-        bids_by_entry_mint.set(entry_mint_pubkey.toBase58(), value);
+        bids_by_entry_mint.set(entry_mint_address, value);
     }
 
-    async process_mint(mint_pubkey, new_entry_pubkeys)
+    async process_mint(mint_address, new_entry_addresses)
     {
         // Load the metaplex metadata
         let result = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(metaplex_metadata_pubkey(mint_pubkey));
+            return rpc_connection.getAccountInfo(get_metaplex_metadata_address(mint_address));
         }, "fetch metaplex metadata");
 
         if (result == null) {
@@ -1396,29 +1521,29 @@ class Wallet
             return;
         }
 
-        let update_authority = buffer_pubkey(result.data, 1);
+        let update_authority = buffer_address(result.data, 1);
 
-        if (update_authority.equals(g_nifty_program_authority_pubkey)) {
-            new_entry_pubkeys.add(get_entry_pubkey(mint_pubkey).toBase58());
+        if (update_authority == g_nifty_program_authority_address) {
+            new_entry_addresses.add(get_entry_address(mint_address));
         }
     }
 
-    async fetch_admin_pubkey()
+    async fetch_admin_address()
     {
         let result = await this.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getAccountInfo(g_config_pubkey,
+                return rpc_connection.getAccountInfo(g_config_address,
                                                      {
                                                          dataSlice : { offset : 4,
                                                                        length : 32 }
                                                      });
-            }, "fetch admin pubkey");
+            }, "fetch admin address");
         
         if (result == null) {
             return null;
         }
         
-        return new SolanaWeb3.PublicKey(result.data);
+        return result.data;
     }
 
     // For all of the following, sign_callback must be an async function with this signature:
@@ -1433,65 +1558,161 @@ class Wallet
     // c. 1 -- to re-try with a new recent blockhash (i.e. a new expiration_slot); which call back into sign_tx again
     //         with an updated version of the transaction
     
-    // maximum_price_lamports should be the price that was shown to the user, but null can be passed in and it will
-    // be fetched from current data.
     // Returns the string transaction id of the completed transaction.  Throws an error on all failures.
-    async buy_entry(entry, clock, maximum_price_lamports, mystery, sign_callback)
+    async buy_entry(entry, maximum_price_lamports, mystery, sign_callback)
     {
-        return this.complete_tx((wallet_pubkey) => {
-            return this.make_buy_tx(entry, clock, maximum_price_lamports, mystery, wallet_pubkey);
+        return this.complete_tx((wallet_address) => {
+            return this.make_buy_tx(entry, maximum_price_lamports, mystery, wallet_address);
         }, sign_callback);
     }
 
-    async make_buy_tx(entry, clock, maximum_price_lamports, mystery, wallet_pubkey)
+    async refund_entry(entry, sign_callback)
     {
-        if (maximum_price_lamports == null) {
-            maximum_price_lamports = entry.get_price(clock);
-        }
-        
-        let admin_pubkey = await this.fetch_admin_pubkey();
+        return this.complete_tx((wallet_address) => {
+            return this.make_refund_tx(entry, wallet_address);
+        }, sign_callback);
+    }
+    
+    async bid_on_entry(entry, minimum_bid_lamports, maximum_bid_lamports, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_bid_tx(entry, minimum_bid_lamports, maximum_bid_lamports, wallet_address);
+        }, sign_callback);
+    }
 
-        let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, entry.mint_pubkey);
+    async claim_entry(entry, won, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_claim_tx(entry, won, wallet_address);
+        }, sign_callback);
+    }
+    
+    // Private implementation follows ---------------------------------------------------------------------------------
+
+    async make_buy_tx(entry, maximum_price_lamports, mystery, wallet_address)
+    {
+        let admin_address = await this.fetch_admin_address();
+
+        let token_destination_address = get_associated_token_address(wallet_address, entry.mint_address);
 
         return mystery ?
-            _buy_mystery_tx({ funding_pubkey : wallet_pubkey,
-                              config_pubkey : g_config_pubkey,
-                              admin_pubkey : admin_pubkey,
-                              block_pubkey : entry.block.pubkey,
-                              entry_pubkey : entry.pubkey,
-                              entry_token_pubkey : entry.token_pubkey,
-                              entry_mint_pubkey : entry.mint_pubkey,
-                              token_destination_pubkey : token_destination_pubkey,
-                              token_destination_owner_pubkey : wallet_pubkey,
-                              metaplex_metadata_pubkey : entry.metaplex_metadata_pubkey,
+            _buy_mystery_tx({ funding_pubkey : wallet_address,
+                              config_pubkey : g_config_address,
+                              admin_pubkey : admin_address,
+                              block_pubkey : entry.block.address,
+                              entry_pubkey : entry.address,
+                              entry_token_pubkey : entry.token_address,
+                              entry_mint_pubkey : entry.mint_address,
+                              token_destination_pubkey : token_destination_address,
+                              token_destination_owner_pubkey : wallet_address,
+                              metaplex_metadata_pubkey : entry.metaplex_metadata_address,
                               maximum_price_lamports : maximum_price_lamports }) :
-            _buy_tx({ funding_pubkey : wallet_pubkey,
-                      config_pubkey : g_config_pubkey,
-                      admin_pubkey : admin_pubkey,
-                      block_pubkey : entry.block.pubkey,
-                      entry_pubkey : entry.pubkey,
-                      entry_token_pubkey : entry.token_pubkey,
-                      entry_mint_pubkey : entry.mint_pubkey,
-                      token_destination_pubkey : token_destination_pubkey,
-                      token_destination_owner_pubkey : wallet_pubkey,
-                      metaplex_metadata_pubkey : entry.metaplex_metadata_pubkey,
+            _buy_tx({ funding_pubkey : wallet_address,
+                      config_pubkey : g_config_address,
+                      admin_pubkey : admin_address,
+                      block_pubkey : entry.block.address,
+                      entry_pubkey : entry.address,
+                      entry_token_pubkey : entry.token_address,
+                      entry_mint_pubkey : entry.mint_address,
+                      token_destination_pubkey : token_destination_address,
+                      token_destination_owner_pubkey : wallet_address,
+                      metaplex_metadata_pubkey : entry.metaplex_metadata_address,
                       maximum_price_lamports : maximum_price_lamports });
     }
 
+    async make_refund_tx(entry, wallet_address)
+    {
+        return _refund_tx({ token_owner_pubkey : wallet_address,
+                            block_pubkey : entry.block.address,
+                            entry_pubkey : entry.address,
+                            buyer_token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
+                            refund_destination_pubkey : wallet_address });
+    }
+   
+    async make_bid_tx(entry, minimum_bid_lamports, maximum_bid_lamports, wallet_address)
+    {
+        let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
+           
+        return _bid_tx({ bidding_pubkey : wallet_address,
+                         entry_pubkey : entry.address,
+                         bid_marker_token_pubkey : bid_marker_token_address,
+                         bid_pubkey : get_bid_address(bid_marker_token_address),
+                         minimum_bid_lamports : minimum_bid_lamports,
+                         maximum_bid_lamports : maximum_bid_lamports });
+    }
     
+    async make_claim_tx(entry, won, wallet_address)
+    {
+        let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
+        let bid_address = get_bid_address(bid_marker_token_address);
+
+        if (won) {
+            let admin_address = await this.fetch_admin_address();
+       
+            let token_destination_address = get_associated_token_address(wallet_address, entry.mint_address);
+            let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
+       
+            return _claim_winning_tx({ bidding_pubkey : wallet_address,
+                                       entry_pubkey : entry.address,
+                                       bid_pubkey : bid_address,
+                                       config_pubkey : g_config_address,
+                                       admin_pubkey : admin_address,
+                                       entry_token_pubkey : entry.token_address,
+                                       entry_mint_pubkey : entry.mint_address,
+                                       token_destination_pubkey : token_destination_address,
+                                       token_destination_owner_pubkey : wallet_address,
+                                       bid_marker_token_pubkey : bid_marker_token_address });
+        }
+        else {
+            return _claim_losing_tx({ bidding_pubkey : wallet_address,
+                                      entry_pubkey : entry.address,
+                                      bid_pubkey : bid_address,
+                                      bid_marker_token_pubkey : bid_marker_token_address });
+        }
+   }
+   
+   async claim_winning_tx()
+   {
+       let wallet_address = this.block.cluster.wallet_address;
+       if (wallet_address == null) {
+           return null;
+       }
+
+       let admin_address = await this.block.cluster.admin_address(g_config_address);
+       if (this.is_shutdown || (wallet_address != this.block.cluster.wallet_address)) {
+           return;
+       }
+       
+       let token_destination_address = get_associated_token_address(wallet_address, this.mint_address);
+       let bid_marker_token_address = get_bid_marker_token_address(this.mint_address, wallet_address);
+       
+       return _claim_winning_tx({ bidding_address : wallet_address,
+                                  entry_address : this.address,
+                                  bid_address : get_bid_address(bid_marker_token_address),
+                                  config_address : g_config_address,
+                                  admin_address : admin_address,
+                                  entry_token_address : this.token_address,
+                                  entry_mint_address : this.mint_address,
+                                  token_destination_address : token_destination_address,
+                                  token_destination_owner_address : wallet_address,
+                                  bid_marker_token_address : bid_marker_token_address });
+   }
+   
     async complete_tx(tx_maker_func, sign_callback)
     {
-        let wallet_pubkey_holder = this.wallet_pubkey_holder;
-        let wallet_pubkey = wallet_pubkey_holder.wallet_pubkey;
-        if (wallet_pubkey == null) {
+        let wallet_address_holder = this.wallet_address_holder;
+        let wallet_address = wallet_address_holder.wallet_address;
+        if (wallet_address == null) {
             throw new Error("No wallet");
         }
 
+        let wallet_pubkey = make_pubkey(wallet_address);
+                
         while (true) {
-            let tx = await tx_maker_func(wallet_pubkey);
+            let tx = await tx_maker_func(wallet_address);
 
-            if (wallet_pubkey_holder != this.wallet_pubkey_holder) {
-                // Wallet pubkey changed, so abort
+            if (wallet_address_holder != this.wallet_address_holder) {
+                // Wallet address changed, so abort
                 throw new Error("Wallet change");
             }
             
@@ -1500,8 +1721,8 @@ class Wallet
                     return rpc_connection.getLatestBlockhash();
                 }, "fetch recent blockhash");
 
-            if (wallet_pubkey_holder != this.wallet_pubkey_holder) {
-                // Wallet pubkey changed, so abort
+            if (wallet_address_holder != this.wallet_address_holder) {
+                // Wallet address changed, so abort
                 throw new Error("Wallet change");
             }
 
@@ -1510,10 +1731,11 @@ class Wallet
             }
             
             let recent_blockhash = recent_blockhash_result.blockhash;
+
             // It appears that last valid block height is not reported correctly!  Use 120 ...
             // let recent_blockhash_expiry = recent_blockhash_result.lastValidBlockHeight;
             let recent_blockhash_expiry = 120;
-                
+
             tx.feePayer = wallet_pubkey;
             tx.recentBlockhash = recent_blockhash;
 
@@ -1521,8 +1743,8 @@ class Wallet
             
             let result = await sign_callback(tx_base64, recent_blockhash_expiry);
 
-            if (wallet_pubkey_holder != this.wallet_pubkey_holder) {
-                // Wallet pubkey changed, so abort
+            if (wallet_address_holder != this.wallet_address_holder) {
+                // Wallet address changed, so abort
                 throw new Error("Wallet change");
             }
             
@@ -1575,257 +1797,153 @@ class Wallet
         }
     }
 
-//   // maximum_price_lamports should be the price that was shown to the user
-//   async buy_mystery(entry, clock, maximum_price_lamports)
+//   stake_tx(stake_account_address)
 //   {
-//       // Get the current price of the entry; the user is willing to pay this much.  This maximum is guaranteed to be
-//       // no higher than any value that was presented to them (since clock only moves forwards and thus entry price
-//       // can only go down).
-//       let maximum_price_lamports = this.get_price(this.block.cluster.get_clock());
-//       
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
-//           return;
-//       }
-//
-//       let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
-//       if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
-//           return;
-//       }
-//
-//       let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
-//
-//       return _buy_mystery_tx({ funding_pubkey : wallet_pubkey,
-//                                config_pubkey : g_config_pubkey,
-//                                admin_pubkey : admin_pubkey,
-//                                block_pubkey : this.block.pubkey,
-//                                entry_pubkey : this.pubkey,
-//                                entry_token_pubkey : this.token_pubkey,
-//                                entry_mint_pubkey : this.mint_pubkey,
-//                                token_destination_pubkey : token_destination_pubkey,
-//                                token_destination_owner_pubkey : wallet_pubkey,
-//                                metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
-//                                maximum_price_lamports : maximum_price_lamports });
-//   }
-//   
-//   refund_tx()
-//   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
+//       let wallet_address = this.block.cluster.wallet_address;
+//       if ((wallet_address == null) || (stake_account_address == null)) {
 //           return null;
 //       }
 //       
-//       return _refund_tx({ token_owner_pubkey : wallet_pubkey,
-//                           block_pubkey : this.block.pubkey,
-//                           entry_pubkey : this.pubkey,
-//                           buyer_token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                           refund_destination_pubkey : wallet_pubkey });
-//   }
-//   
-//   bid_tx(minimum_bid_lamports, maximum_bid_lamports)
-//   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if ((wallet_pubkey == null) || (minimum_bid_lamports == null) || (maximum_bid_lamports == null)) {
-//           return null;
-//       }
-//       let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
-//           
-//       return _bid_tx({ bidding_pubkey : wallet_pubkey,
-//                        entry_pubkey : this.pubkey,
-//                        bid_marker_token_pubkey : bid_marker_token_pubkey,
-//                        bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
-//                        minimum_bid_lamports : minimum_bid_lamports,
-//                        maximum_bid_lamports : maximum_bid_lamports });
-//   }
-//   
-//   claim_losing_tx()
-//   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
-//           return null;
-//       }
-//       let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
-//           
-//       return _claim_losing_tx({ bidding_pubkey : wallet_pubkey,
-//                                 entry_pubkey : this.pubkey,
-//                                 bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
-//                                 bid_marker_token_pubkey : bid_marker_token_pubkey });
-//   }
-//   
-//   async claim_winning_tx()
-//   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
-//           return null;
-//       }
-//
-//       let admin_pubkey = await this.block.cluster.admin_pubkey(g_config_pubkey);
-//       if (this.is_shutdown || (wallet_pubkey != this.block.cluster.wallet_pubkey)) {
-//           return;
-//       }
-//       
-//       let token_destination_pubkey = get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey);
-//       let bid_marker_token_pubkey = get_bid_marker_token_pubkey(this.mint_pubkey, wallet_pubkey);
-//       
-//       return _claim_winning_tx({ bidding_pubkey : wallet_pubkey,
-//                                  entry_pubkey : this.pubkey,
-//                                  bid_pubkey : get_bid_pubkey(bid_marker_token_pubkey),
-//                                  config_pubkey : g_config_pubkey,
-//                                  admin_pubkey : admin_pubkey,
-//                                  entry_token_pubkey : this.token_pubkey,
-//                                  entry_mint_pubkey : this.mint_pubkey,
-//                                  token_destination_pubkey : token_destination_pubkey,
-//                                  token_destination_owner_pubkey : wallet_pubkey,
-//                                  bid_marker_token_pubkey : bid_marker_token_pubkey });
-//   }
-//   
-//   stake_tx(stake_account_pubkey)
-//   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if ((wallet_pubkey == null) || (stake_account_pubkey == null)) {
-//           return null;
-//       }
-//       
-//       return _stake_tx({ block_pubkey : this.block.pubkey,
-//                          entry_pubkey : this.pubkey,
-//                          token_owner_pubkey : wallet_pubkey,
-//                          token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                          stake_pubkey : stake_account_pubkey,
-//                          withdraw_authority : wallet_pubkey });
+//       return _stake_tx({ block_address : this.block.address,
+//                          entry_address : this.address,
+//                          token_owner_address : wallet_address,
+//                          token_address : get_associated_token_address(wallet_address, this.mint_address),
+//                          stake_address : stake_account_address,
+//                          withdraw_authority : wallet_address });
 //   }
 //   
 //   destake_tx()
 //   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
+//       let wallet_address = this.block.cluster.wallet_address;
+//       if (wallet_address == null) {
 //           return null;
 //       }
 //       
-//       return _destake_tx({ funding_pubkey : wallet_pubkey,
-//                            block_pubkey : this.block.pubkey,
-//                            entry_pubkey : this.pubkey,
-//                            token_owner_pubkey : wallet_pubkey,
-//                            token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                            stake_pubkey : this.owned_stake_account,
-//                            ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
-//                            ki_destination_owner_pubkey : wallet_pubkey,
-//                            bridge_pubkey : get_entry_bridge_pubkey(this.mint_pubkey),
-//                            new_withdraw_authority : wallet_pubkey.toBase58() });
+//       return _destake_tx({ funding_address : wallet_address,
+//                            block_address : this.block.address,
+//                            entry_address : this.address,
+//                            token_owner_address : wallet_address,
+//                            token_address : get_associated_token_address(wallet_address, this.mint_address),
+//                            stake_address : this.owned_stake_account,
+//                            ki_destination_address : get_associated_token_address(wallet_address, g_ki_mint_address),
+//                            ki_destination_owner_address : wallet_address,
+//                            bridge_address : get_entry_bridge_address(this.mint_address),
+//                            new_withdraw_authority : wallet_address.toBase58() });
 //   }
 //   
 //   harvest_tx()
 //   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
+//       let wallet_address = this.block.cluster.wallet_address;
+//       if (wallet_address == null) {
 //           return null;
 //       }
 //       
-//       return _harvest_tx({ funding_pubkey : wallet_pubkey,
-//                            entry_pubkey : this.pubkey,
-//                            token_owner_pubkey : wallet_pubkey,
-//                            token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                            stake_pubkey : this.owned_stake_account,
-//                            ki_destination_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
-//                            ki_destination_owner_pubkey : wallet_pubkey });
+//       return _harvest_tx({ funding_address : wallet_address,
+//                            entry_address : this.address,
+//                            token_owner_address : wallet_address,
+//                            token_address : get_associated_token_address(wallet_address, this.mint_address),
+//                            stake_address : this.owned_stake_account,
+//                            ki_destination_address : get_associated_token_address(wallet_address, g_ki_mint_address),
+//                            ki_destination_owner_address : wallet_address });
 //   }
 //   
 //   level_up_tx()
 //   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
+//       let wallet_address = this.block.cluster.wallet_address;
+//       if (wallet_address == null) {
 //           return null;
 //       }
 //       
-//       return _level_up_tx({ entry_pubkey : this.pubkey,
-//                             token_owner_pubkey : wallet_pubkey,
-//                             token_pubkey : get_associated_token_pubkey(wallet_pubkey, this.mint_pubkey),
-//                             entry_metaplex_metadata_pubkey : this.metaplex_metadata_pubkey,
-//                             ki_source_pubkey : get_associated_token_pubkey(wallet_pubkey, g_ki_mint_pubkey),
-//                             ki_source_owner_pubkey : wallet_pubkey });
+//       return _level_up_tx({ entry_address : this.address,
+//                             token_owner_address : wallet_address,
+//                             token_address : get_associated_token_address(wallet_address, this.mint_address),
+//                             entry_metaplex_metadata_address : this.metaplex_metadata_address,
+//                             ki_source_address : get_associated_token_address(wallet_address, g_ki_mint_address),
+//                             ki_source_owner_address : wallet_address });
 //   }
 //   
 //   take_commission_or_delegate_tx()
 //   {
-//       let wallet_pubkey = this.block.cluster.wallet_pubkey;
-//       if (wallet_pubkey == null) {
+//       let wallet_address = this.block.cluster.wallet_address;
+//       if (wallet_address == null) {
 //           return null;
 //       }
 //       
-//       return _take_commission_or_delegate_tx({ funding_pubkey : wallet_pubkey,
-//                                                block_pubkey : this.block.pubkey,
-//                                                entry_pubkey : this.pubkey,
-//                                                stake_pubkey : this.owned_stake_account,
-//                                                bridge_pubkey : get_entry_bridge_pubkey(this.mint_pubkey) });
+//       return _take_commission_or_delegate_tx({ funding_address : wallet_address,
+//                                                block_address : this.block.address,
+//                                                entry_address : this.address,
+//                                                stake_address : this.owned_stake_account,
+//                                                bridge_address : get_entry_bridge_address(this.mint_address) });
 //   }
 }
 
 
-function metaplex_metadata_pubkey(mint_pubkey)
+function get_metaplex_metadata_address(mint_address)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ Buffer.Buffer.from("metadata"),
-                                                         g_metaplex_program_pubkey.toBuffer(),
-                                                         mint_pubkey.toBuffer() ],
-                                                       g_metaplex_program_pubkey)[0];
+    return find_pda([ Buffer.Buffer.from("metadata"),
+                      g_metaplex_program_pubkey.toBuffer(),
+                      address_to_buffer(mint_address) ],
+                    g_metaplex_program_pubkey)[0].toBase58();
 }
 
 
-function get_block_pubkey(group_number, block_number)
+function get_block_address(group_number, block_number)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ [ 7 ],
-                                                         u32_to_le_bytes(group_number),
-                                                         u32_to_le_bytes(block_number) ],
-                                                       g_nifty_program_pubkey)[0];
+    return find_pda([ [ 7 ],
+                      u32_to_le_bytes(group_number),
+                      u32_to_le_bytes(block_number) ],
+                    g_nifty_program_pubkey)[0].toBase58();
 }
 
 
-function get_entry_mint_pubkey(block_pubkey, entry_index)
+function get_entry_mint_address(block_address, entry_index)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ [ 5 ],
-                                                         block_pubkey.toBuffer(),
-                                                         u16_to_le_bytes(entry_index) ],
-                                                       g_nifty_program_pubkey)[0];
+    return find_pda([ [ 5 ],
+                      address_to_buffer(block_address),
+                      u16_to_le_bytes(entry_index) ],
+                    g_nifty_program_pubkey)[0].toBase58();
 }
 
 
-function get_entry_pubkey(entry_mint_pubkey)
+function get_entry_address(entry_mint_address)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ [ 8 ],
-                                                         entry_mint_pubkey.toBuffer() ],
-                                                       g_nifty_program_pubkey)[0];
+    return find_pda([ [ 8 ],
+                      address_to_buffer(entry_mint_address) ],
+                    g_nifty_program_pubkey)[0].toBase58();
 }
 
 
-function get_entry_bridge_pubkey(entry_mint_pubkey)
+function get_entry_bridge_address(entry_mint_address)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ [ 10 ],
-                                                         entry_mint_pubkey.toBuffer() ],
-                                                       g_nifty_program_pubkey)[0];
+    return find_pda([ [ 10 ],
+                      address_to_buffer(entry_mint_address) ],
+                    g_nifty_program_pubkey)[0].toBase58();
 }
 
 
-function get_associated_token_pubkey(token_owner_pubkey, token_mint_pubkey)
+function get_associated_token_address(token_owner_address, token_mint_address)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ token_owner_pubkey.toBuffer(),
-                                                         g_spl_token_program_pubkey.toBuffer(),
-                                                         token_mint_pubkey.toBuffer() ],
-                                                       g_spl_associated_token_program_pubkey)[0];
+    return find_pda([ address_to_buffer(token_owner_address),
+                      g_spl_token_program_pubkey.toBuffer(),
+                      address_to_buffer(token_mint_address) ],
+                    g_spl_associated_token_program_pubkey)[0].toBase58();
 }
 
 
-function get_bid_marker_token_pubkey(entry_mint_pubkey, bidder_pubkey)
+function get_bid_marker_token_address(entry_mint_address, bidder_address)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ [ 12 ],
-                                                         entry_mint_pubkey.toBuffer(),
-                                                         bidder_pubkey.toBuffer() ],
-                                                       g_nifty_program_pubkey)[0];
+    return find_pda([ [ 12 ],
+                      address_to_buffer(entry_mint_address),
+                      address_to_buffer(bidder_address) ],
+                    g_nifty_program_pubkey)[0].toBase58();
 }
 
 
-function get_bid_pubkey(bid_marker_token_pubkey)
+function get_bid_address(bid_marker_token_address)
 {
-    return SolanaWeb3.PublicKey.findProgramAddressSync([ [ 9 ],
-                                                         bid_marker_token_pubkey.toBuffer() ],
-                                                       g_nifty_program_pubkey)[0];
+    return find_pda([ [ 9 ],
+                      address_to_buffer(bid_marker_token_address) ],
+                    g_nifty_program_pubkey)[0].toBase58();
 }
 
 
@@ -1870,9 +1988,9 @@ function buffer_sha256(buffer, offset)
 }
 
 
-function buffer_pubkey(buffer, offset)
+function buffer_address(buffer, offset)
 {
-    return new SolanaWeb3.PublicKey(buffer.slice(offset, offset + 32));
+    return bs58.encode(buffer.slice(offset, offset + 32));
 }
 
 
@@ -1914,9 +2032,3 @@ exports.Block = Block;
 exports.EntryState = EntryState;
 exports.Entry = Entry;
 exports.Wallet = Wallet;
-exports.nifty_program_pubkey = () => g_nifty_program_pubkey;
-exports.config_pubkey = () => g_config_pubkey;
-exports.master_stake_pubkey = () => g_master_stake_pubkey;
-exports.ki_mint_pubkey = () => g_ki_mint_pubkey;
-exports.ki_metadata_pubkey = () => g_ki_metadata_pubkey;
-exports.bid_marker_mint_pubkey = () => g_bid_marker_mint_pubkey;
