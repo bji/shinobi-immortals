@@ -16,6 +16,8 @@ const { _buy_tx,
         _take_commission_or_delegate_tx
       } = require("./tx.js");
 
+const LAMPORTS_PER_SOL = 1000 * 1000 * 1000;
+
 const BLOCKS_AT_ONCE = 3;
 const ENTRIES_AT_ONCE = 20;
 
@@ -31,6 +33,9 @@ function find_pda(seeds, program_id)
     return SolanaWeb3.PublicKey.findProgramAddressSync(seeds, program_id);
 }
 
+const g_system_program_address = "11111111111111111111111111111111";
+const g_system_program_pubkey = make_pubkey(g_system_program_address);
+
 const g_nifty_program_address = "ShinboVZNAn1UjpZ3rJsFzLcWMP5JF8LPdHPWaaGYTV";
 const g_nifty_program_pubkey = make_pubkey(g_nifty_program_address);
 
@@ -45,6 +50,12 @@ const g_spl_associated_token_program_pubkey = make_pubkey(g_spl_associated_token
 
 const g_stake_program_address = "Stake11111111111111111111111111111111111111";
 const g_stake_program_pubkey = make_pubkey(g_stake_program_address);
+
+const g_config_program_address = "Config1111111111111111111111111111111111111";
+const g_config_program_pubkey = make_pubkey(g_config_program_address);
+
+const g_validator_info_address = "Va1idator1nfo111111111111111111111111111111";
+const g_validator_info_pubkey = make_pubkey(g_validator_info_address);
 
 const g_nifty_program_authority_pubkey = find_pda([ [ 2 ] ], g_nifty_program_pubkey)[0];
 const g_nifty_program_authority_address = g_nifty_program_authority_pubkey.toBase58();
@@ -124,6 +135,12 @@ class RpcConnection
         return this.execute(() => { return this.connection.getAccountInfo(pubkey, config); }, 10 * 1024);
     }
 
+    async getParsedAccountInfo(address, config)
+    {
+        let pubkey = make_pubkey(address);
+        return this.execute(() => { return this.connection.getParsedAccountInfo(pubkey, config); }, 10 * 1024);
+    }
+        
     async getEpochInfo()
     {
         return this.execute(() => { return this.connection.getEpochInfo(); }, 1024);
@@ -165,6 +182,13 @@ class RpcConnection
     {
         let program_pubkey = make_pubkey(program_address);
         return this.execute(() => { return this.connection.getParsedProgramAccounts(program_pubkey, config); },
+                            20 * 1024);
+    }
+    
+    async getProgramAccounts(program_address, config)
+    {
+        let program_pubkey = make_pubkey(program_address);
+        return this.execute(() => { return this.connection.getProgramAccounts(program_pubkey, config); },
                             20 * 1024);
     }
     
@@ -385,11 +409,13 @@ class RpcConnections
     }
     
     // Runs the async function, passing it an rpc_connection to use, and returning the result.  If the function throws
-    // an error, retries it after 1 second.  If the RpcConnections is shut down, throws an error.
-    // If the request cannot be run because the connection is overloaded, throws an error.
+    // an error, retries it after 2 seconds, for up to 5 retries.  If the RpcConnections is shut down, throws an
+    // error.  If the request cannot be run because the connection is overloaded, throws an error.
     async run(func, error_prefix)
     {
         let rpc_connection = this.get();
+
+        let retry_count = 0;
 
         while (true) {
             try {
@@ -400,8 +426,10 @@ class RpcConnections
                     throw new Error("shutdown");
                 }
 
-                console.log("Run error (" + error_prefix + "): " + error);
-                
+                if (++retry_count == 11) {
+                    throw error;
+                }
+
                 await delay(1 * 1000);
             }
         }
@@ -502,6 +530,9 @@ class Cluster
         // results if a refresh occurred since the background query started.
         this.entry_query_index = new Map();
 
+        // Keep track of validator names: { name, timeout }
+        this.validator_names = new Map();
+
         // Loop a clock update on the rpc_connections every 5 seconds
         this.rpc_connections.loop(() => { return this.update_clock(); }, 5 * 1000);
 
@@ -573,11 +604,17 @@ class Cluster
         return this.entry_addresses.length;
     }
 
+    get_entry(entry_address)
+    {
+        return this.entries.get(entry_address);
+    }
+
     // Get the entry at a given index
     entry_at(index)
     {
-        return this.entries.get(this.entry_addresses[index]);
+        return this.get_entry(this.entry_addresses[index]);
     }
+
 
     // Return an iterator over all entries
     entry_iter()
@@ -596,6 +633,44 @@ class Cluster
                 return index == stop;
             }
         };
+    }
+
+    // Returns the stake details of a stake account.  If account is null, the stake account is looked up; else
+    // the account is the parsed RPC response for the stake account and is used.
+    async get_stake_account(stake_account_address, account)
+    {
+        if (account == null) {
+            account = await this.rpc_connections.run((rpc_connection) => {
+                return rpc_connection.getParsedAccountInfo(stake_account_address);
+            });
+            if (account != null) {
+                account = account.value;
+            }
+        }
+        
+        if (account == null) {
+            return null;
+        }
+        
+        let stake = { address : stake_account_address };
+
+        if ((account.data.parsed.info.stake == null) ||
+            (account.data.parsed.info.stake.delegation == null)) {
+            stake.lamports = account.lamports;
+        }
+        else {
+            let delegation = account.data.parsed.info.stake.delegation;
+            stake.delegation = { lamports : delegation.stake, vote_account : delegation.voter };
+            
+            // If the name of the stake account hasn't been fetched in 1 hour, fetch it now
+            let validator_name = await this.get_validator_name(delegation.voter);
+            
+            if (validator_name != null) {
+                stake.delegation.validator_name = validator_name;
+            }
+        }
+
+        return stake;
     }
 
     // Causes an entry to be immediately refreshed.  If this causes the Entry to change, asynchronously a callback
@@ -755,6 +830,91 @@ class Cluster
             // All entries were loaded, so try to get more for this block
             return this.update_entries(block, entry_index + ENTRIES_AT_ONCE, block_changed);
         }
+    }
+
+    async get_validator_name(vote_account)
+    {
+        let validator_name_entry = this.validator_names.get(vote_account);
+
+        let now = Date.now();
+        
+        if ((validator_name_entry != null) && ((validator_name_entry.timeout + (60 * 60 * 1000)) >= now)) {
+            return validator_name_entry.name;
+        }
+
+        // Get the validator account from the vote account
+        let result;
+
+        try {
+            result = await this.rpc_connections.run((rpc_connection) => {
+                return rpc_connection.getAccountInfo(vote_account,
+                                                     {
+                                                         dataSlice : { offset : 4,
+                                                                       length : 32 }
+                                                 });
+            });
+        }
+        catch (error) {
+            console.log(error);
+            result = null;
+        }
+
+        if ((result == null) || (result.data == null)) {
+            return null;
+        }
+
+        let validator_account = new SolanaWeb3.PublicKey(result.data).toBase58();
+        
+        try {
+            result = await this.rpc_connections.run((rpc_connection) => {
+                // Fetch the validator info account for the vote account
+                return rpc_connection.getParsedProgramAccounts(g_config_program_address,
+                                                               {
+                                                                   filters : [
+                                                                       {
+                                                                           memcmp :
+                                                                           {
+                                                                               // Config program entry that is storing
+                                                                               // validator info
+                                                                               offset : 1,
+                                                                               bytes : g_validator_info_address
+                                                                           }
+                                                                       },
+                                                                       {
+                                                                           memcmp :
+                                                                           {
+                                                                               // Validator info for the vote account
+                                                                               offset : 34,
+                                                                               bytes : validator_account
+                                                                           }
+                                                                       }
+                                                                   ]
+                                                               });
+            });
+        }
+        catch (error) {
+            console.log(error);
+            result = null;
+        }
+
+        let validator_name;
+
+        if ((result == null) ||
+            (result.length != 1) ||
+            (result[0].account == null) ||
+            (result[0].account.data == null) ||
+            (result[0].account.data.parsed == null) ||
+            (result[0].account.data.parsed.info == null) ||
+            (result[0].account.data.parsed.info.configData == null)) {
+            validator_name = null;
+        }
+        else {
+            validator_name = result[0].account.data.parsed.info.configData.name;
+        }
+
+        this.validator_names.set(vote_account, { name : validator_name, timeout : now });
+    
+        return validator_name;
     }
 }
 
@@ -1037,7 +1197,7 @@ class Entry
     {
         if (this.reveal_sha256 == "0000000000000000000000000000000000000000000000000000000000000000") {
             if (this.purchase_price_lamports > 0) {
-                if (this.owned_stake_account != null) {
+                if (this.owned_stake_account == g_system_program_address) {
                     return EntryState.Owned;
                 }
                 else {
@@ -1113,6 +1273,36 @@ class Entry
         return (this.block.mystery_phase_end_timestamp + this.block.reveal_period_duration);
     }
 
+    // Returns the amount of Ki available for harvest from this entry
+    async get_harvestable_ki(rpc_connections)
+    {
+        // If it's not revealed yet, it couldn't be staked
+        if ((this.reveal_sha256 != "0000000000000000000000000000000000000000000000000000000000000000") ||
+            // If it's not purchased yet, it couldn't be staked
+            (this.purchase_price_lamports == 0) ||
+            // If it has no stake account, then it's not staked
+            (this.owned_stake_account == g_system_program_address)) {
+            return 0;
+        }
+
+        let result = await rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getAccountInfo(this.owned_stake_account,
+                                                 {
+                                                     dataSlice : { offset : 156,
+                                                                   length : 8 }
+                                                 });
+        });
+
+        if ((result == null) || (result.data == null)) {
+            return 0;
+        }
+
+        let stake = buffer_le_u64(result.data, 0);
+
+        return (((Number(stake - this.owned_last_ki_harvest_stake_account_lamports) *
+                  this.level_metadata[this.level].ki_factor) / LAMPORTS_PER_SOL) | 0);
+    }
+
     // Private implementation follows ---------------------------------------------------------------------------------
     
     // Cribbed from user_buy.c
@@ -1173,15 +1363,15 @@ class Entry
 // All addresss passed into and returned from Wallet are strings.
 class Wallet
 {
-    static create(rpc_connections, wallet_address)
+    static create(cluter, wallet_address)
     {
-        return new Wallet(rpc_connections, wallet_address, callbacks);
+        return new Wallet(cluster, wallet_address, callbacks);
     }
 
     // wallet_address is a base-58 string
-    constructor(rpc_connections, wallet_address, callbacks)
+    constructor(cluster, wallet_address, callbacks)
     {
-        this.rpc_connections = rpc_connections;
+        this.cluster = cluster;
 
         this.wallet_address_holder = { wallet_address : null };
         
@@ -1223,7 +1413,7 @@ class Wallet
         this.entry_addresses = new Set();
         this.bids_by_entry_address = new Map();
         this.bids_by_entry_mint = new Map();
-        this.stakes = [ ];
+        this.stakes_by_address = new Map();
         this.last_tokens_fetch_time = null;
         this.last_stakes_fetch_time = null;
     }
@@ -1253,7 +1443,7 @@ class Wallet
             ((now - this.last_balance_fetch_time) > 5000)) {
 
             // Wait on getting SOL balance of wallet
-            let sol_balance = await this.rpc_connections.run((rpc_connection) => {
+            let sol_balance = await this.cluster.rpc_connections.run((rpc_connection) => {
                 return rpc_connection.getBalance(wallet_address);
             }, "update sol balance");
             
@@ -1281,7 +1471,7 @@ class Wallet
         return this.entry_addresses.values();
     }
 
-    // Returns an interator over { entry_address, bid_address, lamports }.  lamports is the number of lamports in the
+    // Returns an iterator over { entry_address, bid_address, lamports }.  lamports is the number of lamports in the
     // bid account, which could be more than the bid if lamports were added post-bid.
     async get_bids()
     {
@@ -1290,12 +1480,27 @@ class Wallet
         return this.bids_by_entry_address.values();
     }
 
-    // Stakes are { address : string, lamports : int, delegation : null or { lamports : int, vote_account : string } }
+    // Returns an interator over { address : string,
+    //                             lamports : int,
+    //                             delegation : null or { lamports : int,
+    //                                                    vote_account : string,
+    //                                                    validator_name : string or null },
+    //                             is_immortal_staked : true or null
+    //                           }
     async get_stakes()
     {
         await this.update_stakes();
 
-        return this.stakes;
+        return this.stakes_by_address.values();
+    }
+
+    // Returns null if the wallet is not withdraw authority for the stake account; otherwise returns the stake account
+    // details
+    async get_stake(stake_address)
+    {
+        await this.update_stakes();
+
+        return this.stakes_by_address.get(stake_address);
     }
 
     // Returns true if the wallet owns the entry with the given string entry address, false if not
@@ -1331,7 +1536,7 @@ class Wallet
         if ((this.last_tokens_fetch_time == null) ||
             // If haven't fetched tokens in 30 seconds, fetch them
             ((now - this.last_tokens_fetch_time) > 30000)) {
-            let results = await this.rpc_connections.run((rpc_connection) =>
+            let results = await this.cluster.rpc_connections.run((rpc_connection) =>
                 {
                     return rpc_connection.getParsedTokenAccountsByOwner(wallet_address, g_spl_token_program_address);
                 }, "update token data token accounts");
@@ -1377,7 +1582,9 @@ class Wallet
                 }
                 // Else if its mint is the ki mint, then add its ki tokens to the total
                 else if (mint_address == g_ki_mint_address) {
-                    new_ki_balance += account.data.parsed.info.tokenAmount.amount;
+                    // Ki tokens on chain have 1 decimal place, but in UI representations, they are shown without the
+                    // decimal
+                    new_ki_balance += ((account.data.parsed.info.tokenAmount.amount / 10) | 0);
                 }
                 else {
                     // Add an async function to check to see if its update authority is the Shinobi Immortals program
@@ -1418,7 +1625,7 @@ class Wallet
         if ((this.last_stakes_fetch_time == null) ||
             // If haven't fetched stakes in 30 seconds, fetch them
             ((now - this.last_stakes_fetch_time) > 30000)) {
-            let results = await this.rpc_connections.run((rpc_connection) =>
+            let results = await this.cluster.rpc_connections.run((rpc_connection) =>
                 {
                     return rpc_connection.getParsedProgramAccounts(g_stake_program_address,
                                                                    {
@@ -1438,7 +1645,9 @@ class Wallet
                 return;
             }
 
-            this.stakes = [ ];
+            this.stakes_by_address = new Map();
+
+            let now = Date.now();
             
             for (let idx = 0; idx < results.length; idx++) {
                 let account = results[idx].account;
@@ -1468,18 +1677,25 @@ class Wallet
                     continue;
                 }
 
-                let stake = { address : pubkey.toBase58() };
-                
-                if ((account.data.parsed.info.stake == null) ||
-                    (account.data.parsed.info.stake.delegation == null)) {
-                    stake.lamports = account.lamports;
+                let stake = await this.cluster.get_stake_account(pubkey.toBase58(), account);
+
+                if (stake != null) {
+                    this.stakes_by_address.set(stake.address, stake);
                 }
-                else {
-                    let delegation = account.data.parsed.info.stake.delegation;
-                    stake.delegation = { lamports : delegation.stake, vote_account : delegation.voter };
+            }
+
+            // Also add in the stake accounts of all entries
+            for (let entry_address of await this.get_entry_addresses()) {
+                let entry = this.cluster.get_entry(entry_address);
+                if ((entry == null) || (entry.owned_stake_account == g_system_program_address)) {
+                    continue;
                 }
-                
-                this.stakes.push(stake);
+                // Fetch the stake account
+                let stake = await this.cluster.get_stake_account(entry.owned_stake_account);
+                if (stake != null) {
+                    stake.is_immortal_staked = true;
+                    this.stakes_by_address.set(stake.address, stake);
+                }
             }
         }
     }
@@ -1489,7 +1705,7 @@ class Wallet
         let bid_address = get_bid_address(bid_marker_token_address);
         
         // Read the mint out of the bid account
-        let result = await this.rpc_connections.run((rpc_connection) =>
+        let result = await this.cluster.rpc_connections.run((rpc_connection) =>
             {
                 return rpc_connection.getAccountInfo(bid_address,
                                                      {
@@ -1512,7 +1728,7 @@ class Wallet
     async process_mint(mint_address, new_entry_addresses)
     {
         // Load the metaplex metadata
-        let result = await this.rpc_connections.run((rpc_connection) => {
+        let result = await this.cluster.rpc_connections.run((rpc_connection) => {
             return rpc_connection.getAccountInfo(get_metaplex_metadata_address(mint_address));
         }, "fetch metaplex metadata");
 
@@ -1530,7 +1746,7 @@ class Wallet
 
     async fetch_admin_address()
     {
-        let result = await this.rpc_connections.run((rpc_connection) =>
+        let result = await this.cluster.rpc_connections.run((rpc_connection) =>
             {
                 return rpc_connection.getAccountInfo(g_config_address,
                                                      {
@@ -1584,6 +1800,34 @@ class Wallet
     {
         return this.complete_tx((wallet_address) => {
             return this.make_claim_tx(entry, won, wallet_address);
+        }, sign_callback);
+    }
+
+    async stake_entry(entry, stake_account, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_stake_tx(entry, stake_account, wallet_address);
+        }, sign_callback);
+    }
+    
+    async destake_entry(entry, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_destake_tx(entry, wallet_address);
+        }, sign_callback);
+    }
+    
+    async harvest_entry(entry, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_harvest_tx(entry, wallet_address);
+        }, sign_callback);
+    }
+    
+    async level_up_entry(entry, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_level_up_tx(entry, wallet_address);
         }, sign_callback);
     }
     
@@ -1669,35 +1913,53 @@ class Wallet
                                       bid_pubkey : bid_address,
                                       bid_marker_token_pubkey : bid_marker_token_address });
         }
-   }
-   
-   async claim_winning_tx()
-   {
-       let wallet_address = this.block.cluster.wallet_address;
-       if (wallet_address == null) {
-           return null;
-       }
-
-       let admin_address = await this.block.cluster.admin_address(g_config_address);
-       if (this.is_shutdown || (wallet_address != this.block.cluster.wallet_address)) {
-           return;
-       }
-       
-       let token_destination_address = get_associated_token_address(wallet_address, this.mint_address);
-       let bid_marker_token_address = get_bid_marker_token_address(this.mint_address, wallet_address);
-       
-       return _claim_winning_tx({ bidding_address : wallet_address,
-                                  entry_address : this.address,
-                                  bid_address : get_bid_address(bid_marker_token_address),
-                                  config_address : g_config_address,
-                                  admin_address : admin_address,
-                                  entry_token_address : this.token_address,
-                                  entry_mint_address : this.mint_address,
-                                  token_destination_address : token_destination_address,
-                                  token_destination_owner_address : wallet_address,
-                                  bid_marker_token_address : bid_marker_token_address });
-   }
-   
+    }
+    
+    async make_stake_tx(entry, stake_address, wallet_address)
+    {
+        return _stake_tx({ block_pubkey : entry.block.address,
+                           entry_pubkey : entry.address,
+                           token_owner_pubkey : wallet_address,
+                           token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
+                           stake_pubkey : stake_address,
+                           withdraw_authority : wallet_address });
+    }
+    
+    async make_destake_tx(entry, wallet_address)
+    {
+       return _destake_tx({ funding_pubkey : wallet_address,
+                            block_pubkey : entry.block.address,
+                            entry_pubkey : entry.address,
+                            token_owner_pubkey : wallet_address,
+                            token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
+                            stake_pubkey : entry.owned_stake_account,
+                            ki_destination_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
+                            ki_destination_owner_pubkey : wallet_address,
+                            bridge_pubkey : get_entry_bridge_address(entry.mint_address),
+                            new_withdraw_authority : wallet_address });
+    }
+    
+    async make_harvest_tx(entry, wallet_address)
+    {
+        return _harvest_tx({ funding_pubkey : wallet_address,
+                             entry_pubkey : entry.address,
+                             token_owner_pubkey : wallet_address,
+                             token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
+                             stake_pubkey : entry.owned_stake_account,
+                             ki_destination_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
+                             ki_destination_owner_pubkey : wallet_address });
+    }
+    
+    async make_level_up_tx(entry, wallet_address)
+    {
+        return _level_up_tx({ entry_pubkey : entry.address,
+                              token_owner_pubkey : wallet_address,
+                              token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
+                              entry_metaplex_metadata_pubkey : entry.metaplex_metadata_address,
+                              ki_source_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
+                              ki_source_owner_pubkey : wallet_address });
+    }
+    
     async complete_tx(tx_maker_func, sign_callback)
     {
         let wallet_address_holder = this.wallet_address_holder;
@@ -1716,7 +1978,7 @@ class Wallet
                 throw new Error("Wallet change");
             }
             
-            let recent_blockhash_result = await this.rpc_connections.run((rpc_connection) =>
+            let recent_blockhash_result = await this.cluster.rpc_connections.run((rpc_connection) =>
                 {
                     return rpc_connection.getLatestBlockhash();
                 }, "fetch recent blockhash");
@@ -1784,7 +2046,7 @@ class Wallet
         let retry_count = 0;
         while (true) {
             try {
-                return await this.rpc_connections.run_once((rpc_connection) => {
+                return await this.cluster.rpc_connections.run_once((rpc_connection) => {
                     return rpc_connection.sendRawTransaction(raw_tx);
                 }, "submit tx");
             }
@@ -1797,21 +2059,6 @@ class Wallet
         }
     }
 
-//   stake_tx(stake_account_address)
-//   {
-//       let wallet_address = this.block.cluster.wallet_address;
-//       if ((wallet_address == null) || (stake_account_address == null)) {
-//           return null;
-//       }
-//       
-//       return _stake_tx({ block_address : this.block.address,
-//                          entry_address : this.address,
-//                          token_owner_address : wallet_address,
-//                          token_address : get_associated_token_address(wallet_address, this.mint_address),
-//                          stake_address : stake_account_address,
-//                          withdraw_authority : wallet_address });
-//   }
-//   
 //   destake_tx()
 //   {
 //       let wallet_address = this.block.cluster.wallet_address;
@@ -1819,47 +2066,6 @@ class Wallet
 //           return null;
 //       }
 //       
-//       return _destake_tx({ funding_address : wallet_address,
-//                            block_address : this.block.address,
-//                            entry_address : this.address,
-//                            token_owner_address : wallet_address,
-//                            token_address : get_associated_token_address(wallet_address, this.mint_address),
-//                            stake_address : this.owned_stake_account,
-//                            ki_destination_address : get_associated_token_address(wallet_address, g_ki_mint_address),
-//                            ki_destination_owner_address : wallet_address,
-//                            bridge_address : get_entry_bridge_address(this.mint_address),
-//                            new_withdraw_authority : wallet_address.toBase58() });
-//   }
-//   
-//   harvest_tx()
-//   {
-//       let wallet_address = this.block.cluster.wallet_address;
-//       if (wallet_address == null) {
-//           return null;
-//       }
-//       
-//       return _harvest_tx({ funding_address : wallet_address,
-//                            entry_address : this.address,
-//                            token_owner_address : wallet_address,
-//                            token_address : get_associated_token_address(wallet_address, this.mint_address),
-//                            stake_address : this.owned_stake_account,
-//                            ki_destination_address : get_associated_token_address(wallet_address, g_ki_mint_address),
-//                            ki_destination_owner_address : wallet_address });
-//   }
-//   
-//   level_up_tx()
-//   {
-//       let wallet_address = this.block.cluster.wallet_address;
-//       if (wallet_address == null) {
-//           return null;
-//       }
-//       
-//       return _level_up_tx({ entry_address : this.address,
-//                             token_owner_address : wallet_address,
-//                             token_address : get_associated_token_address(wallet_address, this.mint_address),
-//                             entry_metaplex_metadata_address : this.metaplex_metadata_address,
-//                             ki_source_address : get_associated_token_address(wallet_address, g_ki_mint_address),
-//                             ki_source_owner_address : wallet_address });
 //   }
 //   
 //   take_commission_or_delegate_tx()

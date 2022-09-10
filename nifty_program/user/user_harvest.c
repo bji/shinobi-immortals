@@ -53,8 +53,7 @@ static uint64_t user_harvest(SolParameters *params)
         return Error_InvalidAccount_First + 5;
     }
 
-    // Harvest Ki.  Must be done before commission is charged since commission charge actually reduces the number of
-    // lamports in the stake account, which would affect Ki harvest calculations
+    // Harvest Ki
     return harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
                       funding_account->key, params->ka, params->ka_num);
 }

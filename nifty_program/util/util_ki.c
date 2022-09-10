@@ -10,8 +10,7 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
                            SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Amount of Ki to harvest is the stake account earnings since the last harvest: it is the number of SOL earned
-    // times the ki_factor.  Note that LAMPORTS_PER_SOL is divided by 10; this is because Ki has a single decimal
-    // place.
+    // times the ki_factor.
     uint64_t harvest_amount =
         (((stake->stake.delegation.stake - entry->owned.last_ki_harvest_stake_account_lamports) * 
           entry->metadata.level_metadata[entry->level].ki_factor) / LAMPORTS_PER_SOL);
