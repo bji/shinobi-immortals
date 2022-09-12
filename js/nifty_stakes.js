@@ -4,7 +4,6 @@ const SolanaWeb3 = require("@solana/web3.js");
 const Buffer = require("buffer");
 const bs58 = require("bs58");
 const { _buy_tx,
-        _buy_mystery_tx,
         _refund_tx,
         _bid_tx,
         _claim_losing_tx,
@@ -1775,10 +1774,10 @@ class Wallet
     //         with an updated version of the transaction
     
     // Returns the string transaction id of the completed transaction.  Throws an error on all failures.
-    async buy_entry(entry, maximum_price_lamports, mystery, sign_callback)
+    async buy_entry(entry, maximum_price_lamports, sign_callback)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_buy_tx(entry, maximum_price_lamports, mystery, wallet_address);
+            return this.make_buy_tx(entry, maximum_price_lamports, wallet_address);
         }, sign_callback);
     }
 
@@ -1833,37 +1832,25 @@ class Wallet
     
     // Private implementation follows ---------------------------------------------------------------------------------
 
-    async make_buy_tx(entry, maximum_price_lamports, mystery, wallet_address)
+    async make_buy_tx(entry, maximum_price_lamports, wallet_address)
     {
         let admin_address = await this.fetch_admin_address();
 
         let token_destination_address = get_associated_token_address(wallet_address, entry.mint_address);
 
-        return mystery ?
-            _buy_mystery_tx({ funding_pubkey : wallet_address,
-                              config_pubkey : g_config_address,
-                              admin_pubkey : admin_address,
-                              block_pubkey : entry.block.address,
-                              entry_pubkey : entry.address,
-                              entry_token_pubkey : entry.token_address,
-                              entry_mint_pubkey : entry.mint_address,
-                              token_destination_pubkey : token_destination_address,
-                              token_destination_owner_pubkey : wallet_address,
-                              metaplex_metadata_pubkey : entry.metaplex_metadata_address,
-                              maximum_price_lamports : maximum_price_lamports }) :
-            _buy_tx({ funding_pubkey : wallet_address,
-                      config_pubkey : g_config_address,
-                      admin_pubkey : admin_address,
-                      block_pubkey : entry.block.address,
-                      entry_pubkey : entry.address,
-                      entry_token_pubkey : entry.token_address,
-                      entry_mint_pubkey : entry.mint_address,
-                      token_destination_pubkey : token_destination_address,
-                      token_destination_owner_pubkey : wallet_address,
-                      metaplex_metadata_pubkey : entry.metaplex_metadata_address,
-                      maximum_price_lamports : maximum_price_lamports });
+        return _buy_tx({ funding_pubkey : wallet_address,
+                         config_pubkey : g_config_address,
+                         admin_pubkey : admin_address,
+                         block_pubkey : entry.block.address,
+                         entry_pubkey : entry.address,
+                         entry_token_pubkey : entry.token_address,
+                         entry_mint_pubkey : entry.mint_address,
+                         token_destination_pubkey : token_destination_address,
+                         token_destination_owner_pubkey : wallet_address,
+                         metaplex_metadata_pubkey : entry.metaplex_metadata_address,
+                         maximum_price_lamports : maximum_price_lamports });
     }
-
+    
     async make_refund_tx(entry, wallet_address)
     {
         return _refund_tx({ token_owner_pubkey : wallet_address,

@@ -30,8 +30,8 @@ static uint64_t user_buy(SolParameters *params)
         DECLARE_ACCOUNT(0,   funding_account,                  ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(1,   config_account,                   ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
         DECLARE_ACCOUNT(2,   admin_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(3,   authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
-        DECLARE_ACCOUNT(4,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,   authority_account,                ReadWrite,  NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(4,   block_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(6,   entry_token_account,              ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   entry_mint_account,               ReadOnly,   NotSigner,  KnownAccount_NotKnown);
@@ -122,16 +122,6 @@ static uint64_t user_buy(SolParameters *params)
     case EntryState_PreRevealUnowned:
         // Pre-reveal but not owned yet.  Can be purchased as a mystery.
 
-        // The authority account must be writable so that the purchase price lamports can be added to it
-        if (!authority_account->is_writable) {
-            return Error_InvalidAccountPermissions_First + 3;
-        }
-
-        // The block account must be writable so that the mysteries sold counter can be incremented
-        if (!block_account->is_writable) {
-            return Error_InvalidAccountPermissions_First + 4;
-        }
-
         // The destination of funds is the authority account, which is where the purchase price is stored until
         // the entry is revealed (and if the entry is never revealed and the user requests a refund, then the
         // funds are removed from that account and returned back to the user)
@@ -155,17 +145,6 @@ static uint64_t user_buy(SolParameters *params)
     case EntryState_Unowned:
         // Unowned, revealed, and not in an auction.  Can be purchased.
 
-        // The write state of the nifty authority and block accounts indicates whether the user intends to buy a
-        // mystery or a non-mystery.  Fail the buy if their desired mystery state doesn't match the state of the
-        // entry, to prevent a user with stale information from buying what they think is a mystery when it no longer
-        // is.
-        if (authority_account->is_writable) {
-            return Error_InvalidAccountPermissions_First + 3;
-        }
-        if (block_account->is_writable) {
-            return Error_InvalidAccountPermissions_First + 4;
-        }
-        
         // The destination of funds is the admin account
         funds_destination_account = admin_account;
 
