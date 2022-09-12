@@ -35,7 +35,7 @@ function find_pda(seeds, program_id)
 const g_system_program_address = "11111111111111111111111111111111";
 const g_system_program_pubkey = make_pubkey(g_system_program_address);
 
-const g_nifty_program_address = "ShinboVZNAn1UjpZ3rJsFzLcWMP5JF8LPdHPWaaGYTV";
+const g_nifty_program_address = "Shinb7MJRu1QKKqGr51vUgqPXHL4YscKd92rARZ1SqE";
 const g_nifty_program_pubkey = make_pubkey(g_nifty_program_address);
 
 const g_metaplex_program_address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
@@ -492,13 +492,13 @@ class RpcConnections
 
 class Cluster
 {
-    // If default_slot_duration_seconds is null, a default is used.
-    static create(rpc_connections, default_slot_duration_seconds, callbacks)
+    // If default_slot_duration_seconds is null, a default is used.  If slots_per_epoch is null, a default is used
+    static create(rpc_connections, default_slot_duration_seconds, slots_per_epoch, callbacks)
     {
-        return new Cluster(rpc_connections, default_slot_duration_seconds, callbacks);
+        return new Cluster(rpc_connections, default_slot_duration_seconds, slots_per_epoch, callbacks);
     }
 
-    constructor(rpc_connections, default_slot_duration_seconds, callbacks)
+    constructor(rpc_connections, default_slot_duration_seconds, slots_per_epoch, callbacks)
     {
         this.rpc_connections = rpc_connections;
 
@@ -512,7 +512,19 @@ class Cluster
             }
         }
 
+        if (slots_per_epoch == null) {
+            if ((rpc_connections.array.length == 1) &&
+                (rpc_connections.array[0].rpcEndpoint == "http://localhost:8899")) {
+                slots_per_epoch = 2000;
+            }
+            else {
+                slots_per_epoch = 432000;
+            }
+        }
+
         this.default_slot_duration_seconds = default_slot_duration_seconds;
+
+        this.slots_per_epoch = slots_per_epoch;
         
         this.callbacks = callbacks;
 
@@ -558,8 +570,8 @@ class Cluster
     }
 
     /**
-     * Returns { confirmed_epoch, confirmed_slot, confirmed_unix_timestamp,
-     *           slot, unix_timestamp }
+     * Returns { confirmed_epoch, confirmed_slot, confirmed_unix_timestamp, confirmed_epoch_pct_complete,
+     *           slot, unix_timestamp, epoch_pct_complete }
      *
      * or null if there is no available clock yet
      *
@@ -569,8 +581,10 @@ class Cluster
      * confirmed_epoch is the epoch at the most recently confirmed slot known to the client.
      * confirmed_slot is the most recently confirmed slot known to the client.
      * confirmed_unix_timestamp is the cluster timestamp of the most recently confirmed slot known to the client.
+     * epoch_epoch_pct_complete is a floating point number from 0 to 1.
      * slot is an estimation of the current confirmed slot.
      * unix_timestamp is an estimation of the cluster timestamp of slot.
+     * epoch_pct_complete is a floating point number from 0 to 1.
      *
      * slot and unix_timestamp MAY GO BACKWARDS in between subsequent calls, beware!
      **/
@@ -586,14 +600,18 @@ class Cluster
         
         let now = Date.now();
         
-        let slots_elapsed = ((now - this.confirmed_query_time) / (slot_duration_seconds * 1000)) | 0; 
+        let slots_elapsed = ((now - this.confirmed_query_time) / (slot_duration_seconds * 1000)) | 0;
+
+        let slot = this.confirmed_slot + slots_elapsed;
 
         return {
             confirmed_epoch : this.confirmed_epoch,
             confirmed_slot : this.confirmed_slot,
             confirmed_unix_timestamp : this.confirmed_unix_timestamp,
-            slot : this.confirmed_slot + slots_elapsed,
-            unix_timestamp : this.confirmed_unix_timestamp + (((now - this.confirmed_query_time) / 1000) | 0)
+            confirmed_epoch_pct_complete : (this.confirmed_slot % this.slots_per_epoch) / this.slots_per_epoch,
+            slot : slot,
+            unix_timestamp : this.confirmed_unix_timestamp + (((now - this.confirmed_query_time) / 1000) | 0),
+            epoch_pct_complete : (slot % this.slots_per_epoch) / this.slots_per_epoch
         };
     }
 
@@ -1071,12 +1089,12 @@ class Entry
         
         for (let i = 0; i < 9; i += 1) {
             this.level_metadata[i] = {
-                form : data[400 + (i * 272)],
-                skill : data[401 + (i * 272)],
-                ki_factor : buffer_le_u32(data, 404 + (i * 272)),
-                name : buffer_string(data, 408 + (i * 272), 32),
-                uri : buffer_string(data, 440 + (i * 272), 200),
-                uri_contents_sha256 : buffer_sha256(data, 640 + (i * 272))
+                form : data[400 + (i * 288)],
+                skill : data[401 + (i * 288)],
+                ki_factor : buffer_le_u32(data, 404 + (i * 288)),
+                name : buffer_string(data, 408 + (i * 288), 48),
+                uri : buffer_string(data, 456 + (i * 288), 200),
+                uri_contents_sha256 : buffer_sha256(data, 656 + (i * 288))
             };
         }
     }

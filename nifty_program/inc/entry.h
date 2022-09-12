@@ -37,8 +37,8 @@ typedef struct
     // This is the number of Ki tokens earned per 1 SOL of stake rewards earned by stake accounts staked to the entry.
     uint32_t ki_factor;
 
-    // Name of the entry at each level (metaplex metadata maximum name length of 32)
-    uint8_t name[32];
+    // Name of the entry at each level (metaplex metadata maximum name length of 48)
+    uint8_t name[48];
 
     // Metadata URL of the entry at this level (metaplex metadata uri length is 200)
     uint8_t uri[200];
