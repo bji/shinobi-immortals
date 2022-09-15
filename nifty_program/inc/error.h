@@ -125,6 +125,21 @@ typedef enum
     // User requested a buy but privided a maximum allowed price that is lower than the actual price
     Error_PriceTooHigh                                 = 1047,
 
+    // Not the correct whitelist account
+    Error_NotWhitelistAccount                          = 1048,
+
+    // Cannot add entries to a whitelist when the block is already created
+    Error_BlockAlreadyExists                           = 1049,
+
+    // Attempted to add more whitelist entries than are supported by a whitelist
+    Error_TooManyWhitelistEntries                      = 1050,
+
+    // Cannot delete a whitelist for a block in progress
+    Error_WhitelistBlockInProgress                     = 1051,
+
+    // Buy attempt failed because the fee payer was not in the whitelist
+    Error_FailedWhitelistCheck                         = 1052,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

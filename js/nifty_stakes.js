@@ -35,7 +35,7 @@ function find_pda(seeds, program_id)
 const g_system_program_address = "11111111111111111111111111111111";
 const g_system_program_pubkey = make_pubkey(g_system_program_address);
 
-const g_nifty_program_address = "Shinb7MJRu1QKKqGr51vUgqPXHL4YscKd92rARZ1SqE";
+const g_nifty_program_address = "shin1Sf5v4WNGKCCTQWFUdQEBGXZZ2J1eGuM3ueR2fa";
 const g_nifty_program_pubkey = make_pubkey(g_nifty_program_address);
 
 const g_metaplex_program_address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
@@ -953,12 +953,13 @@ class Block
         this.has_auction = buffer_le_u32(data, 48);
         this.duration = buffer_le_u32(data, 52);
         this.non_auction_start_price_lamports = buffer_le_u64(data, 56);
-        this.added_entries_count = buffer_le_u16(data, 64);
-        this.block_start_timestamp = Number(buffer_le_s64(data, 72));
-        this.mysteries_sold_count = buffer_le_u16(data, 80);
-        this.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 88));
-        this.commission = buffer_le_u16(data, 96);
-        this.last_commission_change_epoch = Number(buffer_le_u64(data, 104));
+        this.whitelist_duration = buffer_le_u32(data, 64);
+        this.added_entries_count = buffer_le_u16(data, 72);
+        this.block_start_timestamp = Number(buffer_le_s64(data, 80));
+        this.mysteries_sold_count = buffer_le_u16(data, 88);
+        this.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 96));
+        this.commission = buffer_le_u16(data, 104);
+        this.last_commission_change_epoch = Number(buffer_le_u64(data, 112));
     }
 
     update(data)
@@ -1168,6 +1169,34 @@ class Entry
         
         if (new_entry.level != this.level) {
             this.level = new_entry.level;
+            changed = true;
+        }
+
+        let new_level_metadata = [ ];
+
+        let level_metadata_changed = false;
+        
+        for (let i = 0; i < 9; i += 1) {
+            new_level_metadata[i] = {
+                form : data[400 + (i * 288)],
+                skill : data[401 + (i * 288)],
+                ki_factor : buffer_le_u32(data, 404 + (i * 288)),
+                name : buffer_string(data, 408 + (i * 288), 48),
+                uri : buffer_string(data, 456 + (i * 288), 200),
+                uri_contents_sha256 : buffer_sha256(data, 656 + (i * 288))
+            };
+            if ((new_level_metadata[i].form != this.level_metadata[i].form) ||
+                (new_level_metadata[i].skill != this.level_metadata[i].skill) ||
+                (new_level_metadata[i].ki_factor != this.level_metadata[i].ki_factor) ||
+                (new_level_metadata[i].name != this.level_metadata[i].name) ||
+                (new_level_metadata[i].uri != this.level_metadata[i].uri) ||
+                (new_level_metadata[i].uri_contents_sha256 != this.level_metadata[i].uri_contents_sha256)) {
+                level_metadata_changed = true;
+            }
+        }
+
+        if (level_metadata_changed) {
+            this.level_metadata = new_level_metadata;
             changed = true;
         }
 
@@ -1860,6 +1889,7 @@ class Wallet
                          config_pubkey : g_config_address,
                          admin_pubkey : admin_address,
                          block_pubkey : entry.block.address,
+                         whitelist_pubkey : get_whitelist_address(entry.block.address),
                          entry_pubkey : entry.address,
                          entry_token_pubkey : entry.token_address,
                          entry_mint_pubkey : entry.mint_address,
@@ -2103,6 +2133,14 @@ function get_block_address(group_number, block_number)
     return find_pda([ [ 7 ],
                       u32_to_le_bytes(group_number),
                       u32_to_le_bytes(block_number) ],
+                    g_nifty_program_pubkey)[0].toBase58();
+}
+
+
+function get_whitelist_address(block_address)
+{
+    return find_pda([ [ 13 ],
+                      address_to_buffer(block_address) ],
                     g_nifty_program_pubkey)[0].toBase58();
 }
 

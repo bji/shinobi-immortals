@@ -37,35 +37,39 @@ typedef enum
     // Split stake off of the master stake account.  Will never split off stake that would leave the master account
     // at less than 10 SOL staked.
     Instruction_SplitMasterStake              =  7,
+    // Add entries to a block whitelist
+    Instruction_AddWhitelistEntries           =  8,
+    // Delete a whitelist after it is no longer needed
+    Instruction_DeleteWhitelist               =  9,
 
     // User functions: end users may perform these actions -------------------------------------------------------------
     // Buy, either during mystery period, or after end of auction, or during a "reverse" auction
-    Instruction_Buy                           =  8,
+    Instruction_Buy                           = 10,
     // Request a refund of an entry that was purchased before reveal, and was not revealed before the reveal grace
     // period completed
-    Instruction_Refund                        =  9,
+    Instruction_Refund                        = 11,
     // Bid on an entry that is in normal auction
-    Instruction_Bid                           = 10,
+    Instruction_Bid                           = 12,
     // Claim a losing bid
-    Instruction_ClaimLosing                   = 11,
+    Instruction_ClaimLosing                   = 13,
     // Claim a winning bid
-    Instruction_ClaimWinning                  = 12,
+    Instruction_ClaimWinning                  = 14,
     
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
     // progrmam.
-    Instruction_Stake                         = 13,
+    Instruction_Stake                         = 15,
     // Destake the entry, returning the stake account of the entry.
-    Instruction_Destake                       = 14,
+    Instruction_Destake                       = 16,
     // Harvest Ki
-    Instruction_Harvest                       = 15,
+    Instruction_Harvest                       = 17,
     // Level up an entry.  This requires as input am amount of Ki, which is burned.
-    Instruction_LevelUp                       = 16,
+    Instruction_LevelUp                       = 18,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
     // If the entry is staked and the stake account is delegated, this pays any commission owed to the admin account.
     // If the entry is staked and the stake account is not delegated, this delgates the stake account to Shinobi
     // Systems so that it can start earning Ki
-    Instruction_TakeCommissionOrDelegate      = 17,
+    Instruction_TakeCommissionOrDelegate      = 19,
 
     // Special functions -----------------------------------------------------------------------------------------------
     // This is a special function that can only be called on an entry that is in the Owned or OwnedAndStaked state.
@@ -75,7 +79,7 @@ typedef enum
     // bugs or problems with this program; or a need to upgrade the program to handle new conditions.  The program
     // can't be upgraded but a new program can be made and then given authority over all user owned entries via this
     // instruction (but only if both the user and admin agree to do so).
-    Instruction_ReAuthorize                   = 18
+    Instruction_ReAuthorize                   = 20
     
 } Instruction;
 
@@ -90,6 +94,8 @@ typedef enum
 #include "admin/admin_reveal_entries.c"
 #include "admin/admin_set_block_commission.c"
 #include "admin/admin_split_master_stake.c"
+#include "admin/admin_add_whitelist_entries.c"
+#include "admin/admin_delete_whitelist.c"
 
 #include "user/user_buy.c"
 #include "user/user_refund.c"
@@ -152,6 +158,12 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_SplitMasterStake:
         return admin_split_master_stake(&params);
+        
+    case Instruction_AddWhitelistEntries:
+        return admin_add_whitelist_entries(&params);
+        
+    case Instruction_DeleteWhitelist:
+        return admin_delete_whitelist(&params);
         
     case Instruction_Buy:
         return user_buy(&params);

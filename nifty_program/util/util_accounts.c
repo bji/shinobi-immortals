@@ -199,7 +199,7 @@ typedef struct __attribute__((__packed__))
 
 
 // Creates an account at a Program Derived Address, where the address is derived from the program id and a set of seed
-// bytes.
+// bytes.  If the account already existed, it is modified to be the correct size and owner.
 static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, int seeds_count,
                            SolPubkey *funding_account_key, SolPubkey *owner_account_key,
                            uint64_t funding_lamports, uint64_t space,
@@ -253,7 +253,7 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
     }
 
     // Assign ----------------------------------------------------------------------------------------------------------
-    // If the owner is not the same, update it by calling the system program with the Assign instruction
+    // If the owner is not the same, update it by calling the system program with the Assign instruction.
     if (!SolPubkey_same(new_account->owner, owner_account_key)) {
         SolAccountMeta account_metas[] = 
             // Assigned account public key
@@ -274,8 +274,10 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
         if (ret) {
             return ret;
         }
-    }
 
+        // Clear the account data, in case there was pre-existing data from the previous owner
+        sol_memset(new_account->data, 0, space);
+    }
 
     return 0;
 }

@@ -3,6 +3,7 @@
 #include "inc/types.h"
 #include "util/util_token.c"
 #include "util/util_transfer_lamports.c"
+#include "util/util_whitelist.c"
 
 
 typedef struct
@@ -32,19 +33,20 @@ static uint64_t user_buy(SolParameters *params)
         DECLARE_ACCOUNT(2,   admin_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,   authority_account,                ReadWrite,  NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(4,   block_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(5,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(6,   entry_token_account,              ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(7,   entry_mint_account,               ReadOnly,   NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(8,   token_destination_account,        ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(9,   token_destination_owner_account,  ReadOnly,   NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(10,  entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(11,  nifty_program_account,            ReadOnly,   NotSigner,  KnownAccount_NiftyProgram);
-        DECLARE_ACCOUNT(12,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
-        DECLARE_ACCOUNT(13,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
-        DECLARE_ACCOUNT(14,  metaplexprogram_account,          ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
-        DECLARE_ACCOUNT(15,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(5,   whitelist_account,                ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(6,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(7,   entry_token_account,              ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(8,   entry_mint_account,               ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(9,   token_destination_account,        ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(10,  token_destination_owner_account,  ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(11,  entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(12,  nifty_program_account,            ReadOnly,   NotSigner,  KnownAccount_NiftyProgram);
+        DECLARE_ACCOUNT(13,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
+        DECLARE_ACCOUNT(14,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        DECLARE_ACCOUNT(15,  metaplexprogram_account,          ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
+        DECLARE_ACCOUNT(16,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
     }
-    DECLARE_ACCOUNTS_NUMBER(16);
+    DECLARE_ACCOUNTS_NUMBER(17);
 
     // Make sure that the input data is the correct size
     if (params->data_len != sizeof(BuyData)) {
@@ -176,6 +178,15 @@ static uint64_t user_buy(SolParameters *params)
     // Check to ensure that the funds source has at least the purchase price lamports
     if (*(funding_account->lamports) < purchase_price_lamports) {
         return Error_InsufficientFunds;
+    }
+
+    // If the block has a whitelist enabled, check to make sure that the funding account is whitelisted.  This will
+    // remove the funding account from the whitelist on success, thus preventing the funding account from buying another
+    // entry in this block (unless it has an additional entry in the whitelist) until the whitelist period ends.
+    if ((block->config.whitelist_duration > 0) &&
+        ((block->block_start_timestamp + block->config.whitelist_duration) > clock.unix_timestamp) &&
+        !whitelist_check(whitelist_account, block_account->key, funding_account->key)) {
+        return Error_FailedWhitelistCheck;
     }
 
     // Transfer the purchase price from the funds source to the funds destination account

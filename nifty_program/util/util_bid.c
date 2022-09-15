@@ -65,7 +65,7 @@ static uint64_t create_entry_bid_account(SolAccountInfo *bid_account, SolPubkey 
         return ret;
     }
 
-    // Verify that the entry token address is as expected
+    // Verify that the bid account address is as expected
     if (!SolPubkey_same(&pubkey, bid_account->key)) {
         return Error_CreateAccountFailed;
     }

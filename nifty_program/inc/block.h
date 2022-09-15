@@ -55,6 +55,16 @@ typedef struct
     // >= minimum_price_lamports.
     uint64_t non_auction_start_price_lamports;
 
+    // Blocks may be configured to only allow purchasing of Entries by system accounts that are whitelisted.  A system
+    // account is whitelisted if there exists a PDA at the whitelist address for the { system account, block } tuple.
+    // For blocks that have a whitelist, having such an account is a prerequisite for buying.  The whitelist PDA is
+    // deleted (and its lamports returned to the admin) on a successful buy operation.  Whitelist entries are added
+    // via the admin_create_whitelist_entry instruction.  Whitelist requirements expire after whitelist_duration
+    // seconds have passed since block_start_timestamp, and at that time, whitelist entries that haven't been used yet
+    // may be deleted by the admin using the admin_delete_whitelist_entry instruction.  If whitelist_duration is 0,
+    // then no whitelist is ever used for this block.
+    uint32_t whitelist_duration;
+
 } BlockConfiguration;
 
 

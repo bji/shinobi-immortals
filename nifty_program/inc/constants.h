@@ -58,7 +58,9 @@ typedef enum
     
     PDA_Account_Seed_Prefix_Bid_Marker_Mint = 11,
     
-    PDA_Account_Seed_Prefix_Bid_Marker_Token = 12
+    PDA_Account_Seed_Prefix_Bid_Marker_Token = 12,
+
+    PDA_Account_Seed_Prefix_Whitelist = 13
 } PDA_Account_Seed_Prefix;
 
 

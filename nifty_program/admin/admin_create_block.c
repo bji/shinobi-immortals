@@ -1,7 +1,6 @@
 #pragma once
 
 #include "inc/block.h"
-//#include "util/util_accounts.c"
 #include "util/util_entry.c"
 #include "util/util_rent.c"
 

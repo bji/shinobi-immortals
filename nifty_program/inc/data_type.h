@@ -19,6 +19,9 @@ typedef enum
     DataType_Entry          = 3,
 
     // Bid
-    DataType_Bid            = 4
+    DataType_Bid            = 4,
+
+    // Whitelist
+    DataType_Whitelist      = 5
 
 } DataType;
