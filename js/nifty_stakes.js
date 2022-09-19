@@ -1429,11 +1429,9 @@ class Wallet
 
         // Fetch wallet tokens only once every 30 seconds
         // this.last_tokens_fetch_time = 0;
-        // xxx tokens
 
         // Fetch wallet stakes only once every 30 seconds
         // this.last_stakes_fetch_time = 0;
-        // xxx stakes
     }
 
     set_wallet_address(new_wallet_address)
