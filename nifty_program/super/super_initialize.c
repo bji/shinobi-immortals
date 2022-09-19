@@ -151,4 +151,3 @@ static uint64_t super_initialize(SolParameters *params)
     
     return 0;
 }
-

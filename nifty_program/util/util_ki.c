@@ -17,7 +17,7 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
 
     // If the amount to harvest is zero, then wait to accumulate more
     if (harvest_amount == 0) {
-        return;
+        return 0;
     }
     
     // Now reduce the amount to harvest, to discourage very large Ki harvests per entry.  The amount to harvest is the
