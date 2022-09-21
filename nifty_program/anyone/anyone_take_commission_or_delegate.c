@@ -10,7 +10,7 @@ typedef struct
     // created with a delegation smaller than this.  If not provided, it will be fetched by using the currently buggy
     // stake program GetMinimumDelegation instruction.
     uint64_t minimum_stake_lamports;
-    
+
 } TakeCommissionOrDelegateData;
 
 
@@ -77,7 +77,7 @@ static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
     if (!is_master_stake_account(master_stake_account->key)) {
         return Error_InvalidAccount_First + 4;
     }
-    
+
     // Decode the stake account
     Stake stake;
     if (!decode_stake_account(stake_account, &stake)) {
@@ -91,16 +91,16 @@ static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
         if (ret) {
             return ret;
         }
-        
+
         // Re-decode the stake account, to get the new delegation information
         if (!decode_stake_account(stake_account, &stake)) {
             return Error_InvalidAccount_First + 3;
         }
-        
+
         // Record current lamports in the stake account to be used for ki harvesting purposes
         entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
-        
-        // Record current lamports in the stake account to be used for commission purposes 
+
+        // Record current lamports in the stake account to be used for commission purposes
         entry->owned.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
 
         return 0;

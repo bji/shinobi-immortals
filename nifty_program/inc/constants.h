@@ -34,7 +34,7 @@
 
 // Each different PDA type has its own unique prefix, to ensure that even if other seed values between different PDA
 // account types would result in overlapping addresses, the addresses in fact never overlap
-typedef enum 
+typedef enum
 {
     PDA_Account_Seed_Prefix_Config = 1,
 
@@ -43,7 +43,7 @@ typedef enum
     PDA_Account_Seed_Prefix_Master_Stake = 3,
 
     PDA_Account_Seed_Prefix_Ki_Mint = 4,
-    
+
     PDA_Account_Seed_Prefix_Mint = 5,
 
     PDA_Account_Seed_Prefix_Token = 6,
@@ -55,9 +55,9 @@ typedef enum
     PDA_Account_Seed_Prefix_Bid = 9,
 
     PDA_Account_Seed_Prefix_Bridge = 10,
-    
+
     PDA_Account_Seed_Prefix_Bid_Marker_Mint = 11,
-    
+
     PDA_Account_Seed_Prefix_Bid_Marker_Token = 12,
 
     PDA_Account_Seed_Prefix_Whitelist = 13
@@ -119,7 +119,7 @@ typedef struct
 
     // This is the Shinobi Bid mint metadata pubkey
     SolPubkey bid_marker_metadata_pubkey;
-    
+
     // This is the Shinobi Systems vote account pubkey
     SolPubkey shinobi_systems_vote_pubkey;
 
@@ -137,7 +137,7 @@ typedef struct
 
     // This is the SPL Associated Token Account program pubkey
     SolPubkey spl_associated_token_account_program_pubkey;
-    
+
     // This is the stake program pubkey
     SolPubkey stake_program_pubkey;
 
@@ -160,16 +160,16 @@ static const _Constants Constants =
 {
     // superuser_pubkey
     SUPERUSER_PUBKEY_ARRAY,
-    
+
     // nifty_config_pubkey
     NIFTY_CONFIG_PUBKEY_ARRAY,
-    
+
     // nifty_config_seed_bytes
     { PDA_Account_Seed_Prefix_Config, NIFTY_CONFIG_BUMP_SEED },
-    
+
     // nifty_authority_pubkey
     NIFTY_AUTHORITY_PUBKEY_ARRAY,
-    
+
     // nifty_authority_seed_bytes
     { PDA_Account_Seed_Prefix_Authority, NIFTY_AUTHORITY_BUMP_SEED },
 
@@ -196,31 +196,31 @@ static const _Constants Constants =
 
     // bid_marker_metadata_pubkey
     BID_MARKER_METADATA_PUBKEY_ARRAY,
-    
+
     // shinobi_systems_vote_pubkey
     SHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY,
-    
+
     // nifty_program_pubkey
     NIFTY_PROGRAM_PUBKEY_ARRAY,
-    
+
     // system_program_pubkey
     SYSTEM_PROGRAM_PUBKEY_ARRAY,
-    
+
     // metaplex_program_pubkey
     METAPLEX_PROGRAM_PUBKEY_ARRAY,
-    
+
     // spl_token_program_pubkey
     SPL_TOKEN_PROGRAM_PUBKEY_ARRAY,
 
     // spl_associated_token_account_program_pubkey
     SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_PUBKEY_ARRAY,
-    
+
     // stake_program_pubkey
     STAKE_PROGRAM_PUBKEY_ARRAY,
 
     // clock_sysvar_pubkey
     CLOCK_SYSVAR_PUBKEY_ARRAY,
-    
+
     // rent_sysvar_pubkey
     RENT_SYSVAR_PUBKEY_ARRAY,
 

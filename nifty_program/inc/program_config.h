@@ -3,7 +3,7 @@
 #include "data_type.h"
 
 
-// This is the type of data stored in the 
+// This is the type of data stored in the
 typedef struct
 {
     // The data type of the data -- DataType_ProgramConfig

@@ -12,9 +12,9 @@
 typedef struct
 {
     uint8_t instruction_code;
-    
+
     SolPubkey admin_pubkey;
-    
+
 } UpdateAdminData;
 
 
@@ -26,7 +26,7 @@ static uint64_t super_set_admin(SolParameters *params)
         DECLARE_ACCOUNT(1,   config_account,                ReadWrite,  NotSigner,  KnownAccount_ProgramConfig);
     }
     DECLARE_ACCOUNTS_NUMBER(2);
-    
+
     // Ensure that the input data is the correct size
     if (params->data_len != sizeof(UpdateAdminData)) {
         return Error_InvalidDataSize;

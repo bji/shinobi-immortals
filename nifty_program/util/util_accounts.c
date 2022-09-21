@@ -11,7 +11,7 @@
 static bool is_all_zeroes(const void *data, uint32_t length)
 {
     uint8_t *d = (uint8_t *) data;
-    
+
     while (length--) {
         if (*d++) {
             return false;
@@ -140,7 +140,7 @@ static bool is_metaplex_metadata_program(SolPubkey *pubkey)
 static void set_account_size(SolAccountInfo *account, uint64_t size)
 {
     ((uint64_t *) (account->data))[-1] = size;
-    
+
     account->data_len = size;
 }
 
@@ -161,10 +161,10 @@ static uint64_t create_system_account(SolPubkey *target_account_key, SolPubkey *
                                       SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
-    
+
     instruction.program_id = &(Constants.system_program_pubkey);
 
-    SolAccountMeta account_metas[] = 
+    SolAccountMeta account_metas[] =
           ///   0. `[WRITE, SIGNER]` Funding account
         { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
           ///   1. `[WRITE, SIGNER]` New account
@@ -172,12 +172,12 @@ static uint64_t create_system_account(SolPubkey *target_account_key, SolPubkey *
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     util_CreateAccountData data = { 0, lamports, space, *owner_key };
-    
+
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
-    
+
     return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
 
@@ -208,26 +208,26 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
                            SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
-    
+
     instruction.program_id = (SolPubkey *) &(Constants.system_program_pubkey);
 
     // If the account to create didn't exist yet, just use CreateAccount to create it
     if ((new_account->data_len == 0) && is_system_program(new_account->owner)) {
 
-        SolAccountMeta account_metas[] = 
+        SolAccountMeta account_metas[] =
             // First account to pass to CreateAccount is the funding_account
             { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
               // Second account to pass to CreateAccount is the new account to be created
               { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
- 
+
         instruction.accounts = account_metas;
         instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
 
         util_CreateAccountData data = { 0, funding_lamports, space, *owner_account_key };
- 
+
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
- 
+
         SolSignerSeeds signer_seeds = { seeds, seeds_count };
 
         return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
@@ -255,15 +255,15 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
     // Assign ----------------------------------------------------------------------------------------------------------
     // If the owner is not the same, update it by calling the system program with the Assign instruction.
     if (!SolPubkey_same(new_account->owner, owner_account_key)) {
-        SolAccountMeta account_metas[] = 
+        SolAccountMeta account_metas[] =
             // Assigned account public key
             { { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
-        
+
         instruction.accounts = account_metas;
         instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
 
         util_AssignData data = { 1, *owner_account_key };
-        
+
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
 

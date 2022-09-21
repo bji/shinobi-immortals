@@ -15,7 +15,7 @@ typedef struct
     // than the actual price if their queries of chain state show a later block height than the actual block
     // height.  That would be rare, but users should be protected.
     uint64_t maximum_price_lamports;
-    
+
 } BuyData;
 
 
@@ -55,7 +55,7 @@ static uint64_t user_buy(SolParameters *params)
 
     // Cast to instruction data
     BuyData *data = (BuyData *) params->data;
-    
+
     // This is the block data
     Block *block = get_validated_block(block_account);
     if (!block) {
@@ -82,7 +82,7 @@ static uint64_t user_buy(SolParameters *params)
     if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
         return Error_InvalidAccount_First + 7;
     }
-    
+
     // Check that the correct metaplex metadata account is supplied
     if (!SolPubkey_same(entry_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
         return Error_InvalidAccount_First + 10;
@@ -120,7 +120,7 @@ static uint64_t user_buy(SolParameters *params)
     case EntryState_WaitingToBeClaimed:
         // Has a winning auction bid, can't be purchased
         return Error_EntryWaitingToBeClaimed;
-        
+
     case EntryState_PreRevealUnowned:
         // Pre-reveal but not owned yet.  Can be purchased as a mystery.
 
@@ -128,7 +128,7 @@ static uint64_t user_buy(SolParameters *params)
         // the entry is revealed (and if the entry is never revealed and the user requests a refund, then the
         // funds are removed from that account and returned back to the user)
         funds_destination_account = authority_account;
-        
+
         // Compute price of mystery
         purchase_price_lamports = compute_price(block->config.mystery_phase_duration,
                                                 block->config.mystery_start_price_lamports,
@@ -203,7 +203,7 @@ static uint64_t user_buy(SolParameters *params)
     if (ret) {
         return ret;
     }
-                                          
+
     // Transfer the token to the token destination account
     ret = transfer_entry_token(entry, token_destination_account, params->ka, params->ka_num);
     if (ret) {
@@ -219,7 +219,7 @@ static uint64_t user_buy(SolParameters *params)
     if (ret) {
         return ret;
     }
-    
+
     // Finally, close the entry's token account since it will never be used again.  The lamports go to the admin
     // account.
     return close_entry_token(entry, admin_account->key, params->ka, params->ka_num);
@@ -229,7 +229,7 @@ static uint64_t user_buy(SolParameters *params)
 static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
                               uint64_t seconds_elapsed)
 {
-    // Once the elapsed seconds hits the total seconds, the result is always end_price 
+    // Once the elapsed seconds hits the total seconds, the result is always end_price
     if (seconds_elapsed >= total_seconds) {
         return end_price;
     }

@@ -9,7 +9,7 @@ typedef struct
     // than 2% higher.  Also cannot be changed more than once per epoch.  And finally, only takes effect *after* the
     // next commission charge for any already-staked stake accounts.
     uint16_t commission;
-    
+
 } SetBlockCommissionData;
 
 
@@ -27,7 +27,7 @@ static uint64_t admin_set_block_commission(SolParameters *params)
     if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
-    
+
     // Ensure that the data is the correct size
     if (params->data_len != sizeof(SetBlockCommissionData)) {
         return Error_InvalidDataSize;
@@ -67,6 +67,6 @@ static uint64_t admin_set_block_commission(SolParameters *params)
     // can't be changed again this epoch
     block->commission = data->commission;
     block->last_commission_change_epoch = clock.epoch;
-    
+
     return 0;
 }

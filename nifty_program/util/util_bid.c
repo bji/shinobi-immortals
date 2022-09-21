@@ -53,7 +53,7 @@ static uint64_t create_entry_bid_account(SolAccountInfo *bid_account, SolPubkey 
     uint8_t prefix = PDA_Account_Seed_Prefix_Bid;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) bid_marker_key, sizeof(*bid_marker_key) },
                               { &bump_seed, sizeof(bump_seed) } };
@@ -104,7 +104,7 @@ static uint64_t reclaim_bid_marker_token(SolPubkey *entry_token_mint_pubkey,
     if (!bid_marker_token_account->is_writable) {
         return Error_FailedToReclaimBidMarkerToken;
     }
-    
+
     // Ensure that the correct bid marker mint account was passed in
     if (!is_bid_marker_mint_account(bid_marker_mint_account->key)) {
         return Error_FailedToReclaimBidMarkerToken;
@@ -119,19 +119,19 @@ static uint64_t reclaim_bid_marker_token(SolPubkey *entry_token_mint_pubkey,
                               { (uint8_t *) entry_token_mint_pubkey, sizeof(*entry_token_mint_pubkey) },
                               { (uint8_t *) bidding_account->key, sizeof(*(bidding_account->key)) },
                               { &bump_seed, sizeof(bump_seed) } };
-    
+
     SolPubkey pubkey;
     uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
     }
-    
+
     // Verify that the entry token address is as expected
     if (!SolPubkey_same(&pubkey, bid_marker_token_account->key)) {
         return Error_FailedToReclaimBidMarkerToken;
     }
-    
+
     // Figure out how many tokens are in it
     uint64_t token_amount = ((SolanaTokenProgramTokenData *) bid_marker_token_account->data)->amount;
 
@@ -162,7 +162,7 @@ static Bid *get_validated_bid(SolAccountInfo *bid_account)
     if (bid_account->data_len != sizeof(Bid)) {
         return 0;
     }
-    
+
     Bid *bid = (Bid *) bid_account->data;
 
     // If the bid does not have the correct data type, then it's not a bid

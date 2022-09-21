@@ -16,7 +16,7 @@ typedef struct
     // will be created with a delegation smaller than this.  If not provided, it will be fetched by using the
     // currently buggy stake program GetMinimumDelegation instruction.
     uint64_t minimum_stake_lamports;
-    
+
 } DestakeData;
 
 
@@ -49,10 +49,10 @@ static uint64_t user_destake(SolParameters *params)
     if (params->data_len != sizeof(DestakeData)) {
         return Error_InvalidDataSize;
     }
-    
+
     // Cast to instruction data
     DestakeData *data = (DestakeData *) params->data;
-    
+
     // Get validated block and entry, which checks all validity of those accounts
     Block *block = get_validated_block(block_account);
     if (!block) {
@@ -121,6 +121,6 @@ static uint64_t user_destake(SolParameters *params)
 
     // No longer staked, all fields in owned should be zeroed out
     sol_memset(&(entry->owned), 0, sizeof(entry->owned));
-    
+
     return 0;
 }

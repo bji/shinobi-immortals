@@ -13,7 +13,7 @@ static uint64_t user_refund(SolParameters *params)
         DECLARE_ACCOUNT(5,   destination_account,              ReadWrite,  NotSigner,  KnownAccount_NotKnown);
     }
     DECLARE_ACCOUNTS_NUMBER(6);
-    
+
     // Get validated block account
     Block *block = get_validated_block(block_account);
     if (!block) {
@@ -36,7 +36,7 @@ static uint64_t user_refund(SolParameters *params)
     if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
         return Error_InvalidAccount_First + 4;
     }
-    
+
     // Need the clock now
     Clock clock;
     if (sol_get_clock_sysvar(&clock)) {
@@ -52,7 +52,7 @@ static uint64_t user_refund(SolParameters *params)
     if ((block->mystery_phase_end_timestamp + block->config.reveal_period_duration) > clock.unix_timestamp) {
         return Error_EntryWaitingForReveal;
     }
-    
+
     // Check to make sure that the entry was not already refunded
     if (entry->refund_awarded) {
         return Error_AlreadyRefunded;

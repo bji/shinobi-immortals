@@ -18,7 +18,7 @@ typedef struct
     // or the bid is redeemed as a losing bid (because it was outbid, and the only action possible is the return of
     // the stake account to the owner of the token)
     SolPubkey stake_account;
-    
+
 } Bid;
 
 
@@ -61,37 +61,37 @@ typedef struct __attribute__((packed))
     /// UnixTimestamp at which this stake will allow withdrawal, unless the
     ///   transaction is signed by the custodian
     timestamp_t lockup_unix_timestamp;
-    
+
     /// epoch height at which this stake will allow withdrawal, unless the
     ///   transaction is signed by the custodian
     uint64_t lockup_epoch;
-        
+
     /// custodian signature on a transaction exempts the operation from
     ///  lockup constraints
     SolPubkey lockup_custodian;
 
     /// to whom the stake is delegated
     SolPubkey voter_pubkey;
-    
+
     /// activated stake amount, set at delegate() time
     uint64_t stake;
-        
+
     /// epoch at which this stake was activated, std::Epoch::MAX if is a bootstrap stake
     uint64_t activation_epoch;
-        
+
     /// epoch the stake was deactivated, std::Epoch::MAX if not deactivated
     uint64_t deactivation_epoch;
-    
+
     /// how much stake we can activate per-epoch as a fraction of currently effective stake
     // This is a 64 bit floating point value
     uint8_t warmup_cooldown_rate[8];
-        
+
     /// credits observed is credits from vote account state when delegated or redeemed
     uint64_t credits_observed;
 
     /// There are 4 bytes of zero padding stored at the end of stake accounts
     uint8_t padding[4];
-        
+
 } StakeAccountData;
 
 
@@ -116,7 +116,7 @@ typedef struct
     /// Optional authority to freeze token accounts.
     uint32_t has_freeze_authority;
     SolPubkey freeze_authority;
-    
+
 } SolanaTokenProgramMintData;
 
 
@@ -146,7 +146,7 @@ typedef struct
 
     /// The account's state (one of the SolanaTokenAccountState values)
     uint8_t account_state;
-        
+
     /// If has_is_native, this is a native token, and the value logs the rent-exempt reserve. An
     /// Account is required to be rent-exempt, so the value is used by the Processor to ensure that
     /// wrapped SOL accounts do not drop below this threshold.
@@ -159,7 +159,7 @@ typedef struct
     /// Optional authority to close the account.
     uint32_t has_close_authority;
     SolPubkey close_authority;
-    
+
 } SolanaTokenProgramTokenData;
 
 

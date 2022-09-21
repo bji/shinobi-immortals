@@ -15,7 +15,7 @@ typedef struct
     uint64_t leader_schedule_epoch;
 
     timestamp_t unix_timestamp;
-    
+
 } Clock;
 
 

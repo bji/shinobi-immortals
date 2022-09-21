@@ -17,7 +17,7 @@ static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, SolPubke
     uint8_t prefix = PDA_Account_Seed_Prefix_Mint;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) block_key, sizeof(*block_key) },
                               { (uint8_t *) &entry_index, sizeof(entry_index) },
@@ -48,7 +48,7 @@ static uint64_t create_entry_account(SolAccountInfo *entry_account, SolPubkey *m
     uint8_t prefix = PDA_Account_Seed_Prefix_Entry;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) mint_key, sizeof(*mint_key) },
                               { &bump_seed, sizeof(bump_seed) } };
@@ -64,7 +64,7 @@ static uint64_t create_entry_account(SolAccountInfo *entry_account, SolPubkey *m
     if (!SolPubkey_same(&pubkey, entry_account->key)) {
         return Error_CreateAccountFailed;
     }
-    
+
     return create_pda(entry_account, seeds, ARRAY_LEN(seeds), funding_key, &(Constants.nifty_program_pubkey),
                       get_rent_exempt_minimum(sizeof(Entry)), sizeof(Entry), transaction_accounts,
                       transaction_accounts_len);
@@ -79,7 +79,7 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPub
     uint8_t prefix = PDA_Account_Seed_Prefix_Token;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) mint_key, sizeof(*mint_key) },
                               { &bump_seed, sizeof(bump_seed) } };
@@ -110,8 +110,8 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPub
     SolInstruction instruction;
 
     instruction.program_id = &(Constants.spl_token_program_pubkey);
-    
-    SolAccountMeta account_metas[] = 
+
+    SolAccountMeta account_metas[] =
           // The account to initialize.
         { { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signuer */ false },
           // The mint this account will be associated with.
@@ -119,7 +119,7 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPub
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     util_InitializeAccount3Data data = {
         /* instruction_code */ 18,
         /* owner */ Constants.nifty_authority_pubkey
@@ -167,7 +167,7 @@ static Entry *get_validated_entry(SolAccountInfo *entry_account)
     if (entry_account->data_len != sizeof(Entry)) {
         return 0;
     }
-    
+
     Entry *entry = (Entry *) entry_account->data;
 
     // If the entry does not have the correct data type, then it's not an entry
@@ -191,7 +191,7 @@ static Entry *get_validated_entry_of_block(SolAccountInfo *entry_account, SolPub
     }
 }
 
-    
+
 // Assumes that the block containing the Entry is complete.  If block is provided, then the pre-reveal states are
 // discerned, otherwise a generic EntryState_PreReveal is returned.
 static EntryState get_entry_state(Block *block, Entry *entry, Clock *clock)

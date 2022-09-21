@@ -14,12 +14,12 @@ static Whitelist *get_validated_whitelist(SolAccountInfo *whitelist_account)
     if (!is_nifty_program(whitelist_account->owner)) {
         return 0;
     }
-    
+
     // Whitelist account must by the correct size
     if (whitelist_account->data_len != sizeof(Whitelist)) {
         return 0;
     }
-        
+
     Whitelist *whitelist = (Whitelist *) whitelist_account->data;
 
     // If the whitelist does not have the correct data type, then this is an error
@@ -43,16 +43,16 @@ static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, SolAcco
     if (get_validated_block(block_account)) {
         return Error_BlockAlreadyExists;
     }
-    
+
     // Compute the whitelist address
     uint8_t prefix = PDA_Account_Seed_Prefix_Whitelist;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) block_account->key, sizeof(*(block_account->key)) },
                               { &bump_seed, sizeof(bump_seed) } };
-    
+
     SolPubkey pubkey;
     uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
                                                 &pubkey, &bump_seed);
@@ -78,10 +78,10 @@ static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, SolAcco
         }
 
         whitelist = (Whitelist *) whitelist_account->data;
-        
+
         whitelist->data_type = DataType_Whitelist;
     }
-    
+
     // Make sure they will all fit
     if ((whitelisted_pubkey_count + whitelist->count) > MAX_WHITELIST_ENTRIES) {
         return Error_TooManyWhitelistEntries;
@@ -108,11 +108,11 @@ static bool whitelist_check(SolAccountInfo *whitelist_account, SolPubkey *block_
     uint8_t prefix = PDA_Account_Seed_Prefix_Whitelist;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) block_address, sizeof(*block_address) },
                               { &bump_seed, sizeof(bump_seed) } };
-    
+
     SolPubkey pubkey;
     uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
                                                 &pubkey, &bump_seed);
@@ -155,7 +155,7 @@ static bool whitelist_check(SolAccountInfo *whitelist_account, SolPubkey *block_
 
 // Deletes a whitelist, returning the lamports in it to the destination account.  An empty whitelist can always
 // be deleted.  This is not allowed if the block exists, uses a whitelist, and is not yet past its whitelist phase.
-static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, SolAccountInfo *block_account, 
+static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, SolAccountInfo *block_account,
                                          Clock *clock, SolAccountInfo *destination_account,
                                          SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
@@ -168,11 +168,11 @@ static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, SolA
     uint8_t prefix = PDA_Account_Seed_Prefix_Whitelist;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) block_account->key, sizeof(*(block_account->key)) },
                               { &bump_seed, sizeof(bump_seed) } };
-    
+
     SolPubkey pubkey;
     uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
                                                 &pubkey, &bump_seed);
@@ -195,7 +195,7 @@ static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, SolA
             return Error_WhitelistBlockInProgress;
         }
     }
-    
+
     // Move the lamports from the whitelist
     *(destination_account->lamports) += *(whitelist_account->lamports);
     *(whitelist_account->lamports) = 0;

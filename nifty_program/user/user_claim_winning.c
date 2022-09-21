@@ -27,7 +27,7 @@ static uint64_t user_claim_winning(SolParameters *params)
     if (reclaim_bid_marker) {
         DECLARE_ACCOUNTS_NUMBER(15);
     }
-    
+
     // This is the entry data
     Entry *entry = get_validated_entry(entry_account);
     if (!entry) {
@@ -43,7 +43,7 @@ static uint64_t user_claim_winning(SolParameters *params)
     if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
         return Error_InvalidAccount_First + 6;
     }
-        
+
     // Get the clock sysvar, needed below
     Clock clock;
     if (sol_get_clock_sysvar(&clock)) {
@@ -60,7 +60,7 @@ static uint64_t user_claim_winning(SolParameters *params)
     if (!bid) {
         return Error_InvalidAccount_First + 2;
     }
-    
+
     // If this is the not the winning bid pubkey, then it cannot claim the winning bid
     if (!SolPubkey_same(bid_account->key, &(entry->auction.winning_bid_pubkey))) {
         return Error_CannotClaimBid;
@@ -71,7 +71,7 @@ static uint64_t user_claim_winning(SolParameters *params)
     if (!SolPubkey_same(bidding_account->key, &(bid->bidder_pubkey))) {
         return Error_InvalidAccount_First;
     }
-        
+
     // Ensure that the token destination account exists
     uint64_t ret = create_associated_token_account_idempotent(token_destination_account,
                                                               token_destination_owner_account->key,
@@ -89,7 +89,7 @@ static uint64_t user_claim_winning(SolParameters *params)
 
     // If the accounts were provided that would allow the bid marker token account to be reclaimed, do so
     if (reclaim_bid_marker) {
-        {        
+        {
             DECLARE_ACCOUNT(13,   bid_marker_mint_account,          ReadWrite,  NotSigner,  KnownAccount_NotKnown);
             DECLARE_ACCOUNT(14,   bid_marker_token_account,         ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         }
@@ -105,10 +105,10 @@ static uint64_t user_claim_winning(SolParameters *params)
     // Set the purchase price on the entry to the winning bid amount, so that the entry now goes into an Owned
     // state
     entry->purchase_price_lamports = *(bid_account->lamports);
-    
+
     // OK transferred the token, so move the bid account lamports to the admin
     *(admin_account->lamports) += *(bid_account->lamports);
     *(bid_account->lamports) = 0;
-    
+
     return 0;
 }

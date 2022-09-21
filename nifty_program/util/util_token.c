@@ -28,7 +28,7 @@ typedef struct __attribute__((packed))
     /// Optional authority to freeze token accounts.
     uint32_t has_freeze_authority;
     SolPubkey freeze_authority;
-    
+
 } SolanaMintAccountData;
 
 
@@ -58,7 +58,7 @@ typedef struct __attribute__((packed))
 
     /// The account's state (one of the SolanaTokenAccountState values)
     uint8_t account_state;
-        
+
     /// If has_is_native, this is a native token, and the value logs the rent-exempt reserve. An
     /// Account is required to be rent-exempt, so the value is used by the Processor to ensure that
     /// wrapped SOL accounts do not drop below this threshold.
@@ -71,7 +71,7 @@ typedef struct __attribute__((packed))
     /// Optional authority to close the account.
     uint32_t has_close_authority;
     SolPubkey close_authority;
-    
+
 } SolanaTokenProgramTokenData;
 
 
@@ -85,7 +85,7 @@ typedef struct __attribute__((packed))
 
     uint8_t has_freeze_authority;
     SolPubkey freeze_authority;
-    
+
 } util_InitializeMint2Data;
 
 
@@ -94,7 +94,7 @@ typedef struct __attribute__((packed))
     uint8_t instruction_code; // 18 for InitializeAccount3
 
     SolPubkey owner;
-    
+
 } util_InitializeAccount3Data;
 
 
@@ -103,7 +103,7 @@ typedef struct __attribute__((packed))
     uint8_t instruction_code; // 7 for MintTo
 
     uint64_t amount;
-    
+
 } util_MintToData;
 
 
@@ -115,14 +115,14 @@ typedef struct __attribute__((packed))
 
     uint8_t has_new_authority;
     SolPubkey new_authority;
-    
+
 } util_SetAuthorityData;
 
 
 typedef struct __attribute__((packed))
 {
     uint8_t instruction_code; // 3 for Transfer
-    
+
     uint64_t amount;
 } util_TransferData;
 
@@ -130,7 +130,7 @@ typedef struct __attribute__((packed))
 typedef struct __attribute__((packed))
 {
     uint8_t instruction_code; // 8 for Burn
-    
+
     uint64_t amount;
 } util_BurnData;
 
@@ -173,7 +173,7 @@ static bool is_token_owner(SolAccountInfo *token_account, SolPubkey *token_owner
     if (!is_token_account(token_account, mint_pubkey, minimum_amount)) {
         return false;
     }
-    
+
     // token_account must be owned by token_owner_account
     return SolPubkey_same(&(((SolanaTokenProgramTokenData *) token_account->data)->owner), token_owner_key);
 }
@@ -197,14 +197,14 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *m
     SolInstruction instruction;
 
     instruction.program_id = &(Constants.spl_token_program_pubkey);
-    
-    SolAccountMeta account_metas[] = 
+
+    SolAccountMeta account_metas[] =
         // Only account to pass to InitializeMint2 is the mint account to initialize
         { { /* pubkey */ mint_account->key, /* is_writable */ true, /* is_signer */ false } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     util_InitializeMint2Data data = {
         /* instruction_code */ 20,
         /* decimals */ decimals,
@@ -218,7 +218,7 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *m
     return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
 
-    
+
 // When this returns, the given token account will exist for the given mint with the given owner.  Only returns
 // an error if it can't make that happen.
 static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token_account, SolPubkey *owner_key,
@@ -241,8 +241,8 @@ static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token
     SolInstruction instruction;
 
     instruction.program_id = &(Constants.spl_associated_token_account_program_pubkey);
-    
-    SolAccountMeta account_metas[] = 
+
+    SolAccountMeta account_metas[] =
           ///   0. `[writeable,signer]` Funding account (must be a system account)
         { { /* pubkey */ funding_key, /* is_writable */ true, /* is_signer */ true },
           ///   1. `[writeable]` Associated token account address to be created
@@ -258,7 +258,7 @@ static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     instruction.data = (uint8_t *) 0;
     instruction.data_len = 0;
 
@@ -279,9 +279,9 @@ static uint64_t create_pda_token_account(SolAccountInfo *token_account, SolSigne
     }
 
     SolInstruction instruction;
-    
+
     instruction.program_id = &(Constants.spl_token_program_pubkey);
-    
+
     SolAccountMeta account_metas[] =
           ///   0. `[writable]`  The account to initialize.
         { { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signer */ false },
@@ -308,10 +308,10 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
                             SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
-    
+
     instruction.program_id = &(Constants.spl_token_program_pubkey);
-    
-    SolAccountMeta account_metas[] = 
+
+    SolAccountMeta account_metas[] =
           ///   0. `[writable]` The mint.
         { { /* pubkey */ mint_key, /* is_writable */ true, /* is_signer */ false },
           ///   1. `[writable]` The account to mint tokens to.
@@ -321,7 +321,7 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     util_MintToData data = {
         /* instruction_code */ 7,
         /* amount */ amount
@@ -334,7 +334,7 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
     uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
-    
+
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
@@ -342,11 +342,11 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
 static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_key,
                                       SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    
+
     SolInstruction instruction;
     instruction.program_id = &(Constants.spl_token_program_pubkey);
 
-    SolAccountMeta account_metas[] = 
+    SolAccountMeta account_metas[] =
           ///   0. `[writable]` The mint or account to change the authority of.
         { { /* pubkey */ mint_key, /* is_writable */ true, /* is_signer */ false },
           ///   1. `[signer]` The current authority of the mint or account.
@@ -354,7 +354,7 @@ static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     util_SetAuthorityData data = {
         /* instruction_code */ 6,
         /* authority_type */ 0, // MintTokens
@@ -381,7 +381,7 @@ static uint64_t transfer_entry_token(Entry *entry, SolAccountInfo *token_destina
     SolInstruction instruction;
 
     instruction.program_id = &(Constants.spl_token_program_pubkey);
-    
+
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The source account.
         { { &(entry->token_pubkey), true, false },
@@ -393,7 +393,7 @@ static uint64_t transfer_entry_token(Entry *entry, SolAccountInfo *token_destina
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     util_TransferData data = {
         /* instruction_code */ 3,
         /* amount */ 1
@@ -418,7 +418,7 @@ static uint64_t close_token_account(SolPubkey *token_pubkey, SolPubkey *owner_pu
     SolInstruction instruction;
 
     instruction.program_id = &(Constants.spl_token_program_pubkey);
-    
+
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The account to close.
         { { token_pubkey, /* is_writable */ true, /* is_signer */ false },
@@ -430,7 +430,7 @@ static uint64_t close_token_account(SolPubkey *token_pubkey, SolPubkey *owner_pu
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     uint8_t data = 9; // CloseAccount
 
     instruction.data = &data;
@@ -473,7 +473,7 @@ static uint64_t burn_tokens(SolPubkey *token_account_key, SolPubkey *token_owner
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
-    
+
     util_BurnData data = {
         /* instruction code */ 8,
         /* amount */ to_burn
@@ -484,4 +484,3 @@ static uint64_t burn_tokens(SolPubkey *token_account_key, SolPubkey *token_owner
 
     return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
-

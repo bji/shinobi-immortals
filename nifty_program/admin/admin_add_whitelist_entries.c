@@ -14,9 +14,9 @@ typedef struct
 
     // These are the whitelist entries to add, up to 28 of them
     SolPubkey entries[28];
-    
+
 } AddWhitelistEntriesData;
-    
+
 
 // Creates a new block of entries
 static uint64_t admin_add_whitelist_entries(SolParameters *params)
@@ -31,7 +31,7 @@ static uint64_t admin_add_whitelist_entries(SolParameters *params)
         DECLARE_ACCOUNT(5,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(6);
-    
+
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;

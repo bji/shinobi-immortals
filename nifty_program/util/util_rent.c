@@ -38,19 +38,19 @@ static uint64_t get_rent_exempt_minimum(uint64_t account_size)
 
     // 128 bytes are added for account overhead
     uint64_t min = (account_size + 128) * rent.lamports_per_byte_year;
-        
+
     if (exp >= 1023) {
         min *= (1 << (exp - 1023));
     }
     else {
         min /= (1 << (1023 - exp));
     }
-    
+
     uint64_t fraction = u & 0x000FFFFFFFFFFFFFULL;
-    
+
     // Reduce fraction to 10 bits, to avoid overflow.  Keep track of whether or not to round up.
     bool round_up = (fraction & 0x3FFFFFFFFFFULL);
-    
+
     fraction >>= 42;
     if (round_up) {
         fraction += 1;
@@ -58,6 +58,6 @@ static uint64_t get_rent_exempt_minimum(uint64_t account_size)
 
     fraction *= min;
     fraction /= 0x3FF;
-    
+
     return min + fraction;
 }

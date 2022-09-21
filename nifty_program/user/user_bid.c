@@ -13,7 +13,7 @@ typedef struct
 
     // Maximum bid in lamports
     uint64_t maximum_bid_lamports;
-    
+
 } BidData;
 
 
@@ -63,7 +63,7 @@ static uint64_t user_bid(SolParameters *params)
     if (sol_get_clock_sysvar(&clock)) {
         return Error_FailedToGetClock;
     }
-    
+
     // Check to make sure that the entry is in an auction
     if (get_entry_state(0, entry, &clock) != EntryState_InAuction) {
         return Error_EntryNotInAuction;
@@ -95,7 +95,7 @@ static uint64_t user_bid(SolParameters *params)
     if (ret) {
         return ret;
     }
-    
+
     // Create the bid account itself, which will hold the bid lamports in escrow and be claimable by a user_claim
     // instruction
     ret = create_entry_bid_account(bid_account, bid_marker_token_account->key, &(entry->mint_pubkey),
@@ -142,7 +142,7 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
     // result can be off if there is overflow.  So bound it by between 1.02 and 2.1 of the current_max_bid
     uint64_t min_result = current_max_bid + (current_max_bid / 50);
     uint64_t max_result = (2 * current_max_bid) + (current_max_bid / 100);
-    
+
     if (result < min_result) {
         return min_result;
     }

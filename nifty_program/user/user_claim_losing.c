@@ -17,7 +17,7 @@ static uint64_t user_claim_losing(SolParameters *params)
     if (reclaim_bid_marker) {
         DECLARE_ACCOUNTS_NUMBER(7);
     }
-    
+
     // Get the validated entry account data
     Entry *entry = get_validated_entry(entry_account);
     if (!entry) {
@@ -93,6 +93,6 @@ static uint64_t user_claim_losing(SolParameters *params)
     // Move the bid account lamports to the bidding account
     *(bidding_account->lamports) += *(bid_account->lamports);
     *(bid_account->lamports) = 0;
-    
+
     return 0;
 }

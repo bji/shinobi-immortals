@@ -11,5 +11,5 @@ typedef struct
 
     // The bidder account
     SolPubkey bidder_pubkey;
-    
+
 } Bid;

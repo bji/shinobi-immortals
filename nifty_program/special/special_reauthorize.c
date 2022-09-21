@@ -8,7 +8,7 @@ typedef struct
     // This is the new authority that will be given stake and withdraw authority for any stake account staked
     // to the entry, and the enty's metadata.
     SolPubkey new_authority;
-    
+
 } ReauthorizeData;
 
 
@@ -54,7 +54,7 @@ static uint64_t special_reauthorize(SolParameters *params)
     if (sol_get_clock_sysvar(&clock)) {
         return Error_FailedToGetClock;
     }
-    
+
     // Make sure that the entry is in an Owned or OwnedAndStaked state
     bool is_staked;
     switch (get_entry_state(0, entry, &clock)) {

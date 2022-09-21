@@ -13,7 +13,7 @@ typedef struct
 
     // Identification of the block number of this block within its group.
     uint32_t block_number;
-    
+
     // Total number of entries in this block.  Must be greater than 0.
     uint16_t total_entry_count;
 
@@ -73,7 +73,7 @@ typedef struct
 {
     // This is an indicator that the data is a Block
     DataType data_type;
-    
+
     // This is the configuration of the block.  It is never changed after the block is created.  Each entry of the
     // block contains a duplicate of this data in its config.
     BlockConfiguration config;

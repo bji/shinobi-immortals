@@ -30,7 +30,7 @@ typedef struct
 {
     // Form at this level
     uint8_t form;
-    
+
     // Attack and defense skill (top 4 bits = attack, bottom 4 = defense)
     uint8_t skill;
 
@@ -46,7 +46,7 @@ typedef struct
     // SHA-256 of the contents of the Metadata URL at this level.  Used to both verify the metadata and also
     // to allow alternate methods (outside of the scope of this program) for fetching metadata
     sha256_t uri_contents_sha256;
-    
+
 } LevelMetadata;
 
 
@@ -60,7 +60,7 @@ typedef struct
 
     // Metadata for each of the 9 levels
     LevelMetadata level_metadata[9];
-    
+
 } EntryMetadata;
 
 
@@ -87,7 +87,7 @@ typedef struct
 
     // Address of this program's token account for holding the token when the entry is unowned and unsold
     SolPubkey token_pubkey;
-    
+
     // Program Derived Address of the metaplex metadata account
     SolPubkey metaplex_metadata_pubkey;
 
@@ -108,7 +108,7 @@ typedef struct
     // If [has_auction] is false, this is the number of seconds it takes for the entry price to decay from
     // non_auction_start_price_lamports to minimum_price_lamports
     uint32_t duration;
-    
+
     // If [has_auction] is false, this is the initial price to sell revealed entry for, which must be
     // >= minimum_price_lamports.
     uint64_t non_auction_start_price_lamports;
@@ -121,7 +121,7 @@ typedef struct
 
     // Timestamp that the entry was revealed
     timestamp_t reveal_timestamp;
-    
+
     // When an entry is purchased, this is the number of lamports it was purchased for.  If purchased before reveal,
     // then this number of lamports is temporarily held in the program authority account and returned to the user on a
     // Refund action, or transferred to the admin account on a Reveal action.  If purchased after reveal, then this
@@ -146,12 +146,12 @@ typedef struct
         // of this block (block.minimum_bid_lamports), and the "bid increment factor" (which is a function of the
         // time left in the auction) higher than the previous bid
         uint64_t highest_bid_lamports;
-        
+
         // Bid account address of the highest bid.  It is necessary to store this here to track what the winning
         // bid is; cannot rely just on the lamports value of the bid account since someone could send SOL into that
         // via a system transfer after it is created.
         SolPubkey winning_bid_pubkey;
-        
+
     } auction;
 
     // If the entry is owned, then this struct is used
@@ -162,16 +162,16 @@ typedef struct
         // Initial lamports of the stake account at the time that it was staked to the Entry.  Can be used to
         // calculate APY.
         uint64_t stake_initial_lamports;
-        
+
         // Epoch at the time that it was staked to the Entry.  Can be used to calculate APY.
         uint64_t stake_epoch;
-        
+
         // Lamports in the stake account at which Ki was most recently harvested
         uint64_t last_ki_harvest_stake_account_lamports;
-        
+
         // Number of lamports in the stake account at the time of its last commission collection
         uint64_t last_commission_charge_stake_account_lamports;
-        
+
     } owned;
 
     // Current level of the entry

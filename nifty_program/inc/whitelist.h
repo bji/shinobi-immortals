@@ -9,7 +9,7 @@ typedef struct
 {
     // This is an indicator that the data is a Whitelist
     DataType data_type;
-    
+
     // Number of entries in the whitelist.  Entries may be removed after being added, in which case the entry
     // at that index will be all zeroes.
     uint16_t count;

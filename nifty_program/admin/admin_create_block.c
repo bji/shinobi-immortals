@@ -17,7 +17,7 @@ typedef struct
     BlockConfiguration config;
 
 } CreateBlockData;
-    
+
 
 // Creates a new block of entries
 static uint64_t admin_create_block(SolParameters *params)
@@ -31,7 +31,7 @@ static uint64_t admin_create_block(SolParameters *params)
         DECLARE_ACCOUNT(4,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(5);
-    
+
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
@@ -89,7 +89,7 @@ static uint64_t admin_create_block(SolParameters *params)
             return Error_InvalidData_First + 6;
         }
     }
-    
+
     // Ensure that the minimum price of an entry is >= rent exempt minimum of a bid account, to ensure that bids
     // can always be created
     if (config->minimum_price_lamports < get_rent_exempt_minimum(sizeof(Bid))) {

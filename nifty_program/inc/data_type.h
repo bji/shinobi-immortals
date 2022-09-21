@@ -11,7 +11,7 @@ typedef enum
 
     // Program config
     DataType_ProgramConfig  = 1,
-    
+
     // Block
     DataType_Block          = 2,
 

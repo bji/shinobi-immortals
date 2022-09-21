@@ -49,7 +49,7 @@ static uint64_t compute_add_entries_data_size(uint16_t entry_count)
     return ((uint64_t) &(d->entry_sha256s[entry_count]));
 }
 
-    
+
 static uint64_t admin_add_entries_to_block(SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
@@ -64,7 +64,7 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         DECLARE_ACCOUNT(7,   metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
         DECLARE_ACCOUNT(8,   rent_sysvar_account,           ReadOnly,   NotSigner,  KnownAccount_RentSysvar);
     }
-    
+
     // There are 4 accounts per entry following the 9 fixed accounts
     uint8_t entry_count = (params->ka_num - 9) / 4;
 
@@ -108,7 +108,7 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         if (block->entries_added_bitmap[entry_index / 8] & (1 << (entry_index % 8))) {
             continue;
         }
-        
+
         // This is the group of accounts for this entry
         SolAccountInfo *entry_accounts = &(params->ka[9 + (4 * i)]);
 
@@ -118,7 +118,7 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         // Add the entry
         uint64_t result = add_entry(entry_accounts, block_account->key, block, entry_index, funding_account->key,
                                     data, entry_sha256, params->ka, params->ka_num);
-        
+
         if (result) {
             return result;
         }
@@ -212,7 +212,7 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, 
         return ret;
     }
 
-    #if 0    
+    #if 0
 
     // Create the metaplex edition metadata.  Or not:
     // 1. It's useless and an extra cost
@@ -241,15 +241,15 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, 
     entry->block_pubkey = *block_key;
 
     entry->group_number = block->config.group_number;
-    
+
     entry->block_number = block->config.block_number;
 
     entry->entry_index = entry_index;
 
     entry->mint_pubkey = *(mint_account->key);
-    
+
     entry->token_pubkey = *(token_account->key);
-    
+
     entry->metaplex_metadata_pubkey = *(metaplex_metadata_account->key);
 
     entry->minimum_price_lamports = block->config.minimum_price_lamports;

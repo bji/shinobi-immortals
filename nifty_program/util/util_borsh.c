@@ -9,21 +9,21 @@
 typedef enum
 {
     BorshDataType_u8,
-    
+
     BorshDataType_u16,
-    
+
     BorshDataType_u32,
 
     BorshDataType_u64,
-    
+
     BorshDataType_Vec_u8,
 
     BorshDataType_String,
 
     BorshDataType_Pubkey
-    
+
 } BorshDataType;
-    
+
 
 // Macros that will give the in-memory maximum size of a field of the given data type.  These are used to
 // ensure that enough memory is allocated (typically on the stack) to hold a fully serialized version of
@@ -45,7 +45,7 @@ typedef enum
 static uint8_t *borsh_encode_bool(uint8_t *data, bool value)
 {
     *data = value ? 1 : 0;
-    
+
     return &(data[BORSH_SIZE_BOOL]);
 }
 
@@ -54,7 +54,7 @@ static uint8_t *borsh_encode_bool(uint8_t *data, bool value)
 static uint8_t *borsh_encode_u8(uint8_t *data, uint8_t value)
 {
     *data = value;
-    
+
     return &(data[BORSH_SIZE_U8]);
 }
 
@@ -63,7 +63,7 @@ static uint8_t *borsh_encode_u8(uint8_t *data, uint8_t value)
 static uint8_t *borsh_encode_u16(uint8_t *data, uint16_t value)
 {
     * (uint16_t *) data = value;
-    
+
     return &(data[BORSH_SIZE_U16]);
 }
 
@@ -72,7 +72,7 @@ static uint8_t *borsh_encode_u16(uint8_t *data, uint16_t value)
 static uint8_t *borsh_encode_u32(uint8_t *data, uint32_t value)
 {
     * (uint32_t *) data = value;
-    
+
     return &(data[BORSH_SIZE_U32]);
 }
 
@@ -81,7 +81,7 @@ static uint8_t *borsh_encode_u32(uint8_t *data, uint32_t value)
 static uint8_t *borsh_encode_u64(uint8_t *data, uint64_t value)
 {
     * (uint64_t *) data = value;
-    
+
     return &(data[BORSH_SIZE_U64]);
 }
 
@@ -222,7 +222,7 @@ static const uint32_t borsh_decode_Vec_u8(const uint8_t *data, uint32_t data_len
     if ((*length > max_length) || (*length > (data_len - ret))) {
         return 0;
     }
-    
+
     sol_memcpy(value, &(data[ret]), *length);
 
     return ret + *length;

@@ -54,7 +54,7 @@ typedef enum
     Instruction_ClaimLosing                   = 13,
     // Claim a winning bid
     Instruction_ClaimWinning                  = 14,
-    
+
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
     // progrmam.
     Instruction_Stake                         = 15,
@@ -80,7 +80,7 @@ typedef enum
     // can't be upgraded but a new program can be made and then given authority over all user owned entries via this
     // instruction (but only if both the user and admin agree to do so).
     Instruction_ReAuthorize                   = 20
-    
+
 } Instruction;
 
 
@@ -121,7 +121,7 @@ uint64_t entrypoint(const uint8_t *input)
     // instruction.
     SolAccountInfo account_info[21];
     params.ka = account_info;
-    
+
     // Deserialize parameters.  Must succeed.
     if (!sol_deserialize(input, &params, sizeof(account_info) / sizeof(account_info[0]))) {
         return Error_InvalidData;
@@ -137,10 +137,10 @@ uint64_t entrypoint(const uint8_t *input)
     switch (params.data[0]) {
     case Instruction_Initialize:
         return super_initialize(&params);
-        
+
     case Instruction_SetAdmin:
         return super_set_admin(&params);
-        
+
     case Instruction_CreateBlock:
         return admin_create_block(&params);
 
@@ -158,13 +158,13 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_SplitMasterStake:
         return admin_split_master_stake(&params);
-        
+
     case Instruction_AddWhitelistEntries:
         return admin_add_whitelist_entries(&params);
-        
+
     case Instruction_DeleteWhitelist:
         return admin_delete_whitelist(&params);
-        
+
     case Instruction_Buy:
         return user_buy(&params);
 

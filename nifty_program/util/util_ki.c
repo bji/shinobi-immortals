@@ -12,22 +12,22 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
     // Amount of Ki to harvest is the stake account earnings since the last harvest: it is the number of SOL earned
     // times the ki_factor.
     uint64_t harvest_amount =
-        (((stake->stake.delegation.stake - entry->owned.last_ki_harvest_stake_account_lamports) * 
+        (((stake->stake.delegation.stake - entry->owned.last_ki_harvest_stake_account_lamports) *
           entry->metadata.level_metadata[entry->level].ki_factor) / LAMPORTS_PER_SOL);
 
     // If the amount to harvest is zero, then wait to accumulate more
     if (harvest_amount == 0) {
         return 0;
     }
-    
+
     // Now reduce the amount to harvest, to discourage very large Ki harvests per entry.  The amount to harvest is the
     // function:
     // x = (x - (x^4/106666^3))
     // To avoid rounding errors, this is refactored.
     uint64_t f = (harvest_amount * harvest_amount) / 106666ULL;
-    
+
     harvest_amount = ((harvest_amount * 106666ULL) - (f * f)) / 1066666ULL;
-    
+
     if (harvest_amount > 0) {
         // Ensure that the destination account exists
         uint64_t ret = create_associated_token_account_idempotent(destination_account, destination_account_owner_key,
@@ -36,7 +36,7 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
         if (ret) {
             return ret;
         }
-        
+
         // Mint the harvest_amount to the destination_account.  Because Ki tokens have a decimal place count of 1, which
         // is necessary to comply with metaplex metadata standards for fungible tokens, multiply the actual number of Ki
         // by 10.

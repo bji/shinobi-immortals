@@ -20,7 +20,7 @@ static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t gro
     uint8_t prefix = PDA_Account_Seed_Prefix_Block;
 
     uint8_t bump_seed;
-        
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) &group_number, sizeof(group_number) },
                               { (uint8_t *) &block_number, sizeof(block_number) },
@@ -40,7 +40,7 @@ static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t gro
 
     // The size of the block to create is the sizeof a block + 1 byte per 8 entries (for the entries added bitmap)
     uint64_t block_size = compute_block_size(entry_count);
-    
+
     return create_pda(block_account, seeds, ARRAY_LEN(seeds), funding_key, &(Constants.nifty_program_pubkey),
                       get_rent_exempt_minimum(block_size), block_size, transaction_accounts,
                       transaction_accounts_len);
@@ -54,12 +54,12 @@ static Block *get_validated_block(SolAccountInfo *block_account)
     if (!is_nifty_program(block_account->owner)) {
         return 0;
     }
-    
+
     // Block account must have at least enough size to hold zero entries
     if (block_account->data_len < sizeof(Block)) {
         return 0;
     }
-        
+
     Block *block = (Block *) block_account->data;
 
     // Block must be correctly sized for the number of entries it contains
@@ -90,10 +90,8 @@ static bool is_complete_block_revealable(const Block *block, const Clock *clock)
     if (block->mysteries_sold_count == block->config.total_mystery_count) {
         return true;
     }
-    
+
     // Otherwise, it's revealable if the mystery phase has passed (even though not all mysteries were sold)
     timestamp_t mystery_phase_end = block->block_start_timestamp + block->config.mystery_phase_duration;
     return (clock->unix_timestamp > mystery_phase_end);
 }
-
-

@@ -27,13 +27,13 @@ static uint64_t user_stake(SolParameters *params)
     if (!block) {
         return Error_InvalidAccount_First;
     }
-    
+
     // This is the entry data
     Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
         return Error_InvalidAccount_First + 1;
     }
-    
+
     // Get the clock sysvar, needed below
     Clock clock;
     if (sol_get_clock_sysvar(&clock)) {
@@ -60,7 +60,7 @@ static uint64_t user_stake(SolParameters *params)
     default:
         return Error_InvalidAccount_First + 4;
     }
-    
+
     // - Must have a withdraw authority equal to the provided withdraw authority
     if (!SolPubkey_same(&(stake.meta.authorize.withdrawer), withdraw_authority_account->key)) {
         return Error_InvalidAccount_First + 5;
@@ -83,7 +83,7 @@ static uint64_t user_stake(SolParameters *params)
     }
 
     // If the stake account is in an initialized state, then it's not delegated, so delegate it to Shinobi Systems.
-    // The amount of SOL that it will have as delegated after this delegation 
+    // The amount of SOL that it will have as delegated after this delegation
     if (stake.state == StakeState_Initialized) {
         if (delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
                                   params->ka, params->ka_num)) {
@@ -118,10 +118,10 @@ static uint64_t user_stake(SolParameters *params)
 
     // Record current lamports in the stake account to be used for ki harvesting purposes
     entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
-    
-    // Record current lamports in the stake account to be used for commission purposes 
+
+    // Record current lamports in the stake account to be used for commission purposes
     entry->owned.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
-        
+
     // Update the entry's commission to that of the block
     entry->commission = block->commission;
 

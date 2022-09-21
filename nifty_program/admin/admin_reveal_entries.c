@@ -14,7 +14,7 @@ typedef struct
 
     // These are the salt values that were used to compute the SHA-256 hash of each entry
     salt_t entry_salt[0];
-    
+
 } RevealEntriesData;
 
 
@@ -55,13 +55,13 @@ static uint64_t admin_reveal_entries(SolParameters *params)
         DECLARE_ACCOUNT(4,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(5,   metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
-    
+
     // There are 4 accounts per entry, following the 6 fixed accounts
     uint8_t entry_count = (params->ka_num - 6) / 4;
-    
+
     // Must be exactly the fixed accounts + 4 accounts per entry
     DECLARE_ACCOUNTS_NUMBER(6 + (entry_count * 4));
-    
+
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
@@ -86,12 +86,12 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     if (sol_get_clock_sysvar(&clock)) {
         return Error_FailedToGetClock;
     }
-        
+
     // Ensure that the block is complete; cannot reveal entries of a block that is not complete yet
     if (!is_block_complete(block)) {
         return Error_BlockNotComplete;
     }
-    
+
     // Ensure that the block has reached its reveal criteria; cannot reveal entries of a block that has not reached
     // reveal
     if (!is_complete_block_revealable(block, &clock)) {
@@ -106,7 +106,7 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     // Keep track of total number of escrow lamports, paid to the authority account by purchasers of "mystery"
     // un-revealed NFTs, that need to be moved to the admin account now that the entries are revealed.
     uint64_t total_lamports_to_move = 0;
-    
+
     // Reveal entries one by one
     for (uint16_t i = 0; i < entry_count; i++) {
         uint16_t destination_index = data->first_entry + i;
@@ -115,16 +115,16 @@ static uint64_t admin_reveal_entries(SolParameters *params)
 
         // This is the account info of the NFT mint, as passed into the accounts list
         SolAccountInfo *mint_account = &(params->ka[_account_num++]);
-        
+
         // This is the token account of the NFT, as passed into the accounts list
         SolAccountInfo *token_account = &(params->ka[_account_num++]);
-        
+
         // This is the account info of the metaplex metadata for the NFT, as passed into the accounts list
         SolAccountInfo *metaplex_metadata_account = &(params->ka[_account_num++]);
 
         // This is the account info of the entry, as passed into the accounts list
         SolAccountInfo *entry_account = &(params->ka[_account_num++]);
-        
+
         // The salt is the corresponding entry in the input data
         salt_t salt = data->entry_salt[i];
 
@@ -156,7 +156,7 @@ static uint64_t admin_reveal_entries(SolParameters *params)
         *(admin_account->lamports) += total_lamports_to_move;
         *(authority_account->lamports) -= total_lamports_to_move;
     }
-    
+
     return 0;
 }
 
@@ -218,7 +218,7 @@ static uint64_t reveal_single_entry(Block *block,
     // accounts is valid, and the entry is in a valid state.  So now compute the SHA-256 hash that will ensure that
     // these are correct for the reveal of this entry.
     sha256_t computed_sha256;
-    
+
     // The computation of the hash is a two step process:
     // 1. Compute the SHA-256 hash of the entry metadata, into a contiguous buffer of bytes.  Then append the 8 bytes
     //    of salt onto the end.
@@ -251,7 +251,7 @@ static uint64_t reveal_single_entry(Block *block,
     if (sol_memcmp(&computed_sha256, &(entry->reveal_sha256), sizeof(sha256_t))) {
         return Error_InvalidHash;
     }
-    
+
     // Update the metaplex metadata for the NFT to include the level 0 state.
     uint64_t ret = set_metaplex_metadata_for_level(entry, 0, metaplex_metadata_account, transaction_accounts,
                                                    transaction_accounts_len);

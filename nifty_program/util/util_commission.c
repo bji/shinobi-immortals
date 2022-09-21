@@ -34,9 +34,9 @@ static uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolP
 
     // Compute the bridge address
     uint8_t prefix = PDA_Account_Seed_Prefix_Bridge;
-    
+
     uint8_t bump_seed;
-    
+
     SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
                               { (uint8_t *) &(entry->mint_pubkey), sizeof(entry->mint_pubkey) },
                               { &bump_seed, sizeof(bump_seed) } };
@@ -47,7 +47,7 @@ static uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolP
     if (ret) {
         return ret;
     }
-    
+
     // Verify that the bridge address is as expected
     if (!SolPubkey_same(&pubkey, bridge_stake_account->key)) {
         return Error_CreateAccountFailed;

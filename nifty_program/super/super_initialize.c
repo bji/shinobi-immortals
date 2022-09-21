@@ -20,7 +20,7 @@ typedef struct
     uint8_t instruction_code;
 
     SolPubkey admin_pubkey;
-    
+
 } InitializeData;
 
 
@@ -54,13 +54,13 @@ static uint64_t super_initialize(SolParameters *params)
     }
 
     InitializeData *data = (InitializeData *) params->data;
-    
+
     // If the config account already exists and with the correct owner, then fail, because can't re-create the
     // config account, can only modify it after it's created
     if ((config_account->data_len > 0) && is_nifty_program(config_account->owner)) {
         return Error_InvalidAccount_First + 1;
     }
-    
+
     // Create the config account.  The config account is derived from a fixed seed.
     {
         uint8_t *seed_bytes = (uint8_t *) Constants.nifty_config_seed_bytes;
@@ -82,7 +82,7 @@ static uint64_t super_initialize(SolParameters *params)
     {
         uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
-        
+
         if (create_pda(authority_account, &seed, 1, superuser_account->key, &(Constants.nifty_program_pubkey),
                        get_rent_exempt_minimum(0), 0, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
@@ -148,6 +148,6 @@ static uint64_t super_initialize(SolParameters *params)
                                  &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
-    
+
     return 0;
 }
