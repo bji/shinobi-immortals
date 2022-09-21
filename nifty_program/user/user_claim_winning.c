@@ -73,9 +73,8 @@ static uint64_t user_claim_winning(SolParameters *params)
     }
 
     // Ensure that the token destination account exists
-    uint64_t ret = create_associated_token_account_idempotent(token_destination_account,
-                                                              token_destination_owner_account->key,
-                                                              &(entry->mint_pubkey), bidding_account->key,
+    uint64_t ret = create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey), 
+                                                              token_destination_owner_account->key, bidding_account->key,
                                                               params->ka, params->ka_num);
     if (ret) {
         return ret;

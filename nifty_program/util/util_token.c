@@ -221,8 +221,8 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *m
 
 // When this returns, the given token account will exist for the given mint with the given owner.  Only returns
 // an error if it can't make that happen.
-static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token_account, SolPubkey *owner_key,
-                                                           SolPubkey *mint_key, SolPubkey *funding_key,
+static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token_account, SolPubkey *mint_key,
+                                                           SolPubkey *owner_key, SolPubkey *funding_key,
                                                            SolAccountInfo *transaction_accounts,
                                                            int transaction_accounts_len)
 {
@@ -266,10 +266,22 @@ static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token
 }
 
 
-static uint64_t create_pda_token_account(SolAccountInfo *token_account, SolSignerSeed *seeds, int seeds_count,
-                                         SolPubkey *mint_key, SolPubkey *funding_key,
-                                         SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_account, SolPubkey *mint_key,
+                                                    SolPubkey *owner_key, SolPubkey *funding_key,
+                                                    SolSignerSeed *seeds, int seeds_count,
+                                                    SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
+    if (*(token_account->lamports) > 0) {
+        // Make sure that this is a token account for the given mint, doesn't need to have any tokens in it though
+        if (is_token_owner(token_account, owner_key, mint_key, 0)) {
+            // Already exists as a valid account
+            return 0;
+        }
+
+        // The account that was passed in was not the proper token account for the given account address
+        return Error_InvalidTokenAccount;
+    }
+
     // Create PDA
     uint64_t ret = create_pda(token_account, seeds, seeds_count, funding_key, &(Constants.spl_token_program_pubkey),
                               get_rent_exempt_minimum(sizeof(SolanaTokenProgramTokenData)),

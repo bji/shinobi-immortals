@@ -69,6 +69,10 @@ typedef enum
 // BPF is unable to do this.
 typedef struct
 {
+    // This constant ensures that data conforming to the "Solana Security.txt" format is present in the binary.
+    // See: https://github.com/neodyme-labs/solana-security-txt
+    const char *security_txt;
+
     // This is the pubkey bytes of the superuser
     SolPubkey superuser_pubkey;
 
@@ -158,6 +162,15 @@ typedef struct
 
 static const _Constants Constants =
 {
+    // security_txt
+    "=======BEGIN SECURITY.TXT V1=======\0"
+    "name\0Shinobi Immortals\0"
+    "project_url\0https://www.shinobi-systems.com/immortals\0"
+    "contacts\0email:shinobisystems@yahoo.com\0"
+    "policy\0https://www.shinobi-systems.com/immortals/security_policy.txt\0"
+    "source_code\0http://github.com/shinobi_immortals\0"
+    "=======END SECURITY.TXT V1=======\0",
+    
     // superuser_pubkey
     SUPERUSER_PUBKEY_ARRAY,
 

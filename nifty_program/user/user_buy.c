@@ -197,9 +197,9 @@ static uint64_t user_buy(SolParameters *params)
     }
 
     // Ensure that the token destination account exists
-    ret = create_associated_token_account_idempotent(token_destination_account, token_destination_owner_account->key,
-                                                     &(entry->mint_pubkey), funding_account->key, params->ka,
-                                                     params->ka_num);
+    ret = create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey),
+                                                     token_destination_owner_account->key, funding_account->key,
+                                                     params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

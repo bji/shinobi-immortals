@@ -27,15 +27,12 @@ static uint64_t mint_bid_marker_token_idempotent(SolAccountInfo *bid_marker_toke
         return Error_CreateAccountFailed;
     }
 
-    // Only if the token doesn't already exist should it be created
-    if (!is_token_account(bid_marker_token_account, &(Constants.bid_marker_mint_pubkey), 0)) {
-        // Create the bid marker token account
-        ret = create_pda_token_account(bid_marker_token_account, seeds, ARRAY_LEN(seeds),
-                                       &(Constants.bid_marker_mint_pubkey), /* owner */ bidder_key,
-                                       transaction_accounts, transaction_accounts_len);
-        if (ret) {
-            return ret;
-        }
+    // Ensure the bid marker token account exists
+    ret = create_pda_token_account_idempotent(bid_marker_token_account, &(Constants.bid_marker_mint_pubkey),
+                                              /* owner */ bidder_key, /* funder */ bidder_key, seeds, ARRAY_LEN(seeds),
+                                              transaction_accounts, transaction_accounts_len);
+    if (ret) {
+        return ret;
     }
 
     // Mint a token into it, to prevent the user from cleaning it up because "it's empty".  Must mint 10 because the

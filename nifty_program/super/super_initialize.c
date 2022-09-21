@@ -54,10 +54,10 @@ static uint64_t super_initialize(SolParameters *params)
     }
 
     InitializeData *data = (InitializeData *) params->data;
-
-    // If the config account already exists and with the correct owner, then fail, because can't re-create the
-    // config account, can only modify it after it's created
-    if ((config_account->data_len > 0) && is_nifty_program(config_account->owner)) {
+    
+    // If the config account already exists, then fail, because can't re-create the config account, can only modify it
+    // after it's created
+    if (config_account->data_len > 0) {
         return Error_InvalidAccount_First + 1;
     }
 

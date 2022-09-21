@@ -30,8 +30,8 @@ static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destinati
 
     if (harvest_amount > 0) {
         // Ensure that the destination account exists
-        uint64_t ret = create_associated_token_account_idempotent(destination_account, destination_account_owner_key,
-                                                                  &(Constants.ki_mint_pubkey), funding_key,
+        uint64_t ret = create_associated_token_account_idempotent(destination_account, &(Constants.ki_mint_pubkey),
+                                                                  destination_account_owner_key, funding_key,
                                                                   transaction_accounts, transaction_accounts_len);
         if (ret) {
             return ret;

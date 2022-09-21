@@ -35,7 +35,7 @@ typedef enum
     // commission is more than 2% higher than the old commission.
     Instruction_SetBlockCommission            =  6,
     // Split stake off of the master stake account.  Will never split off stake that would leave the master account
-    // at less than 10 SOL staked.
+    // at less than 3 SOL staked.
     Instruction_SplitMasterStake              =  7,
     // Add entries to a block whitelist
     Instruction_AddWhitelistEntries           =  8,
@@ -43,7 +43,7 @@ typedef enum
     Instruction_DeleteWhitelist               =  9,
 
     // User functions: end users may perform these actions -------------------------------------------------------------
-    // Buy, either during mystery period, or after end of auction, or during a "reverse" auction
+    // Buy, either during mystery period, or after end of auction, or during a "final sale"
     Instruction_Buy                           = 10,
     // Request a refund of an entry that was purchased before reveal, and was not revealed before the reveal grace
     // period completed
@@ -123,7 +123,7 @@ uint64_t entrypoint(const uint8_t *input)
     params.ka = account_info;
 
     // Deserialize parameters.  Must succeed.
-    if (!sol_deserialize(input, &params, sizeof(account_info) / sizeof(account_info[0]))) {
+    if (!sol_deserialize(input, &params, ARRAY_LEN(account_info))) {
         return Error_InvalidData;
     }
 

@@ -19,7 +19,6 @@ typedef uint64_t salt_t;
 // Macro to assist in array len calculations
 #define ARRAY_LEN(x) (sizeof(x) / sizeof((x)[0]))
 
-
 // This is a Program Derived Address.  The seed prefix which was used to derive the address is not included here
 // as it is typically a constant specific to the context in which this program derived address is used.  The
 // bump seed however is included since it is unique to the instance of the address.
