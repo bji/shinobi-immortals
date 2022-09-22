@@ -24,7 +24,7 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
                               uint64_t seconds_elapsed);
 
 
-static uint64_t user_buy(SolParameters *params)
+static uint64_t user_buy(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -54,7 +54,7 @@ static uint64_t user_buy(SolParameters *params)
     }
 
     // Cast to instruction data
-    BuyData *data = (BuyData *) params->data;
+    const BuyData *data = (BuyData *) params->data;
 
     // This is the block data
     Block *block = get_validated_block(block_account);
@@ -98,7 +98,7 @@ static uint64_t user_buy(SolParameters *params)
     // invoke of the transfer of the token from the token account to the destination account will simply fail and the
     // transaction will then fail
 
-    SolAccountInfo *funds_destination_account;
+    const SolAccountInfo *funds_destination_account;
     uint64_t purchase_price_lamports;
 
     switch (get_entry_state(block, entry, &clock)) {

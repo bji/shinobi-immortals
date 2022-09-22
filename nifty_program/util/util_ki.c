@@ -5,9 +5,9 @@
 
 // Checks to make sure that the destination account is a valid token account for the Ki mint and returns false
 // if not, or on any other error, and true on success
-static uint64_t harvest_ki(Stake *stake, Entry *entry, SolAccountInfo *destination_account,
-                           SolPubkey *destination_account_owner_key, SolPubkey *funding_key,
-                           SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInfo *destination_account,
+                           const SolPubkey *destination_account_owner_key, const SolPubkey *funding_key,
+                           const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Amount of Ki to harvest is the stake account earnings since the last harvest: it is the number of SOL earned
     // times the ki_factor.

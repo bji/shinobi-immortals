@@ -1,7 +1,7 @@
 #pragma once
 
 
-static uint64_t user_refund(SolParameters *params)
+static uint64_t user_refund(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -15,7 +15,7 @@ static uint64_t user_refund(SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(6);
 
     // Get validated block account
-    Block *block = get_validated_block(block_account);
+    const Block *block = get_validated_block(block_account);
     if (!block) {
         return Error_InvalidAccount_First + 1;
     }

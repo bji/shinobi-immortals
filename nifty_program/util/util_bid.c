@@ -1,8 +1,10 @@
 #pragma once
 
 
-static uint64_t mint_bid_marker_token_idempotent(SolAccountInfo *bid_marker_token_account, SolPubkey *entry_mint_key,
-                                                 SolPubkey *bidder_key, SolAccountInfo *transaction_accounts,
+static uint64_t mint_bid_marker_token_idempotent(SolAccountInfo *bid_marker_token_account,
+                                                 const SolPubkey *entry_mint_key,
+                                                 const SolPubkey *bidder_key,
+                                                 const SolAccountInfo *transaction_accounts,
                                                  int transaction_accounts_len)
 {
     // Compute the bid marker token address
@@ -42,9 +44,9 @@ static uint64_t mint_bid_marker_token_idempotent(SolAccountInfo *bid_marker_toke
 }
 
 
-static uint64_t create_entry_bid_account(SolAccountInfo *bid_account, SolPubkey *bid_marker_key, SolPubkey *mint_key,
-                                         SolPubkey *bidder_key, uint64_t bid_lamports,
-                                         SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_entry_bid_account(SolAccountInfo *bid_account, const SolPubkey *bid_marker_key,
+                                         const SolPubkey *mint_key, const SolPubkey *bidder_key, uint64_t bid_lamports,
+                                         const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute the bid address
     uint8_t prefix = PDA_Account_Seed_Prefix_Bid;
@@ -86,11 +88,11 @@ static uint64_t create_entry_bid_account(SolAccountInfo *bid_account, SolPubkey 
 }
 
 
-static uint64_t reclaim_bid_marker_token(SolPubkey *entry_token_mint_pubkey,
-                                         SolAccountInfo *bidding_account,
-                                         SolAccountInfo *bid_marker_mint_account,
-                                         SolAccountInfo *bid_marker_token_account,
-                                         SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t reclaim_bid_marker_token(const SolPubkey *entry_token_mint_pubkey,
+                                         const SolAccountInfo *bidding_account,
+                                         const SolAccountInfo *bid_marker_mint_account,
+                                         const SolAccountInfo *bid_marker_token_account,
+                                         const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     if (!bidding_account->is_writable) {
         return Error_FailedToReclaimBidMarkerToken;
@@ -148,7 +150,7 @@ static uint64_t reclaim_bid_marker_token(SolPubkey *entry_token_mint_pubkey,
 
 
 // Given a bid account, returns the validated Bid or null if the entry account is invalid in some way.
-static Bid *get_validated_bid(SolAccountInfo *bid_account)
+static const Bid *get_validated_bid(const SolAccountInfo *bid_account)
 {
     // Make sure that the bid account is owned by the nifty stakes program
     if (!is_nifty_program(bid_account->owner)) {
@@ -160,7 +162,7 @@ static Bid *get_validated_bid(SolAccountInfo *bid_account)
         return 0;
     }
 
-    Bid *bid = (Bid *) bid_account->data;
+    const Bid *bid = (Bid *) bid_account->data;
 
     // If the bid does not have the correct data type, then it's not a bid
     if (bid->data_type != DataType_Bid) {

@@ -1,7 +1,7 @@
 #pragma once
 
 
-static uint64_t admin_split_master_stake(SolParameters *params)
+static uint64_t admin_split_master_stake(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {

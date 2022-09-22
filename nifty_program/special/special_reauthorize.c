@@ -12,7 +12,7 @@ typedef struct
 } ReauthorizeData;
 
 
-static uint64_t special_reauthorize(SolParameters *params)
+static uint64_t special_reauthorize(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -41,7 +41,7 @@ static uint64_t special_reauthorize(SolParameters *params)
     }
 
     // Can safely use the data now
-    ReauthorizeData *data = (ReauthorizeData *) params->data;
+    const ReauthorizeData *data = (ReauthorizeData *) params->data;
 
     // This is the entry data
     Entry *entry = get_validated_entry(entry_account);

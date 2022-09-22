@@ -109,12 +109,13 @@ static void number_string(uint8_t *buf, uint32_t number, uint8_t digits)
 
 // [data] must have at least METAPLEX_METADATA_DATA_SIZE bytes in it.  Returns the pointer to the byte immediately
 // after the end of data
-static uint8_t *encode_metaplex_metadata(uint8_t *data, uint8_t *name, uint8_t *symbol, uint8_t *uri,
-                                         SolPubkey *creator_1, SolPubkey *creator_2, SolPubkey *authority_key)
+static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, const uint8_t *symbol, const uint8_t *uri,
+                                         const SolPubkey *creator_1, const SolPubkey *creator_2,
+                                         const SolPubkey *authority_key)
 {
     // If the first pubkey is empty swap the pubkeys so that the logic below can readily test on 0, 1 or 2 creators
     if (is_empty_pubkey(creator_1)) {
-        SolPubkey *tmp = creator_1;
+        const SolPubkey *tmp = creator_1;
         creator_1 = creator_2;
         creator_2 = tmp;
     }
@@ -209,12 +210,12 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, uint8_t *name, uint8_t *
 
 // Ensures that the metadata is being created at the correct address, returns an error if not.  Signs the
 // metadata with the authority key.
-static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPubkey *mint_key, SolPubkey *funding_key,
-                                         uint8_t *name, uint8_t *symbol, uint8_t *uri, SolPubkey *creator_1,
-                                         SolPubkey *creator_2,
+static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key, const SolPubkey *mint_key,
+                                         const SolPubkey *funding_key, const uint8_t *name, const uint8_t *symbol,
+                                         const uint8_t *uri, const SolPubkey *creator_1, const SolPubkey *creator_2,
                                          // All cross-program invocation must pass all account infos through, it's
                                          // the only sane way to cross-program invoke
-                                         SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                                         const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 
 {
     // It is not necessary to verify that the metaplex_metadata_key is the correct account for the given mint,
@@ -232,18 +233,17 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     {
         SolAccountMeta account_metas[] =
               // Metadata key
-            { { /* pubkey */ metaplex_metadata_key, /* is_writable */ true, /* is_signer */ false },
+            { { /* pubkey */ (SolPubkey *) metaplex_metadata_key, /* is_writable */ true, /* is_signer */ false },
               // Mint of token asset
-              { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false },
+              { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ false, /* is_signer */ false },
               // Mint authority
               { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true },
               // payer
-              { /* pubkey */ funding_key, /* is_writable */ true, /* is_signer */ true },
+              { /* pubkey */ (SolPubkey *) funding_key, /* is_writable */ true, /* is_signer */ true },
               // update authority info
               { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ false },
               // system program
-              { /* pubkey */ &((* (_Constants *) &Constants).system_program_pubkey), /* is_writable */ false,
-                /* is_signer */ false },
+              { /* pubkey */ &(Constants.system_program_pubkey), /* is_writable */ false, /* is_signer */ false },
               // rent
               { /* pubkey */ &(Constants.rent_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false } };
 
@@ -271,7 +271,7 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
     // Now sign the metadata with the program authority
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ metaplex_metadata_key, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) metaplex_metadata_key, /* is_writable */ true, /* is_signer */ false },
           // creator
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -288,8 +288,10 @@ static uint64_t create_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPu
 
 // Change the update authority for metaplex metadata.  Assumes that the nifty authority is the current authority
 // of the metadata.
-static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pubkey, SolPubkey *new_authority,
-                                                SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t set_metaplex_metadata_authority(const SolPubkey *metaplex_metadata_pubkey,
+                                                const SolPubkey *new_authority,
+                                                const SolAccountInfo *transaction_accounts,
+                                                int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -298,7 +300,7 @@ static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pub
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ metaplex_metadata_pubkey, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) metaplex_metadata_pubkey, /* is_writable */ true, /* is_signer */ false },
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -320,7 +322,7 @@ static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pub
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -329,11 +331,11 @@ static uint64_t set_metaplex_metadata_authority(SolPubkey *metaplex_metadata_pub
 
 
 // Sets the primary_sale_happened metaplex metadata value to true
-static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
+static uint64_t set_metaplex_metadata_primary_sale_happened(const Entry *entry,
                                                             // All cross-program invocation must pass all account
                                                             // infos through, it's the only sane way to cross-program
                                                             // invoke
-                                                            SolAccountInfo *transaction_accounts,
+                                                            const SolAccountInfo *transaction_accounts,
                                                             int transaction_accounts_len)
 {
     SolInstruction instruction;
@@ -343,7 +345,8 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
     // UpdateMetadataAccountV2
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ &(entry->metaplex_metadata_pubkey), /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) &(entry->metaplex_metadata_pubkey), /* is_writable */ true,
+              /* is_signer */ false },
           // Update authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -362,7 +365,7 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -371,10 +374,12 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(Entry *entry,
 
 
 // Set the metaplex metadata for the entry to that of the given level
-static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, SolAccountInfo *metaplex_metadata_account,
+static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t level,
+                                                const SolAccountInfo *metaplex_metadata_account,
                                                 // All cross-program invocation must pass all account infos through,
                                                 // it's the only sane way to cross-program invoke
-                                                SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                                                const SolAccountInfo *transaction_accounts,
+                                                int transaction_accounts_len)
 {
     // The values to update are name and uri.  Symbol is always "SHIN".  seller_fee_basis_points is always 0,
     // and collection and uses are always empty.  What must be read from the existing metadata is the
@@ -482,7 +487,7 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
         }
     }
 
-    LevelMetadata *level_metadata = &(entry->metadata.level_metadata[level]);
+    const LevelMetadata *level_metadata = &(entry->metadata.level_metadata[level]);
 
     // creator_1 is always the first creator
     SolPubkey *creator_1 = &(creator_keys[0]);
@@ -499,14 +504,15 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     instruction.program_id = &(Constants.metaplex_program_pubkey);
 
     // Must invoke metaplex instructions with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     {
         SolAccountMeta account_metas[] =
               // Metadata key
-            { { /* pubkey */ &(entry->metaplex_metadata_pubkey), /* is_writable */ true, /* is_signer */ false },
+            { { /* pubkey */ (SolPubkey *) &(entry->metaplex_metadata_pubkey), /* is_writable */ true,
+                  /* is_signer */ false },
               // Update authority
               { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -541,7 +547,8 @@ static uint64_t set_metaplex_metadata_for_level(Entry *entry, uint8_t level, Sol
     // Now sign the metadata with the program authority
     SolAccountMeta account_metas[] =
           // Metadata key
-        { { /* pubkey */ &(entry->metaplex_metadata_pubkey), /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) &(entry->metaplex_metadata_pubkey), /* is_writable */ true,
+              /* is_signer */ false },
           // creator
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 

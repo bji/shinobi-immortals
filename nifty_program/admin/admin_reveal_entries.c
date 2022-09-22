@@ -19,23 +19,23 @@ typedef struct
 
 
 // Forward declaration
-static uint64_t reveal_single_entry(Block *block,
+static uint64_t reveal_single_entry(const Block *block,
                                     Entry *entry,
-                                    Clock *clock,
+                                    const Clock *clock,
                                     salt_t salt,
-                                    SolAccountInfo *admin_account,
-                                    SolAccountInfo *authority_account,
-                                    SolAccountInfo *mint_account,
-                                    SolAccountInfo *token_account,
-                                    SolAccountInfo *metaplex_metadata_account,
-                                    SolAccountInfo *transaction_accounts,
+                                    const SolAccountInfo *admin_account,
+                                    const SolAccountInfo *authority_account,
+                                    const SolAccountInfo *mint_account,
+                                    const SolAccountInfo *token_account,
+                                    const SolAccountInfo *metaplex_metadata_account,
+                                    const SolAccountInfo *transaction_accounts,
                                     int transaction_accounts_len,
                                     /* modifies */ uint64_t *total_lamports_to_move);
 
 
 static uint64_t compute_reveal_entries_data_size(uint16_t entry_count)
 {
-    RevealEntriesData *d = 0;
+    const RevealEntriesData *d = 0;
 
     // The total space needed is from the beginning of RevealEntriesData to the entries element one beyond the
     // total supported (i.e. if there are 100 entries, then then entry at index 100 starts at the first byte beyond
@@ -44,7 +44,7 @@ static uint64_t compute_reveal_entries_data_size(uint16_t entry_count)
 }
 
 
-static uint64_t admin_reveal_entries(SolParameters *params)
+static uint64_t admin_reveal_entries(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -73,7 +73,7 @@ static uint64_t admin_reveal_entries(SolParameters *params)
     }
 
     // Data can be used now
-    RevealEntriesData *data = (RevealEntriesData *) params->data;
+    const RevealEntriesData *data = (RevealEntriesData *) params->data;
 
     // Get the valid block data
     Block *block = get_validated_block(block_account);
@@ -114,16 +114,16 @@ static uint64_t admin_reveal_entries(SolParameters *params)
         // _account_num is defined by DECLARE_ACCOUNTS
 
         // This is the account info of the NFT mint, as passed into the accounts list
-        SolAccountInfo *mint_account = &(params->ka[_account_num++]);
+        const SolAccountInfo *mint_account = &(params->ka[_account_num++]);
 
         // This is the token account of the NFT, as passed into the accounts list
-        SolAccountInfo *token_account = &(params->ka[_account_num++]);
+        const SolAccountInfo *token_account = &(params->ka[_account_num++]);
 
         // This is the account info of the metaplex metadata for the NFT, as passed into the accounts list
-        SolAccountInfo *metaplex_metadata_account = &(params->ka[_account_num++]);
+        const SolAccountInfo *metaplex_metadata_account = &(params->ka[_account_num++]);
 
         // This is the account info of the entry, as passed into the accounts list
-        SolAccountInfo *entry_account = &(params->ka[_account_num++]);
+        const SolAccountInfo *entry_account = &(params->ka[_account_num++]);
 
         // The salt is the corresponding entry in the input data
         salt_t salt = data->entry_salt[i];
@@ -164,16 +164,16 @@ static uint64_t admin_reveal_entries(SolParameters *params)
 // This function reveals a single entry, which means ensuring that it meets all requirements for being a valid
 // reveal, and then updates the entry state to their post-reveal values.  It returns nonzero on error, zero on
 // success.
-static uint64_t reveal_single_entry(Block *block,
+static uint64_t reveal_single_entry(const Block *block,
                                     Entry *entry,
-                                    Clock *clock,
+                                    const Clock *clock,
                                     salt_t salt,
-                                    SolAccountInfo *admin_account,
-                                    SolAccountInfo *authority_account,
-                                    SolAccountInfo *mint_account,
-                                    SolAccountInfo *token_account,
-                                    SolAccountInfo *metaplex_metadata_account,
-                                    SolAccountInfo *transaction_accounts,
+                                    const SolAccountInfo *admin_account,
+                                    const SolAccountInfo *authority_account,
+                                    const SolAccountInfo *mint_account,
+                                    const SolAccountInfo *token_account,
+                                    const SolAccountInfo *metaplex_metadata_account,
+                                    const SolAccountInfo *transaction_accounts,
                                     int transaction_accounts_len,
                                     /* modifies */ uint64_t *total_lamports_to_move)
 {
@@ -182,14 +182,14 @@ static uint64_t reveal_single_entry(Block *block,
         return Error_InvalidMintAccount;
     }
 
-    SolanaMintAccountData *mint_data = (SolanaMintAccountData *) mint_account->data;
+    const SolanaMintAccountData *mint_data = (SolanaMintAccountData *) mint_account->data;
 
     // Ensure that the token account is the correct token account for this Entry
     if (!SolPubkey_same(token_account->key, &(entry->token_pubkey))) {
         return Error_InvalidTokenAccount;
     }
 
-    SolanaTokenProgramTokenData *token_data = (SolanaTokenProgramTokenData *) token_account->data;
+    const SolanaTokenProgramTokenData *token_data = (SolanaTokenProgramTokenData *) token_account->data;
 
     // Ensure that the metaplex metadata account passed in is the actual metaplex metadata account for this token
     if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {

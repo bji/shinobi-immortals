@@ -8,8 +8,9 @@ typedef struct __attribute__((packed))
 } util_SystemTransferData;
 
 
-static uint64_t util_transfer_lamports(SolPubkey *source_account, SolPubkey *destination_account, uint64_t lamports,
-                                       SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t util_transfer_lamports(const SolPubkey *source_account, const SolPubkey *destination_account,
+                                       uint64_t lamports, const SolAccountInfo *transaction_accounts,
+                                       int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -17,9 +18,9 @@ static uint64_t util_transfer_lamports(SolPubkey *source_account, SolPubkey *des
 
     SolAccountMeta account_metas[] =
           ///   0. `[writable, signer]` The source account.
-        { { source_account, true, true },
+        { { (SolPubkey *) source_account, true, true },
           ///   1. `[writable]` The destination account.
-          { destination_account, true, false } };
+          { (SolPubkey *) destination_account, true, false } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -33,9 +34,9 @@ static uint64_t util_transfer_lamports(SolPubkey *source_account, SolPubkey *des
 }
 
 
-static uint64_t util_transfer_lamports_signed(SolPubkey *source_account, SolPubkey *destination_account,
-                                              uint64_t lamports, SolSignerSeed *seeds, int seeds_count,
-                                              SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t util_transfer_lamports_signed(const SolPubkey *source_account, const SolPubkey *destination_account,
+                                              uint64_t lamports, const SolSignerSeed *seeds, int seeds_count,
+                                              const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -43,9 +44,9 @@ static uint64_t util_transfer_lamports_signed(SolPubkey *source_account, SolPubk
 
     SolAccountMeta account_metas[] =
           ///   0. `[writable, signer]` The source account.
-        { { source_account, true, true },
+        { { (SolPubkey *) source_account, true, true },
           ///   1. `[writable]` The destination account.
-          { destination_account, true, false } };
+          { (SolPubkey *) destination_account, true, false } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);

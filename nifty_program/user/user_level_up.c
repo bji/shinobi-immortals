@@ -1,7 +1,7 @@
 #pragma once
 
 
-static uint64_t user_level_up(SolParameters *params)
+static uint64_t user_level_up(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {

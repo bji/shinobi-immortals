@@ -6,10 +6,10 @@
 // funding_account is only used to provide transient quantities of SOL for a temporary stake account
 // If 0 is passed in for minimum_stake_lamports, the minimum will be fetched by calling the
 // get_minimum_stake_delegation function.
-static uint64_t charge_commission(Stake *stake, Block *block, Entry *entry, SolPubkey *funding_account_key,
-                                  SolAccountInfo *bridge_stake_account, SolPubkey *stake_account_key,
-                                  uint64_t minimum_stake_lamports,
-                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t charge_commission(const Stake *stake, const Block *block, Entry *entry,
+                                  const SolPubkey *funding_account_key, SolAccountInfo *bridge_stake_account,
+                                  const SolPubkey *stake_account_key, uint64_t minimum_stake_lamports,
+                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute commission to charge.  It is the commission as set in the block, times the difference between
     // the current lamports in the stake account minus the lamports that were in the stake account the last

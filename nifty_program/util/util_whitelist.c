@@ -8,7 +8,7 @@
 #include "util/util_rent.c"
 
 
-static Whitelist *get_validated_whitelist(SolAccountInfo *whitelist_account)
+static Whitelist *get_validated_whitelist(const SolAccountInfo *whitelist_account)
 {
     // Make sure that the whitelist account is owned by the nifty stakes program
     if (!is_nifty_program(whitelist_account->owner)) {
@@ -20,22 +20,22 @@ static Whitelist *get_validated_whitelist(SolAccountInfo *whitelist_account)
         return 0;
     }
 
-    Whitelist *whitelist = (Whitelist *) whitelist_account->data;
+    const Whitelist *whitelist = (Whitelist *) whitelist_account->data;
 
     // If the whitelist does not have the correct data type, then this is an error
     if (whitelist->data_type != DataType_Whitelist) {
         return 0;
     }
 
-    return whitelist;
+    return (Whitelist *) whitelist;
 }
 
 
 // If the block already exists, this function will always return an error.
 // Adds pubkeys to the whitelist for a block.  Creates the whitelist account if it doesn't yet exist.
-static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, SolAccountInfo *block_account,
-                                      SolPubkey *funding_pubkey, uint16_t whitelisted_pubkey_count,
-                                      SolPubkey *whitelisted_pubkeys, SolAccountInfo *transaction_accounts,
+static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, const SolAccountInfo *block_account,
+                                      const SolPubkey *funding_pubkey, uint16_t whitelisted_pubkey_count,
+                                      const SolPubkey *whitelisted_pubkeys, const SolAccountInfo *transaction_accounts,
                                       int transaction_accounts_len)
 {
     // Verify that the block account does not exist.  This is necessary because whitelists cannot be created after a
@@ -101,8 +101,8 @@ static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, SolAcco
 // Checks the ensure that the given system account address is stored in the whitelist for the given block.  If
 // the block has no whitelist, then this check succeeds.  Otherwise, if the account is in the whitelist, it
 // its first entry in the whitelist is cleared and true is returned, otherwise false is returned.
-static bool whitelist_check(SolAccountInfo *whitelist_account, SolPubkey *block_address,
-                            SolPubkey *system_account_address)
+static bool whitelist_check(const SolAccountInfo *whitelist_account, const SolPubkey *block_address,
+                            const SolPubkey *system_account_address)
 {
     // Compute the whitelist address
     uint8_t prefix = PDA_Account_Seed_Prefix_Whitelist;
@@ -155,9 +155,9 @@ static bool whitelist_check(SolAccountInfo *whitelist_account, SolPubkey *block_
 
 // Deletes a whitelist, returning the lamports in it to the destination account.  An empty whitelist can always
 // be deleted.  This is not allowed if the block exists, uses a whitelist, and is not yet past its whitelist phase.
-static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, SolAccountInfo *block_account,
-                                         Clock *clock, SolAccountInfo *destination_account,
-                                         SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t delete_whitelist_account(const SolAccountInfo *whitelist_account, const SolAccountInfo *block_account,
+                                         const Clock *clock, const SolAccountInfo *destination_account,
+                                         const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Ensure that the whitelist is the correct size
     if (whitelist_account->data_len != sizeof(Whitelist)) {
@@ -187,9 +187,9 @@ static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, SolA
 
     // If the whitelist has entries in it, then check the block to make sure that it isn't valid with an in-progress
     // whitelist
-    Whitelist *whitelist = get_validated_whitelist(whitelist_account);
+    const Whitelist *whitelist = get_validated_whitelist(whitelist_account);
     if (whitelist && whitelist->count) {
-        Block *block = get_validated_block(block_account);
+        const Block *block = get_validated_block(block_account);
         if (block && (block->config.whitelist_duration > 0) &&
             ((block->block_start_timestamp + block->config.whitelist_duration) > clock->unix_timestamp)) {
             return Error_WhitelistBlockInProgress;

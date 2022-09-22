@@ -13,7 +13,7 @@ typedef struct
 
 
 // Deletes a whitelist that is no longer needed
-static uint64_t admin_delete_whitelist(SolParameters *params)
+static uint64_t admin_delete_whitelist(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {

@@ -135,7 +135,7 @@ typedef struct __attribute__((packed))
 } util_BurnData;
 
 
-static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubkey, uint64_t minimum_amount)
+static bool is_token_account(const SolAccountInfo *token_account, const SolPubkey *mint_pubkey, uint64_t minimum_amount)
 {
     // token_account must be owned by the SPL-Token program
     if (!is_spl_token_program(token_account->owner)) {
@@ -147,7 +147,7 @@ static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubk
         return false;
     }
 
-    SolanaTokenProgramTokenData *data = (SolanaTokenProgramTokenData *) token_account->data;
+    const SolanaTokenProgramTokenData *data = (SolanaTokenProgramTokenData *) token_account->data;
 
     // token_account must be for the correct mint
     if (!SolPubkey_same(&(data->mint), mint_pubkey)) {
@@ -166,8 +166,8 @@ static bool is_token_account(SolAccountInfo *token_account, SolPubkey *mint_pubk
 
 // Returns true only if [token_account] is a token account of the mint [mint_pubkey] owned by [token_owner_key] and
 // has at least [minimum_amount] of tokens
-static bool is_token_owner(SolAccountInfo *token_account, SolPubkey *token_owner_key, SolPubkey *mint_pubkey,
-                           uint64_t minimum_amount)
+static bool is_token_owner(const SolAccountInfo *token_account, const SolPubkey *token_owner_key,
+                           const SolPubkey *mint_pubkey, uint64_t minimum_amount)
 {
     // token_account must be a token account for the mint
     if (!is_token_account(token_account, mint_pubkey, minimum_amount)) {
@@ -179,9 +179,10 @@ static bool is_token_owner(SolAccountInfo *token_account, SolPubkey *token_owner
 }
 
 
-static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *mint_account_seeds,
-                                  uint8_t mint_account_seed_count, SolPubkey *authority_key, SolPubkey *funding_key,
-                                  uint8_t decimals, SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_token_mint(SolAccountInfo *mint_account, const SolSignerSeed *mint_account_seeds,
+                                  uint8_t mint_account_seed_count, const SolPubkey *authority_key,
+                                  const SolPubkey *funding_key, uint8_t decimals,
+                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // First create the mint account, with owner as SPL-token program
     uint64_t funding_lamports = get_rent_exempt_minimum(sizeof(SolanaMintAccountData));
@@ -221,9 +222,10 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, SolSignerSeed *m
 
 // When this returns, the given token account will exist for the given mint with the given owner.  Only returns
 // an error if it can't make that happen.
-static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token_account, SolPubkey *mint_key,
-                                                           SolPubkey *owner_key, SolPubkey *funding_key,
-                                                           SolAccountInfo *transaction_accounts,
+static uint64_t create_associated_token_account_idempotent(const SolAccountInfo *token_account,
+                                                           const SolPubkey *mint_key, const SolPubkey *owner_key,
+                                                           const SolPubkey *funding_key,
+                                                           const SolAccountInfo *transaction_accounts,
                                                            int transaction_accounts_len)
 {
     if (*(token_account->lamports) > 0) {
@@ -244,13 +246,13 @@ static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token
 
     SolAccountMeta account_metas[] =
           ///   0. `[writeable,signer]` Funding account (must be a system account)
-        { { /* pubkey */ funding_key, /* is_writable */ true, /* is_signer */ true },
+        { { /* pubkey */ (SolPubkey *) funding_key, /* is_writable */ true, /* is_signer */ true },
           ///   1. `[writeable]` Associated token account address to be created
-          { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signer */ false },
+          { /* pubkey */ (SolPubkey *) token_account->key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[]` Wallet address for the new associated token account
-          { /* pubkey */ owner_key, /* is_writable */ false, /* is_signer */ false },
+          { /* pubkey */ (SolPubkey *) owner_key, /* is_writable */ false, /* is_signer */ false },
           ///   3. `[]` The token mint for the new associated token account
-          { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false },
+          { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ false, /* is_signer */ false },
           ///   4. `[]` System program
           { /* pubkey */ &(Constants.system_program_pubkey), /* is_writable */ false, /* is_signer */ false },
           ///   5. `[]` SPL Token program
@@ -266,10 +268,11 @@ static uint64_t create_associated_token_account_idempotent(SolAccountInfo *token
 }
 
 
-static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_account, SolPubkey *mint_key,
-                                                    SolPubkey *owner_key, SolPubkey *funding_key,
-                                                    SolSignerSeed *seeds, int seeds_count,
-                                                    SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_account, const SolPubkey *mint_key,
+                                                    const SolPubkey *owner_key, const SolPubkey *funding_key,
+                                                    const SolSignerSeed *seeds, int seeds_count,
+                                                    const SolAccountInfo *transaction_accounts,
+                                                    int transaction_accounts_len)
 {
     if (*(token_account->lamports) > 0) {
         // Make sure that this is a token account for the given mint, doesn't need to have any tokens in it though
@@ -298,7 +301,7 @@ static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_accoun
           ///   0. `[writable]`  The account to initialize.
         { { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signer */ false },
           ///   1. `[]` The mint this account will be associated with.
-          { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false } };
+          { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ false, /* is_signer */ false } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -316,8 +319,8 @@ static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_accoun
 }
 
 
-static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t amount,
-                            SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t mint_tokens(const SolPubkey *mint_key, const SolPubkey *token_key, uint64_t amount,
+                            const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -325,9 +328,9 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
 
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The mint.
-        { { /* pubkey */ mint_key, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ true, /* is_signer */ false },
           ///   1. `[writable]` The account to mint tokens to.
-          { /* pubkey */ token_key, /* is_writable */ true, /* is_signer */ false },
+          { /* pubkey */ (SolPubkey *) token_key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The mint's minting authority.
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -343,7 +346,7 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -351,8 +354,8 @@ static uint64_t mint_tokens(SolPubkey *mint_key, SolPubkey *token_key, uint64_t 
 }
 
 
-static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_key,
-                                      SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t revoke_mint_authority(const SolPubkey *mint_key, const SolPubkey *authority_key,
+                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
 
     SolInstruction instruction;
@@ -360,9 +363,9 @@ static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_
 
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The mint or account to change the authority of.
-        { { /* pubkey */ mint_key, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ true, /* is_signer */ false },
           ///   1. `[signer]` The current authority of the mint or account.
-          { /* pubkey */ authority_key, /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ (SolPubkey *) authority_key, /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -378,7 +381,7 @@ static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -387,8 +390,8 @@ static uint64_t revoke_mint_authority(SolPubkey *mint_key, SolPubkey *authority_
 
 
 // Transfers entry token account to a destination
-static uint64_t transfer_entry_token(Entry *entry, SolAccountInfo *token_destination,
-                                     SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t transfer_entry_token(const Entry *entry, const SolAccountInfo *token_destination,
+                                     const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -396,9 +399,9 @@ static uint64_t transfer_entry_token(Entry *entry, SolAccountInfo *token_destina
 
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The source account.
-        { { &(entry->token_pubkey), true, false },
+        { { (SolPubkey *) &(entry->token_pubkey), true, false },
           ///   1. `[writable]` The destination account.
-          { token_destination->key, /* is_writable */ true, /* is_signer */ false },
+          { (SolPubkey *) token_destination->key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The source account's owner/delegate, which since this is a token owned by the
           //                  entry, the owner is the authority account
           { &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
@@ -415,7 +418,7 @@ static uint64_t transfer_entry_token(Entry *entry, SolAccountInfo *token_destina
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -423,9 +426,9 @@ static uint64_t transfer_entry_token(Entry *entry, SolAccountInfo *token_destina
 }
 
 
-static uint64_t close_token_account(SolPubkey *token_pubkey, SolPubkey *owner_pubkey,
-                                    SolPubkey *lamports_destination_key, SolAccountInfo *transaction_accounts,
-                                    int transaction_accounts_len)
+static uint64_t close_token_account(const SolPubkey *token_pubkey, const SolPubkey *owner_pubkey,
+                                    const SolPubkey *lamports_destination_key,
+                                    const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -433,12 +436,12 @@ static uint64_t close_token_account(SolPubkey *token_pubkey, SolPubkey *owner_pu
 
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The account to close.
-        { { token_pubkey, /* is_writable */ true, /* is_signer */ false },
+        { { (SolPubkey *) token_pubkey, /* is_writable */ true, /* is_signer */ false },
           ///   1. `[writable]` The destination account.
-          { lamports_destination_key, /* is_writable */ true, /* is_signer */ false },
+          { (SolPubkey *) lamports_destination_key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The owner/delegate of the account to close, which since this is a token owned by the
           //                  entry, the owner is the authority account
-          { owner_pubkey, /* is_writable */ false, /* is_signer */ true } };
+          { (SolPubkey *) owner_pubkey, /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -449,7 +452,7 @@ static uint64_t close_token_account(SolPubkey *token_pubkey, SolPubkey *owner_pu
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -458,8 +461,8 @@ static uint64_t close_token_account(SolPubkey *token_pubkey, SolPubkey *owner_pu
 
 
 // Closes an empty token account and transfers the lamports to a destination account
-static uint64_t close_entry_token(Entry *entry, SolPubkey *lamports_destination_key,
-                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t close_entry_token(const Entry *entry, const SolPubkey *lamports_destination_key,
+                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     return close_token_account(&(entry->token_pubkey), &(Constants.nifty_authority_pubkey), lamports_destination_key,
                                transaction_accounts, transaction_accounts_len);
@@ -467,8 +470,9 @@ static uint64_t close_entry_token(Entry *entry, SolPubkey *lamports_destination_
 
 
 // Burns tokens
-static uint64_t burn_tokens(SolPubkey *token_account_key, SolPubkey *token_owner_account_key, SolPubkey *mint_key,
-                            uint64_t to_burn, SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t burn_tokens(const SolPubkey *token_account_key, const SolPubkey *token_owner_account_key,
+                            const SolPubkey *mint_key, uint64_t to_burn,
+                            const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -476,12 +480,11 @@ static uint64_t burn_tokens(SolPubkey *token_account_key, SolPubkey *token_owner
 
     SolAccountMeta account_metas[] =
           ///   0. `[writable]` The account to burn from.
-        { { token_account_key, /* is_writable */ true, /* is_signer */ false },
+        { { (SolPubkey *) token_account_key, /* is_writable */ true, /* is_signer */ false },
           ///   1. `[writable]` The token mint.
-          { mint_key, /* is_writable */ true, /* is_signer */ false },
+          { (SolPubkey *) mint_key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The account's owner/delegate.
-          { token_owner_account_key, /* is_writable */ false, /* is_signer */ true } };
-
+          { (SolPubkey *) token_owner_account_key, /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);

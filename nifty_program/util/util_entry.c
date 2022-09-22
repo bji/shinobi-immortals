@@ -9,19 +9,19 @@
 
 
 // Returns an error if [mint_account] is not the correct account
-static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, SolPubkey *block_key, uint16_t entry_index,
-                                          SolPubkey *funding_key, SolAccountInfo *transaction_accounts,
-                                          int transaction_accounts_len)
+static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, const SolPubkey *block_key,
+                                          uint16_t entry_index, const SolPubkey *funding_key,
+                                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute the mint address
     uint8_t prefix = PDA_Account_Seed_Prefix_Mint;
 
     uint8_t bump_seed;
 
-    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
-                              { (uint8_t *) block_key, sizeof(*block_key) },
-                              { (uint8_t *) &entry_index, sizeof(entry_index) },
-                              { &bump_seed, sizeof(bump_seed) } };
+    const SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
+                                    { (uint8_t *) block_key, sizeof(*block_key) },
+                                    { (uint8_t *) &entry_index, sizeof(entry_index) },
+                                    { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
     uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
@@ -41,17 +41,18 @@ static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, SolPubke
 
 
 // Returns an error if [mint_account] is not the correct account
-static uint64_t create_entry_account(SolAccountInfo *entry_account, SolPubkey *mint_key, SolPubkey *funding_key,
-                                     SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_entry_account(SolAccountInfo *entry_account, const SolPubkey *mint_key,
+                                     const SolPubkey *funding_key, const SolAccountInfo *transaction_accounts,
+                                     int transaction_accounts_len)
 {
     // Compute the entry address
     uint8_t prefix = PDA_Account_Seed_Prefix_Entry;
 
     uint8_t bump_seed;
 
-    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
-                              { (uint8_t *) mint_key, sizeof(*mint_key) },
-                              { &bump_seed, sizeof(bump_seed) } };
+    const SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
+                                    { (uint8_t *) mint_key, sizeof(*mint_key) },
+                                    { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
     uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
@@ -71,8 +72,8 @@ static uint64_t create_entry_account(SolAccountInfo *entry_account, SolPubkey *m
 }
 
 
-static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPubkey *mint_key,
-                                           SolPubkey *funding_key, SolAccountInfo *transaction_accounts,
+static uint64_t create_entry_token_account(SolAccountInfo *token_account, const SolPubkey *mint_key,
+                                           const SolPubkey *funding_key, const SolAccountInfo *transaction_accounts,
                                            int transaction_accounts_len)
 {
     // Compute the entry address
@@ -80,9 +81,9 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPub
 
     uint8_t bump_seed;
 
-    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
-                              { (uint8_t *) mint_key, sizeof(*mint_key) },
-                              { &bump_seed, sizeof(bump_seed) } };
+    const SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
+                                    { (uint8_t *) mint_key, sizeof(*mint_key) },
+                                    { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
     uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
@@ -115,7 +116,7 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPub
           // The account to initialize.
         { { /* pubkey */ token_account->key, /* is_writable */ true, /* is_signuer */ false },
           // The mint this account will be associated with.
-          { /* pubkey */ mint_key, /* is_writable */ false, /* is_signer */ false } };
+          { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ false, /* is_signer */ false } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -132,10 +133,11 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, SolPub
 }
 
 
-static uint64_t create_entry_metaplex_metadata(SolPubkey *metaplex_metadata_key, SolPubkey *mint_key,
-                                               SolPubkey *funding_key, uint32_t group_number, uint32_t block_number,
-                                               uint16_t entry_index, uint8_t *uri, SolPubkey *creator_1,
-                                               SolPubkey *creator_2, SolAccountInfo *transaction_accounts,
+static uint64_t create_entry_metaplex_metadata(const SolPubkey *metaplex_metadata_key, const SolPubkey *mint_key,
+                                               const SolPubkey *funding_key, uint32_t group_number,
+                                               uint32_t block_number, uint16_t entry_index, const uint8_t *uri,
+                                               const SolPubkey *creator_1, const SolPubkey *creator_2,
+                                               const SolAccountInfo *transaction_accounts,
                                                int transaction_accounts_len)
 {
     // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
@@ -156,7 +158,7 @@ static uint64_t create_entry_metaplex_metadata(SolPubkey *metaplex_metadata_key,
 
 
 // Given an entry account, returns the validated Entry or null if the entry account is invalid in some way.
-static Entry *get_validated_entry(SolAccountInfo *entry_account)
+static Entry *get_validated_entry(const SolAccountInfo *entry_account)
 {
     // Make sure that the entry account is owned by the nifty stakes program
     if (!is_nifty_program(entry_account->owner)) {
@@ -168,23 +170,23 @@ static Entry *get_validated_entry(SolAccountInfo *entry_account)
         return 0;
     }
 
-    Entry *entry = (Entry *) entry_account->data;
+    const Entry *entry = (Entry *) entry_account->data;
 
     // If the entry does not have the correct data type, then it's not an entry
     if (entry->data_type != DataType_Entry) {
         return 0;
     }
 
-    return entry;
+    return (Entry *) entry;
 }
 
 
-static Entry *get_validated_entry_of_block(SolAccountInfo *entry_account, SolPubkey *block_key)
+static Entry *get_validated_entry_of_block(const SolAccountInfo *entry_account, const SolPubkey *block_key)
 {
-    Entry *entry = get_validated_entry(entry_account);
+    const Entry *entry = get_validated_entry(entry_account);
 
     if (entry && SolPubkey_same(&(entry->block_pubkey), block_key)) {
-        return entry;
+        return (Entry *) entry;
     }
     else {
         return 0;
@@ -194,7 +196,7 @@ static Entry *get_validated_entry_of_block(SolAccountInfo *entry_account, SolPub
 
 // Assumes that the block containing the Entry is complete.  If block is provided, then the pre-reveal states are
 // discerned, otherwise a generic EntryState_PreReveal is returned.
-static EntryState get_entry_state(Block *block, Entry *entry, Clock *clock)
+static EntryState get_entry_state(const Block *block, const Entry *entry, const Clock *clock)
 {
     // If the entry has been revealed ...
     if (is_all_zeroes(&(entry->reveal_sha256), sizeof(entry->reveal_sha256))) {

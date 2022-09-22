@@ -89,11 +89,11 @@ static uint8_t *borsh_encode_u64(uint8_t *data, uint64_t value)
 // Encode a Vec<u8> of length length into a buffer, returning the new end of the buffer pointer
 static uint8_t *borsh_encode_Vec_u8(uint8_t *data, uint32_t length, const uint8_t *vec)
 {
-    data = borsh_encode_u32(data, length);
+    uint8_t *after_len = borsh_encode_u32(data, length);
 
-    sol_memcpy(data, vec, length);
+    sol_memcpy(after_len, vec, length);
 
-    return &(data[length]);
+    return &(after_len[length]);
 }
 
 
@@ -111,7 +111,7 @@ static uint8_t *borsh_encode_zero_terminated_string(uint8_t *data, uint32_t max_
 }
 
 
-static uint8_t *borsh_encode_pubkey(uint8_t *data, SolPubkey *pubkey)
+static uint8_t *borsh_encode_pubkey(uint8_t *data, const SolPubkey *pubkey)
 {
     * (SolPubkey *) data = *pubkey;
 

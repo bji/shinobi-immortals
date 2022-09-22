@@ -1,7 +1,7 @@
 #pragma once
 
 
-static uint64_t user_claim_winning(SolParameters *params)
+static uint64_t user_claim_winning(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -56,7 +56,7 @@ static uint64_t user_claim_winning(SolParameters *params)
     }
 
     // Get the validated bid account data
-    Bid *bid = get_validated_bid(bid_account);
+    const Bid *bid = get_validated_bid(bid_account);
     if (!bid) {
         return Error_InvalidAccount_First + 2;
     }
@@ -73,9 +73,9 @@ static uint64_t user_claim_winning(SolParameters *params)
     }
 
     // Ensure that the token destination account exists
-    uint64_t ret = create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey), 
-                                                              token_destination_owner_account->key, bidding_account->key,
-                                                              params->ka, params->ka_num);
+    uint64_t ret = create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey),
+                                                              token_destination_owner_account->key,
+                                                              bidding_account->key, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

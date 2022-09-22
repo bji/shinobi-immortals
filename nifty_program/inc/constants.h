@@ -170,7 +170,7 @@ static const _Constants Constants =
     "policy\0https://www.shinobi-systems.com/immortals/security_policy.txt\0"
     "source_code\0http://github.com/shinobi_immortals\0"
     "=======END SECURITY.TXT V1=======\0",
-    
+
     // superuser_pubkey
     SUPERUSER_PUBKEY_ARRAY,
 

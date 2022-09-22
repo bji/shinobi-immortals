@@ -24,7 +24,7 @@ typedef struct
 
 static uint64_t compute_set_metadata_bytes_data_size(uint16_t bytes_count)
 {
-    SetMetadataBytesData *b = 0;
+    const SetMetadataBytesData *b = 0;
 
     return ((uint64_t) &(b->bytes[bytes_count]));
 }
@@ -39,7 +39,7 @@ static uint64_t compute_set_metadata_bytes_data_size(uint16_t bytes_count)
 // With the above, all metadata for an entry could likely be uploaded in a single transaction.
 // It may be possible to upload metadata for multiple entries in a single transaction even.
 
-static uint64_t admin_set_metadata_bytes(SolParameters *params)
+static uint64_t admin_set_metadata_bytes(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -60,10 +60,10 @@ static uint64_t admin_set_metadata_bytes(SolParameters *params)
         return Error_InvalidDataSize;
     }
 
-    SetMetadataBytesData *data = (SetMetadataBytesData *) params->data;
+    const SetMetadataBytesData *data = (SetMetadataBytesData *) params->data;
 
     // Get the block data
-    Block *block = get_validated_block(block_account);
+    const Block *block = get_validated_block(block_account);
     if (!block) {
         return Error_InvalidAccount_First + 2;
     }

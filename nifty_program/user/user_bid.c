@@ -23,7 +23,7 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
                                     uint64_t seconds_elapsed);
 
 
-static uint64_t user_bid(SolParameters *params)
+static uint64_t user_bid(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -45,7 +45,7 @@ static uint64_t user_bid(SolParameters *params)
     }
 
     // Cast to instruction data
-    BidData *data = (BidData *) params->data;
+    const BidData *data = (BidData *) params->data;
 
     // Check to make sure data is sane
     if (data->minimum_bid_lamports > data->maximum_bid_lamports) {

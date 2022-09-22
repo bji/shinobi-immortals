@@ -24,7 +24,7 @@ typedef struct
 } InitializeData;
 
 
-static uint64_t super_initialize(SolParameters *params)
+static uint64_t super_initialize(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -53,7 +53,7 @@ static uint64_t super_initialize(SolParameters *params)
         return Error_InvalidDataSize;
     }
 
-    InitializeData *data = (InitializeData *) params->data;
+    const InitializeData *data = (InitializeData *) params->data;
     
     // If the config account already exists, then fail, because can't re-create the config account, can only modify it
     // after it's created
@@ -63,7 +63,7 @@ static uint64_t super_initialize(SolParameters *params)
 
     // Create the config account.  The config account is derived from a fixed seed.
     {
-        uint8_t *seed_bytes = (uint8_t *) Constants.nifty_config_seed_bytes;
+        const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_config_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_config_seed_bytes) };
 
         if (create_pda(config_account, &seed, 1, superuser_account->key, (SolPubkey *) params->program_id,
@@ -80,7 +80,7 @@ static uint64_t super_initialize(SolParameters *params)
 
     // Create the authority account.  The authority account is derived from a fixed seed and doesn't hold any data.
     {
-        uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+        const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
 
         if (create_pda(authority_account, &seed, 1, superuser_account->key, &(Constants.nifty_program_pubkey),
@@ -91,7 +91,7 @@ static uint64_t super_initialize(SolParameters *params)
 
     // Create the master stake account
     {
-        uint8_t *seed_bytes = (uint8_t *) Constants.master_stake_seed_bytes;
+        const uint8_t *seed_bytes = (uint8_t *) Constants.master_stake_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.master_stake_seed_bytes) };
 
         if (create_stake_account(master_stake_account, &seed, 1, superuser_account->key,
@@ -109,7 +109,7 @@ static uint64_t super_initialize(SolParameters *params)
 
     // Create the Ki mint
     {
-        uint8_t *seed_bytes = (uint8_t *) Constants.ki_mint_seed_bytes;
+        const uint8_t *seed_bytes = (uint8_t *) Constants.ki_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.ki_mint_seed_bytes) };
 
         if (create_token_mint(ki_mint_account, &seed, 1, &(Constants.nifty_authority_pubkey), superuser_account->key,
@@ -119,18 +119,17 @@ static uint64_t super_initialize(SolParameters *params)
     }
 
     // Create the metadata for the Ki mint
-    uint8_t *name = (uint8_t *) KI_TOKEN_NAME;
-    uint8_t *symbol = (uint8_t *) KI_TOKEN_SYMBOL;
-    uint8_t *uri = (uint8_t *) KI_TOKEN_METADATA_URI;
     if (create_metaplex_metadata(&(Constants.ki_metadata_pubkey), &(Constants.ki_mint_pubkey),
-                                 superuser_account->key, name, symbol, uri, &(Constants.system_program_pubkey),
-                                 &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
+                                 superuser_account->key, (const uint8_t *) KI_TOKEN_NAME,
+                                 (const uint8_t *) KI_TOKEN_SYMBOL, (const uint8_t *) KI_TOKEN_METADATA_URI,
+                                 &(Constants.system_program_pubkey), &(Constants.system_program_pubkey),
+                                 params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }
 
     // Create the Shinobi Bid mint
     {
-        uint8_t *seed_bytes = (uint8_t *) Constants.bid_marker_mint_seed_bytes;
+        const uint8_t *seed_bytes = (uint8_t *) Constants.bid_marker_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.bid_marker_mint_seed_bytes) };
 
         if (create_token_mint(bid_marker_mint_account, &seed, 1, &(Constants.nifty_authority_pubkey),
@@ -140,11 +139,10 @@ static uint64_t super_initialize(SolParameters *params)
     }
 
     // Create the metadata for the Bid Marker mint
-    name = (uint8_t *) BID_MARKER_TOKEN_NAME;
-    symbol = (uint8_t *) BID_MARKER_TOKEN_SYMBOL;
-    uri = (uint8_t *) BID_MARKER_TOKEN_METADATA_URI;
     if (create_metaplex_metadata(&(Constants.bid_marker_metadata_pubkey), &(Constants.bid_marker_mint_pubkey),
-                                 superuser_account->key, name, symbol, uri, &(Constants.system_program_pubkey),
+                                 superuser_account->key, (const uint8_t *) BID_MARKER_TOKEN_NAME,
+                                 (const uint8_t *) BID_MARKER_TOKEN_SYMBOL,
+                                 (const uint8_t *) BID_MARKER_TOKEN_METADATA_URI, &(Constants.system_program_pubkey),
                                  &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
         return Error_CreateAccountFailed;
     }

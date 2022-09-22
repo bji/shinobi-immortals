@@ -12,9 +12,9 @@ static uint64_t compute_block_size(uint16_t entry_count)
 }
 
 // Returns an error if [block_account] is not the correct account
-static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t group_number, uint32_t block_number,
-                                     uint16_t entry_count, SolPubkey *funding_key, SolAccountInfo *transaction_accounts,
-                                     int transaction_accounts_len)
+static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t group_number,
+                                     uint32_t block_number, uint16_t entry_count, const SolPubkey *funding_key,
+                                     const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute the block address
     uint8_t prefix = PDA_Account_Seed_Prefix_Block;
@@ -48,7 +48,7 @@ static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t gro
 
 
 // Given a block account, returns the validated Block or null if the block account is invalid in some way.
-static Block *get_validated_block(SolAccountInfo *block_account)
+static Block *get_validated_block(const SolAccountInfo *block_account)
 {
     // Make sure that the block account is owned by the nifty stakes program
     if (!is_nifty_program(block_account->owner)) {
@@ -60,7 +60,7 @@ static Block *get_validated_block(SolAccountInfo *block_account)
         return 0;
     }
 
-    Block *block = (Block *) block_account->data;
+    const Block *block = (Block *) block_account->data;
 
     // Block must be correctly sized for the number of entries it contains
     if (block_account->data_len != compute_block_size(block->config.total_entry_count)) {
@@ -72,7 +72,7 @@ static Block *get_validated_block(SolAccountInfo *block_account)
         return 0;
     }
 
-    return block;
+    return (Block *) block;
 }
 
 

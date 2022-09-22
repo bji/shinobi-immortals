@@ -34,14 +34,15 @@ typedef struct
 
 
 // Forward declaration
-static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, Block *block, uint16_t entry_index,
-                          SolPubkey *funding_key, AddEntriesToBlockData *data, sha256_t *entry_sha256,
-                          SolAccountInfo *transaction_accounts, int transaction_accounts_len);
+static uint64_t add_entry(SolAccountInfo *entry_accounts, const SolPubkey *block_key, const Block *block,
+                          uint16_t entry_index, const SolPubkey *funding_key, const AddEntriesToBlockData *data,
+                          const sha256_t *entry_sha256, const SolAccountInfo *transaction_accounts,
+                          int transaction_accounts_len);
 
 
 static uint64_t compute_add_entries_data_size(uint16_t entry_count)
 {
-    AddEntriesToBlockData *d = 0;
+    const AddEntriesToBlockData *d = 0;
 
     // The total space needed is from the beginning of AddEntriesToBlockData to the entries element one beyond the
     // total supported (i.e. if there are 100 entries, then then entry at index 100 starts at the first byte beyond
@@ -50,7 +51,7 @@ static uint64_t compute_add_entries_data_size(uint16_t entry_count)
 }
 
 
-static uint64_t admin_add_entries_to_block(SolParameters *params)
+static uint64_t admin_add_entries_to_block(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -82,7 +83,7 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
     }
 
     // Cast to instruction data
-    AddEntriesToBlockData *data = (AddEntriesToBlockData *) params->data;
+    const AddEntriesToBlockData *data = (AddEntriesToBlockData *) params->data;
 
     // Get the validated Block data
     Block *block = get_validated_block(block_account);
@@ -113,7 +114,7 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
         SolAccountInfo *entry_accounts = &(params->ka[9 + (4 * i)]);
 
         // This is the entry details for the entry
-        sha256_t *entry_sha256 = &(data->entry_sha256s[i]);
+        const sha256_t *entry_sha256 = &(data->entry_sha256s[i]);
 
         // Add the entry
         uint64_t result = add_entry(entry_accounts, block_account->key, block, entry_index, funding_account->key,
@@ -150,9 +151,10 @@ static uint64_t admin_add_entries_to_block(SolParameters *params)
 }
 
 
-static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, Block *block, uint16_t entry_index,
-                          SolPubkey *funding_key, AddEntriesToBlockData *data, sha256_t *entry_sha256,
-                          SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t add_entry(SolAccountInfo *entry_accounts, const SolPubkey *block_key, const Block *block,
+                          uint16_t entry_index, const SolPubkey *funding_key, const AddEntriesToBlockData *data,
+                          const sha256_t *entry_sha256, const SolAccountInfo *transaction_accounts,
+                          int transaction_accounts_len)
 {
     SolAccountInfo *entry_account =                     &(entry_accounts[0]);
     SolAccountInfo *mint_account =                      &(entry_accounts[1]);
@@ -212,19 +214,15 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, SolPubkey *block_key, 
         return ret;
     }
 
-    #if 0
-
-    // Create the metaplex edition metadata.  Or not:
+    // Do not create metaplex edition metadata because:
     // 1. It's useless and an extra cost
     // 2. Metaplex currently requires that they be mint authority for any token which has a master edition.  But this
-    //    then gives them rights to mint another token, which in effect gives them the ability to return that
-    //    token for the original stake account, which basically gives metaplex ownership of all stake accounts.
+    //    then gives them rights to mint another token, which in effect gives them the ability to destake that token,
+    //    which basically gives metaplex ownership of all stake accounts.
     //
     // Edition metadata will only be possible of metaplex changes their program to not require mint authority (which
     // they don't need anyway, they just need to verify that there is no mint authority), and is only really needed
     // if it proves necessarry for people to see this useless "master edition" metadata.
-
-    #endif
 
     // Create the entry account
     ret = create_entry_account(entry_account, mint_account->key, funding_key, transaction_accounts,

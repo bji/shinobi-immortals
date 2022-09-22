@@ -3,7 +3,7 @@
 #include "util/util_stake.c"
 
 
-static uint64_t user_stake(SolParameters *params)
+static uint64_t user_stake(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -23,7 +23,7 @@ static uint64_t user_stake(SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(12);
 
     // This is the block data
-    Block *block = get_validated_block(block_account);
+    const Block *block = get_validated_block(block_account);
     if (!block) {
         return Error_InvalidAccount_First;
     }

@@ -19,7 +19,7 @@ typedef struct
 
 
 // Creates a new block of entries
-static uint64_t admin_add_whitelist_entries(SolParameters *params)
+static uint64_t admin_add_whitelist_entries(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -43,7 +43,7 @@ static uint64_t admin_add_whitelist_entries(SolParameters *params)
     }
 
     // Cast to instruction data
-    AddWhitelistEntriesData *data = (AddWhitelistEntriesData *) params->data;
+    const AddWhitelistEntriesData *data = (AddWhitelistEntriesData *) params->data;
 
     // Validate that the entry count is not too large
     if (data->count >= ARRAY_LEN(data->entries)) {

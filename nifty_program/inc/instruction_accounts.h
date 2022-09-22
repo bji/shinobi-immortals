@@ -57,9 +57,9 @@ typedef enum
 
 
 
-static bool check_known_account(SolAccountInfo *account, KnownAccount known_account)
+static bool check_known_account(const SolAccountInfo *account, KnownAccount known_account)
 {
-    SolPubkey *known_pubkey;
+    const SolPubkey *known_pubkey;
 
     switch (known_account) {
     case KnownAccount_NotKnown:

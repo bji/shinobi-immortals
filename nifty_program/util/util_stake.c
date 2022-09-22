@@ -170,7 +170,7 @@ static bool decode_stake_account(const SolAccountInfo *stake_account, Stake *res
         return false;
     }
 
-    uint8_t *data = stake_account->data;
+    const uint8_t *data = stake_account->data;
 
     uint32_t data_len = (uint32_t) stake_account->data_len;
 
@@ -248,10 +248,10 @@ typedef struct __attribute__((__packed__))
 } util_StakeInitializeData;
 
 
-static uint64_t create_stake_account(SolAccountInfo *stake_account, SolSignerSeed *seeds, uint8_t seed_count,
-                                     SolPubkey *funding_account_key,  uint64_t stake_lamports,
-                                     SolPubkey *stake_authority_key, SolPubkey *withdraw_authority_key,
-                                     SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_stake_account(SolAccountInfo *stake_account, const SolSignerSeed *seeds, uint8_t seed_count,
+                                     const SolPubkey *funding_account_key,  uint64_t stake_lamports,
+                                     const SolPubkey *stake_authority_key, const SolPubkey *withdraw_authority_key,
+                                     const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
     uint64_t rent_exempt_minimum = get_rent_exempt_minimum(200);
@@ -306,8 +306,8 @@ typedef struct __attribute__((__packed__))
 } util_StakeInstructionData;
 
 
-static uint64_t set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior_withdraw_authority,
-                                      SolPubkey *new_authority, SolAccountInfo *transaction_accounts,
+static uint64_t set_stake_authorities(const SolPubkey *stake_account, const SolPubkey *prior_withdraw_authority,
+                                      const SolPubkey *new_authority, const SolAccountInfo *transaction_accounts,
                                       int transaction_accounts_len)
 {
     SolInstruction instruction;
@@ -316,11 +316,11 @@ static uint64_t set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior
 
     SolAccountMeta account_metas[] =
           // `[WRITE]` Stake account to be updated
-        { { /* pubkey */ stake_account, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) stake_account, /* is_writable */ true, /* is_signer */ false },
           // `[]` Clock sysvar
           { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
           // `[SIGNER]` The stake or withdraw authority
-          { /* pubkey */ prior_withdraw_authority, /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ (SolPubkey *) prior_withdraw_authority, /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -345,8 +345,8 @@ static uint64_t set_stake_authorities(SolPubkey *stake_account, SolPubkey *prior
 }
 
 
-static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey *new_authority,
-                                             SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t set_stake_authorities_signed(const SolPubkey *stake_account, const SolPubkey *new_authority,
+                                             const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -354,7 +354,7 @@ static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey
 
     SolAccountMeta account_metas[] =
           // `[WRITE]` Stake account to be updated
-        { { /* pubkey */ stake_account, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) stake_account, /* is_writable */ true, /* is_signer */ false },
           // `[]` Clock sysvar
           { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
           // `[SIGNER]` The stake or withdraw authority
@@ -373,7 +373,7 @@ static uint64_t set_stake_authorities_signed(SolPubkey *stake_account, SolPubkey
     instruction.data_len = sizeof(data);
 
     // Now seed needs to be that of the nifty authority
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -408,10 +408,11 @@ typedef struct __attribute__((__packed__))
 
 // lamports is assumed to be at least the stake account minimum or this will fail
 // moves via [bridge_account] which will be created as a PDA of the nifty_program
-static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *bridge_account,
-                                  SolSignerSeed *bridge_seeds, int bridge_seeds_count, SolPubkey *to_account_key,
-                                  uint64_t lamports, SolPubkey *funding_account_key,
-                                  SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t move_stake_signed(const SolPubkey *from_account_key, SolAccountInfo *bridge_account,
+                                  const SolSignerSeed *bridge_seeds, int bridge_seeds_count,
+                                  const SolPubkey *to_account_key, uint64_t lamports,
+                                  const SolPubkey *funding_account_key,
+                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
     uint64_t rent_exempt_minimum = get_rent_exempt_minimum(200);
@@ -428,7 +429,7 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
     instruction.program_id = &(Constants.stake_program_pubkey);
 
     // Now seed needs to be that of the nifty authority
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -436,9 +437,9 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
     {
         SolAccountMeta account_metas[] =
               // `[WRITE]` Stake account to be split; must be in the Initialized or Stake state
-            { { /* pubkey */ from_account_key, /* is_writable */ true, /* is_signer */ false },
+            { { /* pubkey */ (SolPubkey *) from_account_key, /* is_writable */ true, /* is_signer */ false },
               // `[WRITE]` Uninitialized stake account that will take the split-off amount
-              { /* pubkey */ bridge_account->key, /* is_writable */ true, /* is_signer */ false },
+              { /* pubkey */ (SolPubkey *) bridge_account->key, /* is_writable */ true, /* is_signer */ false },
               // `[SIGNER]` Stake authority
               { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -463,9 +464,9 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
     {
         SolAccountMeta account_metas[] =
               // `[WRITE]` Destination stake account for the merge
-            { { /* pubkey */ to_account_key, /* is_writable */ true, /* is_signer */ false },
+            { { /* pubkey */ (SolPubkey *) to_account_key, /* is_writable */ true, /* is_signer */ false },
               // `[WRITE]` Source stake account for to merge.  This account will be drained
-              { /* pubkey */ bridge_account->key, /* is_writable */ true, /* is_signer */ false },
+              { /* pubkey */ (SolPubkey *) bridge_account->key, /* is_writable */ true, /* is_signer */ false },
               // `[]` Clock sysvar
               { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
               // `[]` Stake history sysvar that carries stake warmup/cooldown history
@@ -491,9 +492,9 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
     {
         SolAccountMeta account_metas[] =
               ///   0. `[WRITE]` Stake account from which to withdraw
-            { { /* pubkey */ to_account_key, /* is_writable */ true, /* is_signer */ false },
+            { { /* pubkey */ (SolPubkey *) to_account_key, /* is_writable */ true, /* is_signer */ false },
               ///   1. `[WRITE]` Recipient account
-              { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ false },
+              { /* pubkey */ (SolPubkey *) funding_account_key, /* is_writable */ true, /* is_signer */ false },
               ///   2. `[]` Clock sysvar
               { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
               ///   3. `[]` Stake history sysvar that carries stake warmup/cooldown history
@@ -517,8 +518,9 @@ static uint64_t move_stake_signed(SolPubkey *from_account_key,  SolAccountInfo *
 }
 
 
-static uint64_t split_master_stake_signed(SolPubkey *to_account_key, uint64_t lamports, SolPubkey *funding_account_key,
-                                          SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t split_master_stake_signed(const SolPubkey *to_account_key, uint64_t lamports,
+                                          const SolPubkey *funding_account_key,
+                                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Create the to_account using the system program
     uint64_t ret = create_system_account(to_account_key, funding_account_key, &(Constants.stake_program_pubkey), 200,
@@ -537,7 +539,7 @@ static uint64_t split_master_stake_signed(SolPubkey *to_account_key, uint64_t la
           // `[WRITE]` Stake account to be split; must be in the Initialized or Stake state
         { { /* pubkey */ &(Constants.master_stake_pubkey), /* is_writable */ true, /* is_signer */ false },
           // `[WRITE]` Uninitialized stake account that will take the split-off amount
-          { /* pubkey */ to_account_key, /* is_writable */ true, /* is_signer */ false },
+          { /* pubkey */ (SolPubkey *) to_account_key, /* is_writable */ true, /* is_signer */ false },
           // `[SIGNER]` Stake authority
           { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -553,7 +555,7 @@ static uint64_t split_master_stake_signed(SolPubkey *to_account_key, uint64_t la
     instruction.data_len = sizeof(data);
 
     // Seed needs to be that of the nifty authority
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -568,8 +570,8 @@ static uint64_t split_master_stake_signed(SolPubkey *to_account_key, uint64_t la
 }
 
 
-static uint64_t delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *vote_account_key,
-                                      SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t delegate_stake_signed(const SolPubkey *stake_account_key, const SolPubkey *vote_account_key,
+                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -577,9 +579,9 @@ static uint64_t delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *v
 
     SolAccountMeta account_metas[] =
           // `[WRITE]` Initialized stake account to be delegated
-        { { /* pubkey */ stake_account_key, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) stake_account_key, /* is_writable */ true, /* is_signer */ false },
           // `[]` Vote account to which this stake will be delegated
-          { /* pubkey */ vote_account_key, /* is_writable */ false, /* is_signer */ false },
+          { /* pubkey */ (SolPubkey *) vote_account_key, /* is_writable */ false, /* is_signer */ false },
           // `[]` Clock sysvar
           { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
           // `[]` Stake history sysvar that carries stake warmup/cooldown history
@@ -598,7 +600,7 @@ static uint64_t delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *v
     instruction.data_len = sizeof(data);
 
     // Now seed needs to be that of the nifty authority
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
@@ -606,7 +608,7 @@ static uint64_t delegate_stake_signed(SolPubkey *stake_account_key, SolPubkey *v
 }
 
 
-static uint64_t deactivate_stake_signed(SolPubkey *stake_account_key, SolAccountInfo *transaction_accounts,
+static uint64_t deactivate_stake_signed(const SolPubkey *stake_account_key, const SolAccountInfo *transaction_accounts,
                                         int transaction_accounts_len)
 {
     SolInstruction instruction;
@@ -615,7 +617,7 @@ static uint64_t deactivate_stake_signed(SolPubkey *stake_account_key, SolAccount
 
     SolAccountMeta account_metas[] =
           // `[WRITE]` Delegated stake account
-        { { /* pubkey */ stake_account_key, /* is_writable */ true, /* is_signer */ false },
+        { { /* pubkey */ (SolPubkey *) stake_account_key, /* is_writable */ true, /* is_signer */ false },
           // `[]` Clock sysvar
           { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
           // `[SIGNER]` Stake authority
@@ -630,7 +632,7 @@ static uint64_t deactivate_stake_signed(SolPubkey *stake_account_key, SolAccount
     instruction.data_len = sizeof(data);
 
     // Now seed needs to be that of the nifty authority
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
+    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 

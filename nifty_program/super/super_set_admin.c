@@ -18,7 +18,7 @@ typedef struct
 } UpdateAdminData;
 
 
-static uint64_t super_set_admin(SolParameters *params)
+static uint64_t super_set_admin(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -32,7 +32,7 @@ static uint64_t super_set_admin(SolParameters *params)
         return Error_InvalidDataSize;
     }
 
-    UpdateAdminData *data = (UpdateAdminData *) params->data;
+    const UpdateAdminData *data = (UpdateAdminData *) params->data;
 
     // Ensure that the config account data is the correct size
     if (config_account->data_len != sizeof(ProgramConfig)) {

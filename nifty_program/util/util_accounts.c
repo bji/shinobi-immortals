@@ -10,7 +10,7 @@
 
 static bool is_all_zeroes(const void *data, uint32_t length)
 {
-    uint8_t *d = (uint8_t *) data;
+    const uint8_t *d = (uint8_t *) data;
 
     while (length--) {
         if (*d++) {
@@ -55,7 +55,7 @@ static bool get_admin_account_address(const SolAccountInfo *config_account, SolP
     }
 
     // Get a reference to the admin pubkey from the config
-    ProgramConfig *config = (ProgramConfig *) (config_account->data);
+    const ProgramConfig *config = (ProgramConfig *) (config_account->data);
 
     *fill_in = config->admin_pubkey;
 
@@ -63,7 +63,7 @@ static bool get_admin_account_address(const SolAccountInfo *config_account, SolP
 }
 
 
-static bool is_admin_account(const SolAccountInfo *config_account, SolPubkey *pubkey)
+static bool is_admin_account(const SolAccountInfo *config_account, const SolPubkey *pubkey)
 {
     // Get a reference to the admin pubkey from the config
     SolPubkey admin_pubkey;
@@ -130,7 +130,7 @@ static bool is_spl_token_program(const SolPubkey *pubkey)
 }
 
 
-static bool is_metaplex_metadata_program(SolPubkey *pubkey)
+static bool is_metaplex_metadata_program(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.metaplex_program_pubkey), pubkey);
 }
@@ -156,9 +156,9 @@ typedef struct __attribute__((__packed__))
 
 
 // The target_account must be a signer
-static uint64_t create_system_account(SolPubkey *target_account_key, SolPubkey *funding_account_key,
-                                      SolPubkey *owner_key, uint64_t space, uint64_t lamports,
-                                      SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t create_system_account(const SolPubkey *target_account_key, const SolPubkey *funding_account_key,
+                                      const SolPubkey *owner_key, uint64_t space, uint64_t lamports,
+                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -166,9 +166,9 @@ static uint64_t create_system_account(SolPubkey *target_account_key, SolPubkey *
 
     SolAccountMeta account_metas[] =
           ///   0. `[WRITE, SIGNER]` Funding account
-        { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
+        { { /* pubkey */ (SolPubkey *) funding_account_key, /* is_writable */ true, /* is_signer */ true },
           ///   1. `[WRITE, SIGNER]` New account
-          { /* pubkey */ target_account_key, /* is_writable */ true, /* is_signer */ true } };
+          { /* pubkey */ (SolPubkey *) target_account_key, /* is_writable */ true, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -200,12 +200,12 @@ typedef struct __attribute__((__packed__))
 
 // Creates an account at a Program Derived Address, where the address is derived from the program id and a set of seed
 // bytes.  If the account already existed, it is modified to be the correct size and owner.
-static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, int seeds_count,
-                           SolPubkey *funding_account_key, SolPubkey *owner_account_key,
-                           uint64_t funding_lamports, uint64_t space,
+static uint64_t create_pda(SolAccountInfo *new_account, const SolSignerSeed *seeds, const int seeds_count,
+                           const SolPubkey *funding_account_key, const SolPubkey *owner_account_key,
+                           const uint64_t funding_lamports, uint64_t space,
                            // All cross-program invocation must pass all account infos through, it's
                            // the only sane way to cross-program invoke
-                           SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                           const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -216,7 +216,7 @@ static uint64_t create_pda(SolAccountInfo *new_account, SolSignerSeed *seeds, in
 
         SolAccountMeta account_metas[] =
             // First account to pass to CreateAccount is the funding_account
-            { { /* pubkey */ funding_account_key, /* is_writable */ true, /* is_signer */ true },
+            { { /* pubkey */ (SolPubkey *) funding_account_key, /* is_writable */ true, /* is_signer */ true },
               // Second account to pass to CreateAccount is the new account to be created
               { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
 

@@ -14,7 +14,7 @@ typedef struct
 } TakeCommissionOrDelegateData;
 
 
-static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
+static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -38,10 +38,10 @@ static uint64_t anyone_take_commission_or_delegate(SolParameters *params)
     }
 
     // Data can be safely used now
-    TakeCommissionOrDelegateData *data = (TakeCommissionOrDelegateData *) params->data;
+    const TakeCommissionOrDelegateData *data = (TakeCommissionOrDelegateData *) params->data;
 
     // Get validated block and entry, which checks all validity of those accounts
-    Block *block = get_validated_block(block_account);
+    const Block *block = get_validated_block(block_account);
     if (!block) {
         return Error_InvalidAccount_First + 1;
     }

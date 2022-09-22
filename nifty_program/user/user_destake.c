@@ -20,7 +20,7 @@ typedef struct
 } DestakeData;
 
 
-static uint64_t user_destake(SolParameters *params)
+static uint64_t user_destake(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -51,10 +51,10 @@ static uint64_t user_destake(SolParameters *params)
     }
 
     // Cast to instruction data
-    DestakeData *data = (DestakeData *) params->data;
+    const DestakeData *data = (DestakeData *) params->data;
 
     // Get validated block and entry, which checks all validity of those accounts
-    Block *block = get_validated_block(block_account);
+    const Block *block = get_validated_block(block_account);
     if (!block) {
         return Error_InvalidAccount_First;
     }

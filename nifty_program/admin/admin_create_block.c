@@ -20,7 +20,7 @@ typedef struct
 
 
 // Creates a new block of entries
-static uint64_t admin_create_block(SolParameters *params)
+static uint64_t admin_create_block(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -48,9 +48,9 @@ static uint64_t admin_create_block(SolParameters *params)
     }
 
     // Cast to instruction data
-    CreateBlockData *data = (CreateBlockData *) params->data;
+    const CreateBlockData *data = (CreateBlockData *) params->data;
 
-    BlockConfiguration *config = &(data->config);
+    const BlockConfiguration *config = &(data->config);
 
     // Sanitize inputs
     if (config->total_entry_count == 0) {

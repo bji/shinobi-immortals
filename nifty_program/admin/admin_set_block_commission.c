@@ -13,7 +13,7 @@ typedef struct
 } SetBlockCommissionData;
 
 
-static uint64_t admin_set_block_commission(SolParameters *params)
+static uint64_t admin_set_block_commission(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -34,7 +34,7 @@ static uint64_t admin_set_block_commission(SolParameters *params)
     }
 
     // Now the data can be used
-    SetBlockCommissionData *data = (SetBlockCommissionData *) params->data;
+    const SetBlockCommissionData *data = (SetBlockCommissionData *) params->data;
 
     // This is the block data
     Block *block = get_validated_block(block_account);

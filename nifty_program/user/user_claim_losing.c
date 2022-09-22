@@ -1,7 +1,7 @@
 #pragma once
 
 
-static uint64_t user_claim_losing(SolParameters *params)
+static uint64_t user_claim_losing(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
@@ -19,7 +19,7 @@ static uint64_t user_claim_losing(SolParameters *params)
     }
 
     // Get the validated entry account data
-    Entry *entry = get_validated_entry(entry_account);
+    const Entry *entry = get_validated_entry(entry_account);
     if (!entry) {
         return Error_InvalidAccount_First + 1;
     }
@@ -57,7 +57,7 @@ static uint64_t user_claim_losing(SolParameters *params)
     }
 
     // Get the validated bid account data
-    Bid *bid = get_validated_bid(bid_account);
+    const Bid *bid = get_validated_bid(bid_account);
     if (!bid) {
         return Error_InvalidAccount_First + 2;
     }
