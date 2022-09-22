@@ -159,11 +159,6 @@ static uint64_t delete_whitelist_account(const SolAccountInfo *whitelist_account
                                          const Clock *clock, const SolAccountInfo *destination_account,
                                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    // Ensure that the whitelist is the correct size
-    if (whitelist_account->data_len != sizeof(Whitelist)) {
-        return Error_NotWhitelistAccount;
-    }
-
     // Compute the whitelist address
     uint8_t prefix = PDA_Account_Seed_Prefix_Whitelist;
 
