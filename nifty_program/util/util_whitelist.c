@@ -15,7 +15,7 @@ static Whitelist *get_validated_whitelist(const SolAccountInfo *whitelist_accoun
         return 0;
     }
 
-    // Whitelist account must by the correct size
+    // Whitelist account must be the correct size
     if (whitelist_account->data_len != sizeof(Whitelist)) {
         return 0;
     }

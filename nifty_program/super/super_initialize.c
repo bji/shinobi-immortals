@@ -54,7 +54,7 @@ static uint64_t super_initialize(const SolParameters *params)
     }
 
     const InitializeData *data = (InitializeData *) params->data;
-    
+
     // If the config account already exists, then fail, because can't re-create the config account, can only modify it
     // after it's created
     if (config_account->data_len > 0) {
@@ -66,7 +66,7 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_config_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_config_seed_bytes) };
 
-        if (create_pda(config_account, &seed, 1, superuser_account->key, (SolPubkey *) params->program_id,
+        if (create_pda(config_account, &seed, 1, superuser_account->key, &(Constants.nifty_program_pubkey),
                        get_rent_exempt_minimum(sizeof(ProgramConfig)), sizeof(ProgramConfig), params->ka,
                        params->ka_num)) {
             return Error_CreateAccountFailed;

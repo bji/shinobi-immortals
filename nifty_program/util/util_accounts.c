@@ -211,9 +211,14 @@ static uint64_t create_pda(SolAccountInfo *new_account, const SolSignerSeed *see
 
     instruction.program_id = (SolPubkey *) &(Constants.system_program_pubkey);
 
-    // If the account to create didn't exist yet, just use CreateAccount to create it
-    if ((new_account->data_len == 0) && is_system_program(new_account->owner)) {
-
+    // The system programs's CreateAccount instruction can create it but only if its lamports are zero.  Will fail if:
+    //   a. sol_invoke_signed fails because of bad seeds
+    //   b. The account is not empty or is not owned by the system program (checked in allocate)
+    //   c. Size to allocate is too large (checked in allocate)
+    //   d. Account is not owned by the system program (checked in assign)
+    //   e. Account is not writable (checked in assign)
+    //   f. Account is not empty or all zeroes (checked in assign)
+    if (*(new_account->lamports) == 0) {
         SolAccountMeta account_metas[] =
             // First account to pass to CreateAccount is the funding_account
             { { /* pubkey */ (SolPubkey *) funding_account_key, /* is_writable */ true, /* is_signer */ true },
@@ -233,10 +238,11 @@ static uint64_t create_pda(SolAccountInfo *new_account, const SolSignerSeed *see
         return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
     }
 
-    // Else the account existed already; just ensure that it has the correct owner, lamports, and space
+    // Else the account existed already; just ensure that it has the correct lamports, and space, and owner
 
     // Fund ------------------------------------------------------------------------------------------------------------
-    // If the account doesn't have the required number of lamports yet, transfer the required number
+    // If the account doesn't have the required number of lamports yet, transfer the required number.  Will fail if:
+    //   - The funding_lamports are not available
     if (*(new_account->lamports) < funding_lamports) {
         uint64_t ret = util_transfer_lamports(funding_account_key, new_account->key,
                                               funding_lamports - *(new_account->lamports),
@@ -247,37 +253,43 @@ static uint64_t create_pda(SolAccountInfo *new_account, const SolSignerSeed *see
     }
 
     // Alloc -----------------------------------------------------------------------------------------------------------
-    // If the account doesn't have the correct data size, "realloc" it
+    // If the account doesn't have the correct data size, "realloc" it.  Cannot fail.
     if (new_account->data_len != space) {
         set_account_size(new_account, space);
     }
 
     // Assign ----------------------------------------------------------------------------------------------------------
-    // If the owner is not the same, update it by calling the system program with the Assign instruction.
-    if (!SolPubkey_same(new_account->owner, owner_account_key)) {
-        SolAccountMeta account_metas[] =
-            // Assigned account public key
-            { { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
 
-        instruction.accounts = account_metas;
-        instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
-
-        util_AssignData data = { 1, *owner_account_key };
-
-        instruction.data = (uint8_t *) &data;
-        instruction.data_len = sizeof(data);
-
-        SolSignerSeeds signer_seeds = { seeds, seeds_count };
-
-        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len,
-                                         &signer_seeds, 1);
-        if (ret) {
-            return ret;
-        }
-
-        // Clear the account data, in case there was pre-existing data from the previous owner
-        sol_memset(new_account->data, 0, space);
+    // If already assigned to the desired owner, there is nothing to do
+    if (SolPubkey_same(new_account->owner, owner_account_key)) {
+        return 0;
     }
 
-    return 0;
+    // The owner is not the same, update it by calling the system program with the Assign instruction.  Will fail if:
+    //   a. sol_invoke_signed fails because of bad seeds
+    //   b. Account is not owned by system program
+    //   c. Account is not writable
+    //   d. Account is not empty or all zeroes
+    // However, because the account exists already (has nonzero lamports), if we pass (a), then:
+    //   (b) cannot fail because we know that the account is not owned by us, and it cannot be owned by any other
+    //       program because that program could not have passed (a)
+    //   (c) can fail but only if the caller of this function already verified writability of the account
+    //   (d) can fail but only if the caller is trying to re-create an already created account, and it shouldn't do that
+    // Most importantly, it's not possible for some other program to inject their own data, because they can't
+    // find seeds that allow both them and us to sign for this account.
+    SolAccountMeta account_metas[] =
+          // Assigned account public key
+        { { /* pubkey */ new_account->key, /* is_writable */ true, /* is_signer */ true } };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = sizeof(account_metas) / sizeof(account_metas[0]);
+
+    util_AssignData data = { 1, *owner_account_key };
+
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+
+    SolSignerSeeds signer_seeds = { seeds, seeds_count };
+
+    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }

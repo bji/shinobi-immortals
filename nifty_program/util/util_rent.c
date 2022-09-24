@@ -46,9 +46,8 @@ static uint64_t get_rent_exempt_minimum(uint64_t account_size)
         min /= (1 << (1023 - exp));
     }
 
-    uint64_t fraction = u & 0x000FFFFFFFFFFFFFULL;
-
     // Reduce fraction to 10 bits, to avoid overflow.  Keep track of whether or not to round up.
+    uint64_t fraction = u & 0x000FFFFFFFFFFFFFULL;
     bool round_up = (fraction & 0x3FFFFFFFFFFULL);
 
     fraction >>= 42;

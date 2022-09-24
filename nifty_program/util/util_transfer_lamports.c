@@ -5,6 +5,7 @@ typedef struct __attribute__((packed))
     uint32_t instruction_code; // 2 for Transfer
 
     uint64_t amount;
+
 } util_SystemTransferData;
 
 
