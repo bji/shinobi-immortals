@@ -11,8 +11,7 @@ const { _buy_tx,
         _stake_tx,
         _destake_tx,
         _harvest_tx,
-        _level_up_tx,
-        _take_commission_or_delegate_tx
+        _level_up_tx
       } = require("./tx.js");
 
 const LAMPORTS_PER_SOL = 1000 * 1000 * 1000;
@@ -631,7 +630,6 @@ class Cluster
     {
         return this.get_entry(this.entry_addresses[index]);
     }
-
 
     // Return an iterator over all entries
     entry_iter()
@@ -2091,29 +2089,6 @@ class Wallet
             }
         }
     }
-
-//   destake_tx()
-//   {
-//       let wallet_address = this.block.cluster.wallet_address;
-//       if (wallet_address == null) {
-//           return null;
-//       }
-//       
-//   }
-//   
-//   take_commission_or_delegate_tx()
-//   {
-//       let wallet_address = this.block.cluster.wallet_address;
-//       if (wallet_address == null) {
-//           return null;
-//       }
-//       
-//       return _take_commission_or_delegate_tx({ funding_address : wallet_address,
-//                                                block_address : this.block.address,
-//                                                entry_address : this.address,
-//                                                stake_address : this.owned_stake_account,
-//                                                bridge_address : get_entry_bridge_address(this.mint_address) });
-//   }
 }
 
 
