@@ -48,6 +48,11 @@ static uint64_t user_buy(const SolParameters *params)
     }
     DECLARE_ACCOUNTS_NUMBER(17);
 
+    // Ensure that the correct admin account was passed in
+    if (!is_admin_account(config_account, admin_account->key)) {
+        return Error_InvalidAccount_First + 2;
+    }
+
     // Make sure that the input data is the correct size
     if (params->data_len != sizeof(BuyData)) {
         return Error_InvalidDataSize;

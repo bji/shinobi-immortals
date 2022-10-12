@@ -34,6 +34,11 @@ static uint64_t user_claim_winning(const SolParameters *params)
         return Error_InvalidAccount_First + 1;
     }
 
+    // Ensure that the correct admin account was passed in
+    if (!is_admin_account(config_account, admin_account->key)) {
+        return Error_InvalidAccount_First + 4;
+    }
+
     // Check to make sure that the entry_token_account is the correct account for this entry
     if (!SolPubkey_same(entry_token_account->key, &(entry->token_pubkey))) {
         return Error_InvalidAccount_First + 5;
