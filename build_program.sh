@@ -27,52 +27,52 @@ KI_METADATA_PUBKEY_C_ARRAY="{95,105,135,153,232,240,25,47,48,30,118,232,246,249,
 BID_MARKER_MINT_PUBKEY_C_ARRAY="{50,93,116,81,245,55,111,7,147,234,11,23,77,132,23,6,166,82,147,167,119,81,92,21,67,16,88,56,5,125,32,78}"
 BID_MARKER_METADATA_PUBKEY_C_ARRAY="{255,14,199,239,218,36,110,120,153,227,116,80,206,96,6,69,203,81,57,48,172,48,204,169,246,51,99,9,4,232,31,2}"
 
-$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/clang                                             \
-    -fno-builtin                                                                                \
-    -fno-zero-initialized-in-bss                                                                \
-    -fno-data-sections                                                                          \
-    -std=c2x                                                                                    \
-    -I$SDK_ROOT/bpf/c/inc                                                                       \
-    -O3                                                                                         \
-    -target bpf                                                                                 \
-    -fPIC                                                                                       \
-    -march=bpfel+solana                                                                         \
-    -Iprogram                                                                                   \
-    -o program.po                                                                               \
-    -c program/entrypoint.c                                                                     \
-    -DSUPERUSER_PUBKEY_ARRAY="$SUPERUSER_PUBKEY_C_ARRAY"                                        \
-    -DCONFIG_PUBKEY_ARRAY="$CONFIG_PUBKEY_C_ARRAY"                                              \
-    -DCONFIG_BUMP_SEED="$CONFIG_BUMP_SEED"                                                      \
-    -DAUTHORITY_PUBKEY_ARRAY="$AUTHORITY_PUBKEY_C_ARRAY"                                        \
-    -DAUTHORITY_BUMP_SEED="$AUTHORITY_BUMP_SEED"                                                \
-    -DMASTER_STAKE_PUBKEY_ARRAY="$MASTER_STAKE_PUBKEY_C_ARRAY"                                  \
-    -DMASTER_STAKE_BUMP_SEED="$MASTER_STAKE_BUMP_SEED"                                          \
-    -DKI_MINT_PUBKEY_ARRAY="$KI_MINT_PUBKEY_C_ARRAY"                                            \
-    -DKI_MINT_BUMP_SEED="$KI_MINT_BUMP_SEED"                                                    \
-    -DKI_METADATA_PUBKEY_ARRAY="$KI_METADATA_PUBKEY_C_ARRAY"                                    \
-    -DBID_MARKER_MINT_PUBKEY_ARRAY="$BID_MARKER_MINT_PUBKEY_C_ARRAY"                            \
-    -DBID_MARKER_MINT_BUMP_SEED="$BID_MARKER_MINT_BUMP_SEED"                                    \
-    -DBID_MARKER_METADATA_PUBKEY_ARRAY="$BID_MARKER_METADATA_PUBKEY_C_ARRAY"                    \
-    -DSHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY="$SHINOBI_SYSTEMS_VOTE_PUBKEY_C_ARRAY"                  \
-    -DSELF_PROGRAM_PUBKEY_ARRAY="$SELF_PROGRAM_PUBKEY_C_ARRAY"                                  \
-    -DSYSTEM_PROGRAM_PUBKEY_ARRAY="$SYSTEM_PROGRAM_PUBKEY_C_ARRAY"                              \
-    -DMETAPLEX_PROGRAM_PUBKEY_ARRAY="$METAPLEX_PROGRAM_PUBKEY_C_ARRAY"                          \
-    -DSPL_TOKEN_PROGRAM_PUBKEY_ARRAY="$SPL_TOKEN_PROGRAM_PUBKEY_C_ARRAY"                        \
-    -DSPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_PUBKEY_ARRAY="$SPLATA_PROGRAM_PUBKEY_C_ARRAY"        \
-    -DSTAKE_PROGRAM_PUBKEY_ARRAY="$STAKE_PROGRAM_PUBKEY_C_ARRAY"                                \
-    -DCLOCK_SYSVAR_PUBKEY_ARRAY="$CLOCK_SYSVAR_PUBKEY_C_ARRAY"                                  \
-    -DRENT_SYSVAR_PUBKEY_ARRAY="$RENT_SYSVAR_PUBKEY_C_ARRAY"                                    \
-    -DSTAKE_HISTORY_SYSVAR_PUBKEY_ARRAY="$STAKE_HISTORY_SYSVAR_PUBKEY_C_ARRAY"                  \
+$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/clang                                       \
+    -fno-builtin                                                                          \
+    -fno-zero-initialized-in-bss                                                          \
+    -fno-data-sections                                                                    \
+    -std=c2x                                                                              \
+    -I$SDK_ROOT/bpf/c/inc                                                                 \
+    -O3                                                                                   \
+    -target bpf                                                                           \
+    -fPIC                                                                                 \
+    -march=bpfel+solana                                                                   \
+    -Iprogram                                                                             \
+    -o program.po                                                                         \
+    -c program/entrypoint.c                                                               \
+    -DSUPERUSER_PUBKEY_ARRAY="$SUPERUSER_PUBKEY_C_ARRAY"                                  \
+    -DCONFIG_PUBKEY_ARRAY="$CONFIG_PUBKEY_C_ARRAY"                                        \
+    -DCONFIG_BUMP_SEED="$CONFIG_BUMP_SEED"                                                \
+    -DAUTHORITY_PUBKEY_ARRAY="$AUTHORITY_PUBKEY_C_ARRAY"                                  \
+    -DAUTHORITY_BUMP_SEED="$AUTHORITY_BUMP_SEED"                                          \
+    -DMASTER_STAKE_PUBKEY_ARRAY="$MASTER_STAKE_PUBKEY_C_ARRAY"                            \
+    -DMASTER_STAKE_BUMP_SEED="$MASTER_STAKE_BUMP_SEED"                                    \
+    -DKI_MINT_PUBKEY_ARRAY="$KI_MINT_PUBKEY_C_ARRAY"                                      \
+    -DKI_MINT_BUMP_SEED="$KI_MINT_BUMP_SEED"                                              \
+    -DKI_METADATA_PUBKEY_ARRAY="$KI_METADATA_PUBKEY_C_ARRAY"                              \
+    -DBID_MARKER_MINT_PUBKEY_ARRAY="$BID_MARKER_MINT_PUBKEY_C_ARRAY"                      \
+    -DBID_MARKER_MINT_BUMP_SEED="$BID_MARKER_MINT_BUMP_SEED"                              \
+    -DBID_MARKER_METADATA_PUBKEY_ARRAY="$BID_MARKER_METADATA_PUBKEY_C_ARRAY"              \
+    -DSHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY="$SHINOBI_SYSTEMS_VOTE_PUBKEY_C_ARRAY"            \
+    -DSELF_PROGRAM_PUBKEY_ARRAY="$SELF_PROGRAM_PUBKEY_C_ARRAY"                            \
+    -DSYSTEM_PROGRAM_PUBKEY_ARRAY="$SYSTEM_PROGRAM_PUBKEY_C_ARRAY"                        \
+    -DMETAPLEX_PROGRAM_PUBKEY_ARRAY="$METAPLEX_PROGRAM_PUBKEY_C_ARRAY"                    \
+    -DSPL_TOKEN_PROGRAM_PUBKEY_ARRAY="$SPL_TOKEN_PROGRAM_PUBKEY_C_ARRAY"                  \
+    -DSPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_PUBKEY_ARRAY="$SPLATA_PROGRAM_PUBKEY_C_ARRAY"  \
+    -DSTAKE_PROGRAM_PUBKEY_ARRAY="$STAKE_PROGRAM_PUBKEY_C_ARRAY"                          \
+    -DCLOCK_SYSVAR_PUBKEY_ARRAY="$CLOCK_SYSVAR_PUBKEY_C_ARRAY"                            \
+    -DRENT_SYSVAR_PUBKEY_ARRAY="$RENT_SYSVAR_PUBKEY_C_ARRAY"                              \
+    -DSTAKE_HISTORY_SYSVAR_PUBKEY_ARRAY="$STAKE_HISTORY_SYSVAR_PUBKEY_C_ARRAY"            \
     -DSTAKE_CONFIG_SYSVAR_PUBKEY_ARRAY="$STAKE_CONFIG_SYSVAR_PUBKEY_C_ARRAY"
 
-$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/ld.lld                                            \
-    -z notext                                                                                   \
-    -shared                                                                                     \
-    --Bdynamic                                                                                  \
-    program/fixed_bpf.ld                                                                        \
-    --entry entrypoint                                                                          \
-    -o program.so                                                                               \
-    program.po                                                                                  \
+$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/ld.lld                                      \
+    -z notext                                                                             \
+    -shared                                                                               \
+    --Bdynamic                                                                            \
+    program/fixed_bpf.ld                                                                  \
+    --entry entrypoint                                                                    \
+    -o program.so                                                                         \
+    program.po                                                                            \
 
 rm program.po
 

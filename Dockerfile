@@ -48,7 +48,7 @@ RUN tar zxf shinobi-immortals.tar.gz --strip-components=1 "*/build_program.sh" "
 RUN tar cf program.tar program
 
 # Check that the SHA-1 hash of build_program.sh is and program is as expected
-RUN echo "c6172925e59bd2cab27dd131dac3cb8f119d0985 build_program.sh" | sha1sum -c -
+RUN echo "316d12f3f58b2ee297ade86b24f90318c9fbf168 build_program.sh" | sha1sum -c -
 RUN echo "ac3298e6fb79e85dcc66de87e7e0440323682eb6 program.tar" | sha1sum -c -
 
 # Run build_program.sh to build it
