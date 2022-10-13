@@ -48,7 +48,7 @@ RUN tar zxf shinobi-immortals.tar.gz --strip-components=1 "*/build_program.sh" "
 # tar file is always the same.
 RUN tar cf program.tar program --mtime "1970-01-01"
 
-# Check that the SHA-1 hash of build_program.sh is and program is as expected
+# Check that the SHA-1 hash of build_program.sh and program is as expected
 RUN echo "316d12f3f58b2ee297ade86b24f90318c9fbf168 build_program.sh" | sha1sum -c -
 RUN echo "0943c156ba2280622bc0c5e5568a8d99d8a21629 program.tar" | sha1sum -c -
 
