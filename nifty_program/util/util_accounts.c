@@ -49,8 +49,8 @@ static bool get_admin_account_address(const SolAccountInfo *config_account, SolP
         return false;
     }
 
-    // The data must be correctly sized -- may be larger than, but never smaller than, the expected size
-    if (config_account->data_len < sizeof(ProgramConfig)) {
+    // The data must be correctly sized
+    if (config_account->data_len != sizeof(ProgramConfig)) {
         return false;
     }
 

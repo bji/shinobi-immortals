@@ -194,8 +194,8 @@ static Entry *get_validated_entry_of_block(const SolAccountInfo *entry_account, 
 }
 
 
-// Assumes that the block containing the Entry is complete.  If block is provided, then the pre-reveal states are
-// discerned, otherwise a generic EntryState_PreReveal is returned.
+// If block is provided, then it must be complete.  If block is provided, then the pre-reveal states are discerned,
+// otherwise a generic EntryState_PreReveal is returned.
 static EntryState get_entry_state(const Block *block, const Entry *entry, const Clock *clock)
 {
     // If the entry has been revealed ...
