@@ -3,7 +3,7 @@
 
 typedef struct
 {
-    // This is the instruction code for TakeCommissionorDelegate
+    // This is the instruction code for TakeCommissionOrDelegate
     uint8_t instruction_code;
 
     // Minimum stake account delegation in lamports.  If this is provided (i.e. is nonzero), no stake account will be
