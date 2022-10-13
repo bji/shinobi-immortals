@@ -18,7 +18,7 @@ static uint64_t mint_bid_marker_token_idempotent(SolAccountInfo *bid_marker_toke
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -58,7 +58,7 @@ static uint64_t create_entry_bid_account(SolAccountInfo *bid_account, const SolP
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -69,7 +69,7 @@ static uint64_t create_entry_bid_account(SolAccountInfo *bid_account, const SolP
         return Error_CreateAccountFailed;
     }
 
-    ret = create_pda(bid_account, seeds, ARRAY_LEN(seeds), bidder_key, &(Constants.nifty_program_pubkey),
+    ret = create_pda(bid_account, seeds, ARRAY_LEN(seeds), bidder_key, &(Constants.self_program_pubkey),
                      bid_lamports, sizeof(Bid), transaction_accounts, transaction_accounts_len);
     if (ret) {
         return ret;
@@ -120,7 +120,7 @@ static uint64_t reclaim_bid_marker_token(const SolPubkey *entry_token_mint_pubke
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -152,8 +152,8 @@ static uint64_t reclaim_bid_marker_token(const SolPubkey *entry_token_mint_pubke
 // Given a bid account, returns the validated Bid or null if the entry account is invalid in some way.
 static const Bid *get_validated_bid(const SolAccountInfo *bid_account)
 {
-    // Make sure that the bid account is owned by the nifty stakes program
-    if (!is_nifty_program(bid_account->owner)) {
+    // Make sure that the bid account is owned by the program
+    if (!is_self_program(bid_account->owner)) {
         return 0;
     }
 

@@ -14,7 +14,7 @@ typedef enum
     KnownAccount_BidMarkerMint,
     KnownAccount_BidMarkerMetadata,
     KnownAccount_ShinobiSystemsVote,
-    KnownAccount_NiftyProgram,
+    KnownAccount_SelfProgram,
     KnownAccount_SystemProgram,
     KnownAccount_MetaplexProgram,
     KnownAccount_SPLTokenProgram,
@@ -70,11 +70,11 @@ static bool check_known_account(const SolAccountInfo *account, KnownAccount know
         break;
 
     case KnownAccount_ProgramConfig:
-        known_pubkey = &(Constants.nifty_config_pubkey);
+        known_pubkey = &(Constants.config_pubkey);
         break;
 
     case KnownAccount_Authority:
-        known_pubkey = &(Constants.nifty_authority_pubkey);
+        known_pubkey = &(Constants.authority_pubkey);
         break;
 
     case KnownAccount_MasterStake:
@@ -101,8 +101,8 @@ static bool check_known_account(const SolAccountInfo *account, KnownAccount know
         known_pubkey = &(Constants.shinobi_systems_vote_pubkey);
         break;
 
-    case KnownAccount_NiftyProgram:
-        known_pubkey = &(Constants.nifty_program_pubkey);
+    case KnownAccount_SelfProgram:
+        known_pubkey = &(Constants.self_program_pubkey);
         break;
 
     case KnownAccount_SystemProgram:

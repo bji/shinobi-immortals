@@ -113,7 +113,7 @@ static uint64_t user_destake(const SolParameters *params)
     }
 
     // Use stake account program to set all authorities to the new authority; must do this signed since the
-    // nifty program authority is currently the withdraw authority of the stake account
+    // program authority is currently the withdraw authority of the stake account
     if (set_stake_authorities_signed(stake_account->key, &(data->new_withdraw_authority_pubkey),
                                      params->ka, params->ka_num)) {
         return Error_SetStakeAuthoritiesFailed;

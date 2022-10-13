@@ -27,7 +27,7 @@ static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t gro
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -41,7 +41,7 @@ static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t gro
     // The size of the block to create is the sizeof a block + 1 byte per 8 entries (for the entries added bitmap)
     uint64_t block_size = compute_block_size(entry_count);
 
-    return create_pda(block_account, seeds, ARRAY_LEN(seeds), funding_key, &(Constants.nifty_program_pubkey),
+    return create_pda(block_account, seeds, ARRAY_LEN(seeds), funding_key, &(Constants.self_program_pubkey),
                       get_rent_exempt_minimum(block_size), block_size, transaction_accounts,
                       transaction_accounts_len);
 }
@@ -50,8 +50,8 @@ static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t gro
 // Given a block account, returns the validated Block or null if the block account is invalid in some way.
 static Block *get_validated_block(const SolAccountInfo *block_account)
 {
-    // Make sure that the block account is owned by the nifty stakes program
-    if (!is_nifty_program(block_account->owner)) {
+    // Make sure that the block account is owned by the program
+    if (!is_self_program(block_account->owner)) {
         return 0;
     }
 

@@ -63,10 +63,10 @@ static uint64_t super_initialize(const SolParameters *params)
 
     // Create the config account.  The config account is derived from a fixed seed.
     {
-        const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_config_seed_bytes;
-        SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_config_seed_bytes) };
+        const uint8_t *seed_bytes = (uint8_t *) Constants.config_seed_bytes;
+        SolSignerSeed seed = { seed_bytes, sizeof(Constants.config_seed_bytes) };
 
-        if (create_pda(config_account, &seed, 1, superuser_account->key, &(Constants.nifty_program_pubkey),
+        if (create_pda(config_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
                        get_rent_exempt_minimum(sizeof(ProgramConfig)), sizeof(ProgramConfig), params->ka,
                        params->ka_num)) {
             return Error_CreateAccountFailed;
@@ -80,10 +80,10 @@ static uint64_t super_initialize(const SolParameters *params)
 
     // Create the authority account.  The authority account is derived from a fixed seed and doesn't hold any data.
     {
-        const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
-        SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+        const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+        SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
 
-        if (create_pda(authority_account, &seed, 1, superuser_account->key, &(Constants.nifty_program_pubkey),
+        if (create_pda(authority_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
                        get_rent_exempt_minimum(0), 0, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }
@@ -95,8 +95,8 @@ static uint64_t super_initialize(const SolParameters *params)
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.master_stake_seed_bytes) };
 
         if (create_stake_account(master_stake_account, &seed, 1, superuser_account->key,
-                                 MASTER_STAKE_ACCOUNT_MIN_LAMPORTS, &(Constants.nifty_authority_pubkey),
-                                 &(Constants.nifty_authority_pubkey), params->ka, params->ka_num)) {
+                                 MASTER_STAKE_ACCOUNT_MIN_LAMPORTS, &(Constants.authority_pubkey),
+                                 &(Constants.authority_pubkey), params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }
     }
@@ -112,7 +112,7 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.ki_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.ki_mint_seed_bytes) };
 
-        if (create_token_mint(ki_mint_account, &seed, 1, &(Constants.nifty_authority_pubkey), superuser_account->key,
+        if (create_token_mint(ki_mint_account, &seed, 1, &(Constants.authority_pubkey), superuser_account->key,
                               1, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }
@@ -132,7 +132,7 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.bid_marker_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.bid_marker_mint_seed_bytes) };
 
-        if (create_token_mint(bid_marker_mint_account, &seed, 1, &(Constants.nifty_authority_pubkey),
+        if (create_token_mint(bid_marker_mint_account, &seed, 1, &(Constants.authority_pubkey),
                               superuser_account->key, 1, params->ka, params->ka_num)) {
             return Error_CreateAccountFailed;
         }

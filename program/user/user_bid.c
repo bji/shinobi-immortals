@@ -34,7 +34,7 @@ static uint64_t user_bid(const SolParameters *params)
         DECLARE_ACCOUNT(4,  bid_account,                   ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,  authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(6,  system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
-        DECLARE_ACCOUNT(7,  nifty_program_account,         ReadOnly,   NotSigner,  KnownAccount_NiftyProgram);
+        DECLARE_ACCOUNT(7,  self_program_account,          ReadOnly,   NotSigner,  KnownAccount_SelfProgram);
         DECLARE_ACCOUNT(8,  spl_token_program_account,     ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(9);

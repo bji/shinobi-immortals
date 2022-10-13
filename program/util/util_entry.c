@@ -24,7 +24,7 @@ static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, const So
                                     { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -35,7 +35,7 @@ static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, const So
         return Error_CreateAccountFailed;
     }
 
-    return create_token_mint(mint_account, seeds, ARRAY_LEN(seeds), &(Constants.nifty_authority_pubkey), funding_key,
+    return create_token_mint(mint_account, seeds, ARRAY_LEN(seeds), &(Constants.authority_pubkey), funding_key,
                              0, transaction_accounts, transaction_accounts_len);
 }
 
@@ -55,7 +55,7 @@ static uint64_t create_entry_account(SolAccountInfo *entry_account, const SolPub
                                     { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -66,7 +66,7 @@ static uint64_t create_entry_account(SolAccountInfo *entry_account, const SolPub
         return Error_CreateAccountFailed;
     }
 
-    return create_pda(entry_account, seeds, ARRAY_LEN(seeds), funding_key, &(Constants.nifty_program_pubkey),
+    return create_pda(entry_account, seeds, ARRAY_LEN(seeds), funding_key, &(Constants.self_program_pubkey),
                       get_rent_exempt_minimum(sizeof(Entry)), sizeof(Entry), transaction_accounts,
                       transaction_accounts_len);
 }
@@ -86,7 +86,7 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, const 
                                     { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -123,7 +123,7 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, const 
 
     util_InitializeAccount3Data data = {
         /* instruction_code */ 18,
-        /* owner */ Constants.nifty_authority_pubkey
+        /* owner */ Constants.authority_pubkey
     };
 
     instruction.data = (uint8_t *) &data;
@@ -160,8 +160,8 @@ static uint64_t create_entry_metaplex_metadata(const SolPubkey *metaplex_metadat
 // Given an entry account, returns the validated Entry or null if the entry account is invalid in some way.
 static Entry *get_validated_entry(const SolAccountInfo *entry_account)
 {
-    // Make sure that the entry account is owned by the nifty stakes program
-    if (!is_nifty_program(entry_account->owner)) {
+    // Make sure that the entry account is owned by the program
+    if (!is_self_program(entry_account->owner)) {
         return 0;
     }
 

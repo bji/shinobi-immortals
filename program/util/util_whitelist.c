@@ -10,8 +10,8 @@
 
 static Whitelist *get_validated_whitelist(const SolAccountInfo *whitelist_account)
 {
-    // Make sure that the whitelist account is owned by the nifty stakes program
-    if (!is_nifty_program(whitelist_account->owner)) {
+    // Make sure that the whitelist account is owned by the program
+    if (!is_self_program(whitelist_account->owner)) {
         return 0;
     }
 
@@ -54,7 +54,7 @@ static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, const S
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;
@@ -70,7 +70,7 @@ static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, const S
 
     if (whitelist == 0) {
         // No whitelist existed so create it
-        ret = create_pda(whitelist_account, seeds, ARRAY_LEN(seeds), funding_pubkey, &(Constants.nifty_program_pubkey),
+        ret = create_pda(whitelist_account, seeds, ARRAY_LEN(seeds), funding_pubkey, &(Constants.self_program_pubkey),
                          get_rent_exempt_minimum(sizeof(Whitelist)), sizeof(Whitelist), transaction_accounts,
                          transaction_accounts_len);
         if (ret) {
@@ -114,7 +114,7 @@ static bool whitelist_check(const SolAccountInfo *whitelist_account, const SolPu
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return false;
@@ -169,7 +169,7 @@ static uint64_t delete_whitelist_account(const SolAccountInfo *whitelist_account
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return Error_NotWhitelistAccount;

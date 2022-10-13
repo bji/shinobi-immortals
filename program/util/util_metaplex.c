@@ -226,8 +226,8 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
     instruction.program_id = &(Constants.metaplex_program_pubkey);
 
     // Must invoke all metaplex instructions with signed authority account
-    uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     {
@@ -237,11 +237,11 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
               // Mint of token asset
               { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ false, /* is_signer */ false },
               // Mint authority
-              { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true },
+              { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true },
               // payer
               { /* pubkey */ (SolPubkey *) funding_key, /* is_writable */ true, /* is_signer */ true },
               // update authority info
-              { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ false },
+              { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ false },
               // system program
               { /* pubkey */ &(Constants.system_program_pubkey), /* is_writable */ false, /* is_signer */ false },
               // rent
@@ -255,7 +255,7 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
                      METAPLEX_METADATA_DATA_SIZE /* data */ +
                      BORSH_SIZE_BOOL /* is_mutable */];
         uint8_t *d = borsh_encode_u8(data, 16); // instruction code 16 = CreateMetadataAccountV2
-        d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, &(Constants.nifty_authority_pubkey));
+        d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, &(Constants.authority_pubkey));
         d = borsh_encode_bool(d, true); // is_mutable
 
         instruction.data = data;
@@ -273,7 +273,7 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
           // Metadata key
         { { /* pubkey */ (SolPubkey *) metaplex_metadata_key, /* is_writable */ true, /* is_signer */ false },
           // creator
-          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -286,7 +286,7 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
 }
 
 
-// Change the update authority for metaplex metadata.  Assumes that the nifty authority is the current authority
+// Change the update authority for metaplex metadata.  Assumes that the authority is the current authority
 // of the metadata.
 static uint64_t set_metaplex_metadata_authority(const SolPubkey *metaplex_metadata_pubkey,
                                                 const SolPubkey *new_authority,
@@ -302,7 +302,7 @@ static uint64_t set_metaplex_metadata_authority(const SolPubkey *metaplex_metada
           // Metadata key
         { { /* pubkey */ (SolPubkey *) metaplex_metadata_pubkey, /* is_writable */ true, /* is_signer */ false },
           // Update authority
-          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -322,8 +322,8 @@ static uint64_t set_metaplex_metadata_authority(const SolPubkey *metaplex_metada
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
@@ -348,7 +348,7 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(const Entry *entry,
         { { /* pubkey */ (SolPubkey *) &(entry->metaplex_metadata_pubkey), /* is_writable */ true,
               /* is_signer */ false },
           // Update authority
-          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -365,8 +365,8 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(const Entry *entry,
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
@@ -504,8 +504,8 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
     instruction.program_id = &(Constants.metaplex_program_pubkey);
 
     // Must invoke metaplex instructions with signed authority account
-    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     {
@@ -514,7 +514,7 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
             { { /* pubkey */ (SolPubkey *) &(entry->metaplex_metadata_pubkey), /* is_writable */ true,
                   /* is_signer */ false },
               // Update authority
-              { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+              { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
         instruction.accounts = account_metas;
         instruction.account_len = ARRAY_LEN(account_metas);
@@ -529,7 +529,7 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
         uint8_t *d = borsh_encode_u8(data, 15); // instruction code 15 = UpdateMetadataAccountV2
         d = borsh_encode_option_some(d);
         d = encode_metaplex_metadata(d, level_metadata->name, (uint8_t *) "SHIN", level_metadata->uri, creator_1,
-                                     creator_2, &(Constants.nifty_authority_pubkey));
+                                     creator_2, &(Constants.authority_pubkey));
         d = borsh_encode_option_none(d); // update_authority
         d = borsh_encode_option_none(d); // primary_sale_happened
         d = borsh_encode_option_none(d); // is_mutable
@@ -550,7 +550,7 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
         { { /* pubkey */ (SolPubkey *) &(entry->metaplex_metadata_pubkey), /* is_writable */ true,
               /* is_signer */ false },
           // creator
-          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);

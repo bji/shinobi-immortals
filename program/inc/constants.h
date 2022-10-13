@@ -20,15 +20,15 @@
 // This is the Ki token metadata uri (to be updated with a permanent uri when one is available_
 #define KI_TOKEN_METADATA_URI "https://www.shinobi-systems.com/nifty_stakes/ki.json"
 
-// This is the nifty stakes auction token name.  These tokens are used to create "markers" within users token
-// lists that point to bids.  These must use the Metaplex Fungible Token standard, which means having at least
-// one decimal place.
+// This is the Shinobi Immortals auction token name.  These tokens are used to create "markers" within users token
+// lists that point to bids.  These must use the Metaplex Fungible Token standard, which means having at least one
+// decimal place.
 #define BID_MARKER_TOKEN_NAME "Shinobi Auction Bid Marker"
 
-// Nifty stakes auction token symbol
+// Shinobi Immortals auction token symbol
 #define BID_MARKER_TOKEN_SYMBOL "SHIN-BID"
 
-// Nifty stakes auction token metadata uri
+// Shinobi Immortals auction token metadata uri
 #define BID_MARKER_TOKEN_METADATA_URI "https://www.shinobi-systems.com/nifty_stakes/bid_marker.json"
 
 
@@ -77,30 +77,29 @@ typedef struct
     SolPubkey superuser_pubkey;
 
     // This is the account address of the program config.  It is a program derived address using the
-    // program id and nifty_config_seed_bytes
-    SolPubkey nifty_config_pubkey;
+    // program id and config_seed_bytes
+    SolPubkey config_pubkey;
 
-    // These are the seed bytes used to derive the nifty_config_pubkey address
-    uint8_t nifty_config_seed_bytes[2];
+    // These are the seed bytes used to derive the config_pubkey address
+    uint8_t config_seed_bytes[2];
 
     // This is the account address of the authority account.  The authority account is used by the program as the
     // authority anywhere that an authority is needed, because the program can sign this authority.  This is computed
     // when the program's address is known and hardcoded into the program, along with the seeds needed to generate it.
-    SolPubkey nifty_authority_pubkey;
+    SolPubkey authority_pubkey;
 
-    // These are the seed bytes used to derive the nifty_authority_pubkey address
-    uint8_t nifty_authority_seed_bytes[2];
+    // These are the seed bytes used to derive the authority_pubkey address
+    uint8_t authority_seed_bytes[2];
 
-    // The master stake account to be used for commission splits.  This is needed to ensure that splits off of
-    // small amounts of commission is possible, because if there is ever a minimum stake account size, then it
-    // would not be possible to split less than that off of a stake account for commission purposes.  So instead,
-    // commission is charged by: merging the stake account into the master stake account, then splitting off
-    // that same amount minus the commission charge back into the original stake account.  The master stake account
-    // must have all authorities set to the nifty authority account, which will allow the nifty program itself
-    // to have full control over the stake account.  Commission is taken from the master stake account to the
-    // admin account by a separate operation that the admin can run which requests the program to split off SOL
-    // from the master stake account.  ALL authorities for the stake account must be set to the nifty authority
-    // account so that there are no trust issues.
+    // The master stake account to be used for commission splits.  This is needed to ensure that splits off of small
+    // amounts of commission is possible, because if there is ever a minimum stake account size, then it would not be
+    // possible to split less than that off of a stake account for commission purposes.  So instead, commission is
+    // charged by: merging the stake account into the master stake account, then splitting off that same amount minus
+    // the commission charge back into the original stake account.  The master stake account must have all authorities
+    // set to the authority account, which will allow the program itself to have full control over the stake account.
+    // Commission is taken from the master stake account to the admin account by a separate operation that the admin
+    // can run which requests the program to split off SOL from the master stake account.  ALL authorities for the
+    // stake account must be set to the authority account so that there are no trust issues.
     SolPubkey master_stake_pubkey;
 
     // These are the seed bytes used to derive the master stake account address
@@ -127,8 +126,8 @@ typedef struct
     // This is the Shinobi Systems vote account pubkey
     SolPubkey shinobi_systems_vote_pubkey;
 
-    // This is the nifty program pubkey.  It is the account address that actually stores this program.
-    SolPubkey nifty_program_pubkey;
+    // This is the Shinobi Immortals program pubkey.  It is the account address that actually stores this program.
+    SolPubkey self_program_pubkey;
 
     // This is the system program pubkey
     SolPubkey system_program_pubkey;
@@ -174,17 +173,17 @@ static const _Constants Constants =
     // superuser_pubkey
     SUPERUSER_PUBKEY_ARRAY,
 
-    // nifty_config_pubkey
-    NIFTY_CONFIG_PUBKEY_ARRAY,
+    // config_pubkey
+    CONFIG_PUBKEY_ARRAY,
 
-    // nifty_config_seed_bytes
-    { PDA_Account_Seed_Prefix_Config, NIFTY_CONFIG_BUMP_SEED },
+    // config_seed_bytes
+    { PDA_Account_Seed_Prefix_Config, CONFIG_BUMP_SEED },
 
-    // nifty_authority_pubkey
-    NIFTY_AUTHORITY_PUBKEY_ARRAY,
+    // authority_pubkey
+    AUTHORITY_PUBKEY_ARRAY,
 
-    // nifty_authority_seed_bytes
-    { PDA_Account_Seed_Prefix_Authority, NIFTY_AUTHORITY_BUMP_SEED },
+    // authority_seed_bytes
+    { PDA_Account_Seed_Prefix_Authority, AUTHORITY_BUMP_SEED },
 
     // master_stake_pubkey
     MASTER_STAKE_PUBKEY_ARRAY,
@@ -213,8 +212,8 @@ static const _Constants Constants =
     // shinobi_systems_vote_pubkey
     SHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY,
 
-    // nifty_program_pubkey
-    NIFTY_PROGRAM_PUBKEY_ARRAY,
+    // Shinobi Immortals program_pubkey
+    SELF_PROGRAM_PUBKEY_ARRAY,
 
     // system_program_pubkey
     SYSTEM_PROGRAM_PUBKEY_ARRAY,

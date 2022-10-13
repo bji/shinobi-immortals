@@ -40,7 +40,7 @@ static uint64_t user_buy(const SolParameters *params)
         DECLARE_ACCOUNT(9,   token_destination_account,        ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(10,  token_destination_owner_account,  ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(11,  entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(12,  nifty_program_account,            ReadOnly,   NotSigner,  KnownAccount_NiftyProgram);
+        DECLARE_ACCOUNT(12,  program_account,                  ReadOnly,   NotSigner,  KnownAccount_SelfProgram);
         DECLARE_ACCOUNT(13,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(14,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
         DECLARE_ACCOUNT(15,  metaplexprogram_account,          ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
@@ -99,9 +99,9 @@ static uint64_t user_buy(const SolParameters *params)
         return Error_FailedToGetClock;
     }
 
-    // No need to check that the token is owned by the nifty stakes program; if it is not, then the SPL token program
-    // invoke of the transfer of the token from the token account to the destination account will simply fail and the
-    // transaction will then fail
+    // No need to check that the token is owned by the program; if it is not, then the SPL token program invoke of the
+    // transfer of the token from the token account to the destination account will simply fail and the transaction
+    // will then fail
 
     const SolAccountInfo *funds_destination_account;
     uint64_t purchase_price_lamports;

@@ -42,7 +42,7 @@ static uint64_t charge_commission(const Stake *stake, const Block *block, Entry 
                               { &bump_seed, sizeof(bump_seed) } };
 
     SolPubkey pubkey;
-    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.nifty_program_pubkey),
+    uint64_t ret = sol_try_find_program_address(seeds, ARRAY_LEN(seeds) - 1, &(Constants.self_program_pubkey),
                                                 &pubkey, &bump_seed);
     if (ret) {
         return ret;

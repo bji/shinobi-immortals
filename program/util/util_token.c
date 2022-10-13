@@ -332,7 +332,7 @@ static uint64_t mint_tokens(const SolPubkey *mint_key, const SolPubkey *token_ke
           ///   1. `[writable]` The account to mint tokens to.
           { /* pubkey */ (SolPubkey *) token_key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The mint's minting authority.
-          { /* pubkey */ &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -346,8 +346,8 @@ static uint64_t mint_tokens(const SolPubkey *mint_key, const SolPubkey *token_ke
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    const uint8_t *seed_bytes = (uint8_t *) Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
@@ -381,8 +381,8 @@ static uint64_t revoke_mint_authority(const SolPubkey *mint_key, const SolPubkey
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    const uint8_t *seed_bytes = Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    const uint8_t *seed_bytes = Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
@@ -404,7 +404,7 @@ static uint64_t transfer_entry_token(const Entry *entry, const SolAccountInfo *t
           { (SolPubkey *) token_destination->key, /* is_writable */ true, /* is_signer */ false },
           ///   2. `[signer]` The source account's owner/delegate, which since this is a token owned by the
           //                  entry, the owner is the authority account
-          { &(Constants.nifty_authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+          { &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
@@ -418,8 +418,8 @@ static uint64_t transfer_entry_token(const Entry *entry, const SolAccountInfo *t
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    const uint8_t *seed_bytes = Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    const uint8_t *seed_bytes = Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
@@ -452,8 +452,8 @@ static uint64_t close_token_account(const SolPubkey *token_pubkey, const SolPubk
     instruction.data_len = sizeof(data);
 
     // Must invoke with signed authority account
-    const uint8_t *seed_bytes = Constants.nifty_authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.nifty_authority_seed_bytes) };
+    const uint8_t *seed_bytes = Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
     return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
@@ -464,7 +464,7 @@ static uint64_t close_token_account(const SolPubkey *token_pubkey, const SolPubk
 static uint64_t close_entry_token(const Entry *entry, const SolPubkey *lamports_destination_key,
                                   const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    return close_token_account(&(entry->token_pubkey), &(Constants.nifty_authority_pubkey), lamports_destination_key,
+    return close_token_account(&(entry->token_pubkey), &(Constants.authority_pubkey), lamports_destination_key,
                                transaction_accounts, transaction_accounts_len);
 }
 

@@ -92,7 +92,7 @@ typedef enum
     // Attempt to stake when an entry is not in a stakeable state
     Error_NotStakeable                                 = 1036,
 
-    // Attempt to set stake account authorities to the nifty authority failed during a stake operation
+    // Attempt to set stake account authorities to the authority failed during a stake operation
     Error_SetStakeAuthoritiesFailed                    = 1037,
 
     // Delegate stake failed

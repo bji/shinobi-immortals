@@ -35,9 +35,9 @@ static bool is_superuser_pubkey(const SolPubkey *pubkey)
 }
 
 
-static bool is_nifty_config_account(const SolPubkey *pubkey)
+static bool is_config_account(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.nifty_config_pubkey), pubkey);
+    return SolPubkey_same(&(Constants.config_pubkey), pubkey);
 }
 
 
@@ -45,7 +45,7 @@ static bool get_admin_account_address(const SolAccountInfo *config_account, SolP
 {
     // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
     // account
-    if (!is_nifty_config_account(config_account->key)) {
+    if (!is_config_account(config_account->key)) {
         return false;
     }
 
@@ -99,15 +99,15 @@ static bool is_shinobi_systems_vote_account(const SolPubkey *pubkey)
 }
 
 
-static bool is_nifty_authority_account(const SolPubkey *pubkey)
+static bool is_authority_account(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.nifty_authority_pubkey), pubkey);
+    return SolPubkey_same(&(Constants.authority_pubkey), pubkey);
 }
 
 
-static bool is_nifty_program(const SolPubkey *pubkey)
+static bool is_self_program(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.nifty_program_pubkey), pubkey);
+    return SolPubkey_same(&(Constants.self_program_pubkey), pubkey);
 }
 
 

@@ -34,8 +34,8 @@ function find_pda(seeds, program_id)
 const g_system_program_address = "11111111111111111111111111111111";
 const g_system_program_pubkey = make_pubkey(g_system_program_address);
 
-const g_nifty_program_address = "shin1Sf5v4WNGKCCTQWFUdQEBGXZZ2J1eGuM3ueR2fa";
-const g_nifty_program_pubkey = make_pubkey(g_nifty_program_address);
+const g_self_program_address = "Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG";
+const g_self_program_pubkey = make_pubkey(g_self_program_address);
 
 const g_metaplex_program_address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 const g_metaplex_program_pubkey = make_pubkey(g_metaplex_program_address);
@@ -55,22 +55,22 @@ const g_config_program_pubkey = make_pubkey(g_config_program_address);
 const g_validator_info_address = "Va1idator1nfo111111111111111111111111111111";
 const g_validator_info_pubkey = make_pubkey(g_validator_info_address);
 
-const g_nifty_program_authority_pubkey = find_pda([ [ 2 ] ], g_nifty_program_pubkey)[0];
-const g_nifty_program_authority_address = g_nifty_program_authority_pubkey.toBase58();
+const g_program_authority_pubkey = find_pda([ [ 2 ] ], g_self_program_pubkey)[0];
+const g_program_authority_address = g_program_authority_pubkey.toBase58();
       
-const g_config_pubkey = find_pda([ [ 1 ] ], g_nifty_program_pubkey)[0];
+const g_config_pubkey = find_pda([ [ 1 ] ], g_self_program_pubkey)[0];
 const g_config_address = g_config_pubkey.toBase58();
 
-const g_master_stake_pubkey = find_pda([ [ 3 ] ], g_nifty_program_pubkey)[0];
+const g_master_stake_pubkey = find_pda([ [ 3 ] ], g_self_program_pubkey)[0];
 const g_master_stake_address = g_master_stake_pubkey.toBase58();
 
-const g_ki_mint_pubkey = find_pda([ [ 4 ] ], g_nifty_program_pubkey)[0];
+const g_ki_mint_pubkey = find_pda([ [ 4 ] ], g_self_program_pubkey)[0];
 const g_ki_mint_address = g_ki_mint_pubkey.toBase58();
 
 const g_ki_metadata_address = get_metaplex_metadata_address(g_ki_mint_address);
 const g_ki_metadata_pubkey = make_pubkey(g_ki_metadata_address);
 
-const g_bid_marker_mint_pubkey = find_pda([ [ 11 ] ], g_nifty_program_pubkey)[0];
+const g_bid_marker_mint_pubkey = find_pda([ [ 11 ] ], g_self_program_pubkey)[0];
 const g_bid_marker_mint_address = g_bid_marker_mint_pubkey.toBase58();
 
 
@@ -1236,7 +1236,7 @@ class Entry
         return buffer_string(data, offset + 4, len);
     }
 
-    // Cribbed from the nifty program's get_entry_state() function
+    // Cribbed from the program's get_entry_state() function
     get_entry_state(clock)
     {
         if (this.reveal_sha256 == "0000000000000000000000000000000000000000000000000000000000000000") {
@@ -1781,7 +1781,7 @@ class Wallet
 
         let update_authority = buffer_address(result.data, 1);
 
-        if (update_authority == g_nifty_program_authority_address) {
+        if (update_authority == g_program_authority_address) {
             new_entry_addresses.add(get_entry_address(mint_address));
         }
     }
@@ -2106,7 +2106,7 @@ function get_block_address(group_number, block_number)
     return find_pda([ [ 7 ],
                       u32_to_le_bytes(group_number),
                       u32_to_le_bytes(block_number) ],
-                    g_nifty_program_pubkey)[0].toBase58();
+                    g_self_program_pubkey)[0].toBase58();
 }
 
 
@@ -2114,7 +2114,7 @@ function get_whitelist_address(block_address)
 {
     return find_pda([ [ 13 ],
                       address_to_buffer(block_address) ],
-                    g_nifty_program_pubkey)[0].toBase58();
+                    g_self_program_pubkey)[0].toBase58();
 }
 
 
@@ -2123,7 +2123,7 @@ function get_entry_mint_address(block_address, entry_index)
     return find_pda([ [ 5 ],
                       address_to_buffer(block_address),
                       u16_to_le_bytes(entry_index) ],
-                    g_nifty_program_pubkey)[0].toBase58();
+                    g_self_program_pubkey)[0].toBase58();
 }
 
 
@@ -2131,7 +2131,7 @@ function get_entry_address(entry_mint_address)
 {
     return find_pda([ [ 8 ],
                       address_to_buffer(entry_mint_address) ],
-                    g_nifty_program_pubkey)[0].toBase58();
+                    g_self_program_pubkey)[0].toBase58();
 }
 
 
@@ -2139,7 +2139,7 @@ function get_entry_bridge_address(entry_mint_address)
 {
     return find_pda([ [ 10 ],
                       address_to_buffer(entry_mint_address) ],
-                    g_nifty_program_pubkey)[0].toBase58();
+                    g_self_program_pubkey)[0].toBase58();
 }
 
 
@@ -2157,7 +2157,7 @@ function get_bid_marker_token_address(entry_mint_address, bidder_address)
     return find_pda([ [ 12 ],
                       address_to_buffer(entry_mint_address),
                       address_to_buffer(bidder_address) ],
-                    g_nifty_program_pubkey)[0].toBase58();
+                    g_self_program_pubkey)[0].toBase58();
 }
 
 
@@ -2165,7 +2165,7 @@ function get_bid_address(bid_marker_token_address)
 {
     return find_pda([ [ 9 ],
                       address_to_buffer(bid_marker_token_address) ],
-                    g_nifty_program_pubkey)[0].toBase58();
+                    g_self_program_pubkey)[0].toBase58();
 }
 
 

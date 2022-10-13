@@ -76,9 +76,9 @@ static uint64_t user_stake(const SolParameters *params)
         return Error_InvalidAccount_First + 4;
     }
 
-    // Use stake account program to set all authorities to the nifty authority
+    // Use stake account program to set all authorities to the authority
     if (set_stake_authorities(stake_account->key, withdraw_authority_account->key,
-                              &(Constants.nifty_authority_pubkey), params->ka, params->ka_num)) {
+                              &(Constants.authority_pubkey), params->ka, params->ka_num)) {
         return Error_SetStakeAuthoritiesFailed;
     }
 
