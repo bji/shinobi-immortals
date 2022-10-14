@@ -8,7 +8,7 @@ const { _buy_tx,
         _bid_tx,
         _claim_losing_tx,
         _claim_winning_tx,
-        _stake_tx,
+        _stake_with_vote_account_tx,
         _destake_tx,
         _harvest_tx,
         _level_up_tx
@@ -491,7 +491,7 @@ class RpcConnections
 
 class Cluster
 {
-    // If default_slot_duration_seconds is null, a default is used.  If slots_per_epoch is null, a default is used
+    // If default_slot_duration_seconds is null, a default is used.  If slots_per_epoch is null, a default is used.
     static create(rpc_connections, default_slot_duration_seconds, slots_per_epoch, callbacks)
     {
         return new Cluster(rpc_connections, default_slot_duration_seconds, slots_per_epoch, callbacks);
@@ -648,6 +648,21 @@ class Cluster
                 return index == stop;
             }
         };
+    }
+
+    /**
+     * Gets the Shinobi Systems vote account for this cluster.
+     **/
+    async get_shinobi_systems_vote_account()
+    {
+        if (this.shinobi_immortals_vote_account == null) {
+            let result = await this.get_stake_account(g_master_stake_address, null);
+            if (result != null) {
+                this.shinobi_immortals_vote_account = result.delegation.vote_account;
+            }
+        }
+            
+        return this.shinobi_immortals_vote_account;
     }
 
     // Returns the stake details of a stake account.  If account is null, the stake account is looked up; else
@@ -1847,8 +1862,14 @@ class Wallet
 
     async stake_entry(entry, stake_account, sign_callback)
     {
+        let vote_account = await this.get_shinobi_systems_vote_account();
+
+        if (vote_account == null) {
+            throw new Error("Shinobi Immortals vote account does not exist");
+        }
+        
         return this.complete_tx((wallet_address) => {
-            return this.make_stake_tx(entry, stake_account, wallet_address);
+            return this.make_stake_with_vote_account_tx(entry, stake_account, vote_account, wallet_address);
         }, sign_callback);
     }
     
@@ -1946,13 +1967,14 @@ class Wallet
         }
     }
     
-    async make_stake_tx(entry, stake_address, wallet_address)
+    async make_stake_with_vote_account_tx(entry, stake_address, vote_account_address, wallet_address)
     {
         return _stake_tx({ block_pubkey : entry.block.address,
                            entry_pubkey : entry.address,
                            token_owner_pubkey : wallet_address,
                            token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
                            stake_pubkey : stake_address,
+                           vote_account_pubkey : vote_account_address,
                            withdraw_authority : wallet_address });
     }
     
