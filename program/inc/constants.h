@@ -71,7 +71,7 @@ typedef struct
 {
     // This constant ensures that data conforming to the "Solana Security.txt" format is present in the binary.
     // See: https://github.com/neodyme-labs/solana-security-txt
-    const char *security_txt;
+    const char security_txt[304];
 
     // This is the pubkey bytes of the superuser
     SolPubkey superuser_pubkey;
