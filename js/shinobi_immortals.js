@@ -1103,12 +1103,12 @@ class Entry
         
         for (let i = 0; i < 9; i += 1) {
             this.level_metadata[i] = {
-                form : data[400 + (i * 288)],
-                skill : data[401 + (i * 288)],
-                ki_factor : buffer_le_u32(data, 404 + (i * 288)),
-                name : buffer_string(data, 408 + (i * 288), 48),
-                uri : buffer_string(data, 456 + (i * 288), 200),
-                uri_contents_sha256 : buffer_sha256(data, 656 + (i * 288))
+                form : data[400 + (i * 292)],
+                skill : data[404 + (i * 292)],
+                ki_factor : buffer_le_u32(data, 408 + (i * 292)),
+                name : buffer_string(data, 412 + (i * 292), 48),
+                uri : buffer_string(data, 460 + (i * 292), 200),
+                uri_contents_sha256 : buffer_sha256(data, 660 + (i * 292))
             };
         }
     }
@@ -1191,12 +1191,12 @@ class Entry
         
         for (let i = 0; i < 9; i += 1) {
             new_level_metadata[i] = {
-                form : data[400 + (i * 288)],
-                skill : data[401 + (i * 288)],
-                ki_factor : buffer_le_u32(data, 404 + (i * 288)),
-                name : buffer_string(data, 408 + (i * 288), 48),
-                uri : buffer_string(data, 456 + (i * 288), 200),
-                uri_contents_sha256 : buffer_sha256(data, 656 + (i * 288))
+                form : data[400 + (i * 292)],
+                skill : data[404 + (i * 292)],
+                ki_factor : buffer_le_u32(data, 408 + (i * 292)),
+                name : buffer_string(data, 412 + (i * 292), 48),
+                uri : buffer_string(data, 460 + (i * 292), 200),
+                uri_contents_sha256 : buffer_sha256(data, 660 + (i * 292))
             };
             if ((new_level_metadata[i].form != this.level_metadata[i].form) ||
                 (new_level_metadata[i].skill != this.level_metadata[i].skill) ||

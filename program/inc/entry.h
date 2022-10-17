@@ -29,7 +29,7 @@ typedef enum EntryState
 typedef struct
 {
     // Form at this level
-    uint8_t form;
+    uint32_t form;
 
     // Attack and defense skill (top 4 bits = attack, bottom 4 = defense)
     uint8_t skill;
