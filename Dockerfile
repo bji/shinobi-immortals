@@ -50,10 +50,10 @@ RUN tar cf program.tar program --mtime "1970-01-01"
 
 # Check that the SHA-1 hash of build_program.sh and program is as expected
 RUN echo "316d12f3f58b2ee297ade86b24f90318c9fbf168 build_program.sh" | sha1sum -c -
-RUN echo "bc8a2e87f1d983d70e6a52172028308944eae3b6 program.tar" | sha1sum -c -
+RUN echo "a8f655daf56a726ad7a1931efebff53a78305178 program.tar" | sha1sum -c -
 
 # Run build_program.sh to build it
 RUN SDK_ROOT=solana-release/bin/sdk sh build_program.sh
 
 # Check to make sure that the sha1sum of the built program is as expected
-RUN echo "175a73dbc0feebc58754d6939d6400cf323430e6 program.so" | sha1sum -c -
+RUN echo "4159cff9e667d5b5cfe7541a95d3ce0679e3a15a program.so" | sha1sum -c -
