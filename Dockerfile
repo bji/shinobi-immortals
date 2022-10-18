@@ -44,13 +44,11 @@ RUN (cd solana-release/bin/sdk/bpf/dependencies/bpf-tools; tar jxf /root/solana-
 # Extract just build_program.sh and program
 RUN tar zxf shinobi-immortals.tar.gz --strip-components=1 "*/build_program.sh" "*/program"
 
-# Archive the Shinobi Immortals program directory so that it can be checked.  Use fixed timestamp so that the
-# tar file is always the same.
-RUN tar cf program.tar program --mtime "1970-01-01"
+# Cat build_program.sh and contents of all files under program into a single file so that the checksum can be verified
+RUN find build_program.sh program -type f | sort | xargs cat > build_contents.txt
 
-# Check that the SHA-1 hash of build_program.sh and program is as expected
-RUN echo "316d12f3f58b2ee297ade86b24f90318c9fbf168 build_program.sh" | sha1sum -c -
-RUN echo "0c48f621d3b6b82ce36398dbed0363f23c2c5dfb program.tar" | sha1sum -c -
+# Check that the SHA-1 hash of build_program.sh and program files is as expected
+RUN echo "0308657dad689591d52cf1bef11533954336b56f build_contents.txt" | sha1sum -c -
 
 # Run build_program.sh to build it
 RUN SDK_ROOT=solana-release/bin/sdk sh build_program.sh
