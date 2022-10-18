@@ -1,7 +1,8 @@
 #pragma once
 
-#include "util/util_bid.c"
 #include "util/util_accounts.c"
+#include "util/util_bid.c"
+#include "util/util_math.c"
 
 typedef struct
 {
@@ -17,8 +18,6 @@ typedef struct
 } BidData;
 
 
-// This is guaranteed accurate for a 3 day auction and a current_max_bid of 10,000 SOL.  Above those values, accuracy
-// is not guaranteed due to overflow.
 static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
                                     uint64_t seconds_elapsed);
 
@@ -74,6 +73,11 @@ static uint64_t user_bid(const SolParameters *params)
                                                entry->auction.highest_bid_lamports,
                                                clock.unix_timestamp - entry->reveal_timestamp);
 
+    // If the minimum bid is 0, then no bid is possible
+    if (minimum_bid == 0) {
+        return Error_BidTooLow;
+    }
+
     // If the minimum bid is greater than the maximum range of this bid, then the bid is not large enough
     if (minimum_bid > data->maximum_bid_lamports) {
         return Error_BidTooLow;
@@ -119,14 +123,20 @@ static uint64_t user_bid(const SolParameters *params)
 static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
                                     uint64_t seconds_elapsed)
 {
-    // If there have been no bids yet, then start with the initial minimum
+    // If the maximum possible bid has been achieved, return 0
+    if (current_max_bid == UINT64_MAX) {
+        return 0;
+    }
+
+    // If there have been no bids yet, then use the initial minimum.  Only once the first bid is cast, does the
+    // minimum bid increment come into play.
     if (current_max_bid < initial_minimum_bid) {
-        current_max_bid = initial_minimum_bid;
+        return initial_minimum_bid;
     }
 
     // Sanitize the seconds elapsed
-    if (seconds_elapsed > auction_duration) {
-        seconds_elapsed = auction_duration;
+    if (seconds_elapsed >= auction_duration) {
+        seconds_elapsed = (auction_duration - 1);
     }
 
     // This is a curve based on the formula: y = p * ((1 / (101 - (100 * (a / b)))) + 1.01)
@@ -137,19 +147,27 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
     uint64_t b = auction_duration;
     uint64_t p = current_max_bid;
 
-    uint64_t result = (p * (((1000 * b) / ((b + (b / 100)) - a)) + 101000)) / 100000;
+    // Keep track of whether any of the math for computing the minimum bid overflows
+    bool overflow = false;
 
-    // result can be off if there is overflow.  So bound it by between 1.02 and 2.1 of the current_max_bid
-    uint64_t min_result = current_max_bid + (current_max_bid / 50);
-    uint64_t max_result = (2 * current_max_bid) + (current_max_bid / 100);
+    // result = (p * (((1000 * b) / ((b + (b / 100)) - a)) + 101000)) / 100000
+    // The term involving b and a cannot overflow since b was originally a uint32_t value; and a is less than b.
+    uint64_t result = checked_multiply(p, ((1000 * b) / ((b + (b / 100)) - a)) + 101000, &overflow) / 100000;
 
-    if (result < min_result) {
-        return min_result;
+    // Check for overflow
+    if (overflow) {
+        // Overflow has occurred.  This means that the formula can't be used to compute the maximum next bid because
+        // the numbers are too large.  This would only happen with extremely large bids, millions of dollars' worth.
+        // But to be safe, in this case, instead of computing an invalid minimum next bid, just use 1/8 more than the
+        // previous bid.
+        overflow = false;
+        result = checked_add(current_max_bid, (current_max_bid >> 3), &overflow);
+
+        // If this also overflowed, then use the maximum possible bid.
+        if (overflow) {
+            result = UINT64_MAX;
+        }
     }
-    else if (result > max_result) {
-        return max_result;
-    }
-    else {
-        return result;
-    }
+
+    return result;
 }

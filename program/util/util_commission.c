@@ -16,7 +16,7 @@ static uint64_t charge_commission(const Stake *stake, const Block *block, Entry 
     // time commission was charged.
     uint64_t commission_lamports =
         (((stake->stake.delegation.stake - entry->owned.last_commission_charge_stake_account_lamports) *
-          entry->commission) / 0xFFFFull);
+          entry->commission) / 0xFFFFul);
 
     // Update the entry's last_commission_charge_stake_account_lamports to the value it will hold after the commission
     // has been charged.

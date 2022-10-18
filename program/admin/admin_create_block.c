@@ -63,7 +63,7 @@ static uint64_t admin_create_block(const SolParameters *params)
         }
         // Ensure that the initial mystery price is no more than 100,000 SOL, to avoid rounding errors in mystery
         // price computation
-        if (config->mystery_start_price_lamports > (100ull * 1000ull * LAMPORTS_PER_SOL)) {
+        if (config->mystery_start_price_lamports > (100ul * 1000ul * LAMPORTS_PER_SOL)) {
             return Error_InvalidData_First + 2;
         }
         // Ensure that the final mystery price is not greater than the initial mystery price
@@ -81,7 +81,7 @@ static uint64_t admin_create_block(const SolParameters *params)
     else {
         // Ensure that the post-mystery start price is no more than 100,000 SOL, to avoid rounding errors in price
         // calculations
-        if (config->non_auction_start_price_lamports > (100ull * 1000ull * LAMPORTS_PER_SOL)) {
+        if (config->non_auction_start_price_lamports > (100ul * 1000ul * LAMPORTS_PER_SOL)) {
             return Error_InvalidData_First + 5;
         }
         // Ensure that the post-mystery start price is >= the minimum price

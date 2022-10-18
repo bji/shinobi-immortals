@@ -28,17 +28,17 @@ typedef enum
 // Macros that will give the in-memory maximum size of a field of the given data type.  These are used to
 // ensure that enough memory is allocated (typically on the stack) to hold a fully serialized version of
 // the data type
-#define BORSH_SIZE_BOOL                              1UL
-#define BORSH_SIZE_U8                                1UL
-#define BORSH_SIZE_U16                               2UL
-#define BORSH_SIZE_U32                               4UL
-#define BORSH_SIZE_U64                               8UL
-#define BORSH_SIZE_STRING(max_length)               (4UL + (max_length))
-#define BORSH_SIZE_VEC_U8(max_count)                (4UL + (max_count))
-#define BORSH_SIZE_PUBKEY                            32UL
-#define BORSH_SIZE_VEC(max_count, element_length)   (4UL + (max_count) * (element_length))
-#define BORSH_SIZE_ENUM(fields_length)              (1UL + (fields_length))
-#define BORSH_SIZE_OPTION(fields_length)            (1UL + (fields_length))
+#define BORSH_SIZE_BOOL                              1ul
+#define BORSH_SIZE_U8                                1ul
+#define BORSH_SIZE_U16                               2ul
+#define BORSH_SIZE_U32                               4ul
+#define BORSH_SIZE_U64                               8ul
+#define BORSH_SIZE_STRING(max_length)               (4ul + (max_length))
+#define BORSH_SIZE_VEC_U8(max_count)                (4ul + (max_count))
+#define BORSH_SIZE_PUBKEY                            32ul
+#define BORSH_SIZE_VEC(max_count, element_length)   (4ul + (max_count) * (element_length))
+#define BORSH_SIZE_ENUM(fields_length)              (1ul + (fields_length))
+#define BORSH_SIZE_OPTION(fields_length)            (1ul + (fields_length))
 
 
 // Encode a bool into a buffer, returning the new end of buffer pointer

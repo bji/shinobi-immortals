@@ -4,7 +4,7 @@
 
 
 // Number of lamports per SOL (1 billion)
-#define LAMPORTS_PER_SOL (1000ull * 1000ull * 1000ull)
+#define LAMPORTS_PER_SOL (1000ul * 1000ul * 1000ul)
 
 // Minimum number of lamports allowed to be retained staked within the master stake account.  This must be a value
 // that is always 2x greater than the minimum stake size (plus one for good measure!).  Because this is hardcoded, it

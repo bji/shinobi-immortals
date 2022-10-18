@@ -205,7 +205,7 @@ uint64_t entrypoint(const uint8_t *input)
 
 
 // Provide a memcpy implementation; this allows structure assignments that the compiler will turn into memcpy which is
-// safer that calling memcpy directly
+// safer than calling memcpy directly
 void *memcpy(void *dst, const void *src, int len)
 {
     (void) sol_memcpy(dst, src, len);

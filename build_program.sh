@@ -72,7 +72,7 @@ $SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/ld.lld                            
     program/fixed_bpf.ld                                                                  \
     --entry entrypoint                                                                    \
     -o program.so                                                                         \
-    program.po                                                                            \
+    program.po
 
 rm program.po
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "util/util_math.c"
 
 static uint64_t user_level_up(const SolParameters *params)
 {
@@ -53,16 +54,20 @@ static uint64_t user_level_up(const SolParameters *params)
         return Error_InvalidAccount_First + 3;
     }
 
-    // Compute how much Ki to burn from the source account
-    uint64_t ki_to_burn = entry->metadata.level_1_ki;
+    // Compute how much Ki to burn from the source account.  Since on-chain Ki are stored with decimal places 1,
+    // or in other words "DeciKi", multiply ki_to_burn by 10 since 10 on-chain tokens equals one Ki.  Keep track
+    // of overflow, and if it occurs, use the maximum value.
+    bool overflow = false;
+    uint64_t ki_to_burn = checked_multiply(entry->metadata.level_1_ki, 10, &overflow);
     for (uint8_t i = 0; i < entry->level; i++) {
         // Multiply by 1.5x
-        ki_to_burn += (ki_to_burn >> 1);
+        ki_to_burn = checked_add(ki_to_burn, (ki_to_burn >> 1), &overflow);
     }
 
-    // Multiply the number of ki to burn by 10 because on-chain Ki are stored with decimal places 1, or in other
-    // words, as "DeciKi"
-    ki_to_burn *= 10;
+    // If overflow occurred, then use the max value.
+    if (overflow) {
+        ki_to_burn = UINT64_MAX;
+    }
 
     // Check to make sure that the ki source account passed in is really a ki account owned by the passed in owner
     // and has the required amount of Ki

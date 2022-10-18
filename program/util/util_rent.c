@@ -28,7 +28,7 @@ static uint64_t get_rent_exempt_minimum(uint64_t account_size)
     uint64_t exp = ((u >> 52) & 0x7FF);
 
     if (result || // sol_get_rent_sysvar failed, so u and exp are bogus
-        (u & 0x8000000000000000ULL) || // negative exemption_threshold
+        (u & 0x8000000000000000ul) || // negative exemption_threshold
         ((exp == 0) || (exp == 0x7FF))) { // subnormal values
         // Unsupported and basically nonsensical rent exemption threshold.  Just use some hopefully sane default based
         // on historical values that were true for 2021/2022: lamports_per_byte_year = 3480, exemption_threshold = 2
@@ -47,8 +47,8 @@ static uint64_t get_rent_exempt_minimum(uint64_t account_size)
     }
 
     // Reduce fraction to 10 bits, to avoid overflow.  Keep track of whether or not to round up.
-    uint64_t fraction = u & 0x000FFFFFFFFFFFFFULL;
-    bool round_up = (fraction & 0x3FFFFFFFFFFULL);
+    uint64_t fraction = u & 0x000FFFFFFFFFFFFFul;
+    bool round_up = (fraction & 0x3FFFFFFFFFFul);
 
     fraction >>= 42;
     if (round_up) {

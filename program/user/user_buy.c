@@ -1,6 +1,7 @@
 #pragma once
 
 #include "inc/types.h"
+#include "util/util_math.c"
 #include "util/util_token.c"
 #include "util/util_transfer_lamports.c"
 #include "util/util_whitelist.c"
@@ -176,12 +177,12 @@ static uint64_t user_buy(const SolParameters *params)
 
     // Check to make sure that the actual price is not higher than the price that the user has indicated willingness
     // to pay
-    if (data->maximum_price_lamports < purchase_price_lamports) {
+    if (purchase_price_lamports > data->maximum_price_lamports) {
         return Error_PriceTooHigh;
     }
 
     // Check to ensure that the funds source has at least the purchase price lamports
-    if (*(funding_account->lamports) < purchase_price_lamports) {
+    if (purchase_price_lamports > *(funding_account->lamports)) {
         return Error_InsufficientFunds;
     }
 
@@ -189,7 +190,7 @@ static uint64_t user_buy(const SolParameters *params)
     // remove the funding account from the whitelist on success, thus preventing the funding account from buying another
     // entry in this block (unless it has an additional entry in the whitelist) until the whitelist period ends.
     if ((block->config.whitelist_duration > 0) &&
-        ((block->block_start_timestamp + block->config.whitelist_duration) > clock.unix_timestamp) &&
+        (clock.unix_timestamp < (block->block_start_timestamp + block->config.whitelist_duration)) &&
         !whitelist_check(whitelist_account, block_account->key, funding_account->key)) {
         return Error_FailedWhitelistCheck;
     }
@@ -243,14 +244,34 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
 
     // This is a curve based on the formula: y = (1 / (100x + 1)) - (1 / 101)
     // To avoid rounding errors in math, work with lamports / 1000
-    delta /= 1000ull;
-    end_price /= 1000ull;
+    delta /= 1000ul;
+    end_price /= 1000ul;
 
-    uint64_t ac = delta * 101ull;
+    // Keep track of overflow, and if it occurs, use the end price
+    bool overflow = false;
 
-    uint64_t ab = ((100ull * delta * seconds_elapsed) / total_seconds) + delta;
+    // ac = delta * 101ul (cannot overflow since delta was already divided by 1000)
+    uint64_t ac = delta * 101ul;
 
-    uint64_t bc = ((100ull * 101ull * seconds_elapsed) / total_seconds) + 101ull;
+    // ab = ((100ul * delta * seconds_elapsed) / total_seconds) + delta (100 * delta cannot overflow)
+    uint64_t ab = checked_add((checked_multiply(100ul * delta, seconds_elapsed, &overflow) / total_seconds),
+                              delta,
+                              &overflow);
 
-    return (end_price + ((ac - ab) / bc)) * 1000ull;
+    // bc = ((100ul * 101ul * seconds_elapsed) / total-seconds) + 101ul
+    uint64_t bc = checked_add(checked_multiply(100ul * 101ul, seconds_elapsed, &overflow) / total_seconds,
+                              101ul,
+                              &overflow);
+
+    // price = (end_price + ((ac - ab) / bc)) * 1000ul
+    uint64_t price = checked_multiply(checked_add(end_price, ((ac - ab) / bc), &overflow),
+                                      1000ul,
+                                      &overflow);
+
+    // Overflow would only occur with impossibly huge seconds_elapsed or end_price
+    if (overflow) {
+        price = end_price;
+    }
+
+    return price;
 }
