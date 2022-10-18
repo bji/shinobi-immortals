@@ -2125,7 +2125,7 @@ function get_metaplex_metadata_address(mint_address)
 
 function get_block_address(group_number, block_number)
 {
-    return find_pda([ [ 7 ],
+    return find_pda([ [ 14 ],
                       u32_to_le_bytes(group_number),
                       u32_to_le_bytes(block_number) ],
                     g_self_program_pubkey)[0].toBase58();
@@ -2151,7 +2151,7 @@ function get_entry_mint_address(block_address, entry_index)
 
 function get_entry_address(entry_mint_address)
 {
-    return find_pda([ [ 8 ],
+    return find_pda([ [ 15 ],
                       address_to_buffer(entry_mint_address) ],
                     g_self_program_pubkey)[0].toBase58();
 }

@@ -48,9 +48,9 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Token = 6,
 
-    PDA_Account_Seed_Prefix_Block = 7,
+    PDA_Obsolete_0 = 7,
 
-    PDA_Account_Seed_Prefix_Entry = 8,
+    PDA_Obsolete_1 = 8,
 
     PDA_Account_Seed_Prefix_Bid = 9,
 
@@ -60,7 +60,12 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Bid_Marker_Token = 12,
 
-    PDA_Account_Seed_Prefix_Whitelist = 13
+    PDA_Account_Seed_Prefix_Whitelist = 13,
+
+    PDA_Account_Seed_Prefix_Block = 14,
+
+    PDA_Account_Seed_Prefix_Entry = 15
+
 } PDA_Account_Seed_Prefix;
 
 
