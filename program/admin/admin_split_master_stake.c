@@ -1,5 +1,15 @@
 #pragma once
 
+typedef struct
+{
+    // This is the instruction code for SplitMasterStake
+    uint8_t instruction_code;
+
+    // Number of lamports to split off, or 0 to split the maximum possible.
+    uint64_t lamports;
+
+} SplitMasterStakeData;
+
 
 static uint64_t admin_split_master_stake(const SolParameters *params)
 {
@@ -21,6 +31,13 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
         return Error_PermissionDenied;
     }
 
+    // Get the instruction data
+    if (params->data_len < sizeof(SplitMasterStakeData)) {
+        return Error_InvalidDataSize;
+    }
+
+    const SplitMasterStakeData *data = (SplitMasterStakeData *) params->data;
+
     // Decode the master stake account
     Stake stake;
     if (!decode_stake_account(master_stake_account, &stake)) {
@@ -28,13 +45,15 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
     }
 
     // Determine the maximum number of lamports that could be split off from the master stake account and still
-    // leave it at its minimum delegation.  Split that number of lamports off.
-    if (stake.stake.delegation.stake <= MASTER_STAKE_ACCOUNT_MIN_LAMPORTS) {
-        // No lamports to split off
-        return 0;
+    // leave it at its minimum delegation.
+    uint64_t to_split = stake.stake.delegation.stake - MASTER_STAKE_ACCOUNT_MIN_LAMPORTS;
+
+    // If a number of lamports to split was specified, and if the number requested to split is less than the maximum
+    // amount that could be split off, then split the lower amount.
+    if ((data->lamports > 0) && (to_split > data->lamports)) {
+        to_split = data->lamports;
     }
 
-    return split_master_stake_signed(target_stake_account->key,
-                                     stake.stake.delegation.stake - MASTER_STAKE_ACCOUNT_MIN_LAMPORTS,
-                                     admin_account->key, params->ka, params->ka_num);
+    return split_master_stake_signed(target_stake_account->key, to_split, admin_account->key, params->ka,
+                                     params->ka_num);
 }

@@ -256,7 +256,7 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, const SolPubkey *block
 
     entry->duration = block->config.duration;
 
-    entry->non_auction_start_price_lamports = block->config.non_auction_start_price_lamports;
+    entry->non_auction_start_price_lamports = block->config.final_start_price_lamports;
 
     entry->reveal_sha256 = *entry_sha256;
 

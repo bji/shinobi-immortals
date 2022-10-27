@@ -45,15 +45,12 @@ typedef struct
     // price that is determined by parameters in [non_auction];
     bool has_auction;
 
-    // If [has_auction} is true, this is a number of seconds to add to entry reveal time to get the end of auction
-    // time, which must be > 0.
-    // If [has_auction] is false, this is the number of seconds it takes for the entry price to decay from
-    // non_auction_start_price_lamports to minimum_price_lamports
+    // This is the duration to use for auctions and for final sale periods.
     uint32_t duration;
 
-    // If [has_auction] is false, this is the initial price to sell revealed entry for, which must be
+    // This is the initial price to sell revealed entry for during its final sale period, which must be
     // >= minimum_price_lamports.
-    uint64_t non_auction_start_price_lamports;
+    uint64_t final_start_price_lamports;
 
     // Blocks may be configured to only allow purchasing of Entries by system accounts that are whitelisted.  A system
     // account is whitelisted if there exists a PDA at the whitelist address for the { system account, block } tuple.

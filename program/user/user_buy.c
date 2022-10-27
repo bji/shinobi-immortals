@@ -44,7 +44,7 @@ static uint64_t user_buy(const SolParameters *params)
         DECLARE_ACCOUNT(12,  program_account,                  ReadOnly,   NotSigner,  KnownAccount_SelfProgram);
         DECLARE_ACCOUNT(13,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(14,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
-        DECLARE_ACCOUNT(15,  metaplexprogram_account,          ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
+        DECLARE_ACCOUNT(15,  metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
         DECLARE_ACCOUNT(16,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(17);

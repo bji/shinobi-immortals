@@ -22,7 +22,7 @@ static uint64_t special_reauthorize(const SolParameters *params)
         DECLARE_ACCOUNT(3,   token_owner_account,           ReadOnly,   Signer,      KnownAccount_NotKnown);
         DECLARE_ACCOUNT(4,   token_account,                 ReadOnly,   NotSigner,   KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   entry_metadata_account,        ReadWrite,  NotSigner,   KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(6,   stake_account,                 ReadOnly,   NotSigner,   KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(6,   stake_account,                 ReadWrite,  NotSigner,   KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   authority_account,             ReadOnly,   NotSigner,   KnownAccount_Authority);
         DECLARE_ACCOUNT(8,   clock_sysvar_account,          ReadOnly,   NotSigner,   KnownAccount_ClockSysvar);
         DECLARE_ACCOUNT(9,   metaplex_program_account,      ReadOnly,   NotSigner,   KnownAccount_MetaplexProgram);
