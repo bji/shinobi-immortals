@@ -51,7 +51,7 @@ RUN find build_program.sh program -type f | sort | xargs cat > build_contents.tx
 RUN echo "3669670e831828460344fd0f9eafc0c1b5393b9754c212d714f0ae83d4b42271 build_contents.txt" | sha256sum -c -
 
 # Run build_program.sh to build it
-RUN SDK_ROOT=solana-release/bin/sdk sh build_program.sh
+RUN SDK_ROOT=solana-release/bin/sdk SOURCE_ROOT=. sh build_program.sh
 
 # Check to make sure that the sha256sum of the built program is as expected
 RUN echo "9f818a79502ae2a195b73a1e3012156dddc05fea23fc1f3fa73671301ac4da24 program.so" | sha256sum -c -

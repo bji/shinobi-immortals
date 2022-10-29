@@ -45,16 +45,15 @@ typedef enum
         return Error_IncorrectNumberOfAccounts;                                                                        \
     }                                                                                                                  \
     SolAccountInfo *name = &(params->ka[_account_num++]);                                                              \
+    if (!check_known_account(name, (known_account))) {                                                                 \
+        return Error_InvalidAccount_First + (_account_num - 1);                                                        \
+    }                                                                                                                  \
     if (((writable == ReadWrite) && !name->is_writable) ||                                                             \
         ((signer == Signer) && !name->is_signer)) {                                                                    \
         return Error_InvalidAccountPermissions_First + (_account_num - 1);                                             \
-    }                                                                                                                  \
-    if (!check_known_account(name, (known_account))) {                                                                 \
-        return Error_InvalidAccount_First + (_account_num - 1);                                                        \
     } {
 
 #define DECLARE_ACCOUNTS_NUMBER(n) if (params->ka_num != (n)) { return Error_IncorrectNumberOfAccounts; }
-
 
 
 static bool check_known_account(const SolAccountInfo *account, KnownAccount known_account)

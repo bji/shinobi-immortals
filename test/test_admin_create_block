@@ -1,0 +1,711 @@
+
+# Make sure that the admin has signed the tx
+if should_run_test admin_create_block_no_auth; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_no_auth                                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $RICH_USER1_PUBKEY ws                                                                              \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration //                                                                                             \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Make sure that an overwrite of an existing account is not possible
+if should_run_test admin_create_block_overwrite; then
+    assert_fail admin_create_block_overwrite                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           // Should not be able to overwrite the config account //                                                   \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration //                                                                                             \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+# Make sure that writing to the wrong block account is not possible
+if should_run_test admin_create_block_wrong_block; then
+    assert_fail admin_create_block_wrong_block                                                                        \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           // Should not be able to write an invalid block address //                                                 \
+           account G36xzTxcezHcZTppRr4Ufj1dSi38Ks6x9JczaDXC84pD w                                                     \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration //                                                                                             \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+# Must have nonzero total entry count
+if should_run_test admin_create_block_zero_entries; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_zero_entries                                                                       \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1300}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x514"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count (bad -- must be nonzero) //                                                           \
+           u16 0                                                                                                      \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration //                                                                                             \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_bad_mystery_count; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_bad_mystery_count                                                                  \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1301}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x515"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count (bad -- cannot be > total entry count) //                                           \
+           u16 11                                                                                                     \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration //                                                                                             \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_bad_mystery_start_price; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_bad_mystery_start_price                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1302}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x516"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x516"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports (bad, must be <= 100,000 SOL) //                                           \
+           u64 \`lamports_from_sol 100000.00001\`                                                                     \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration //                                                                                             \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_bad_mystery_price; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_bad_mystery_price                                                                  \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1303}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x517"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x517"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports (bad, must be <= mystery start price) //                                         \
+           u64 \`lamports_from_sol 1000.0001\`                                                                        \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration //                                                                                             \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_bad_auction_duration; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_bad_auction_duration                                                               \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1304}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x518"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x518"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool true                                                                                                  \
+           // Duration (bad, must be nonzero) //                                                                      \
+           u32 0                                                                                                      \
+           // Final Start Price Lamports //                                                                           \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_bad_final_start_price; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_bad_final_start_price                                                              \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1305}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x519"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x519"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration (bad, must be nonzero) //                                                                      \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports (bad, must be <= 100,000 SOL) //                                             \
+           u64 \`lamports_from_sol 100000.001\`                                                                       \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_bad_final_start_price_2; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_bad_final_start_price_2                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1306}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x51a"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x51a"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration (bad, must be nonzero) //                                                                      \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports (bad, must be >= minimum price) //                                           \
+           u64 \`lamports_from_sol 0.001\`                                                                            \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_bad_minimum_price; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_bad_minimum_price                                                                  \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1307}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x51b"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x51b"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 0.000001\`                                                                         \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration (bad, must be nonzero) //                                                                      \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports  //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test admin_create_block_success; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert admin_create_block_success                                                                                 \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration (bad, must be nonzero) //                                                                      \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports  //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+
+    # Check that the created block has all expected parameters
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    EXPECTED_BLOCK_JSON=`cat <<EOF
+{
+  "block_account": "$BLOCK_PUBKEY",
+  "configuration": {
+    "group_number": 0,
+    "block_number": 0,
+    "total_entry_count": 10,
+    "total_mystery_count": 5,
+    "mystery_start_price": 1000,
+    "reveal_period_duration": 86400,
+    "reveal_period_duration_display": "1 day 0 hr 0 min 0.00 sec",
+    "minimum_price": 1,
+    "has_auction": false,
+    "duration": 86400,
+    "duration_display": "1 day 0 hr 0 min 0.00 sec",
+    "final_start_price": 1000,
+    "whitelist_duration": 0,
+    "whitelist_duration_display": "0.00 sec"
+  },
+  "added_entries_count": 0,
+  "block_start_timestamp": 0,
+  "mysteries_sold_count": 0,
+  "mystery_phase_end_timestamp": 0,
+  "commission": 0,
+  "last_commission_change_epoch": 0,
+  "entries_added": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  ]
+}
+EOF`
+    ACTUAL_BLOCK_JSON=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l block 0 0 | jq .`
+
+    if [ "$EXPECTED_BLOCK_JSON" != "$ACTUAL_BLOCK_JSON" ]; then
+        echo "FAIL: admin_create_block_success: Unexpected block data:"
+        diff <(echo "$EXPECTED_BLOCK_JSON") <(echo "$ACTUAL_BLOCK_JSON")
+    fi
+fi
+
+
+if should_run_test admin_create_block_again; then
+    # Test with block 0 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
+    assert_fail admin_create_block_again                                                                              \
+    ''\
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration (bad, must be nonzero) //                                                                      \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports  //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi

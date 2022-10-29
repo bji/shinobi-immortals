@@ -1,0 +1,295 @@
+
+
+function pda ()
+{
+    solpda $@ | cut -d . -f 1
+}
+
+
+function should_run_test ()
+{
+    [ -z "$TESTS" ] || [[ "$TESTS" = *"[$1]"* ]]
+}
+
+
+function sanitize_output ()
+{
+    echo "$@" | sed -r -e 's/Program [^ ]+/Program REDACTED/g' |                                                      \
+        sed -r -e 's/consumed [^ ]+ of [^ ]+/consumed REDACTED/g' |                                                   \
+        sed -r -e 's/,\"unitsConsumed\":[[:digit:]]+//g' | tr -d "'"
+}
+
+
+function transfer ()
+{
+    local FROM=$1
+    local TO=$2
+    local SOL=$3
+
+    echo "Transferring $SOL from $FROM to $TO"
+    solana transfer -u l -k $FROM $TO $SOL --allow-unfunded-recipient --commitment finalized >/dev/null 2>/dev/null
+}
+
+
+# Assumes $FROM is the fee payer
+function transfer_all_except ()
+{
+    local FROM=$1
+    local TO=$2
+    local EXCEPT_SOL=$3
+
+    # Add 0.000005 to account for tx fee
+    EXCEPT_SOL=`echo "20 k $EXCEPT_SOL 0.000005 + p" | dc`
+
+    CURRENT_SOL=`solana balance -u l $FROM | cut -d ' ' -f 1`
+
+    DIFF=`echo "20 k $CURRENT_SOL $EXCEPT_SOL - p" | dc`
+
+    if [[ $DIFF != -* ]]; then
+        echo "Transferring $DIFF from $FROM to $TO"
+        solana transfer -u l -k $FROM $TO $DIFF --allow-unfunded-recipient --commitment finalized >/dev/null 2>/dev/null
+    fi
+}
+
+
+function assert ()
+{
+    RESULT=$?
+    
+    local TEST_NAME=$1
+    shift
+    local TEST_OUTPUT=`sanitize_output "$@"`
+
+    if [ $RESULT -ne 0 ]; then
+        echo "FAIL: $TEST_NAME failed when success was expected:"
+        echo "$TEST_OUTPUT"
+        echo
+        exit 1
+    else
+        echo "+$TEST_NAME"
+    fi
+}
+
+
+function assert_fail ()
+{
+    RESULT=$?
+    
+    local TEST_NAME=$1
+    shift
+    local EXPECTED_OUTPUT=$1
+    shift
+    local TEST_OUTPUT=`sanitize_output "$@"`
+
+    if [ $RESULT -eq 0 ]; then
+        echo "FAIL: $TEST_NAME succeded when failure was expected:"
+        echo "$TEST_OUTPUT"
+        echo
+        exit 1
+    elif [ "$EXPECTED_OUTPUT" != "$TEST_OUTPUT" ]; then
+        echo "FAIL: $TEST_NAME incorrect output:"
+        diff <(echo "$EXPECTED_OUTPUT") <(echo "$TEST_OUTPUT")
+        echo
+        exit 1
+    else
+        echo "-$TEST_NAME"
+    fi
+}
+
+function assert_fail2 ()
+{
+    echo "HERE $?"
+    cat
+}
+
+
+function lamports_from_sol ()
+{
+    local SOL=$1
+
+    printf "%0.f" `echo "$SOL 1000 * 1000 * 1000 * p" | dc`
+}
+
+
+function make_funded_keypair ()
+{
+    local KEY_FILE=$1
+    local SOL=$2
+
+    if [ -n "$3" ]; then
+        local COMMITMENT="--commitment finalized"
+    else
+        local COMMITMENT=
+    fi
+
+    echo "Creating keypair @ $KEY_FILE with $SOL SOL"
+
+    solana-keygen new -o $KEY_FILE --no-bip39-passphrase >/dev/null 2>/dev/null
+
+    solana -u l airdrop -k $KEY_FILE $SOL $COMMITMENT >/dev/null 2>/dev/null
+}
+
+
+function make_stake_account ()
+{
+    local AUTHORITY_KEY_FILE=$1
+    local STAKE_KEY_FILE=$2
+    local LAMPORTS=$3
+
+    if [ -n "$4" ]; then
+        local COMMITMENT="--commitment finalized"
+    else
+        local COMMITMENT=
+    fi
+    
+    echo "Creating stake account @ $STAKE_KEY_FILE authority $AUTHORITY_KEY_FILE with lamports $LAMPORTS"
+
+    solana-keygen new -o $STAKE_KEY_FILE --no-bip39-passphrase >/dev/null 2>/dev/null
+
+    solana -u l create-stake-account -k $AUTHORITY_KEY_FILE $STAKE_KEY_FILE $LAMPORTS $COMMITMENT >/dev/null 2>/dev/null
+}
+
+
+function get_account_data ()
+{
+    local ACCOUNT_PUBKEY=$1
+    local DATA_OFFSET=$2
+    local DATA_LEN=$3
+
+    if [ -n "$DATA_OFFSET" ]; then
+        DATA_SLICE="\"dataSlice\":{\"offset\":$DATA_OFFSET,\"length\":$DATA_LEN},"
+    else
+        DATA_SLICE=
+    fi
+
+    DATA=`curl -s http://localhost:8899 -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getAccountInfo\",\"params\":[\"$ACCOUNT_PUBKEY\",{$DATA_SLICE\"encoding\":\"base64\"}]}" | jq -r ".result.value.data[0]"`
+
+    if [ "$DATA" = "null" ]; then
+        echo -n ""
+    else
+        echo -n "$DATA"
+    fi
+}
+
+function hex_digit ()
+{
+    local decimal=$1
+
+    if [ $decimal -lt 16 ]; then
+        echo -n "0"
+    fi
+    
+    echo "16o $x p" | dc
+}
+
+function pubkey_binary ()
+{
+    local pubkey=$1
+
+    for x in `solpda -pubkey --bytes $1 | tr -d '[' | tr -d ']' | tr ',' ' '`; do hex_digit $x; done | xxd -r -p
+}
+
+
+function setup ()
+{
+    # Make a temporary directory to hold the validator ledger
+    export LEDGER=`mktemp -d`
+
+    echo "Starting test validator @ $LEDGER"
+    
+    solana-test-validator --ledger $LEDGER --ticks-per-slot 20 --slots-per-epoch 1000                                 \
+                          -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s       \
+                          -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT >/dev/null 2>/dev/null &
+
+    echo "Waiting 5 seconds for it to settle"
+
+    # Give it time to start
+    sleep 5
+
+    # Detect the vote account
+    export VALIDATOR_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1               \
+                             | awk '{ print $2 }'`
+    export VOTE_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                    \
+                        | awk '{ print $3 }'`
+
+    # Create keys: program, super, admin, rich_user1, rich_user2, poor_user, nonexistent_user
+    make_funded_keypair $LEDGER/program.json 0
+    make_funded_keypair $LEDGER/super.json 100000
+    make_funded_keypair $LEDGER/admin.json 100000
+    make_funded_keypair $LEDGER/rich_user1.json 100000
+    make_funded_keypair $LEDGER/rich_user2.json 100000
+    make_funded_keypair $LEDGER/poor_user.json 1
+    make_funded_keypair $LEDGER/nonexistent_user.json 0 finalized
+
+    # Build the program
+    echo "Making build script"
+    $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $VOTE_PUBKEY > $LEDGER/build_program.sh
+    chmod +x $LEDGER/build_program.sh
+    echo "Building program"
+    (cd $LEDGER; SDK_ROOT=~/.local/share/solana/install/active_release/bin/sdk SOURCE_ROOT=$SOURCE ./build_program.sh)
+
+    # Create stake accounts: delegated_stake, undelegated_stake
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/delegated_stake.json 1000
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/undelegated_stake.json 1000 finalized
+
+    # Delegate the delegated stake account
+    echo "Delegating $LEDGER/delegated_stake.json"
+    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated_stake.json $VOTE_PUBKEY                    \
+           >/dev/null 2>/dev/null
+
+    # Deploy the program
+    echo "Deploying program"
+    solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
+           --commitment finalized >/dev/null 2>/dev/null
+
+#    export LEDGER=/tmp/tmp.R6SGZsofVL
+
+# Compute pubkeys
+
+    export         SELF_PROGRAM_PUBKEY=`solpda -pubkey $LEDGER/program.json`
+    export            SUPERUSER_PUBKEY=`solpda -pubkey $LEDGER/super.json`
+    export                ADMIN_PUBKEY=`solpda -pubkey $LEDGER/admin.json`
+    export           RICH_USER1_PUBKEY=`solpda -pubkey $LEDGER/rich_user1.json`
+    export           RICH_USER2_PUBKEY=`solpda -pubkey $LEDGER/rich_user2.json`
+    export            POOR_USER_PUBKEY=`solpda -pubkey $LEDGER/poor_user.json`
+    export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated_stake.json`
+    export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated_stake.json`
+
+    export       SYSTEM_PROGRAM_PUBKEY=`echo 11111111111111111111111111111111`
+    export    SPL_TOKEN_PROGRAM_PUBKEY=`echo TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
+    export       SPLATA_PROGRAM_PUBKEY=`echo ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`
+    export        STAKE_PROGRAM_PUBKEY=`echo Stake11111111111111111111111111111111111111`
+    export         CLOCK_SYSVAR_PUBKEY=`echo SysvarC1ock11111111111111111111111111111111`
+    export          RENT_SYSVAR_PUBKEY=`echo SysvarRent111111111111111111111111111111111`
+    export     METAPLEX_PROGRAM_PUBKEY=`echo metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`
+    export STAKE_HISTORY_SYSVAR_PUBKEY=`echo SysvarStakeHistory1111111111111111111111111`
+    export         STAKE_CONFIG_PUBKEY=`echo StakeConfig11111111111111111111111111111111`
+    export               CONFIG_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[1]`
+    export            AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[2]`
+    export         MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[3]`
+    export              KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[4]`
+    export      BID_MARKER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[11]`
+    export          KI_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                  \
+                                            String[metadata]                                                          \
+                                            Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                          \
+                                            Pubkey[$KI_MINT_PUBKEY]`
+    export  BID_MARKER_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                  \
+                                            String[metadata]                                                          \
+                                            Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                          \
+                                            Pubkey[$BID_MARKER_MINT_PUBKEY]`
+}
+
+
+function teardown ()
+{
+    echo "Stopping test validator @ $LEDGER"
+
+    solana-validator --ledger $LEDGER exit --force >/dev/null 2>/dev/null
+
+    # Wait until it's exited
+    while ps auxww | grep solana-test-ledger | grep -v grep; do
+        sleep 1
+    done
+
+    rm -rf $LEDGER
+}

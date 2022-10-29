@@ -11,6 +11,7 @@ static uint64_t compute_block_size(uint16_t entry_count)
     return (uint64_t) &(b->entries_added_bitmap[(((uint32_t) entry_count + 1) / 8) + 1]);
 }
 
+
 // Returns an error if [block_account] is not the correct account
 static uint64_t create_block_account(SolAccountInfo *block_account, uint32_t group_number,
                                      uint32_t block_number, uint16_t entry_count, const SolPubkey *funding_key,

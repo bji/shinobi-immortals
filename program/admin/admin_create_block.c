@@ -72,22 +72,18 @@ static uint64_t admin_create_block(const SolParameters *params)
         }
     }
 
-    if (config->has_auction) {
-        // Auctions must have nonzero duration
-        if (config->duration == 0) {
-            return Error_InvalidData_First + 4;
-        }
+    // Auctions must have nonzero duration
+    if (config->has_auction && (config->duration == 0)) {
+        return Error_InvalidData_First + 4;
     }
-    else {
-        // Ensure that the post-mystery start price is no more than 100,000 SOL, to avoid rounding errors in price
-        // calculations
-        if (config->final_start_price_lamports > (100ul * 1000ul * LAMPORTS_PER_SOL)) {
-            return Error_InvalidData_First + 5;
-        }
-        // Ensure that the post-mystery start price is >= the minimum price
-        if (config->final_start_price_lamports < config->minimum_price_lamports) {
-            return Error_InvalidData_First + 6;
-        }
+
+    // Ensure that the final start price is no more than 100,000 SOL, to avoid rounding errors in price calculations
+    if (config->final_start_price_lamports > (100ul * 1000ul * LAMPORTS_PER_SOL)) {
+        return Error_InvalidData_First + 5;
+    }
+    // Ensure that the final start price is >= the minimum price
+    if (config->final_start_price_lamports < config->minimum_price_lamports) {
+        return Error_InvalidData_First + 6;
     }
 
     // Ensure that the minimum price of an entry is >= rent exempt minimum of a bid account, to ensure that bids

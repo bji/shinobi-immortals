@@ -37,9 +37,9 @@ $SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/clang                             
     -target bpf                                                                           \
     -fPIC                                                                                 \
     -march=bpfel+solana                                                                   \
-    -Iprogram                                                                             \
+    -I$SOURCE_ROOT/program                                                               \
     -o program.po                                                                         \
-    -c program/entrypoint.c                                                               \
+    -c $SOURCE_ROOT/program/entrypoint.c                                                  \
     -DSUPERUSER_PUBKEY_ARRAY="$SUPERUSER_PUBKEY_C_ARRAY"                                  \
     -DCONFIG_PUBKEY_ARRAY="$CONFIG_PUBKEY_C_ARRAY"                                        \
     -DCONFIG_BUMP_SEED="$CONFIG_BUMP_SEED"                                                \
@@ -69,7 +69,7 @@ $SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/ld.lld                            
     -z notext                                                                             \
     -shared                                                                               \
     --Bdynamic                                                                            \
-    program/fixed_bpf.ld                                                                  \
+    $SOURCE_ROOT/program/fixed_bpf.ld                                                    \
     --entry entrypoint                                                                    \
     -o program.so                                                                         \
     program.po

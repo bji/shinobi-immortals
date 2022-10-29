@@ -1,0 +1,1104 @@
+
+
+# Issue an invalid super_initialize tx with wrong super
+if should_run_test super_initialize_wrong_super; then
+    assert_fail super_initialize_wrong_super                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1100}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           // Incorrect super user account //                                                                         \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx without super signature.
+if should_run_test super_initialize_unsigned_super; then
+    assert_fail super_initialize_unsigned_super                                                                       \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1200}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b0"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b0"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           // Correct super user account but not a signer //                                                          \
+           account $SUPERUSER_PUBKEY                                                                                  \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong config
+if should_run_test super_initialize_wrong_config; then
+    assert_fail super_initialize_wrong_config                                                                         \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           // Incorrect config account //                                                                             \
+           account $RICH_USER2_PUBKEY w                                                                               \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong config permissions
+if should_run_test super_initialize_wrong_config_permissions; then
+    assert_fail super_initialize_wrong_config_permissions                                                             \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1201}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b1"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b1"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           // Correct config account, wrong permissions (should be w) //                                              \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong authority
+if should_run_test super_initialize_wrong_authority; then
+    assert_fail super_initialize_wrong_authority                                                                      \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           // Incorrect authority account //                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong authority permissions
+if should_run_test super_initialize_wrong_authority_permissions; then
+    assert_fail super_initialize_wrong_authority_permissions                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1202}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b2"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b2"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           // Correct authority account, wrong permissions (should be w) //                                           \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong master stake account
+if should_run_test super_initialize_wrong_master_stake; then
+    assert_fail super_initialize_wrong_master_stake                                                                   \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           // Incorrect master stake account //                                                                       \
+           account $RICH_USER2_PUBKEY w                                                                               \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong master stake account permissions
+if should_run_test super_initialize_wrong_master_stake_permissions; then
+    assert_fail super_initialize_wrong_master_stake_permissions                                                       \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1203}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b3"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b3"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           // Correct master stake account, wrong permissions (should be w) //                                        \
+           account $MASTER_STAKE_PUBKEY                                                                               \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+if should_run_test super_initialize_wrong_vote_account; then
+    assert_fail super_initialize_wrong_vote_account                                                                   \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           // Wrong Shinobi Systems vote account //                                                                   \
+           account $RICH_USER1_PUBKEY                                                                                 \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong Ki mint
+if should_run_test super_initialize_wrong_ki_mint; then
+    assert_fail super_initialize_wrong_ki_mint                                                                        \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           // Incorrect Ki mint //                                                                                    \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong Ki mint permissions
+if should_run_test super_initialize_wrong_ki_mint_permissions; then
+    assert_fail super_initialize_wrong_ki_mint_permissions                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1205}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b5"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b5"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           // Correct Ki mint, wrong permissions (should be w) //                                                     \
+           account $KI_MINT_PUBKEY                                                                                    \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong Ki metadata
+if should_run_test super_initialize_wrong_ki_metadata; then
+    assert_fail super_initialize_wrong_ki_metadata                                                                    \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1106}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x452"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           // Incorrect Ki metadata //                                                                                \
+           account $RICH_USER2_PUBKEY w                                                                               \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong Ki metadata permissions
+if should_run_test super_initialize_wrong_ki_metadata_permissions; then
+    assert_fail super_initialize_wrong_ki_metadata_permissions                                                        \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1206}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b6"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b6"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           // Correct Ki metadata, wrong permissions (should be w) //                                                 \
+           account $KI_METADATA_PUBKEY                                                                                \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong bid marker mint
+if should_run_test super_initialize_wrong_bid_marker_mint; then
+    assert_fail super_initialize_wrong_bid_marker_mint                                                                \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1107}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x453"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x453"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           // Incorrect bid marker mint //                                                                            \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong bid marker mint permissions
+if should_run_test super_initialize_wrong_bid_marker_mint_permissions; then
+    assert_fail super_initialize_wrong_bid_marker_mint_permissions                                                    \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1207}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b7"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b7"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           // Correct bid marker mint, incorrect permissions (should be w) //                                         \
+           account $BID_MARKER_MINT_PUBKEY                                                                            \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong bid marker metadata
+if should_run_test super_initialize_wrong_bid_marker_metadata; then
+    assert_fail super_initialize_wrong_bid_marker_metadata                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1108}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x454"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x454"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           // Incorrect bid marker metadata //                                                                        \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong bid marker metadata permissions
+if should_run_test super_initialize_wrong_bid_marker_metadata_permissions; then
+    assert_fail super_initialize_wrong_bid_marker_metadata_permissions                                                \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1208}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x4b8"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b8"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           // Correct bid marker metadata, incorrect permissions (should be w) //                                     \
+           account $BID_MARKER_METADATA_PUBKEY                                                                        \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong clock sysvar
+if should_run_test super_initialize_wrong_clock_sysvar; then
+    assert_fail super_initialize_wrong_clock_sysvar                                                                   \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1109}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x455"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x455"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           // Incorrect clock sysvar //                                                                               \
+           account $RICH_USER1_PUBKEY                                                                                 \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong rent_sysvar
+if should_run_test super_initialize_wrong_rent_sysvar; then
+    assert_fail super_initialize_wrong_rent_sysvar                                                                    \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1110}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x456"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x456"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           // Incorrect rent sysvar //                                                                                \
+           account $RICH_USER2_PUBKEY                                                                                 \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong stake history sysvar
+if should_run_test super_initialize_wrong_stake_history_sysvar; then
+    assert_fail super_initialize_wrong_stake_history_sysvar                                                           \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1111}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x457"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x457"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           // Incorrect stake history sysvar //                                                                       \
+           account $SUPERUSER_PUBKEY                                                                                  \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong stake config
+if should_run_test super_initialize_wrong_stake_config; then
+    assert_fail super_initialize_wrong_stake_config                                                                  \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1112}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x458"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x458"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           // Incorrect stake config //                                                                               \
+           account $POOR_USER_PUBKEY                                                                                  \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong system program
+if should_run_test super_initialize_wrong_system_program; then
+    assert_fail super_initialize_wrong_system_program                                                                 \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1113}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x459"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x459"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           // Incorrect system program //                                                                             \
+           account $RICH_USER1_PUBKEY                                                                                 \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong stake program
+if should_run_test super_initialize_wrong_stake_program; then
+    assert_fail super_initialize_wrong_stake_program                                                                  \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1114}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x45a"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45a"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Incorrect stake program //                                                                              \
+           account $RICH_USER1_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong spl token program
+if should_run_test super_initialize_wrong_spl_token_program; then
+    assert_fail super_initialize_wrong_spl_token_program                                                              \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1115}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x45b"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45b"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           // Incorrect SPL Token program //                                                                          \
+           account $RICH_USER2_PUBKEY                                                                                 \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong metaplex program
+if should_run_test super_initialize_wrong_metaplex_program; then
+    assert_fail super_initialize_wrong_metaplex_program                                                               \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1116}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x45c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           // Incorrect SPL Token program //                                                                          \
+           account $RICH_USER1_PUBKEY                                                                                 \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with missing accounts
+if should_run_test super_initialize_missing_account; then
+    assert_fail super_initialize_missing_account                                                                      \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1002}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ea"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ea"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with short data size
+if should_run_test super_initialize_short_data; then
+    assert_fail super_initialize_short_data                                                                           \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0"                                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with long data size
+if should_run_test super_initialize_long_data; then
+    assert_fail super_initialize_long_data                                                                           \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+           // Extra junk //                                                                                           \
+           u64 17                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with superuser account that doesn't have sufficient credit.  To to this,
+# transfer all except 0.01 SOL from the super to the admin
+if should_run_test super_initialize_insufficent_lamports; then
+    transfer_all_except $LEDGER/super.json $LEDGER/admin.json 0.01
+    assert_fail super_initialize_insufficient_lamports                                                                \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Transfer: insufficient lamports 7961749, need 3002283926","Program REDACTED failed: custom program error: 0x1","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x1"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                            \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+    # Leave 10000 SOL in admin
+    transfer_all_except $LEDGER/admin.json $LEDGER/super.json 10000
+fi    
+
+
+# Issue a valid super_initialize tx and check to make sure that the correct config account was created
+# This test cannot be skipped since the creation of a config account is a prerequisite for all other tests
+# Except if a test is requested, it is assumed that this is not neede
+if [ -z "$TESTS" ]; then
+    assert super_initialize_success                                                                                   \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $ADMIN_PUBKEY"                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+
+    # Ensure that the config account was created and that its contents are as expected -- should be the admin pubkey
+    EXPECTED_CONFIG_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
+    CONFIG_ACCOUNT_DATA=`get_account_data $CONFIG_PUBKEY`
+    if [ "$EXPECTED_CONFIG_ACCOUNT_DATA" != "$CONFIG_ACCOUNT_DATA" ]; then
+        echo "FAIL: super_initialize_success: Incorrect account contents:"
+        diff <(echo "$EXPECTED_CONFIG_ACCOUNT_DATA") <(echo "$CONFIG_ACCOUNT_DATA")
+        exit 1
+    fi
+fi
+
+
+# Issue a valid additional super_initialize tx that should fail because the initialize cannot be repeated once
+# it is completed
+if should_run_test super_initialize_again; then
+    assert_fail super_initialize_again                                                                                \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $SUPERUSER_PUBKEY                                                                                \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $SUPERUSER_PUBKEY s                                                                                \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $VOTE_PUBKEY                                                                                       \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $KI_METADATA_PUBKEY w                                                                              \
+           account $BID_MARKER_MINT_PUBKEY w                                                                          \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                                \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           // Instruction code 0 = InitializeData //                                                                  \
+           u8 0                                                                                                       \
+           // Admin pubkey //                                                                                         \
+           pubkey $RICH_USER1_PUBKEY"                                                                                 \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/super.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+# Ensure that the config account still has the expected contents
+EXPECTED_CONFIG_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
+CONFIG_ACCOUNT_DATA=`get_account_data $CONFIG_PUBKEY`
+if [ "$EXPECTED_CONFIG_ACCOUNT_DATA" != "$CONFIG_ACCOUNT_DATA" ]; then
+    echo "FAIL: super_initialize_success: Incorrect account contents:"
+    diff <(echo "$EXPECTED_CONFIG_ACCOUNT_DATA") <(echo "$CONFIG_ACCOUNT_DATA")
+    exit 1
+fi
