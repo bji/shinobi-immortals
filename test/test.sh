@@ -24,4 +24,6 @@ source $SOURCE/test/test_super_set_admin
 
 source $SOURCE/test/test_admin_create_block
 
+source $SOURCE/test/test_admin_add_entries_to_block
+
 # teardown

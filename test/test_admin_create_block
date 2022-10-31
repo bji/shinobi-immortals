@@ -614,7 +614,7 @@ if should_run_test admin_create_block_success; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
     EXPECTED_BLOCK_JSON=`cat <<EOF
 {
-  "block_account": "$BLOCK_PUBKEY",
+  "block_pubkey": "$BLOCK_PUBKEY",
   "configuration": {
     "group_number": 0,
     "block_number": 0,
@@ -656,6 +656,7 @@ EOF`
     if [ "$EXPECTED_BLOCK_JSON" != "$ACTUAL_BLOCK_JSON" ]; then
         echo "FAIL: admin_create_block_success: Unexpected block data:"
         diff <(echo "$EXPECTED_BLOCK_JSON") <(echo "$ACTUAL_BLOCK_JSON")
+        exit 1
     fi
 fi
 
@@ -664,7 +665,7 @@ if should_run_test admin_create_block_again; then
     # Test with block 0 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[0]`
     assert_fail admin_create_block_again                                                                              \
-    ''\
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \

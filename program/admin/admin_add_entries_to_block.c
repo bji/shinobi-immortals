@@ -91,9 +91,9 @@ static uint64_t admin_add_entries_to_block(const SolParameters *params)
         return Error_InvalidAccount_First + 3;
     }
 
-    // If the block is already complete, then there's nothing to do
+    // If the block is already complete, then can't add entries
     if (is_block_complete(block)) {
-        return 0;
+        return Error_BlockAlreadyComplete;
     }
 
     // Make sure that the entry range is within the range of entries in the block

@@ -30,13 +30,6 @@ METAPLEX_METADATA_URI=$4
 SECOND_METAPLEX_METADATA_CREATOR_OR_NONE=$5
 FIRST_ENTRY_INDEX=$6
 
-# Compose SHA-256 pubkey data elements from the remaining arguments
-SHA256_DATA=
-while [ -n "$7" ]; do
-    SHA256_DATA="$SHA256_DATA $(echo "$7" | xxd -r -p | od -An -tu1 | tr -d '\n' | tr -s '[:space:]')"
-    shift
-done
-
 require $ADMIN_PUBKEY
 require $GROUP_NUMBER
 require $BLOCK_NUMBER
@@ -85,6 +78,28 @@ STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
                                   u32[$GROUP_NUMBER]                                                                  \
                                   u32[$BLOCK_NUMBER])
 
+# Compute entry pubkeys and sha256               
+ENTRY_ACCOUNTS=
+ENTERY_SHA256S=
+ENTRY_INDEX=$FIRST_ENTRY_INDEX
+while [ -n "$7" ]; do
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u8[$ENTRY_INDEX]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
+                                                   Pubkey[$MINT_PUBKEY]`
+    
+    ENTRY_ACCOUNTS="$ENTRY_ACCOUNTS account $ENTRY_PUBKEY w $MINT_PUBKEY w $TOKEN_PUBKEY w $METADATA_PUBKEY w"
+    SHA256_DATA="$SHA256_DATA $(echo "$7" | xxd -r -p | od -An -tu1 | tr -d '\n' | tr -s '[:space:]')"
+    shift
+    ENTRY_INDEX=$(($ENTRY_INDEX+1))
+done
+
+if [ -z "$ENTRY_ACCOUNTS" ]; then
+    require DIE
+fi
+
+               
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $ADMIN_PUBKEY                                                                                       \
@@ -98,6 +113,7 @@ solxact encode                                                                  
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         account $RENT_SYSVAR_PUBKEY                                                                                   \
+        $ENTRY_ACCOUNTS                                                                                               \
         // Instruction code 3 = AddEntriesToBlockData //                                                              \
         u8 3                                                                                                          \
         c_string 200 $METAPLEX_METADATA_URI                                                                           \

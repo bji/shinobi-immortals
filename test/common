@@ -66,7 +66,7 @@ function assert ()
         echo
         exit 1
     else
-        echo "+$TEST_NAME"
+        echo "+ $TEST_NAME"
     fi
 }
 
@@ -92,14 +92,8 @@ function assert_fail ()
         echo
         exit 1
     else
-        echo "-$TEST_NAME"
+        echo "- $TEST_NAME"
     fi
-}
-
-function assert_fail2 ()
-{
-    echo "HERE $?"
-    cat
 }
 
 
@@ -108,6 +102,16 @@ function lamports_from_sol ()
     local SOL=$1
 
     printf "%0.f" `echo "$SOL 1000 * 1000 * 1000 * p" | dc`
+}
+
+
+function sha256_of ()
+{
+    if [ -n "$1" ]; then
+        echo -n "$@" | sha256sum | cut -d ' ' -f 1
+    else
+        sha256sum | cut -d ' ' -f 1
+    fi
 }
 
 
@@ -242,7 +246,7 @@ function setup ()
     solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
            --commitment finalized >/dev/null 2>/dev/null
 
-#    export LEDGER=/tmp/tmp.R6SGZsofVL
+#    export LEDGER=/tmp/tmp.QQqP9XfSXA
 
 # Compute pubkeys
 

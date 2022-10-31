@@ -120,7 +120,7 @@ function to_base58 ()
         A B C D E F G H   J K L M N   P Q R S T U V W X Y Z
         a b c d e f g h i j k   m n o p q r s t u v w x y z
     )
-    cat | xxd -p -u | tr -d '\n' |
+    xxd -p -u | tr -d '\n' |
         {
             read hex
             while [[ "$hex" =~ ^00 ]]; do
@@ -134,6 +134,15 @@ function to_base58 ()
             fi
             echo
         }
+}
+
+function to_hex ()
+{
+    if [ -z "$1" ]; then
+        od -An -tx1 -v | tr -d '[:space:]'
+    else
+        printf "%032x" $1
+    fi
 }
 
 function get_account_data ()
@@ -164,7 +173,7 @@ function get_data_u8 ()
 {
     local offset=$1
     
-    echo "$2" | base64 -d | od -An -j$offset -N1 -tu1 | tr -d [:space:]
+    echo "$2" | base64 -d | od -An -j$offset -N1 -tu1 -v | tr -d [:space:]
 }
 
 
@@ -173,7 +182,7 @@ function get_data_u16 ()
 {
     local offset=$1
     
-    echo "$2" | base64 -d | od -An -j$offset -N2 -tu2 | tr -d [:space:]
+    echo "$2" | base64 -d | od -An -j$offset -N2 -tu2 -v | tr -d [:space:]
 }
 
 
@@ -182,7 +191,7 @@ function get_data_u32 ()
 {
     local offset=$1
     
-    echo "$2" | base64 -d | od -An -j$offset -N4 -tu4 | tr -d [:space:]
+    echo "$2" | base64 -d | od -An -j$offset -N4 -tu4 -v | tr -d [:space:]
 }
 
 
@@ -191,16 +200,28 @@ function get_data_u64 ()
 {
     local offset=$1
     
-    echo "$2" | base64 -d | od -An -j$offset -N8 -tu8 | tr -d [:space:]
+    echo "$2" | base64 -d | od -An -j$offset -N8 -tu8 -v | tr -d [:space:]
 }
 
 # Given base64 data $2 (as loaded by get_account_data), returns the pubkey value at offset $1 (as Base58 string)
 function get_data_pubkey ()
 {
     local offset=$1
-    echo "$2" | base64 -d | dd bs=1 count=32 skip=4 status=none | to_base58
+    echo "$2" | base64 -d | dd bs=1 count=32 skip=$offset status=none | to_base58
 }
 
+function get_data_sha256 ()
+{
+    local offset=$1
+    echo "$2" | base64 -d | dd bs=1 count=32 skip=$offset status=none | to_hex
+}
+
+function get_data_string ()
+{
+    local offset=$1
+    local max_length=$2
+    echo "$3" | base64 -d | dd bs=1 count=$max_length skip=$offset status=none | tr -d '\0'
+}
 
 RPC_URL=https://api.mainnet-beta.solana.com
 
@@ -281,7 +302,7 @@ case $1 in
 
         shift
         
-        if [ -z "$2" ]; then
+        if [ -z "$1" -o -z "$2" -o -n "$3" ]; then
             usage_exit
         fi
 
@@ -310,7 +331,7 @@ case $1 in
 
         echo -n '{'
 
-        echo -n '"block_account":"'$BLOCK_PUBKEY'",'
+        echo -n '"block_pubkey":"'$BLOCK_PUBKEY'",'
 
         echo -n '"configuration":{'
         
@@ -352,9 +373,9 @@ case $1 in
 
         echo -n '},'
 
-        echo -n '"added_entries_count":'`get_data_u16 68 "$ACCOUNT_DATA"`','
+        echo -n '"added_entries_count":'`get_data_u16 72 "$ACCOUNT_DATA"`','
 
-        TIMESTAMP=`get_data_u64 72 "$ACCOUNT_DATA"`
+        TIMESTAMP=`get_data_u64 80 "$ACCOUNT_DATA"`
 
         echo -n '"block_start_timestamp":'$TIMESTAMP','
 
@@ -362,9 +383,9 @@ case $1 in
             echo -n '"block_start_timestamp_display":"'`to_timestamp $TIMESTAMP`'",'
         fi
         
-        echo -n '"mysteries_sold_count":'`get_data_u16 80 "$ACCOUNT_DATA"`','
+        echo -n '"mysteries_sold_count":'`get_data_u16 88 "$ACCOUNT_DATA"`','
 
-        TIMESTAMP=`get_data_u64 88 "$ACCOUNT_DATA"`
+        TIMESTAMP=`get_data_u64 96 "$ACCOUNT_DATA"`
 
         echo -n '"mystery_phase_end_timestamp":'$TIMESTAMP','
 
@@ -372,14 +393,14 @@ case $1 in
             echo -n '"mystery_phase_end_timestamp_display":"'`to_timestamp $TIMESTAMP`'",'
         fi
 
-        echo -n '"commission":'`to_commission \`get_data_u16 96 "$ACCOUNT_DATA"\``','
+        echo -n '"commission":'`to_commission \`get_data_u16 104 "$ACCOUNT_DATA"\``','
 
-        echo -n '"last_commission_change_epoch":'`get_data_u64 104 "$ACCOUNT_DATA"`','
+        echo -n '"last_commission_change_epoch":'`get_data_u64 112 "$ACCOUNT_DATA"`','
 
         echo -n '"entries_added":['
 
         # Skip to the entries added bitmap
-        BITMAP_BYTES=`echo "$ACCOUNT_DATA" | base64 -d | dd bs=1 skip=112 status=none | od -An -tu8`
+        BITMAP_BYTES=`echo "$ACCOUNT_DATA" | base64 -d | dd bs=1 skip=120 status=none | od -An -tu1 -v`
 
         N=0
         COMMA=
@@ -416,6 +437,144 @@ case $1 in
     ;;
 
     entry)
+
+        shift
+        
+        if [ -z "$1" -o -z "$2" -o -z "$3" -o -n "$4" ]; then
+            usage_exit
+        fi
+
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[$3]`
+
+        ENTRY_PUBKEY=`pda $PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+
+        ACCOUNT_DATA=`get_account_data $RPC_URL $ENTRY_PUBKEY`
+
+        if [ -z "$ACCOUNT_DATA" ]; then
+            echo "Entry account $1 $2 $3 does not exist"
+            exit 1
+        fi
+
+        ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
+
+        if [ $ACCOUNT_DATA_LEN -ne 3032 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected 3032"
+            exit 1
+        fi
+
+        DATA_TYPE=`get_data_u32 0 "$ACCOUNT_DATA"`
+
+        if [ "0$DATA_TYPE" -ne 3 ]; then
+            echo "Invalid data type: $DATA_TYPE"
+            exit 1
+        fi
+
+        echo -n '{"entry_pubkey":"'$ENTRY_PUBKEY'",'
+
+        echo -n '"block_pubkey":"'`get_data_pubkey 4 "$ACCOUNT_DATA"`'",'
+
+        echo -n '"group_number":'`get_data_u32 36 "$ACCOUNT_DATA"`','
+        
+        echo -n '"block_number":'`get_data_u32 40 "$ACCOUNT_DATA"`','
+
+        echo -n '"entry_index":'`get_data_u16 44 "$ACCOUNT_DATA"`','
+
+        echo -n '"mint_pubkey":"'`get_data_pubkey 46 "$ACCOUNT_DATA"`'",'
+
+        echo -n '"token_pubkey":"'`get_data_pubkey 78 "$ACCOUNT_DATA"`'",'
+
+        echo -n '"metaplex_metadata_pubkey":"'`get_data_pubkey 110 "$ACCOUNT_DATA"`'",'
+
+        echo -n '"minimum_price":'`to_sol \`get_data_u64 144 "$ACCOUNT_DATA"\``','
+
+        echo -n '"has_auction":'`to_bool \`get_data_u8 152 "$ACCOUNT_DATA"\``','
+
+        echo -n '"duration":'`get_data_u32 156 "$ACCOUNT_DATA"`','
+
+        echo -n '"non_auction_start_price":'`to_sol \`get_data_u64 160 "$ACCOUNT_DATA"\``','
+
+        echo -n '"reveal_sha256":"'`get_data_sha256 168 "$ACCOUNT_DATA"`'",'
+
+        TIMESTAMP=`get_data_u64 200 "$ACCOUNT_DATA"`
+
+        echo -n '"reveal_timestamp":'$TIMESTAMP','
+
+        if [ "0$TIMESTAMP" -ne 0 ]; then
+            echo -n '"reveal_timestamp_display":"'`to_timestamp $TIMESTAMP`'",'
+        fi
+
+        echo -n '"purchase_price":'`to_sol \`get_data_u64 208 "$ACCOUNT_DATA"\``','
+
+        echo -n '"refund_awarded":'`to_bool \`get_data_u8 216 "$ACCOUNT_DATA"\``','
+
+        echo -n '"commission":'`get_data_u16 218 "$ACCOUNT_DATA"`','
+
+        echo -n '"auction":{'
+        
+        echo -n '"highest_bid":'`to_sol \`get_data_u64 224 "$ACCOUNT_DATA"\``
+
+        PUBKEY=`get_data_pubkey 232 "$ACCOUNT_DATA"`
+
+        if [ "$PUBKEY" != "11111111111111111111111111111111" ]; then
+            echo -n ',"winning_bid_pubkey":'`get_data_pubkey 232 "$ACCOUNT_DATA"`
+        fi
+
+        echo -n '},"owned":{'
+
+        PUBKEY=`get_data_pubkey 264 "$ACCOUNT_DATA"`
+
+        if [ "$PUBKEY" != "11111111111111111111111111111111" ]; then
+            echo -n '"stake_account":'`get_data_pubkey 264 "$ACCOUNT_DATA"`','
+        fi
+
+        echo -n '"stake_initial":'`to_sol \`get_data_u64 296 "$ACCOUNT_DATA"\``','
+
+        echo -n '"stake_epoch":'`get_data_u64 304 "$ACCOUNT_DATA"`','
+
+        echo -n '"last_harvest_ki_stake":'`to_sol \`get_data_u64 312 "$ACCOUNT_DATA"\``','
+
+        echo -n '"last_commission_charge_stake":'`to_sol \`get_data_u64 320 "$ACCOUNT_DATA"\``
+
+        echo -n '},'
+
+        echo -n '"level":'`get_data_u8 328 "$ACCOUNT_DATA"`','
+
+        echo -n '"metadata":{'
+
+        echo -n '"level_1_ki":'`get_data_u32 332 "$ACCOUNT_DATA"`','
+
+        echo -n '"random":['
+
+        for i in `seq 1 15`; do
+            echo -n `get_data_u32 $(($i*4+336)) "$ACCOUNT_DATA"`','
+        done
+
+        echo -n `get_data_u32 396 "$ACCOUNT_DATA"`'],"level_metadata":['
+
+        for i in `seq 0 8`; do
+            OFFSET=$(($i*292+400))
+            echo -n '{"form":'`get_data_u32 $(($OFFSET+0)) "$ACCOUNT_DATA"`','
+
+            echo -n '"skill":'`get_data_u8 $(($OFFSET+4)) "$ACCOUNT_DATA"`','
+
+            echo -n '"ki_factor":'`get_data_u32 $(($OFFSET+8)) "$ACCOUNT_DATA"`','
+
+            echo -n '"name":"'`get_data_string $(($OFFSET+16)) 48 "$ACCOUNT_DATA"`'",'
+
+            echo -n '"uri":"'`get_data_string $(($OFFSET+64)) 200 "$ACCOUNT_DATA"`'",'
+
+            echo -n '"uri_contents_sha256":"'`get_data_sha256 $(($OFFSET+264)) "$ACCOUNT_DATA"`'"'
+
+            echo -n '}'
+
+            if [ $i -lt 8 ]; then
+                echo -n ','
+            fi
+        done            
+
+        echo ']}}'
 
     ;;
 

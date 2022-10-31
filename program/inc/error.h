@@ -140,6 +140,9 @@ typedef enum
     // Buy attempt failed because the fee payer was not in the whitelist
     Error_FailedWhitelistCheck                         = 1052,
 
+    // Attempt to add entries to an already complete block
+    Error_BlockAlreadyComplete                         = 1053,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

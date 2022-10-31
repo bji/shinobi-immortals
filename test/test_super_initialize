@@ -1016,7 +1016,7 @@ fi
 
 # Issue a valid super_initialize tx and check to make sure that the correct config account was created
 # This test cannot be skipped since the creation of a config account is a prerequisite for all other tests
-# Except if a test is requested, it is assumed that this is not neede
+# Except if a test is requested, it is assumed that this is not needed
 if [ -z "$TESTS" ]; then
     assert super_initialize_success                                                                                   \
     `echo "encoding c                                                                                                 \
