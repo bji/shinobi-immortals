@@ -37,11 +37,15 @@ require $DATA_START_INDEX
 require $BASE64_ENCODED_DATA
 
 # Convert BASE64_ENCODED_BYTES into METADATA_BYTES
-METADATA_BYTES=$(echo $BASE64_ENCODED_DATA | base64 -d | od -An -tu1 | tr -d '\n' | tr -s '[:space:]')
+METADATA_BYTES=$(echo $BASE64_ENCODED_DATA | base64 -d | od -An -tu1 -v | tr -d '\n' | tr -s ' ')
 METADATA_BYTES_COUNT=$(echo $BASE64_ENCODED_DATA | base64 -d | wc -c)
 
 if [ -e "$ADMIN_PUBKEY" ]; then
     ADMIN_PUBKEY=$(solpda -pubkey "$ADMIN_PUBKEY")
+fi
+
+if [ -z "$SELF_PROGRAM_PUBKEY" ]; then
+    SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
 fi
 
 # Compute pubkeys
@@ -55,7 +59,6 @@ fi
     METAPLEX_PROGRAM_PUBKEY=$(echo metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s)
 STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
         STAKE_CONFIG_PUBKEY=$(echo StakeConfig11111111111111111111111111111111)
-        SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
               CONFIG_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[1])
            AUTHORITY_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[2])
         MASTER_STAKE_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[3])

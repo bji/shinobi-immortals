@@ -36,7 +36,6 @@ require $BLOCK_NUMBER
 require $METAPLEX_METADATA_URI
 require $SECOND_METAPLEX_METADATA_CREATOR_OR_NONE
 require $FIRST_ENTRY_INDEX
-require $SHA256_DATA
 
 if [ -e "$ADMIN_PUBKEY" ]; then
     ADMIN_PUBKEY=$(solpda -pubkey "$ADMIN_PUBKEY")
@@ -44,6 +43,10 @@ fi
 
 if [ "$SECOND_METAPLEX_METADATA_CREATOR_OR_NONE" = "none" ]; then
     SECOND_METAPLEX_METADATA_CREATOR_OR_NONE=$(echo 11111111111111111111111111111111)
+fi
+
+if [ -z "$SELF_PROGRAM_PUBKEY" ]; then
+    SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
 fi
 
 # Compute pubkeys
@@ -57,7 +60,6 @@ fi
     METAPLEX_PROGRAM_PUBKEY=$(echo metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s)
 STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
         STAKE_CONFIG_PUBKEY=$(echo StakeConfig11111111111111111111111111111111)
-        SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
               CONFIG_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[1])
            AUTHORITY_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[2])
         MASTER_STAKE_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[3])
@@ -83,22 +85,20 @@ ENTRY_ACCOUNTS=
 ENTERY_SHA256S=
 ENTRY_INDEX=$FIRST_ENTRY_INDEX
 while [ -n "$7" ]; do
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u8[$ENTRY_INDEX]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[$ENTRY_INDEX]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY]`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                   \
+                                                  Pubkey[$MINT_PUBKEY]`
     
-    ENTRY_ACCOUNTS="$ENTRY_ACCOUNTS account $ENTRY_PUBKEY w $MINT_PUBKEY w $TOKEN_PUBKEY w $METADATA_PUBKEY w"
+    ENTRY_ACCOUNTS="$ENTRY_ACCOUNTS account $ENTRY_PUBKEY w account $MINT_PUBKEY w account $TOKEN_PUBKEY w            \
+                    account $METADATA_PUBKEY w"
     SHA256_DATA="$SHA256_DATA $(echo "$7" | xxd -r -p | od -An -tu1 | tr -d '\n' | tr -s '[:space:]')"
     shift
     ENTRY_INDEX=$(($ENTRY_INDEX+1))
 done
 
-if [ -z "$ENTRY_ACCOUNTS" ]; then
-    require DIE
-fi
-
+require $SHA256_DATA
                
 solxact encode                                                                                                        \
         encoding c                                                                                                    \

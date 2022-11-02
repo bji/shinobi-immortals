@@ -317,8 +317,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -ne 122 ]; then
-            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected 122"
+        if [ $ACCOUNT_DATA_LEN -lt 120 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected at least 120"
             exit 1
         fi
 

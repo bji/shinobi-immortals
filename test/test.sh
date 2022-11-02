@@ -26,4 +26,10 @@ source $SOURCE/test/test_admin_create_block
 
 source $SOURCE/test/test_admin_add_entries_to_block
 
+source $SOURCE/test/test_admin_set_metadata_bytes
+
+source $SOURCE/test/test_admin_reveal_entries
+
+source $SOURCE/test/test_admin_set_block_commission
+
 # teardown

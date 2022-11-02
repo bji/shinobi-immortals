@@ -14,9 +14,15 @@ function should_run_test ()
 
 function sanitize_output ()
 {
-    echo "$@" | sed -r -e 's/Program [^ ]+/Program REDACTED/g' |                                                      \
-        sed -r -e 's/consumed [^ ]+ of [^ ]+/consumed REDACTED/g' |                                                   \
-        sed -r -e 's/,\"unitsConsumed\":[[:digit:]]+//g' | tr -d "'"
+    if [[ "$@" = "ERROR: {"* ]]; then
+        echo "$@" | sed -r -e 's/Program [^ ]+/Program REDACTED/g' |                                                   \
+            sed -r -e 's/consumed [^ ]+ of [^ ]+/consumed REDACTED/g' |                                                \
+            sed -r -e 's/,\"unitsConsumed\":[[:digit:]]+//g' |                                                         \
+            sed -r -e 's/lamports [[:digit:]]+/lamports REDACTED/g' |                                                  \
+            sed -r -e 's/need [[:digit:]]+/need REDACTED/g' | tr -d "'"
+    else
+        echo "$@"
+    fi
 }
 
 
@@ -154,6 +160,19 @@ function make_stake_account ()
 }
 
 
+function compute_metadata_sha256 ()
+{
+    local metadata_base64=$1
+    local salt=$2
+
+    # Convert salt to 8 digit hex, little endian
+    salt=`printf "%016x" $salt | tac -rs ..`
+
+    (echo "$metadata_base64" | base64 -d | sha256sum | cut -d ' ' -f 1 | xxd -r -p;                                   \
+     echo $salt | xxd -r -p | tr -d '\n') | sha256sum | cut -d ' ' -f 1
+}
+
+
 function get_account_data ()
 {
     local ACCOUNT_PUBKEY=$1
@@ -175,6 +194,7 @@ function get_account_data ()
     fi
 }
 
+
 function hex_digit ()
 {
     local decimal=$1
@@ -186,11 +206,20 @@ function hex_digit ()
     echo "16o $x p" | dc
 }
 
+
 function pubkey_binary ()
 {
     local pubkey=$1
 
     for x in `solpda -pubkey --bytes $1 | tr -d '[' | tr -d ']' | tr ',' ' '`; do hex_digit $x; done | xxd -r -p
+}
+
+
+# The solana command is messed up and sometimes epoch-info fails
+function current_epoch ()
+{
+    SLOT=`solana -u l block | grep ^Slot: | cut -d ' ' -f 2`
+    echo "$SLOT 100 / p" | dc -
 }
 
 
@@ -201,7 +230,7 @@ function setup ()
 
     echo "Starting test validator @ $LEDGER"
     
-    solana-test-validator --ledger $LEDGER --ticks-per-slot 20 --slots-per-epoch 1000                                 \
+    solana-test-validator --ledger $LEDGER --ticks-per-slot 20 --slots-per-epoch 100                                  \
                           -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s       \
                           -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT >/dev/null 2>/dev/null &
 
@@ -246,8 +275,8 @@ function setup ()
     solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
            --commitment finalized >/dev/null 2>/dev/null
 
-#    export LEDGER=/tmp/tmp.QQqP9XfSXA
-
+#    export LEDGER=/tmp/tmp.hD8ewnrMkU
+    
 # Compute pubkeys
 
     export         SELF_PROGRAM_PUBKEY=`solpda -pubkey $LEDGER/program.json`

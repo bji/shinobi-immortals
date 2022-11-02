@@ -27,21 +27,17 @@ GROUP_NUMBER=$2
 BLOCK_NUMBER=$3
 FIRST_ENTRY_INDEX=$4
 
-# Compose entry salt
-SALT_VALUES=
-while [ -n "$5" ]; do
-    SALT_VALUES="$SALT_VALUES $5"
-    shift
-done
-
 require $ADMIN_PUBKEY
 require $GROUP_NUMBER
 require $BLOCK_NUMBER
 require $FIRST_ENTRY_INDEX
-require $SALT_VALUES
 
 if [ -e "$ADMIN_PUBKEY" ]; then
     ADMIN_PUBKEY=$(solpda -pubkey "$ADMIN_PUBKEY")
+fi
+
+if [ -z "$SELF_PROGRAM_PUBKEY" ]; then
+    SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
 fi
 
 # Compute pubkeys
@@ -55,7 +51,6 @@ fi
     METAPLEX_PROGRAM_PUBKEY=$(echo metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s)
 STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
         STAKE_CONFIG_PUBKEY=$(echo StakeConfig11111111111111111111111111111111)
-        SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
               CONFIG_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[1])
            AUTHORITY_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[2])
         MASTER_STAKE_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[3])
@@ -76,6 +71,26 @@ STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
                                   u32[$GROUP_NUMBER]                                                                  \
                                   u32[$BLOCK_NUMBER])
 
+
+# Compose entry salt and accounts
+ENTRY_ACCOUNTS=
+SALT_VALUES=
+ENTRY_INDEX=$FIRST_ENTRY_INDEX
+while [ -n "$5" ]; do
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[$ENTRY_INDEX]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
+                                                  Pubkey[$MINT_PUBKEY]`
+    
+    ENTRY_ACCOUNTS="$ENTRY_ACCOUNTS account $ENTRY_PUBKEY w account $METADATA_PUBKEY w"
+    SALT_VALUES="$SALT_VALUES $5"
+    shift
+    ENTRY_INDEX=$(($ENTRY_INDEX+1))
+done
+
+require $SALT_VALUES
+
+
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $ADMIN_PUBKEY                                                                                       \
@@ -86,6 +101,7 @@ solxact encode                                                                  
         account $AUTHORITY_PUBKEY w                                                                                   \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
+        $ENTRY_ACCOUNTS                                                                                               \
         // Instruction code 5 = RevealEntriesData //                                                                  \
         u8 5                                                                                                          \
         u16 $FIRST_ENTRY_INDEX                                                                                        \

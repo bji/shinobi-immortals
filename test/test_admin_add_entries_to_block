@@ -237,7 +237,7 @@ fi
 
 
 # Bad entry account
-if should_run_test admin_add_entries_to_block_bad_entry_account; then
+if should_run_test admin_add_entries_to_block_bad_entry; then
     # Test with block 1 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
     MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
@@ -251,7 +251,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_account; then
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
-    assert_fail admin_add_entries_to_block_bad_entry_account                                                          \
+    assert_fail admin_add_entries_to_block_bad_entry                                                                  \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Create Metadata Accounts v2","Program REDACTED Transfer 5616720 lamports to the new account","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED Allocate space for the account","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED Assign the account to the owning program","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Sign Metadata","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: SetAuthority","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                                                                 \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
@@ -290,7 +290,7 @@ fi
 
 
 # Bad entry mint account
-if should_run_test admin_add_entries_to_block_bad_entry_mint_account; then
+if should_run_test admin_add_entries_to_block_bad_entry_mint; then
     # Test with block 1 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
     # Bad mint account, based on invalid PDA
@@ -304,7 +304,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_mint_account; then
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
-    assert_fail admin_add_entries_to_block_bad_entry_mint_account                                                     \
+    assert_fail admin_add_entries_to_block_bad_entry_mint                                                             \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
@@ -342,7 +342,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_mint_account; then
 fi
 
 # Bad entry token account
-if should_run_test admin_add_entries_to_block_bad_entry_token_account; then
+if should_run_test admin_add_entries_to_block_bad_entry_token; then
     # Test with block 1 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
     MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
@@ -356,7 +356,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_token_account; then
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
-    assert_fail admin_add_entries_to_block_bad_entry_token_account                                                    \
+    assert_fail admin_add_entries_to_block_bad_entry_token                                                            \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
@@ -395,7 +395,7 @@ fi
 
 
 # Bad entry metaplex metadata account
-if should_run_test admin_add_entries_to_block_bad_entry_metaplex_account; then
+if should_run_test admin_add_entries_to_block_bad_entry_metadata; then
     # Test with block 1 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
     MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
@@ -409,7 +409,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_metaplex_account; then
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
-    assert_fail admin_add_entries_to_block_bad_entry_metaplex_account                                                 \
+    assert_fail admin_add_entries_to_block_bad_entry_metadata                                                         \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":5}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Create Metadata Accounts v2","Program REDACTED Metadatas key must match seed of [metadata, program id, mint] provided","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x5","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x5"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x5"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \

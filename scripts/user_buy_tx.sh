@@ -40,6 +40,10 @@ if [ -e "$USER_PUBKEY" ]; then
     USER_PUBKEY=$(solpda -pubkey $USER_PUBKEY)
 fi
 
+if [ -z "$SELF_PROGRAM_PUBKEY" ]; then
+    SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
+fi
+
 # Compute pubkeys
 
       SYSTEM_PROGRAM_PUBKEY=$(echo 11111111111111111111111111111111)
@@ -51,7 +55,6 @@ fi
     METAPLEX_PROGRAM_PUBKEY=$(echo metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s)
 STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
         STAKE_CONFIG_PUBKEY=$(echo StakeConfig11111111111111111111111111111111)
-        SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
               CONFIG_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[1])
            AUTHORITY_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[2])
         MASTER_STAKE_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY u8[3])
@@ -87,7 +90,7 @@ STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
       ENTRY_METADATA_PUBKEY=$(pda $METAPLEX_PROGRAM_PUBKEY                                                            \
                                   String[metadata]                                                                    \
                                   Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                                    \
-                                  Pubkey[$BID_MARKER_MINT_PUBKEY])
+                                  Pubkey[$ENTRY_MINT_PUBKEY])
    TOKEN_DESTINATION_PUBKEY=$(pda $SPLATA_PROGRAM_PUBKEY                                                              \
                                   Pubkey[$USER_PUBKEY]                                                                \
                                   Pubkey[$SPL_TOKEN_PROGRAM_PUBKEY]                                                   \

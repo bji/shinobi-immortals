@@ -25,8 +25,6 @@ static uint64_t reveal_single_entry(const Block *block,
                                     salt_t salt,
                                     const SolAccountInfo *admin_account,
                                     const SolAccountInfo *authority_account,
-                                    const SolAccountInfo *mint_account,
-                                    const SolAccountInfo *token_account,
                                     const SolAccountInfo *metaplex_metadata_account,
                                     const SolAccountInfo *transaction_accounts,
                                     int transaction_accounts_len,
@@ -56,11 +54,11 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
         DECLARE_ACCOUNT(5,   metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
 
-    // There are 4 accounts per entry, following the 6 fixed accounts
-    uint8_t entry_count = (params->ka_num - 6) / 4;
+    // There are 2 accounts per entry, following the 6 fixed accounts
+    uint8_t entry_count = (params->ka_num - 6) / 2;
 
-    // Must be exactly the fixed accounts + 4 accounts per entry
-    DECLARE_ACCOUNTS_NUMBER(6 + (entry_count * 4));
+    // Must be exactly the fixed accounts + 2 accounts per entry
+    DECLARE_ACCOUNTS_NUMBER(6 + (entry_count * 2));
 
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_account(config_account, admin_account->key)) {
@@ -113,17 +111,13 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
 
         // _account_num is defined by DECLARE_ACCOUNTS
 
-        // This is the account info of the NFT mint, as passed into the accounts list
-        const SolAccountInfo *mint_account = &(params->ka[_account_num++]);
-
-        // This is the token account of the NFT, as passed into the accounts list
-        const SolAccountInfo *token_account = &(params->ka[_account_num++]);
-
-        // This is the account info of the metaplex metadata for the NFT, as passed into the accounts list
-        const SolAccountInfo *metaplex_metadata_account = &(params->ka[_account_num++]);
-
         // This is the account info of the entry, as passed into the accounts list
         const SolAccountInfo *entry_account = &(params->ka[_account_num++]);
+
+        // Ensure that the entry account is writable
+        if (!entry_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 6;
+        }
 
         // The salt is the corresponding entry in the input data
         salt_t salt = data->entry_salt[i];
@@ -131,18 +125,31 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
         // Get the validated Entry and ensure that it's for the provided block
         Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
         if (!entry) {
-            return Error_InvalidAccount_First + 9;
+            return Error_InvalidAccount_First + 6;
         }
 
         // Make sure that it's the correct entry for the index
         if (entry->entry_index != destination_index) {
-            return Error_InvalidAccount_First + 9;
+            return Error_InvalidAccount_First + 6;
+        }
+
+        // This is the account info of the metaplex metadata for the NFT, as passed into the accounts list
+        const SolAccountInfo *metaplex_metadata_account = &(params->ka[_account_num++]);
+
+        // Ensure that it's the correct metadata account for this entry
+        if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
+            return Error_InvalidAccount_First + 7;
+        }
+
+        // Ensure that the metaplex metadata account is writable
+        if (!metaplex_metadata_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 7;
         }
 
         // Do the reveal of this entry
         uint64_t result = reveal_single_entry(block, entry, &clock, salt, admin_account, authority_account,
-                                              mint_account, token_account, metaplex_metadata_account, params->ka,
-                                              params->ka_num, /* modifies */ &total_lamports_to_move);
+                                              metaplex_metadata_account, params->ka, params->ka_num,
+                                              /* modifies */ &total_lamports_to_move);
 
         // If that reveal failed, then the entire transaction fails
         if (result) {
@@ -170,27 +177,11 @@ static uint64_t reveal_single_entry(const Block *block,
                                     salt_t salt,
                                     const SolAccountInfo *admin_account,
                                     const SolAccountInfo *authority_account,
-                                    const SolAccountInfo *mint_account,
-                                    const SolAccountInfo *token_account,
                                     const SolAccountInfo *metaplex_metadata_account,
                                     const SolAccountInfo *transaction_accounts,
                                     int transaction_accounts_len,
                                     /* modifies */ uint64_t *total_lamports_to_move)
 {
-    // Ensure that the mint is the correct mint account for this Entry
-    if (!SolPubkey_same(mint_account->key, &(entry->mint_pubkey))) {
-        return Error_InvalidMintAccount;
-    }
-
-    const SolanaMintAccountData *mint_data = (SolanaMintAccountData *) mint_account->data;
-
-    // Ensure that the token account is the correct token account for this Entry
-    if (!SolPubkey_same(token_account->key, &(entry->token_pubkey))) {
-        return Error_InvalidTokenAccount;
-    }
-
-    const SolanaTokenProgramTokenData *token_data = (SolanaTokenProgramTokenData *) token_account->data;
-
     // Ensure that the metaplex metadata account passed in is the actual metaplex metadata account for this token
     if (!SolPubkey_same(metaplex_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
         return Error_InvalidMetadataAccount;
@@ -210,8 +201,8 @@ static uint64_t reveal_single_entry(const Block *block,
         }
         break;
     default:
-        // Already revealed, ignore this request to reveal
-        return 0;
+        // Already revealed
+        return Error_AlreadyRevealed;
     }
 
     // OK at this point, it is known that the mint account is valid, the token account is valid, the metaplex metadata
