@@ -44,16 +44,8 @@ fi
 # Make sure that a successful set_admin works
 if should_run_test super_set_admin_success; then
     assert super_set_admin_success_1                                                                                  \
-    `echo "encoding c                                                                                                 \
-           fee_payer $SUPERUSER_PUBKEY                                                                                \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SUPERUSER_PUBKEY s                                                                                \
-           account $CONFIG_PUBKEY w                                                                                   \
-           // Instruction code 1 = UpdateAdmin //                                                                     \
-           u8 1                                                                                                       \
-           // Admin pubkey //                                                                                         \
-           pubkey $RICH_USER1_PUBKEY"                                                                                 \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SELF_$SOURCE/scripts/super_set_admin_tx.sh                             \
+         $SUPERUSER_PUBKEY $RICH_USER1_PUBKEY                                                                         \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/super.json                                                                             \
         | solxact submit l 2>&1`
@@ -66,17 +58,9 @@ if should_run_test super_set_admin_success; then
         exit 1
     fi
     # Now change it back
-    assert super_set_admin_success_2                                                                                  \
-    `echo "encoding c                                                                                                 \
-           fee_payer $SUPERUSER_PUBKEY                                                                                \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SUPERUSER_PUBKEY s                                                                                \
-           account $CONFIG_PUBKEY w                                                                                   \
-           // Instruction code 1 = UpdateAdmin //                                                                     \
-           u8 1                                                                                                       \
-           // Admin pubkey //                                                                                         \
-           pubkey $ADMIN_PUBKEY"                                                                                      \
-        | solxact encode                                                                                              \
+    assert super_set_admin_success_1                                                                                  \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SELF_$SOURCE/scripts/super_set_admin_tx.sh                             \
+         $SUPERUSER_PUBKEY $ADMIN_PUBKEY                                                                              \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/super.json                                                                             \
         | solxact submit l 2>&1`

@@ -34,48 +34,10 @@ fi
 # Create the block needed for this test
 if [ -z "$TESTS" ]; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
-    assert admin_add_entries_to_block_setup                                                                           \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 2 = CreateBlock //                                                                     \
-           u8 2                                                                                                       \
-           // Commission //                                                                                           \
-           u16 0                                                                                                      \
-           // Block Configuration //                                                                                  \
-           struct [                                                                                                   \
-           // Group Number //                                                                                         \
-           u32 1                                                                                                      \
-           // Block Number //                                                                                         \
-           u32 0                                                                                                      \
-           // Total Entry Count //                                                                                    \
-           u16 10                                                                                                     \
-           // Total Mystery Count //                                                                                  \
-           u16 5                                                                                                      \
-           // Mystery Phase Duration //                                                                               \
-           u32 $((24*60*60))                                                                                          \
-           // Mystery Start Price Lamports //                                                                         \
-           u64 \`lamports_from_sol 1000\`                                                                             \
-           // Reveal Period Duration //                                                                               \
-           u32 $((24*60*60))                                                                                          \
-           // Minimum Price Lamports //                                                                               \
-           u64 \`lamports_from_sol 1\`                                                                                \
-           // Has Auction //                                                                                          \
-           bool false                                                                                                 \
-           // Duration (bad, must be nonzero) //                                                                      \
-           u32 $((24*60*60))                                                                                          \
-           // Final Start Price Lamports  //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                             \
-           // Whitelist Duration //                                                                                   \
-           u32 0                                                                                                      \
-           ]"                                                                                                         \
-        | solxact encode                                                                                              \
+    assert admin_create_block_success                                                                                 \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 1 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -446,205 +408,45 @@ fi
 # Add entries 0 - 8 successfully, must do this
 if [ -z "$TESTS" ]; then
     # Test with block 1 0
+    # Before adding entry 0, create all of the accounts, to ensure that it can still succeed if the accounts
+    # already exist as system accounts
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                   \
+                                                   Pubkey[$MINT_PUBKEY]`
+    transfer $LEDGER/rich_user1.json $MINT_PUBKEY 0.1
+    transfer $LEDGER/rich_user1.json $ENTRY_PUBKEY 0.1
+    transfer $LEDGER/rich_user1.json $TOKEN_PUBKEY 0.1
+    transfer $LEDGER/rich_user1.json $METADATA_PUBKEY 0.1
     assert admin_add_entries_to_block_success1                                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY0 w                                                                                   \
-           account $MINT_PUBKEY0 w                                                                                    \
-           account $TOKEN_PUBKEY0 w                                                                                   \
-           account $METADATA_PUBKEY0 w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $MINT_PUBKEY1 w                                                                                    \
-           account $TOKEN_PUBKEY1 w                                                                                   \
-           account $METADATA_PUBKEY1 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 0                                                                                                      \
-           sha256 \`sha256_of 0\`                                                                                     \
-           sha256 \`sha256_of 1\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    MINT_PUBKEY2=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[2]`
-    ENTRY_PUBKEY2=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY2]`
-    TOKEN_PUBKEY2=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY2]`
-    METADATA_PUBKEY2=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY2]`
-    MINT_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[3]`
-    ENTRY_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY3]`
-    TOKEN_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY3]`
-    METADATA_PUBKEY3=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY3]`
     assert admin_add_entries_to_block_success2                                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY2 w                                                                                   \
-           account $MINT_PUBKEY2 w                                                                                    \
-           account $TOKEN_PUBKEY2 w                                                                                   \
-           account $METADATA_PUBKEY2 w                                                                                \
-           account $ENTRY_PUBKEY3 w                                                                                   \
-           account $MINT_PUBKEY3 w                                                                                    \
-           account $TOKEN_PUBKEY3 w                                                                                   \
-           account $METADATA_PUBKEY3 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 2                                                                                                      \
-           sha256 \`sha256_of 2\`                                                                                     \
-           sha256 \`sha256_of 3\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 2 \`sha256_of 2\` \`sha256_of 3\`                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    MINT_PUBKEY4=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[4]`
-    ENTRY_PUBKEY4=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY4]`
-    TOKEN_PUBKEY4=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY4]`
-    METADATA_PUBKEY4=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY4]`
-    MINT_PUBKEY5=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[5]`
-    ENTRY_PUBKEY5=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY5]`
-    TOKEN_PUBKEY5=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY5]`
-    METADATA_PUBKEY5=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY5]`
     assert admin_add_entries_to_block_success3                                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY4 w                                                                                   \
-           account $MINT_PUBKEY4 w                                                                                    \
-           account $TOKEN_PUBKEY4 w                                                                                   \
-           account $METADATA_PUBKEY4 w                                                                                \
-           account $ENTRY_PUBKEY5 w                                                                                   \
-           account $MINT_PUBKEY5 w                                                                                    \
-           account $TOKEN_PUBKEY5 w                                                                                   \
-           account $METADATA_PUBKEY5 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 4                                                                                                      \
-           sha256 \`sha256_of 4\`                                                                                     \
-           sha256 \`sha256_of 5\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 4 \`sha256_of 4\` \`sha256_of 5\`                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    MINT_PUBKEY6=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[6]`
-    ENTRY_PUBKEY6=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY6]`
-    TOKEN_PUBKEY6=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY6]`
-    METADATA_PUBKEY6=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY6]`
-    MINT_PUBKEY7=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[7]`
-    ENTRY_PUBKEY7=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY7]`
-    TOKEN_PUBKEY7=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY7]`
-    METADATA_PUBKEY7=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY7]`
     assert admin_add_entries_to_block_success4                                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY6 w                                                                                   \
-           account $MINT_PUBKEY6 w                                                                                    \
-           account $TOKEN_PUBKEY6 w                                                                                   \
-           account $METADATA_PUBKEY6 w                                                                                \
-           account $ENTRY_PUBKEY7 w                                                                                   \
-           account $MINT_PUBKEY7 w                                                                                    \
-           account $TOKEN_PUBKEY7 w                                                                                   \
-           account $METADATA_PUBKEY7 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 6                                                                                                      \
-           sha256 \`sha256_of 6\`                                                                                     \
-           sha256 \`sha256_of 7\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 6 \`sha256_of 6\` \`sha256_of 7\`                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-
-    MINT_PUBKEY8=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[8]`
-    ENTRY_PUBKEY8=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY8]`
-    TOKEN_PUBKEY8=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY8]`
-    METADATA_PUBKEY8=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY8]`
     assert admin_add_entries_to_block_success5                                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY8 w                                                                                   \
-           account $MINT_PUBKEY8 w                                                                                    \
-           account $TOKEN_PUBKEY8 w                                                                                   \
-           account $METADATA_PUBKEY8 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 8                                                                                                      \
-           sha256 \`sha256_of 8\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 8 \`sha256_of 8\`                                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -654,47 +456,10 @@ fi
 # Add too many entries
 if should_run_test admin_add_entries_to_block_too_many_entries; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
-    MINT_PUBKEY9=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[9]`
-    ENTRY_PUBKEY9=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY9]`
-    TOKEN_PUBKEY9=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY9]`
-    METADATA_PUBKEY9=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY9]`
-    MINT_PUBKEYa=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[10]`
-    ENTRY_PUBKEYa=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEYa]`
-    TOKEN_PUBKEYa=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEYa]`
-    METADATA_PUBKEYa=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEYa]`
     assert_fail admin_add_entries_to_block_too_many_entries                                                           \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1302}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x516"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x516"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY9 w                                                                                   \
-           account $MINT_PUBKEY9 w                                                                                    \
-           account $TOKEN_PUBKEY9 w                                                                                   \
-           account $METADATA_PUBKEY9 w                                                                                \
-           account $ENTRY_PUBKEYa w                                                                                   \
-           account $MINT_PUBKEYa w                                                                                    \
-           account $TOKEN_PUBKEYa w                                                                                   \
-           account $METADATA_PUBKEYa w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 9                                                                                                      \
-           sha256 \`sha256_of 9\`                                                                                     \
-           sha256 \`sha256_of a\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 9 \`sha256_of 9\` \`sha256_of a\`                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -705,36 +470,9 @@ fi
 # Success, and verify
 if [ -z "$TESTS" ]; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[1] u32[0]`
-    MINT_PUBKEY9=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[9]`
-    ENTRY_PUBKEY9=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY9]`
-    TOKEN_PUBKEY9=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY9]`
-    METADATA_PUBKEY9=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY9]`
     assert admin_add_entries_to_block_success6                                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY9 w                                                                                   \
-           account $MINT_PUBKEY9 w                                                                                    \
-           account $TOKEN_PUBKEY9 w                                                                                   \
-           account $METADATA_PUBKEY9 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 9                                                                                                      \
-           sha256 \`sha256_of 9\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 9 \`sha256_of 9\`                                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -906,29 +644,8 @@ if should_run_test admin_add_entries_to_block_already_complete; then
                                                    Pubkey[$MINT_PUBKEY3]`
     assert_fail admin_add_entries_to_block_too_already_complete                                                       \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1053}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x41d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY3 w                                                                                   \
-           account $MINT_PUBKEY3 w                                                                                    \
-           account $TOKEN_PUBKEY3 w                                                                                   \
-           account $METADATA_PUBKEY3 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 3                                                                                                      \
-           sha256 \`sha256_of 3 again\`"                                                                              \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 3 \`sha256_of 3 again\`                                          \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`

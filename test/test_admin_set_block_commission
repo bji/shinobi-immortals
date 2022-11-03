@@ -67,11 +67,10 @@ fi
 # Create incomplete block
 if [ -z "$TESTS" ]; then
     # Test with block 5 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
     assert admin_reveal_entries_setup                                                                                 \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                         \
-                $ADMIN_PUBKEY 5 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                        \
-                \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 5 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -81,19 +80,9 @@ fi
 # Incomplete block
 if should_run_test admin_set_block_commission_incomplete_block; then
     # Test with block 5 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[5] u32[0]`
     assert_fail admin_set_block_commission_incomplete_block                                                           \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           // Instruction code 6 = SetBlockCommission //                                                              \
-           u8 6                                                                                                       \
-           u16 0"                                                                                                     \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 0    \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -102,46 +91,9 @@ fi
 
 # Complete the block
 if [ -z "$TESTS" ]; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[5] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
     assert admin_set_block_commission_setup                                                                           \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY0 w                                                                                   \
-           account $MINT_PUBKEY0 w                                                                                    \
-           account $TOKEN_PUBKEY0 w                                                                                   \
-           account $METADATA_PUBKEY0 w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $MINT_PUBKEY1 w                                                                                    \
-           account $TOKEN_PUBKEY1 w                                                                                   \
-           account $METADATA_PUBKEY1 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 0                                                                                                      \
-           sha256 \`sha256_of 0\`                                                                                     \
-           sha256 \`sha256_of 1\`"                                                                                    \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 5 0 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -152,8 +104,7 @@ if should_run_test admin_set_block_commission_success; then
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
     assert admin_set_block_commission_success                                                                         \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh                 \
-                $ADMIN_PUBKEY 5 0 1000                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 1000 \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -178,19 +129,9 @@ fi
 # Set commission twice in same epoch
 if should_run_test admin_set_block_commission_reset; then
     # Test with block 5 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[5] u32[0]`
     assert_fail admin_set_block_commission_reset                                                                      \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1043}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x413"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           // Instruction code 6 = SetBlockCommission //                                                              \
-           u8 6                                                                                                       \
-           u16 2000"                                                                                                  \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 2000 \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -202,8 +143,7 @@ if should_run_test admin_set_block_commission_large_change; then
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
     assert admin_set_block_commission_large_change_setup                                                              \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh                 \
-                $ADMIN_PUBKEY 5 0 2000                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 2000 \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -211,8 +151,7 @@ if should_run_test admin_set_block_commission_large_change; then
     sleep_until_next_epoch
     assert_fail admin_set_block_commission_large_change                                                               \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1044}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x414"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh                 \
-                $ADMIN_PUBKEY 5 0 3311                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 3311 \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`

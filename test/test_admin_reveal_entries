@@ -182,48 +182,10 @@ fi
 # Create the block needed for this test
 if [ -z "$TESTS" ]; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
     assert admin_reveal_entries_setup                                                                                 \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                         \
-                $ADMIN_PUBKEY 4 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                        \
-                \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
-        | solxact submit l 2>&1`
-fi
-
-# Incomplete block
-if should_run_test admin_reveal_entries_incomplete_block; then
-    # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
-    assert_fail admin_reveal_entries_incomplete_block                                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $ENTRY_PUBKEY0 w                                                                                   \
-           account $METADATA_PUBKEY0 w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $METADATA_PUBKEY1 w                                                                                \
-           // Instruction code 5 = RevealEntriesData //                                                               \
-           u8 5                                                                                                       \
-           u16 0                                                                                                      \
-           u64 0 1"                                                                                                   \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 4 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -237,54 +199,23 @@ SALT1=1
 SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
 SHA2561=`compute_metadata_sha256 $METADATA1 $SALT1`
 
+# Incomplete block
+if should_run_test admin_reveal_entries_incomplete_block; then
+    # Test with block 4 0
+    assert_fail admin_reveal_entries_incomplete_block                                                                 \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 4 0 0 $SALT0 $SALT1                                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
 # Add entries to block to make it complete but not revealable
 if [ -z "$TESTS" ]; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
-    # Before adding entry 1, create all of the accounts, to ensure that it can still succeed if the accounts
-    # already exist as system accounts
-    transfer $LEDGER/rich_user1.json $MINT_PUBKEY1 0.1
-    transfer $LEDGER/rich_user1.json $ENTRY_PUBKEY1 0.1
-    transfer $LEDGER/rich_user1.json $TOKEN_PUBKEY1 0.1
-    transfer $LEDGER/rich_user1.json $METADATA_PUBKEY1 0.1
     assert admin_set_metadata_bytes_bytes_incomplete_block_setup2                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $ADMIN_PUBKEY ws                                                                                   \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $RENT_SYSVAR_PUBKEY                                                                                \
-           account $ENTRY_PUBKEY0 w                                                                                   \
-           account $MINT_PUBKEY0 w                                                                                    \
-           account $TOKEN_PUBKEY0 w                                                                                   \
-           account $METADATA_PUBKEY0 w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $MINT_PUBKEY1 w                                                                                    \
-           account $TOKEN_PUBKEY1 w                                                                                   \
-           account $METADATA_PUBKEY1 w                                                                                \
-           // Instruction code 3 = AddEntriesToBlockData //                                                           \
-           u8 3                                                                                                       \
-           c_string 200 "http://foo.bar.com"                                                                          \
-           pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
-           u16 0                                                                                                      \
-           sha256 $SHA2560                                                                                            \
-           sha256 $SHA2561"                                                                                           \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 4 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -294,35 +225,10 @@ fi
 # Unrevealable block
 if should_run_test admin_reveal_entries_unrevealable_block; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
     assert_fail admin_reveal_entries_unrevealable_block                                                               \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1008}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f0"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f0"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $ENTRY_PUBKEY0 w                                                                                   \
-           account $METADATA_PUBKEY0 w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $METADATA_PUBKEY1 w                                                                                \
-           // Instruction code 5 = RevealEntriesData //                                                               \
-           u8 5                                                                                                       \
-           u16 0                                                                                                      \
-           u64 0 1"                                                                                                   \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 4 0 0 $SALT0 $SALT1                                                                            \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -332,22 +238,22 @@ fi
 # Buy entry in block to make it revealable and set metadata bytes for both entries
 if [ -z "$TESTS" ]; then
     assert admin_reveal_entries_setup                                                                                 \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh $ADMIN_PUBKEY $RICH_USER1_PUBKEY  \
-                                                                                    4 0 0 \`lamports_from_sol 10000\` \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh $ADMIN_PUBKEY $RICH_USER1_PUBKEY         \
+        4 0 0 \`lamports_from_sol 10000\`                                                                             \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/rich_user1.json                                                                        \
         | solxact submit l 2>&1`
     BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
     BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
     assert admin_reveal_entries_setup2                                                                                \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                   \
-                $ADMIN_PUBKEY 4 0 0 0 $BYTE_0                                                                         \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 4 0 0 0 $BYTE_0                                                                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
     assert admin_reveal_entries_setup3                                                                                \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                   \
-                $ADMIN_PUBKEY 4 0 1 0 $BYTE_1                                                                         \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 4 0 1 0 $BYTE_1                                                                                \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -357,35 +263,10 @@ fi
 # Last entry to reveal exceeds number of entries in block
 if should_run_test admin_reveal_entries_exceed_entries; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
     assert_fail admin_reveal_entries_exceed_entries                                                                   \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1301}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x515"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $ENTRY_PUBKEY0 w                                                                                   \
-           account $METADATA_PUBKEY0 w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $METADATA_PUBKEY1 w                                                                                \
-           // Instruction code 5 = RevealEntriesData //                                                               \
-           u8 5                                                                                                       \
-           u16 1                                                                                                      \
-           u64 0 1"                                                                                                   \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 4 0 1 $SALT0 $SALT1                                                                            \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -509,35 +390,10 @@ fi
 # Mismatched SHA-256
 if should_run_test admin_reveal_entries_mismatched_sha256; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
     assert_fail admin_reveal_entries_mismatched_sha256                                                                \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1014}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f6"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f6"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $ENTRY_PUBKEY0 w                                                                                   \
-           account $METADATA_PUBKEY0 w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $METADATA_PUBKEY1 w                                                                                \
-           // Instruction code 5 = RevealEntriesData //                                                               \
-           u8 5                                                                                                       \
-           u16 0                                                                                                      \
-           u64 $SALT1 $SALT0"                                                                                         \
-        | solxact encode                                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 4 0 0 $SALT1 $SALT0                                                                            \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -547,19 +403,9 @@ fi
 # Success
 if should_run_test admin_reveal_entries_success; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
-
     assert admin_reveal_entries_success                                                                               \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                       \
-                $ADMIN_PUBKEY 4 0 0 $SALT0 $SALT1                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 4 0 0 $SALT0 $SALT1                                                                            \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
@@ -595,19 +441,10 @@ fi
 # Re-revealing already revealed entry
 if should_run_test admin_reveal_entries_rereveal; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[4] u32[0]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY0]`
-    METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY0]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY1]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
-                                                   Pubkey[$MINT_PUBKEY1]`
     assert_fail admin_reveal_entries_rereveal                                                                         \
         'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1009}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f1"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f1"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                 \
-           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                       \
-                $ADMIN_PUBKEY 4 0 0 $SALT0 $SALT1                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 4 0 0 $SALT0 $SALT1                                                                            \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`

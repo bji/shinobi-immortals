@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 # Usage: test.sh [<TEST_TO_RUN>...]
 # If no tests are specified, all tests are run.
 
