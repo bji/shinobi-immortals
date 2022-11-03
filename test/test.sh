@@ -32,4 +32,6 @@ source $SOURCE/test/test_admin_reveal_entries
 
 source $SOURCE/test/test_admin_set_block_commission
 
+source $SOURCE/test/test_admin_split_master_stake
+
 # teardown

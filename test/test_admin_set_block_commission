@@ -150,15 +150,7 @@ fi
 # Success
 if should_run_test admin_set_block_commission_success; then
     # Must wait for at least 1 epoch to pass
-    START_EPOCH=`current_epoch`
-    while true; do
-        echo "Waiting for epoch $START_EPOCH to complete"
-        sleep 5
-        CURRENT_EPOCH=`current_epoch`
-        if [ $CURRENT_EPOCH != $START_EPOCH ]; then
-            break
-        fi
-    done
+    sleep_until_next_epoch
     assert admin_set_block_commission_success                                                                         \
            `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh                 \
                 $ADMIN_PUBKEY 5 0 1000                                                                                \
@@ -208,15 +200,7 @@ fi
 # Change commission by too much
 if should_run_test admin_set_block_commission_large_change; then
     # Must wait for at least 1 epoch to pass
-    START_EPOCH=`current_epoch`
-    while true; do
-        echo "Waiting for epoch $START_EPOCH to complete"
-        sleep 5
-        CURRENT_EPOCH=`current_epoch`
-        if [ $CURRENT_EPOCH != $START_EPOCH ]; then
-            break
-        fi
-    done
+    sleep_until_next_epoch
     assert admin_set_block_commission_large_change_setup                                                              \
            `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh                 \
                 $ADMIN_PUBKEY 5 0 2000                                                                                \
@@ -224,15 +208,7 @@ if should_run_test admin_set_block_commission_large_change; then
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
     # Must wait for at least 1 epoch to pass
-    START_EPOCH=`current_epoch`
-    while true; do
-        echo "Waiting for epoch $START_EPOCH to complete"
-        sleep 5
-        CURRENT_EPOCH=`current_epoch`
-        if [ $CURRENT_EPOCH != $START_EPOCH ]; then
-            break
-        fi
-    done
+    sleep_until_next_epoch
     assert_fail admin_set_block_commission_large_change                                                               \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1044}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x414"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
            `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh                 \

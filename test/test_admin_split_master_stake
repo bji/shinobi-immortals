@@ -1,0 +1,101 @@
+
+# Create an account into which the stake will be split
+solana-keygen new -o $LEDGER/split_into.json --no-bip39-passphrase --force >/dev/null 2>/dev/null
+
+
+# Make sure that the admin has signed the tx
+if should_run_test admin_split_master_stake_no_auth; then
+    assert_fail admin_split_master_stake_no_auth                                                                      \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $LEDGER/split_into.json ws                                                                         \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           // Instruction code 7 = SplitMasterStake //                                                                \
+           u8 7                                                                                                       \
+           u64 100"                                                                                                   \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact sign $LEDGER/split_into.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Bad data size
+if should_run_test admin_split_master_stake_bad_data; then
+    assert_fail admin_split_master_stake_bad_data                                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $MASTER_STAKE_PUBKEY w                                                                             \
+           account $LEDGER/split_into.json ws                                                                         \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           // Instruction code 7 = SplitMasterStake //                                                                \
+           u8 7"                                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/split_into.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Split off too much
+if should_run_test admin_split_master_stake_too_much; then
+    # Figure out how much stake is in there
+    CURRENT_DELEGATION=`solana -u l stake-account $MASTER_STAKE_PUBKEY | grep Balance: | cut -d ' ' -f 2`
+    # Try to split it down to 1 SOL
+    TO_SPLIT=`echo "20 k $CURRENT_DELEGATION 1 - p" | dc -`
+    assert_fail admin_split_master_stake_too_much                                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1303}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x517"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x517"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_split_master_stake_tx.sh                   \
+                $ADMIN_PUBKEY $LEDGER/split_into.json \`lamports_from_sol $TO_SPLIT\`                                 \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/split_into.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Split off everything that can be split.  Supply a pre_merge account to allow this to happen.
+if should_run_test admin_split_master_stake_success; then
+    # Create a pre_merge stake account that will be merged in to ensure that the master stake account is large enough
+    # to split from
+    make_stake_account $LEDGER/admin.json $LEDGER/pre_merge.json 5 finalized
+    # Delegate the pre_merge stake account
+    solana -u l delegate-stake -k $LEDGER/admin.json $LEDGER/pre_merge.json $VOTE_PUBKEY >/dev/null 2>/dev/null
+    # Wait an epoch for the delegated stake to become delegated
+    sleep_until_next_epoch
+    # Wait an epoch for the delegated stake to earn rewards
+    sleep_until_next_epoch
+    # Change its authorities to the program authority so that it can be used for this merge
+    solana -u l -k $LEDGER/admin.json stake-authorize $LEDGER/pre_merge.json                                          \
+           --new-stake-authority $AUTHORITY_PUBKEY --new-withdraw-authority $AUTHORITY_PUBKEY                         \
+           --commitment=finalized >/dev/null 2>/dev/null
+    assert admin_split_master_stake_success                                                                           \
+           `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_split_master_stake_tx.sh                   \
+                $ADMIN_PUBKEY $LEDGER/split_into.json 0 $LEDGER/pre_merge.json                                        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/split_into.json                                                                        \
+        | solxact sign $LEDGER/pre_merge.json                                                                         \
+        | solxact submit l 2>&1`
+fi

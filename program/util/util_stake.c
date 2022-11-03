@@ -63,6 +63,7 @@ typedef struct
 } Stake;
 
 
+// Stake accounts are 200 bytes
 #define STAKE_ACCOUNT_DATA_LEN 200
 
 
@@ -203,8 +204,8 @@ static bool decode_stake_account(const SolAccountInfo *stake_account, Stake *res
 
 
 // Returns the minimum delegation allowed in a stake account in [fill_in].  The number of lamports that must be used
-// to create a stake account must be at least this amount + the rent exempt minimum of a 200 byte account.  Returns 0
-// on success, nonzero on error getting the minimum stake delegation.
+// to create a stake account must be at least this amount + the rent exempt minimum of a STAKE_ACCOUNT_DATA_LEN byte
+// account.  Returns 0 on success, nonzero on error getting the minimum stake delegation.
 static uint64_t get_minimum_stake_delegation(uint64_t *fill_in)
 {
     SolInstruction instruction;
@@ -254,15 +255,15 @@ static uint64_t create_stake_account(SolAccountInfo *stake_account, const SolSig
                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
-    uint64_t rent_exempt_minimum = get_rent_exempt_minimum(200);
+    uint64_t rent_exempt_minimum = get_rent_exempt_minimum(STAKE_ACCOUNT_DATA_LEN);
 
     // Create the pda with the desired lamports
     {
         uint8_t prefix = PDA_Account_Seed_Prefix_Master_Stake;
 
         uint64_t ret = create_pda(stake_account, seeds, seed_count, funding_account_key,
-                                  &(Constants.stake_program_pubkey), rent_exempt_minimum + stake_lamports, 200,
-                                  transaction_accounts, transaction_accounts_len);
+                                  &(Constants.stake_program_pubkey), rent_exempt_minimum + stake_lamports,
+                                  STAKE_ACCOUNT_DATA_LEN, transaction_accounts, transaction_accounts_len);
         if (ret) {
             return ret;
         }
@@ -415,12 +416,12 @@ static uint64_t move_stake_signed(const SolPubkey *from_account_key, SolAccountI
                                   const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute rent exempt minimum for a stake account
-    uint64_t rent_exempt_minimum = get_rent_exempt_minimum(200);
+    uint64_t rent_exempt_minimum = get_rent_exempt_minimum(STAKE_ACCOUNT_DATA_LEN);
 
     // Create the bridge account as a PDA to ensure that it exist with proper ownership
     uint64_t ret = create_pda(bridge_account, bridge_seeds, bridge_seeds_count, funding_account_key,
-                              &(Constants.stake_program_pubkey), rent_exempt_minimum, 200, transaction_accounts,
-                              transaction_accounts_len);
+                              &(Constants.stake_program_pubkey), rent_exempt_minimum, STAKE_ACCOUNT_DATA_LEN,
+                              transaction_accounts, transaction_accounts_len);
     if (ret) {
         return ret;
     }
@@ -518,28 +519,68 @@ static uint64_t move_stake_signed(const SolPubkey *from_account_key, SolAccountI
 }
 
 
-static uint64_t split_master_stake_signed(const SolPubkey *to_account_key, uint64_t lamports,
-                                          const SolPubkey *funding_account_key,
-                                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static uint64_t split_master_stake_signed(const SolPubkey *admin_account_key, SolAccountInfo *master_stake_account,
+                                          const SolAccountInfo *pre_merge_account, SolAccountInfo *split_into_account,
+                                          uint64_t lamports, const SolAccountInfo *transaction_accounts,
+                                          int transaction_accounts_len)
 {
-    // Create the to_account using the system program
-    uint64_t ret = create_system_account(to_account_key, funding_account_key, &(Constants.stake_program_pubkey), 200,
-                                         get_rent_exempt_minimum(200), transaction_accounts, transaction_accounts_len);
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.stake_program_pubkey);
+
+    // Seed needs to be that of the authority
+    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+
+    // If pre_merge_account is provided, then it must be merged into the master stake account first
+
+    if (pre_merge_account) {
+        SolAccountMeta account_metas[] =
+              // `[WRITE]` Destination stake account for the merge
+            { { /* pubkey */ &(Constants.master_stake_pubkey), /* is_writable */ true, /* is_signer */ false },
+              // `[WRITE]` Source stake account for to merge.  This account will be drained
+              { /* pubkey */ (SolPubkey *) pre_merge_account->key, /* is_writable */ true, /* is_signer */ false },
+              // `[]` Clock sysvar
+              { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
+              // `[]` Stake history sysvar that carries stake warmup/cooldown history
+              { /* pubkey */ &(Constants.stake_history_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
+              // `[SIGNER]` Stake authority
+              { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+
+        instruction.accounts = account_metas;
+        instruction.account_len = ARRAY_LEN(account_metas);
+
+        uint32_t data = 7; // Merge
+
+        instruction.data = (uint8_t *) &data;
+        instruction.data_len = sizeof(data);
+
+        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len,
+                                         &signer_seeds, 1);
+        if (ret) {
+            return ret;
+        }
+    }
+
+    uint64_t rent_exempt_minimum = get_rent_exempt_minimum(STAKE_ACCOUNT_DATA_LEN);
+
+    // Create the stake account with the correct size and with the stake program as owner.  The stake account must
+    // be a signer of this transaction.
+    uint64_t ret = create_system_account(split_into_account, admin_account_key, &(Constants.stake_program_pubkey),
+                                         STAKE_ACCOUNT_DATA_LEN, rent_exempt_minimum,
+                                         transaction_accounts, transaction_accounts_len);
     if (ret) {
         return ret;
     }
 
     // Now use the stake program to split
 
-    SolInstruction instruction;
-
-    instruction.program_id = &(Constants.stake_program_pubkey);
-
     SolAccountMeta account_metas[] =
           // `[WRITE]` Stake account to be split; must be in the Initialized or Stake state
         { { /* pubkey */ &(Constants.master_stake_pubkey), /* is_writable */ true, /* is_signer */ false },
           // `[WRITE]` Uninitialized stake account that will take the split-off amount
-          { /* pubkey */ (SolPubkey *) to_account_key, /* is_writable */ true, /* is_signer */ false },
+          { /* pubkey */ split_into_account->key, /* is_writable */ true, /* is_signer */ false },
           // `[SIGNER]` Stake authority
           { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
 
@@ -554,18 +595,16 @@ static uint64_t split_master_stake_signed(const SolPubkey *to_account_key, uint6
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    // Seed needs to be that of the authority
-    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
-    SolSignerSeeds signer_seeds = { &seed, 1 };
-
     ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
     if (ret) {
         return ret;
     }
 
-    // Now re-assign authorities of the new account to the funding account
-    return set_stake_authorities_signed(to_account_key, funding_account_key, transaction_accounts,
+    // The merge in has added undelegated SOL into the master stake account; but it does not seem possible to
+    // withdraw that, so it will accumulate
+
+    // Now re-assign authorities of the new account to the admin account
+    return set_stake_authorities_signed(split_into_account->key, admin_account_key, transaction_accounts,
                                         transaction_accounts_len);
 }
 

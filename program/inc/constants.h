@@ -64,7 +64,9 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Block = 14,
 
-    PDA_Account_Seed_Prefix_Entry = 15
+    PDA_Account_Seed_Prefix_Entry = 15,
+
+    PDA_Account_Seed_Prefix_Master_Split = 16
 
 } PDA_Account_Seed_Prefix;
 

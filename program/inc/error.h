@@ -143,6 +143,9 @@ typedef enum
     // Attempt to add entries to an already complete block
     Error_BlockAlreadyComplete                         = 1053,
 
+    // Invalid attempt to resize an account
+    Error_InvalidResize                                = 1054,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

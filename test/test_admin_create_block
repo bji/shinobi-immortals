@@ -710,3 +710,55 @@ if should_run_test admin_create_block_again; then
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
 fi
+
+
+# Now test creating a block where the block account already exists, to ensure that it is not disrupted
+if should_run_test admin_create_block_already_exists; then
+    # Test with block 0 1
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[0] u32[1]`
+    transfer $LEDGER/rich_user1.json $BLOCK_PUBKEY 0.1
+    assert admin_create_block_already_exists                                                                          \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                     \
+           u8 2                                                                                                       \
+           // Commission //                                                                                           \
+           u16 0                                                                                                      \
+           // Block Configuration //                                                                                  \
+           struct [                                                                                                   \
+           // Group Number //                                                                                         \
+           u32 0                                                                                                      \
+           // Block Number //                                                                                         \
+           u32 1                                                                                                      \
+           // Total Entry Count //                                                                                    \
+           u16 10                                                                                                     \
+           // Total Mystery Count //                                                                                  \
+           u16 5                                                                                                      \
+           // Mystery Phase Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Mystery Start Price Lamports //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Reveal Period Duration //                                                                               \
+           u32 $((24*60*60))                                                                                          \
+           // Minimum Price Lamports //                                                                               \
+           u64 \`lamports_from_sol 1\`                                                                                \
+           // Has Auction //                                                                                          \
+           bool false                                                                                                 \
+           // Duration (bad, must be nonzero) //                                                                      \
+           u32 $((24*60*60))                                                                                          \
+           // Final Start Price Lamports  //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                             \
+           // Whitelist Duration //                                                                                   \
+           u32 0                                                                                                      \
+           ]"                                                                                                         \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi

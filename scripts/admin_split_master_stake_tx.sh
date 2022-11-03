@@ -10,7 +10,7 @@ function require ()
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: admin_split_master_stake_tx.sh <ADMIN_PUBKEY> <TARGET_STAKE_PUBKEY> <LAMPORTS_TO_SPLIT>
+Usage: admin_split_master_stake_tx.sh <ADMIN_PUBKEY> <INTO_STAKE_PUBKEY> <LAMPORTS_TO_SPLIT> [<PRE_MERGE_STAKE_PUBKEY>]
 
 EOF
         exit 1
@@ -23,11 +23,12 @@ function pda ()
 }
 
 ADMIN_PUBKEY=$1
-TARGET_STAKE_PUBKEY=$2
+INTO_STAKE_PUBKEY=$2
 LAMPORTS_TO_SPLIT=$3
+PRE_MERGE_STAKE_PUBKEY=$4
 
 require $ADMIN_PUBKEY
-require $TARGET_STAKE_PUBKEY
+require $INTO_STAKE_PUBKEY
 require $LAMPORTS_TO_SPLIT
 
 if [ -e "$ADMIN_PUBKEY" ]; then
@@ -37,6 +38,7 @@ fi
 if [ -z "$SELF_PROGRAM_PUBKEY" ]; then
     SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
 fi
+
 
 # Compute pubkeys
 
@@ -63,6 +65,14 @@ STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
                                   Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                                    \
                                   Pubkey[$BID_MARKER_MINT_PUBKEY])
 
+ 
+if [ -n "$PRE_MERGE_STAKE_PUBKEY" ]; then
+    PRE_MERGE_STAKE_PUBKEY="$PRE_MERGE_STAKE_PUBKEY w"
+else
+    PRE_MERGE_STAKE_PUBKEY=$SYSTEM_PROGRAM_PUBKEY
+fi
+
+
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $ADMIN_PUBKEY                                                                                       \
@@ -70,11 +80,13 @@ solxact encode                                                                  
         account $CONFIG_PUBKEY                                                                                        \
         account $ADMIN_PUBKEY s                                                                                       \
         account $MASTER_STAKE_PUBKEY w                                                                                \
-        account $TARGET_STAKE_PUBKEY w                                                                                \
+        account $INTO_STAKE_PUBKEY ws                                                                                 \
+        account $PRE_MERGE_STAKE_PUBKEY                                                                               \
         account $AUTHORITY_PUBKEY                                                                                     \
         account $CLOCK_SYSVAR_PUBKEY                                                                                  \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $STAKE_PROGRAM_PUBKEY                                                                                 \
+        account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
         // Instruction code 7 = SplitMasterStake //                                                                   \
         u8 7                                                                                                          \
-        u64 $LAMPORTS_TO_SPLIT
+        u64 $LAMPORTS_TO_SPLIT                                                                                        

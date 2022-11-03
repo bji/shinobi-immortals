@@ -144,7 +144,7 @@ function make_stake_account ()
 {
     local AUTHORITY_KEY_FILE=$1
     local STAKE_KEY_FILE=$2
-    local LAMPORTS=$3
+    local SOL=$3
 
     if [ -n "$4" ]; then
         local COMMITMENT="--commitment finalized"
@@ -152,11 +152,11 @@ function make_stake_account ()
         local COMMITMENT=
     fi
     
-    echo "Creating stake account @ $STAKE_KEY_FILE authority $AUTHORITY_KEY_FILE with lamports $LAMPORTS"
+    echo "Creating stake account @ $STAKE_KEY_FILE authority $AUTHORITY_KEY_FILE with lamports $SOL"
 
-    solana-keygen new -o $STAKE_KEY_FILE --no-bip39-passphrase >/dev/null 2>/dev/null
+    solana-keygen new -o $STAKE_KEY_FILE --no-bip39-passphrase --force >/dev/null 2>/dev/null
 
-    solana -u l create-stake-account -k $AUTHORITY_KEY_FILE $STAKE_KEY_FILE $LAMPORTS $COMMITMENT >/dev/null 2>/dev/null
+    solana -u l create-stake-account -k $AUTHORITY_KEY_FILE $STAKE_KEY_FILE $SOL $COMMITMENT >/dev/null 2>/dev/null
 }
 
 
@@ -223,6 +223,20 @@ function current_epoch ()
 }
 
 
+function sleep_until_next_epoch ()
+{
+    START_EPOCH=`current_epoch`
+    while true; do
+        echo "Waiting for epoch $START_EPOCH to complete"
+        sleep 5
+        CURRENT_EPOCH=`current_epoch`
+        if [ $CURRENT_EPOCH != $START_EPOCH ]; then
+            break
+        fi
+    done
+}
+
+
 function setup ()
 {
     # Make a temporary directory to hold the validator ledger
@@ -275,7 +289,7 @@ function setup ()
     solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
            --commitment finalized >/dev/null 2>/dev/null
 
-#    export LEDGER=/tmp/tmp.hD8ewnrMkU
+#    export LEDGER=/tmp/tmp.z3GQr4q6vN
     
 # Compute pubkeys
 
@@ -287,7 +301,6 @@ function setup ()
     export            POOR_USER_PUBKEY=`solpda -pubkey $LEDGER/poor_user.json`
     export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated_stake.json`
     export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated_stake.json`
-
     export       SYSTEM_PROGRAM_PUBKEY=`echo 11111111111111111111111111111111`
     export    SPL_TOKEN_PROGRAM_PUBKEY=`echo TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
     export       SPLATA_PROGRAM_PUBKEY=`echo ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`

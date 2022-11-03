@@ -250,6 +250,12 @@ if [ -z "$TESTS" ]; then
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY1]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
+    # Before adding entry 1, create all of the accounts, to ensure that it can still succeed if the accounts
+    # already exist as system accounts
+    transfer $LEDGER/rich_user1.json $MINT_PUBKEY1 0.1
+    transfer $LEDGER/rich_user1.json $ENTRY_PUBKEY1 0.1
+    transfer $LEDGER/rich_user1.json $TOKEN_PUBKEY1 0.1
+    transfer $LEDGER/rich_user1.json $METADATA_PUBKEY1 0.1
     assert admin_set_metadata_bytes_bytes_incomplete_block_setup2                                                     \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \

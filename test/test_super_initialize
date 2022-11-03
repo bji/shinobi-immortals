@@ -980,7 +980,7 @@ fi
 if should_run_test super_initialize_insufficent_lamports; then
     transfer_all_except $LEDGER/super.json $LEDGER/admin.json 0.01
     assert_fail super_initialize_insufficient_lamports                                                                \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Transfer: insufficient lamports REDACTED, need REDACTED","Program REDACTED failed: custom program error: 0x1","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x1"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Transfer: insufficient lamports REDACTED, need REDACTED","Program REDACTED failed: custom program error: 0x1","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x1"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                                                                                  \
     `echo "encoding c                                                                                                 \
            fee_payer $SUPERUSER_PUBKEY                                                                                \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -1018,6 +1018,8 @@ fi
 # This test cannot be skipped since the creation of a config account is a prerequisite for all other tests
 # Except if a test is requested, it is assumed that this is not needed
 if [ -z "$TESTS" ]; then
+    # Send lamports to the config account, to ensure that if the account already exists, it is properly re-owned
+    transfer $LEDGER/admin.json $CONFIG_PUBKEY 0.1
     assert super_initialize_success                                                                                   \
     `echo "encoding c                                                                                                 \
            fee_payer $SUPERUSER_PUBKEY                                                                                \

@@ -252,7 +252,7 @@ if should_run_test admin_add_entries_to_block_bad_entry; then
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
     assert_fail admin_add_entries_to_block_bad_entry                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Create Metadata Accounts v2","Program REDACTED Transfer 5616720 lamports to the new account","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED Allocate space for the account","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED Assign the account to the owning program","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Sign Metadata","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: SetAuthority","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                                                                 \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Create Metadata Accounts v2","Program REDACTED Transfer 5616720 lamports to the new account","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED Allocate space for the account","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED Assign the account to the owning program","Program REDACTED invoke [3]","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Sign Metadata","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: SetAuthority","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                                                                             \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -279,7 +279,6 @@ if should_run_test admin_add_entries_to_block_bad_entry; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 0                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of hi\`                                                                                    \
            sha256 \`sha256_of there\`"                                                                                \
         | solxact encode                                                                                              \
@@ -332,7 +331,6 @@ if should_run_test admin_add_entries_to_block_bad_entry_mint; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 0                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of hi\`                                                                                    \
            sha256 \`sha256_of there\`"                                                                                \
         | solxact encode                                                                                              \
@@ -357,7 +355,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_token; then
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
     assert_fail admin_add_entries_to_block_bad_entry_token                                                            \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1005}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ed"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ed"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                                                      \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -384,7 +382,6 @@ if should_run_test admin_add_entries_to_block_bad_entry_token; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 0                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of hi\`                                                                                    \
            sha256 \`sha256_of there\`"                                                                                \
         | solxact encode                                                                                              \
@@ -410,7 +407,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_metadata; then
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                  \
                                                    Pubkey[$MINT_PUBKEY1]`
     assert_fail admin_add_entries_to_block_bad_entry_metadata                                                         \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":5}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Create Metadata Accounts v2","Program REDACTED Metadatas key must match seed of [metadata, program id, mint] provided","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x5","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x5"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x5"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                        \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":5}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeMint2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: Create Metadata Accounts v2","Program REDACTED Metadatas key must match seed of [metadata, program id, mint] provided","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x5","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x5"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x5"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                    \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -437,7 +434,6 @@ if should_run_test admin_add_entries_to_block_bad_entry_metadata; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 0                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of hi\`                                                                                    \
            sha256 \`sha256_of there\`"                                                                                \
         | solxact encode                                                                                              \
@@ -487,7 +483,6 @@ if [ -z "$TESTS" ]; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 0                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 0\`                                                                                     \
            sha256 \`sha256_of 1\`"                                                                                    \
         | solxact encode                                                                                              \
@@ -530,7 +525,6 @@ if [ -z "$TESTS" ]; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 2                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 2\`                                                                                     \
            sha256 \`sha256_of 3\`"                                                                                    \
         | solxact encode                                                                                              \
@@ -573,7 +567,6 @@ if [ -z "$TESTS" ]; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 4                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 4\`                                                                                     \
            sha256 \`sha256_of 5\`"                                                                                    \
         | solxact encode                                                                                              \
@@ -616,13 +609,13 @@ if [ -z "$TESTS" ]; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 6                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 6\`                                                                                     \
            sha256 \`sha256_of 7\`"                                                                                    \
         | solxact encode                                                                                              \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
+
     MINT_PUBKEY8=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[8]`
     ENTRY_PUBKEY8=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY8]`
     TOKEN_PUBKEY8=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY8]`
@@ -650,7 +643,6 @@ if [ -z "$TESTS" ]; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 8                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 8\`"                                                                                    \
         | solxact encode                                                                                              \
         | solxact hash l                                                                                              \
@@ -700,7 +692,6 @@ if should_run_test admin_add_entries_to_block_too_many_entries; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 9                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 9\`                                                                                     \
            sha256 \`sha256_of a\`"                                                                                    \
         | solxact encode                                                                                              \
@@ -742,7 +733,6 @@ if [ -z "$TESTS" ]; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 9                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 9\`"                                                                                    \
         | solxact encode                                                                                              \
         | solxact hash l                                                                                              \
@@ -937,7 +927,6 @@ if should_run_test admin_add_entries_to_block_already_complete; then
            c_string 200 "http://foo.bar.com"                                                                          \
            pubkey $SYSTEM_PROGRAM_PUBKEY                                                                              \
            u16 3                                                                                                      \
-           // But there are three entry SHA256 provided here //                                                       \
            sha256 \`sha256_of 3 again\`"                                                                              \
         | solxact encode                                                                                              \
         | solxact hash l                                                                                              \
