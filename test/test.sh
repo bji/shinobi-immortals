@@ -36,4 +36,6 @@ source $SOURCE/test/test_admin_set_block_commission
 
 source $SOURCE/test/test_admin_split_master_stake
 
+source $SOURCE/test/test_admin_add_whitelist_entries
+
 # teardown

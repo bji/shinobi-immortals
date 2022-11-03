@@ -4,6 +4,7 @@ function usage_exit ()
 {
     echo "Usage: show.sh [-u $RPC_SPECIFIER] config"
     echo "       show.sh [-u $RPC_SPECIFIER] block <GROUP_NUMBER> <BLOCK_NUMBER>"
+    echo "       show.sh [-u $RPC_SPECIFIER] whitelist <GROUP_NUMBER> <BLOCK_NUMBER>"
     echo "       show.sh [-u $RPC_SPECIFIER] entry <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>"
     echo
     echo "RPC_SPECIFIER, if provided, is either a URL, or a mnemonic:"
@@ -434,6 +435,66 @@ case $1 in
         done
 
         echo ']}'
+    ;;
+
+    whitelist)
+
+        shift
+        
+        if [ -z "$1" -o -z "$2" -o -n "$3" ]; then
+            usage_exit
+        fi
+
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+
+        WHITELIST_PUBKEY=`pda $PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+        
+        ACCOUNT_DATA=`get_account_data $RPC_URL $WHITELIST_PUBKEY`
+
+        if [ -z "$ACCOUNT_DATA" ]; then
+            echo "Whitelist account for $1 $2 does not exist"
+            echo $BLOCK_PUBKEY
+            echo $WHITELIST_PUBKEY
+            exit 1
+        fi
+
+        ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
+
+        if [ $ACCOUNT_DATA_LEN -ne 9608 ]; then
+            echo "Whitelist account has invalid size $ACCOUNT_DATA_LEN, expected 9608"
+            exit 1
+        fi
+
+        DATA_TYPE=`get_data_u32 0 "$ACCOUNT_DATA"`
+
+        if [ "0$DATA_TYPE" -ne 5 ]; then
+            echo "Invalid data type: $DATA_TYPE"
+            exit 1
+        fi
+
+        LIST_COUNT=`get_data_u16 4 "$ACCOUNT_DATA"`
+
+        if [ "0$LIST_COUNT" -eq 0 -o "0$LIST_COUNT" -gt 300 ]; then
+            echo "Invalid list count: $LIST_COUNT"
+            exit 1
+        fi
+
+        echo -n '{'
+
+        echo -n '"block_pubkey":"'$BLOCK_PUBKEY'",'
+        
+        echo -n '"whitelist_pubkey":"'$WHITELIST_PUBKEY'",'
+
+        echo -n '"whitelisted_pubkeys":['
+
+        for i in `seq 1 $LIST_COUNT`; do
+            if [ $i -gt 1 ]; then
+                echo -n ","
+            fi
+            echo -n '"'`get_data_pubkey $((32*$i-26)) "$ACCOUNT_DATA"`'"'
+        done
+
+        echo -n ']}'
     ;;
 
     entry)
