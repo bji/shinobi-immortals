@@ -1,0 +1,111 @@
+
+# Make sure that the admin has signed the tx
+if should_run_test admin_delete_whitelist_no_auth; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[7] u32[0]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    assert_fail admin_delete_whitelist_no_auth                                                                       \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $RICH_USER1_PUBKEY ws                                                                              \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $WHITELIST_PUBKEY w                                                                                \
+           // Instruction code 9 = DeleteWhitelist //                                                                 \
+           u8 9"                                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Wrong block
+if should_run_test admin_delete_whitelist_wrong_block; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[7] u32[0]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    assert_fail admin_delete_whitelist_wrong_block                                                                    \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1048}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x418"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $WHITELIST_PUBKEY w                                                                                \
+           // Instruction code 9 = DeleteWhitelist //                                                                 \
+           u8 9"                                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+# Wrong whitelist
+if should_run_test admin_delete_whitelist_wrong_whitelist; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[7] u32[0]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    assert_fail admin_delete_whitelist_wrong_whitelist                                                                \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1048}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x418"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $ADMIN_PUBKEY                                                                                    \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY ws                                                                                   \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $CONFIG_PUBKEY w                                                                                   \
+           // Instruction code 9 = DeleteWhitelist //                                                                 \
+           u8 9"                                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+# Delete whitelist in progress
+if should_run_test admin_delete_whitelist_in_progress; then
+    # Make a whitelist
+    assert admin_delete_whitelist_in_progress_setup                                                                   \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                       \
+         $ADMIN_PUBKEY 7 0 $RICH_USER1_PUBKEY                                                                         \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # Make the block for that whitelist
+    assert admin_delete_whitelist_in_progress_setup_2                                                                 \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 7 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 12                                    \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # Add the block's entries to start the block timestamp, which then puts the whitelist into use
+    assert admin_delete_whitelist_in_progress_setup_3                                                                 \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 7 0 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                                \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # Get the current t, then wait until the whitelist period has passed.
+    START_BLOCK_TIME=`current_block_time`
+    # Delete the whitelist, fails because the non-empty whitelist is still in use
+    assert_fail admin_delete_whitelist_in_progress                                                                    \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1051}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x41b"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41b"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_delete_whitelist_tx.sh                            \
+         $ADMIN_PUBKEY 7 0                                                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # Wait 13 seconds, which is which will cause the whitelist to become deletable as it will no longer be in effect
+    wait_for_block_time $((START_BLOCK_TIME+13))
+    # Delete the whitelist, succeeds because the non-empty whitelist is no longer in use
+    assert admin_delete_whitelist_after_end                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_delete_whitelist_tx.sh                            \
+         $ADMIN_PUBKEY 7 0                                                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi

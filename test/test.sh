@@ -38,4 +38,6 @@ source $SOURCE/test/test_admin_split_master_stake
 
 source $SOURCE/test/test_admin_add_whitelist_entries
 
+source $SOURCE/test/test_admin_delete_whitelist
+
 # teardown

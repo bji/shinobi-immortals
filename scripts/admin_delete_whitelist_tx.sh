@@ -76,7 +76,7 @@ solxact encode                                                                  
         fee_payer $ADMIN_PUBKEY                                                                                       \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
         account $CONFIG_PUBKEY                                                                                        \
-        account $ADMIN_PUBKEY s                                                                                       \
+        account $ADMIN_PUBKEY ws                                                                                      \
         account $BLOCK_PUBKEY                                                                                         \
         account $WHITELIST_PUBKEY w                                                                                   \
         // Instruction code 9 = DeleteWhitelist //                                                                    \

@@ -26,6 +26,21 @@ function sanitize_output ()
 }
 
 
+function wait_for_block_time ()
+{
+    local end=$1
+
+    while true; do
+        local now=`current_block_time`
+        if [ "0$now" -gt "0$end" ]; then
+            break
+        fi
+        echo "Waiting for $(($end-$now)) more seconds"
+        sleep 3
+    done
+}
+
+
 function transfer ()
 {
     local FROM=$1
@@ -218,8 +233,13 @@ function pubkey_binary ()
 # The solana command is messed up and sometimes epoch-info fails
 function current_epoch ()
 {
-    SLOT=`solana -u l block | grep ^Slot: | cut -d ' ' -f 2`
-    echo "$SLOT 100 / p" | dc -
+    solana -u l epoch-info | grep ^Epoch: | cut -d ' ' -f 2
+}
+
+
+function current_block_time ()
+{
+    solana -u l block-time --output=json | jq .timestamp
 }
 
 
@@ -231,6 +251,8 @@ function sleep_until_next_epoch ()
         sleep 5
         CURRENT_EPOCH=`current_epoch`
         if [ $CURRENT_EPOCH != $START_EPOCH ]; then
+            echo "Waiting for epoch $START_EPOCH to complete"
+            sleep 5
             break
         fi
     done
@@ -244,7 +266,7 @@ function setup ()
 
     echo "Starting test validator @ $LEDGER"
     
-    solana-test-validator --ledger $LEDGER --ticks-per-slot 20 --slots-per-epoch 100                                  \
+    solana-test-validator --ledger $LEDGER --ticks-per-slot 16 --slots-per-epoch 100                                  \
                           -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s       \
                           -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT >/dev/null 2>/dev/null &
 
@@ -289,7 +311,7 @@ function setup ()
     solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
            --commitment finalized >/dev/null 2>/dev/null
 
-#    export LEDGER=/tmp/tmp.z3GQr4q6vN
+#    export LEDGER=/tmp/tmp.f3fEUgTwYw
     
 # Compute pubkeys
 

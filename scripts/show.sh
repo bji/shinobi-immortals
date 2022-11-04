@@ -453,8 +453,6 @@ case $1 in
 
         if [ -z "$ACCOUNT_DATA" ]; then
             echo "Whitelist account for $1 $2 does not exist"
-            echo $BLOCK_PUBKEY
-            echo $WHITELIST_PUBKEY
             exit 1
         fi
 
