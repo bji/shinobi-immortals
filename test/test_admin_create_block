@@ -582,6 +582,7 @@ if should_run_test admin_create_block_success; then
     "block_number": 0,
     "total_entry_count": 10,
     "total_mystery_count": 5,
+    "mystery_phase_duration": 86400,
     "mystery_start_price": 1000,
     "reveal_period_duration": 86400,
     "reveal_period_duration_display": "1 day 0 hr 0 min 0.00 sec",

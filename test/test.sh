@@ -40,4 +40,6 @@ source $SOURCE/test/test_admin_add_whitelist_entries
 
 source $SOURCE/test/test_admin_delete_whitelist
 
+source $SOURCE/test/test_user_buy
+
 # teardown

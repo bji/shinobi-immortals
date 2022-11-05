@@ -228,18 +228,16 @@ static uint64_t create_associated_token_account_idempotent(const SolAccountInfo 
                                                            const SolAccountInfo *transaction_accounts,
                                                            int transaction_accounts_len)
 {
-    if (*(token_account->lamports) > 0) {
-        // Make sure that this is a token account for the given mint, doesn't need to have any tokens in it though
-        if (is_token_owner(token_account, owner_key, mint_key, 0)) {
-            // Already exists as a valid account
-            return 0;
-        }
-
-        // The account that was passed in was not the proper token account for the given account address
+    // If the token account already existed, then if it isn't owned by the system account, then it must be a token
+    // account for the given mint and owned by owner_key.
+    if ((*(token_account->lamports) > 0) &&
+        !is_system_program(token_account->owner) &&
+        !is_token_owner(token_account, owner_key, mint_key, 0)) {
         return Error_InvalidTokenAccount;
     }
 
-    // Use the Associated Token Account program to create the token account
+    // Otherwise the account didn't exist, or was owned by the system program, so create it using the Associated Token
+    // Account program to create the token account
     SolInstruction instruction;
 
     instruction.program_id = &(Constants.spl_associated_token_account_program_pubkey);
@@ -261,8 +259,10 @@ static uint64_t create_associated_token_account_idempotent(const SolAccountInfo 
     instruction.accounts = account_metas;
     instruction.account_len = ARRAY_LEN(account_metas);
 
-    instruction.data = (uint8_t *) 0;
-    instruction.data_len = 0;
+    // CreateIdempotent instruction
+    uint8_t one = 1;
+    instruction.data = &one;
+    instruction.data_len = sizeof(one);
 
     return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }

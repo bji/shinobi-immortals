@@ -52,6 +52,14 @@ function transfer ()
 }
 
 
+function account_balance ()
+{
+    local ACCOUNT=$1
+
+    solana balance -u l $ACCOUNT | cut -d ' ' -f 1    
+}
+
+
 # Assumes $FROM is the fee payer
 function transfer_all_except ()
 {
@@ -62,7 +70,7 @@ function transfer_all_except ()
     # Add 0.000005 to account for tx fee
     EXCEPT_SOL=`echo "20 k $EXCEPT_SOL 0.000005 + p" | dc`
 
-    CURRENT_SOL=`solana balance -u l $FROM | cut -d ' ' -f 1`
+    CURRENT_SOL=`account_balance $FROM`
 
     DIFF=`echo "20 k $CURRENT_SOL $EXCEPT_SOL - p" | dc`
 
@@ -172,6 +180,16 @@ function make_stake_account ()
     solana-keygen new -o $STAKE_KEY_FILE --no-bip39-passphrase --force >/dev/null 2>/dev/null
 
     solana -u l create-stake-account -k $AUTHORITY_KEY_FILE $STAKE_KEY_FILE $SOL $COMMITMENT >/dev/null 2>/dev/null
+}
+
+
+function get_splata_account ()
+{
+    local mint=$1
+    local user=$2
+
+    solpda "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" Pubkey[$user] Pubkey[$SPL_TOKEN_PROGRAM_PUBKEY]             \
+           Pubkey[$mint] | cut -d '.' -f 1
 }
 
 
@@ -287,7 +305,7 @@ function setup ()
     make_funded_keypair $LEDGER/admin.json 100000
     make_funded_keypair $LEDGER/rich_user1.json 100000
     make_funded_keypair $LEDGER/rich_user2.json 100000
-    make_funded_keypair $LEDGER/poor_user.json 1
+    make_funded_keypair $LEDGER/poor_user.json 0.01
     make_funded_keypair $LEDGER/nonexistent_user.json 0 finalized
 
     # Build the program
@@ -311,7 +329,7 @@ function setup ()
     solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
            --commitment finalized >/dev/null 2>/dev/null
 
-#    export LEDGER=/tmp/tmp.f3fEUgTwYw
+#    export LEDGER=/tmp/tmp.sHtoUSITwB
     
 # Compute pubkeys
 

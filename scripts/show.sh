@@ -6,6 +6,7 @@ function usage_exit ()
     echo "       show.sh [-u $RPC_SPECIFIER] block <GROUP_NUMBER> <BLOCK_NUMBER>"
     echo "       show.sh [-u $RPC_SPECIFIER] whitelist <GROUP_NUMBER> <BLOCK_NUMBER>"
     echo "       show.sh [-u $RPC_SPECIFIER] entry <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>"
+    echo "       show.sh [-u $RPC_SPECIFIER] metaplex <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>"
     echo
     echo "RPC_SPECIFIER, if provided, is either a URL, or a mnemonic:"
     echo "l, localhost : http://localhost:8899"
@@ -16,7 +17,6 @@ function usage_exit ()
     echo "If RPC_SPECIFIER is not provided, the default is \"mainnet\"."
     exit 1
 }
-
 
 function pda ()
 {
@@ -168,7 +168,6 @@ function get_account_data ()
     fi
 }
 
-
 # Given base64 data $2 (as loaded by get_account_data), returns the numeric u8 value at offset $1
 function get_data_u8 ()
 {
@@ -176,7 +175,6 @@ function get_data_u8 ()
     
     echo "$2" | base64 -d | od -An -j$offset -N1 -tu1 -v | tr -d [:space:]
 }
-
 
 # Given base64 data $2 (as loaded by get_account_data), returns the numeric u16 value at offset $1
 function get_data_u16 ()
@@ -186,7 +184,6 @@ function get_data_u16 ()
     echo "$2" | base64 -d | od -An -j$offset -N2 -tu2 -v | tr -d [:space:]
 }
 
-
 # Given base64 data $2 (as loaded by get_account_data), returns the numeric u32 value at offset $1
 function get_data_u32 ()
 {
@@ -195,13 +192,24 @@ function get_data_u32 ()
     echo "$2" | base64 -d | od -An -j$offset -N4 -tu4 -v | tr -d [:space:]
 }
 
-
 # Given base64 data $2 (as loaded by get_account_data), returns the numeric u64 value at offset $1
 function get_data_u64 ()
 {
     local offset=$1
     
     echo "$2" | base64 -d | od -An -j$offset -N8 -tu8 -v | tr -d [:space:]
+}
+
+# Given base64 data $2 (as loaded by get_account_data), returns the bool value at offset $1
+function get_data_bool ()
+{
+    local bv=`get_data_u8 $1 "$2"`
+
+    if [ "0$bv" -eq 0 ]; then
+        echo false
+    else
+        echo true
+    fi
 }
 
 # Given base64 data $2 (as loaded by get_account_data), returns the pubkey value at offset $1 (as Base58 string)
@@ -344,9 +352,15 @@ case $1 in
         
         echo -n '"total_entry_count":'$TOTAL_ENTRY_COUNT','
 
-        echo -n '"total_mystery_count":'`get_data_u16 18 "$ACCOUNT_DATA"`','
+        MYSTERY_COUNT=`get_data_u16 18 "$ACCOUNT_DATA"`
 
-        echo -n '"mystery_start_price":'`to_sol \`get_data_u64 24 "$ACCOUNT_DATA"\``','
+        echo -n '"total_mystery_count":'$MYSTERY_COUNT','
+
+        if [ "0$MYSTERY_COUNT" -ne 0 ]; then
+            echo -n '"mystery_phase_duration":'`get_data_u32 20 "$ACCOUNT_DATA"`','
+
+            echo -n '"mystery_start_price":'`to_sol \`get_data_u64 24 "$ACCOUNT_DATA"\``','
+        fi
         
         DURATION=`get_data_u32 32 "$ACCOUNT_DATA"`
         
@@ -383,15 +397,18 @@ case $1 in
         if [ "0$TIMESTAMP" -ne 0 ]; then
             echo -n '"block_start_timestamp_display":"'`to_timestamp $TIMESTAMP`'",'
         fi
+
+        if [ "0$MYSTERY_COUNT" -ne 0 ]; then
         
-        echo -n '"mysteries_sold_count":'`get_data_u16 88 "$ACCOUNT_DATA"`','
+            echo -n '"mysteries_sold_count":'`get_data_u16 88 "$ACCOUNT_DATA"`','
 
-        TIMESTAMP=`get_data_u64 96 "$ACCOUNT_DATA"`
+            TIMESTAMP=`get_data_u64 96 "$ACCOUNT_DATA"`
 
-        echo -n '"mystery_phase_end_timestamp":'$TIMESTAMP','
+            echo -n '"mystery_phase_end_timestamp":'$TIMESTAMP','
 
-        if [ "0$TIMESTAMP" -ne 0 ]; then
-            echo -n '"mystery_phase_end_timestamp_display":"'`to_timestamp $TIMESTAMP`'",'
+            if [ "0$TIMESTAMP" -ne 0 ]; then
+                echo -n '"mystery_phase_end_timestamp_display":"'`to_timestamp $TIMESTAMP`'",'
+            fi
         fi
 
         echo -n '"commission":'`to_commission \`get_data_u16 104 "$ACCOUNT_DATA"\``','
@@ -635,6 +652,305 @@ case $1 in
 
         echo ']}}'
 
+    ;;
+
+    metaplex)
+
+        shift
+        
+        if [ -z "$1" -o -z "$2" -o -z "$3" -o -n "$4" ]; then
+            usage_exit
+        fi
+
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[$3]`
+
+        METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]               \
+                                                      Pubkey[$MINT_PUBKEY]`
+
+        ACCOUNT_DATA=`get_account_data $RPC_URL $METADATA_PUBKEY`
+
+        if [ -z "$ACCOUNT_DATA" ]; then
+            echo "Metaplex metadata account $1 $2 $3 does not exist"
+            exit 1
+        fi
+
+        ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
+        REMAINING_DATA_LEN=$ACCOUNT_DATA_LEN
+
+        # 1 byte -- Key
+        if [ $REMAINING_DATA_LEN -lt 1 ]; then
+            echo "Metaplex metadata account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        KEY=`get_data_u8 0 "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+        OFFSET=1
+        
+        if [ "0$KEY" -ne 4 ]; then # 4 is MetadataV1
+           echo "Metaplex metadata account has invalid key $KEY"
+           exit 1
+        fi
+
+        if [ $REMAINING_DATA_LEN -lt 64 ]; then
+            echo "Metaplex metadata account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        # Update authority
+        UPDATE_AUTHORITY=`get_data_pubkey $OFFSET "$ACCOUNT_DATA"`
+        OFFSET=$(($OFFSET+32))
+
+        MINT=`get_data_pubkey $OFFSET "$ACCOUNT_DATA"`
+        OFFSET=$(($OFFSET+32))
+
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-64))
+
+        if [ $(($REMAINING_DATA_LEN)) -lt 4 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        NAME_LEN=`get_data_u32 $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-4))
+        OFFSET=$(($OFFSET+4))
+
+        if [ $REMAINING_DATA_LEN -lt $NAME_LEN ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        if [ "0$NAME_LEN" -eq 0 ]; then
+            NAME=""
+        else
+            NAME=`get_data_string $OFFSET $NAME_LEN "$ACCOUNT_DATA"`
+        fi
+
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-$NAME_LEN))
+        OFFSET=$(($OFFSET+$NAME_LEN))
+
+        if [ $(($REMAINING_DATA_LEN)) -lt 4 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+        
+        SYMBOL_LEN=`get_data_u32 $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-4))
+        OFFSET=$(($OFFSET+4))
+
+        if [ $REMAINING_DATA_LEN -lt $SYMBOL_LEN ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        if [ "0$SYMBOL_LEN" -eq 0 ]; then
+            SYMBOL=""
+        else
+            SYMBOL=`get_data_string $OFFSET $SYMBOL_LEN "$ACCOUNT_DATA"`
+        fi
+
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-$SYMBOL_LEN))
+        OFFSET=$(($OFFSET+$SYMBOL_LEN))
+
+        if [ $(($REMAINING_DATA_LEN)) -lt 4 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+        
+        URI_LEN=`get_data_u32 $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-4))
+        OFFSET=$(($OFFSET+4))
+
+        if [ $REMAINING_DATA_LEN -lt $URI_LEN ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        if [ "0$URI_LEN" -eq 0 ]; then
+            URI=""
+        else
+            URI=`get_data_string $OFFSET $URI_LEN "$ACCOUNT_DATA"`
+        fi
+
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-$URI_LEN))
+        OFFSET=$(($OFFSET+$URI_LEN))
+
+        if [ $REMAINING_DATA_LEN -lt 2 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        SELLER_FEE_BASIS_POINTS=`get_data_u16 $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-2))
+        OFFSET=$(($OFFSET+2))
+
+        # Creators vec
+        if [ $REMAINING_DATA_LEN -lt 1 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        HAS_CREATORS=`get_data_u8 $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+        OFFSET=$(($OFFSET+1))
+
+        CREATORS_JSON=""
+        
+        if [ "0$HAS_CREATORS" -ne 0 ]; then
+            if [ $REMAINING_DATA_LEN -lt 4 ]; then
+                echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+                exit 1
+            fi
+            
+            CREATORS_COUNT=`get_data_u32 $OFFSET "$ACCOUNT_DATA"`
+            REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-4))
+            OFFSET=$(($OFFSET+4))
+
+            if [ "0$CREATORS_COUNT" -ne 0 ]; then
+                # Each Creator is 34 bytes long
+                if [ $(($CREATORS_COUNT*34)) -gt $REMAINING_DATA_LEN ]; then
+                    echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+                    exit 1
+                fi
+                CREATORS_JSON='"creators":['
+                for i in `seq 1 $CREATORS_COUNT`; do
+                    ADDRESS=`get_data_pubkey $OFFSET "$ACCOUNT_DATA"`
+                    VERIFIED=`get_data_bool $(($OFFSET+32)) "$ACCOUNT_DATA"`
+                    SHARE=`get_data_u8 $(($OFFSET+33)) "$ACCOUNT_DATA"`
+                    if [ $i -gt 1 ]; then
+                        CREATORS_JSON+=','
+                    fi
+                    CREATORS_JSON+='{"address":"'$ADDRESS'","verified":'$VERIFIED',"share":'$SHARE'}'
+                    REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-34))
+                    OFFSET=$(($OFFSET+34))
+                done
+                CREATORS_JSON+="]"
+            fi
+        fi
+
+        if [ $REMAINING_DATA_LEN -lt 1 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        PRIMARY_SALE_HAPPENED=`get_data_bool $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+        OFFSET=$(($OFFSET+1))
+
+        if [ $REMAINING_DATA_LEN -lt 1 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        IS_MUTABLE=`get_data_bool $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+        OFFSET=$(($OFFSET+1))
+        
+        if [ $REMAINING_DATA_LEN -lt 1 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        HAS_EDITION_NONCE=`get_data_u8 $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+        OFFSET=$(($OFFSET+1))
+
+        EDITION_NONCE_JSON=
+
+        if [ "0$HAS_EDITION_NONCE" -ne 0 ]; then
+            if [ $REMAINING_DATA_LEN -lt 1 ]; then
+                echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+                exit 1
+            fi
+
+            EDITION_NONCE_JSON='"edition_nonce":'`get_data_u8 $OFFSET "$ACCOUNT_DATA"`
+            REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+            OFFSET=$(($OFFSET+1))
+        fi
+
+        HAS_TOKEN_STANDARD=`get_data_u8 $OFFSET "$ACCOUNT_DATA"`
+        REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+        OFFSET=$(($OFFSET+1))
+
+        TOKEN_STANDARD_JSON=
+
+        if [ "0$HAS_TOKEN_STANDARD" -ne 0 ]; then
+            if [ $REMAINING_DATA_LEN -lt 1 ]; then
+                echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+                exit 1
+            fi
+
+            TOKEN_STANDARD=`get_data_u8 $OFFSET "$ACCOUNT_DATA"`
+            REMAINING_DATA_LEN=$(($REMAINING_DATA_LEN-1))
+            OFFSET=$(($OFFSET+1))
+
+            TOKEN_STANDARD_JSON='"token_standard":"'
+
+            case $TOKEN_STANDARD in
+                0) TOKEN_STANDARD_JSON+="NonFungible" ;;
+                1) TOKEN_STANDARD_JSON+="FungibleAsset" ;;
+                2) TOKEN_STANDARD_JSON+="Fungible" ;;
+                3) TOKEN_STANDARD_JSON+="NonFungibleEdition" ;;
+                *) echo "Invalid token_standard $TOKEN_STANDARD"; exit 1 ;;
+            esac
+
+            TOKEN_STANDARD_JSON+='"'
+        fi
+
+        # Shinobi Immortals metadata never has collection or uses
+        
+        if [ $REMAINING_DATA_LEN -lt 2 ]; then
+            echo "Metadata account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        if [ 0`get_data_u8 $OFFSET "$ACCOUNT_DATA"` -ne 0 ]; then
+            echo "Metadata account has collection"
+            exit 1
+        fi
+
+        if [ 0`get_data_u8 $(($OFFSET+1)) "$ACCOUNT_DATA"` -ne 0 ]; then
+            echo "Metadata account has uses"
+            exit 1
+        fi
+
+        echo -n '{"metadata_pubkey":"'$METADATA_PUBKEY'",'
+
+        echo -n '"update_authority_pubkey":"'$UPDATE_AUTHORITY'",'
+
+        echo -n '"mint_pubkey":"'$MINT_PUBKEY'",'
+
+        echo -n '"name":"'$NAME'",'
+
+        echo -n '"symbol":"'$SYMBOL'",'
+
+        echo -n '"uri":"'$URI'",'
+
+        echo -n '"seller_fee_basis_points":'$SELLER_FEE_BASIS_POINTS
+
+        if [ -n "$CREATORS_JSON" ]; then
+            echo -n ','$CREATORS_JSON
+        fi
+
+        echo -n ',"primary_sale_happened":'$PRIMARY_SALE_HAPPENED',"is_mutable":'$IS_MUTABLE
+
+        if [ -n "$EDITION_NONCE_JSON" ]; then
+            echo -n ','$EDITION_NONCE_JSON
+        fi
+
+        if [ $REMAINING_DATA_LEN -lt 1 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN"
+            exit 1
+        fi
+
+        if [ -n "$TOKEN_STANDARD_JSON" ]; then
+            echo -n ','$TOKEN_STANDARD_JSON
+        fi
+
+        echo -n '}'
+        
     ;;
 
     *)
