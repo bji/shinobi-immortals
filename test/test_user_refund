@@ -1,0 +1,510 @@
+
+
+# Invalid block
+if should_run_test user_refund_bad_block; then
+    # Test with block 9 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_bad_block                                                                                 \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Create block, do not complete it
+if [ -z "$TESTS" ]; then
+   # 9 0 -- Not complete
+   # create block
+    assert user_refund_setup_9_0                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 9 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+# Incomplete block
+if should_run_test user_refund_incomplete_block; then
+    # Test with block 9 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_incomplete_block                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
+BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
+BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+SALT0=0
+SALT1=1
+SALT2=2
+SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
+SHA2561=`compute_metadata_sha256 $METADATA1 $SALT1`
+SHA2562=`compute_metadata_sha256 $METADATA2 $SALT2`
+
+
+if [ -z "$TESTS" ]; then
+   # 9 1 -- Complete with long mystery reveal period
+   # create block
+    assert user_refund_setup_9_1_a                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 9 1 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # add entries
+    assert user_buy_setup_9_1_b                                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 9 1 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # rich_user1.json buy mystery 9 1 0
+    assert user_buy_setup_9_1_c                                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 9 1 0 \`lamports_from_sol 10000\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # Block 9 1 is now in mystery reveal phase since mystery phase ended when entry 0 was bought
+    
+    # 9 2 -- Complete with short mystery reveal period.
+    # create block
+    assert user_refund_setup_9_2_a                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 9 2 0 3 2 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # add entries
+    assert user_refund_setup_9_2_b                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 9 2 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # add entries
+    assert user_refund_setup_9_2_c                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 9 2 "http://foo.bar.com" none 2 $SHA2562                                                       \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # rich_user1.json buy mystery 9 2 0
+    assert user_refund_setup_9_2_d                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 9 2 0 \`lamports_from_sol 10000\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user1.json buy mystery 9 2 1
+    assert user_refund_setup_9_2_e                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 9 2 1 \`lamports_from_sol 10000\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # set metadata of mystery 9 2 1
+    assert user_refund_setup_9_2_f                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 9 2 1 0 $BYTE_1                                                                                \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # reveal mystery 9 2 1
+    assert user_refund_setup_9_2_g                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 9 2 1 $SALT1                                                                                   \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # Wait 1 second to be sure that the block is past its reveal deadline
+    sleep 1
+    # Block 9 2 is now complete, 9 2 0 is owned by rich_user1.json is not revealed and is past its reveal deadline,
+    # 9 2 1 is owned by rich_user1.json and is revealed, 9 2 2 is not owned and is past its reveal deadline
+fi
+
+
+# Invalid entry
+if should_run_test user_refund_bad_entry; then
+    # Test with block 9 1
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[1]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_bad_entry                                                                                 \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Entry is not owned
+if should_run_test user_refund_unowned_entry; then
+    # Test with block 9 1
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[1]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    # The mint, entry, and token used here is entry 1 which was not purchased
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    assert_fail user_refund_unowned_entry                                                                             \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Mismatch block and entry
+if should_run_test user_refund_mismatched_block_entry; then
+    # Test with block 9 1
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[1]`
+    # The block used here is block 2
+    BAD_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BAD_BLOCK_PUBKEY] u16[0]`
+    BAD_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$BAD_MINT_PUBKEY]`
+    BAD_TOKEN_DESTINATION_PUBKEY=`get_splata_account $BAD_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_mismatched_block_entry                                                                    \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $BAD_ENTRY_PUBKEY w                                                                                \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $BAD_TOKEN_DESTINATION_PUBKEY                                                                      \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+    
+
+# Entry is still revealable
+if should_run_test user_refund_still_revealable; then
+    # Test with entry 9 1 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[1]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_still_revealable                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1016}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f8"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f8"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+    
+# Entry is not waiting to be revealed
+if should_run_test user_refund_not_revealable; then
+    # Test with entry 9 2 1
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_not_revealable                                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1013}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f5"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f5"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+   
+
+if should_run_test user_refund_not_revealable; then
+    # Test with entry 9 2 1
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_not_revealable                                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1013}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f5"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f5"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test user_refund_unowned; then
+    # Test with entry 9 2 2
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[2]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_unowned                                                                                   \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# User doesn't own the token (but someone else does)
+if should_run_test user_refund_wrong_owner; then
+    # Test with entry 9 2 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_wrong_owner                                                                               \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER2_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER2_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER2_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+if should_run_test user_refund_nonexistent_token_account; then
+    # Test with entry 9 2 2
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[2]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    # Token account that does not exist
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $NONEXISTENT_USER_PUBKEY`
+    assert_fail user_refund_nonexistent_token_account                                                                 \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Attempt to refund from an empty token account
+if should_run_test user_refund_empty_token_account; then
+    # Test with entry 9 2 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER2_PUBKEY`
+    # Need to create the token destination account with no tokens in it.  The following transaction uses the
+    # Associated Token Program to do this.
+    assert user_refund_empty_token_account_setup                                                                      \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER2_PUBKEY                                                                               \
+           program $SPLATA_PROGRAM_PUBKEY                                                                             \
+           account $RICH_USER2_PUBKEY ws                                                                              \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
+           account $RICH_USER2_PUBKEY                                                                                 \
+           account $MINT_PUBKEY                                                                                       \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           // InitializeAccount2 //                                                                                   \
+           u8 0"                                                                                                      \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+    assert_fail user_refund_wrong_user_empty_empty_token_account                                                      \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER2_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER2_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER2_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Success
+if should_run_test user_refund_success; then
+    # Test with entry 9 2 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    # Token account that does not exist
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert user_refund_success                                                                                        \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Already refunded
+if should_run_test user_refund_already_refunded; then
+    # Test with entry 9 2 0
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[9] u32[2]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    # Token account that does not exist
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_refund_already_refunded                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1020}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3fc"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fc"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $AUTHORITY_PUBKEY w                                                                                \
+           account $TOKEN_DESTINATION_PUBKEY                                                                          \
+           account $RICH_USER1_PUBKEY w                                                                               \
+           // Instruction code 11 = Refund //                                                                         \
+           u8 11"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi

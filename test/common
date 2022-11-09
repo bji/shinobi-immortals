@@ -95,7 +95,30 @@ function assert ()
         echo
         exit 1
     else
-        echo "+ $TEST_NAME"
+        # Transactions can successfully be submitted (passing simulation) but then fail when actually run on chain;
+        # so fetch the transaction signature and wait until its results are known
+        if [[ "$TEST_OUTPUT" = Transaction\ signature:\ * ]]; then
+            SIGNATURE=`echo "$TEST_OUTPUT" | cut -d ' ' -f 3`
+            # Try for at most 10 seconds
+            for i in `seq 1 10`; do
+                JSON=`curl -s http://localhost:8899 -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIGNATURE\",\"json\"]}"`
+                if [ -n "$JSON" ]; then
+                    if [ "`echo $JSON | jq .result`" != "null" -a                                                     \
+                         "`echo $JSON | jq .result.meta`" != "null" -a                                                \
+                         "`echo $JSON | jq .result.meta.err`" != "null" ]; then
+                        echo "FAIL: $TEST_NAME failed when success was expected:"
+                        echo $JSON
+                        exit 1
+                    fi
+                    echo "+ $TEST_NAME"
+                    return
+                fi
+                sleep 1
+            done
+        fi
+        echo "FAIL: $TEST_NAME failed when success was expected:"
+        echo $TEST_OUTPUT
+        exit 1
     fi
 }
 
@@ -339,6 +362,7 @@ function setup ()
     export           RICH_USER1_PUBKEY=`solpda -pubkey $LEDGER/rich_user1.json`
     export           RICH_USER2_PUBKEY=`solpda -pubkey $LEDGER/rich_user2.json`
     export            POOR_USER_PUBKEY=`solpda -pubkey $LEDGER/poor_user.json`
+    export     NONEXISTENT_USER_PUBKEY=`solpda -pubkey $LEDGER/nonexistent_user.json`
     export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated_stake.json`
     export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated_stake.json`
     export       SYSTEM_PROGRAM_PUBKEY=`echo 11111111111111111111111111111111`

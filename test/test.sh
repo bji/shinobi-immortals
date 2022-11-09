@@ -42,4 +42,6 @@ source $SOURCE/test/test_admin_delete_whitelist
 
 source $SOURCE/test/test_user_buy
 
+source $SOURCE/test/test_user_refund
+
 # teardown
