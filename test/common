@@ -81,6 +81,17 @@ function transfer_all_except ()
 }
 
 
+# Returns 0 if $1 < $2, else returns 1
+function less_than ()
+{
+    if [[ `echo "$1 $2 - p" | dc -` = -* ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
 function assert ()
 {
     RESULT=$?
@@ -352,7 +363,7 @@ function setup ()
     solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
            --commitment finalized >/dev/null 2>/dev/null
 
-#    export LEDGER=/tmp/tmp.sHtoUSITwB
+#    export LEDGER=/tmp/tmp.uOwxRtWF46
     
 # Compute pubkeys
 

@@ -54,7 +54,7 @@ static uint64_t user_bid(const SolParameters *params)
     // This is the entry data
     Entry *entry = get_validated_entry(entry_account);
     if (!entry) {
-        return Error_InvalidAccount_First + 2;
+        return Error_InvalidAccount_First + 1;
     }
 
     // Get the clock sysvar, needed below

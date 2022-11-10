@@ -228,13 +228,13 @@ static uint64_t create_associated_token_account_idempotent(const SolAccountInfo 
                                                            const SolAccountInfo *transaction_accounts,
                                                            int transaction_accounts_len)
 {
-    // If the token account already existed, then if it isn't owned by the system account, then it must be a token
-    // account for the given mint and owned by owner_key.
+    // If it's already a token account for this user, then there's nothing more to do
     if ((*(token_account->lamports) > 0) &&
         !is_system_program(token_account->owner) &&
-        !is_token_owner(token_account, owner_key, mint_key, 0)) {
-        return Error_InvalidTokenAccount;
+        is_token_owner(token_account, owner_key, mint_key, 0)) {
+        return 0;
     }
+    // Else, proceed to either creating it as a new account, or re-appropriating it from the system program
 
     // Otherwise the account didn't exist, or was owned by the system program, so create it using the Associated Token
     // Account program to create the token account
@@ -274,16 +274,13 @@ static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_accoun
                                                     const SolAccountInfo *transaction_accounts,
                                                     int transaction_accounts_len)
 {
-    if (*(token_account->lamports) > 0) {
-        // Make sure that this is a token account for the given mint, doesn't need to have any tokens in it though
-        if (is_token_owner(token_account, owner_key, mint_key, 0)) {
-            // Already exists as a valid account
-            return 0;
-        }
-
-        // The account that was passed in was not the proper token account for the given account address
-        return Error_InvalidTokenAccount;
+    // If it's already a token account for this user, then there's nothing more to do
+    if ((*(token_account->lamports) > 0) &&
+        !is_system_program(token_account->owner) &&
+        is_token_owner(token_account, owner_key, mint_key, 0)) {
+        return 0;
     }
+    // Else, proceed to either creating it as a new account, or re-appropriating it from the system program
 
     // Create PDA
     uint64_t ret = create_pda(token_account, seeds, seeds_count, funding_key, &(Constants.spl_token_program_pubkey),
