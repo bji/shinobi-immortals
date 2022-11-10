@@ -13,9 +13,12 @@ static uint64_t user_claim_losing(const SolParameters *params)
     // If there are more than 3 accounts, then the optional reclaiming of bid marker is requested
     bool reclaim_bid_marker = (params->ka_num > 3);
 
-    // If reclaiming bid marker, there must be 7 accounts
+    // If reclaiming bid marker, there must be 7 accounts, else there must be 3
     if (reclaim_bid_marker) {
         DECLARE_ACCOUNTS_NUMBER(7);
+    }
+    else {
+        DECLARE_ACCOUNTS_NUMBER(3);
     }
 
     // Get the validated entry account data
@@ -68,7 +71,7 @@ static uint64_t user_claim_losing(const SolParameters *params)
         return Error_InvalidAccount_First;
     }
 
-    // If this was actually the winning bid, then can't claim it as a losing bid
+    // If this is the winning bid, then can't claim it as a losing bid
     if (SolPubkey_same(bid_account->key, &(entry->auction.winning_bid_pubkey))) {
         return Error_BidWon;
     }

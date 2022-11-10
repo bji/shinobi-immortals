@@ -9,7 +9,9 @@ function require ()
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: user_claim_losing_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>
+Usage: user_claim_losing_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> [true]
+
+If true is supplied as the last argument, then the bid marker will be reclaimed.
 
 
 EOF
@@ -26,6 +28,11 @@ USER_PUBKEY=$1
 GROUP_NUMBER=$2
 BLOCK_NUMBER=$3
 ENTRY_INDEX=$4
+if [ "$5" = "true" ]; then
+    RECLAIM_BID_MARKER=true
+else
+    RECLAIM_BID_MARKER=false
+fi
 
 require $USER_PUBKEY
 require $GROUP_NUMBER
@@ -85,7 +92,17 @@ STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
                  BID_PUBKEY=$(pda $SELF_PROGRAM_PUBKEY                                                                \
                                   u8[9]                                                                               \
                                   Pubkey[$BID_MARKER_TOKEN_PUBKEY])
-                                  
+
+if [ $RECLAIM_BID_MARKER = true ]; then
+    EXTRA_ACCOUNTS="account $BID_MARKER_MINT_PUBKEY w                                                                 \
+                    account $BID_MARKER_TOKEN_PUBKEY w                                                                \
+                    account $AUTHORITY_PUBKEY                                                                         \
+                    account $SPL_TOKEN_PROGRAM_PUBKEY"
+else
+    EXTRA_ACCOUNTS=
+fi
+
+
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $USER_PUBKEY                                                                                        \
@@ -93,5 +110,6 @@ solxact encode                                                                  
         account $USER_PUBKEY ws                                                                                       \
         account $ENTRY_PUBKEY                                                                                         \
         account $BID_PUBKEY w                                                                                         \
+        $EXTRA_ACCOUNTS                                                                                               \
         // Instruction code 13 = ClaimLosing //                                                                       \
         u8 13

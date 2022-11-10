@@ -145,11 +145,24 @@ function assert_fail ()
     local TEST_OUTPUT=`sanitize_output "$@"`
 
     if [ $RESULT -eq 0 ]; then
-        echo "FAIL: $TEST_NAME succeded when failure was expected:"
-        echo "$TEST_OUTPUT"
-        echo
-        exit 1
-    elif [ "$EXPECTED_OUTPUT" != "$TEST_OUTPUT" ]; then
+        # Transactions can successfully be submitted (passing simulation) but then fail when actually run on chain;
+        # so fetch the transaction signature and wait until its results are known
+        if [[ "$TEST_OUTPUT" = Transaction\ signature:\ * ]]; then
+            SIGNATURE=`echo "$TEST_OUTPUT" | cut -d ' ' -f 3`
+            # Try for at most 10 seconds
+            for i in `seq 1 10`; do
+                TEST_OUTPUT=`curl -s http://localhost:8899 -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIGNATURE\",\"json\"]}"`
+                if [ -n "$TEST_OUTPUT" ]; then
+                    break
+                fi
+                sleep 1
+            done
+            echo "FAIL: $TEST_NAME did not land"
+            exit 1
+        fi
+    fi
+
+    if [ "$EXPECTED_OUTPUT" != "$TEST_OUTPUT" ]; then
         echo "FAIL: $TEST_NAME incorrect output:"
         diff <(echo "$EXPECTED_OUTPUT") <(echo "$TEST_OUTPUT")
         echo
@@ -363,7 +376,7 @@ function setup ()
     solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
            --commitment finalized >/dev/null 2>/dev/null
 
-#    export LEDGER=/tmp/tmp.uOwxRtWF46
+#    export LEDGER=/tmp/tmp.nMGEqfdOYe
     
 # Compute pubkeys
 

@@ -46,4 +46,6 @@ source $SOURCE/test/test_user_refund
 
 source $SOURCE/test/test_user_bid
 
+source $SOURCE/test/test_user_claim_losing
+
 # teardown
