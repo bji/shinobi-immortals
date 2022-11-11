@@ -207,7 +207,7 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, const SolPubkey *block
         return ret;
     }
 
-    // Revoke the mint authority so that it is truly an NFT
+    // Revoke the mint authority so that it is not fungible
     ret = revoke_mint_authority(mint_account->key, &(Constants.authority_pubkey), transaction_accounts,
                                 transaction_accounts_len);
     if (ret) {

@@ -27,6 +27,10 @@ static uint64_t user_claim_winning(const SolParameters *params)
     if (reclaim_bid_marker) {
         DECLARE_ACCOUNTS_NUMBER(15);
     }
+    // Else there must be 13
+    else {
+        DECLARE_ACCOUNTS_NUMBER(13);
+    }
 
     // This is the entry data
     Entry *entry = get_validated_entry(entry_account);
@@ -85,7 +89,7 @@ static uint64_t user_claim_winning(const SolParameters *params)
         return ret;
     }
 
-    // Transfer the entry token (NFT) to the destination account
+    // Transfer the entry token to the destination account
     ret = transfer_entry_token(entry, token_destination_account, params->ka, params->ka_num);
     if (ret) {
         return ret;

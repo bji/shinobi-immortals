@@ -54,7 +54,6 @@ typedef enum
     Instruction_ClaimLosing                   = 13,
     // Claim a winning bid
     Instruction_ClaimWinning                  = 14,
-
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
     // progrmam.
     Instruction_Stake                         = 15,

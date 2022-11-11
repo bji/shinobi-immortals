@@ -30,7 +30,7 @@ typedef struct
 
     // Number of seconds to add to the block state's all_mysteries_sold_timestamp value to get the cutoff period for
     // reveal; any entry which has not been revealed by this point allows zero-penalty return of the purchase price
-    // (while retaining the mystery NFT itself).
+    // (while retaining the mystery token itself).
     uint32_t reveal_period_duration;
 
     // This value is used in three ways:

@@ -9,7 +9,9 @@ function require ()
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: user_claim_winning_tx.sh <ADMIN_PUBKEY> <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>
+Usage: user_claim_winning_tx.sh <ADMIN_PUBKEY> <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> [true]
+
+If true is supplied as the last argument, then the bid marker will be reclaimed.
 
 EOF
         exit 1
@@ -26,6 +28,11 @@ USER_PUBKEY=$2
 GROUP_NUMBER=$3
 BLOCK_NUMBER=$4
 ENTRY_INDEX=$5
+if [ "$6" = "true" ]; then
+    RECLAIM_BID_MARKER=true
+else
+    RECLAIM_BID_MARKER=false
+fi
 
 require $ADMIN_PUBKEY
 require $USER_PUBKEY
@@ -96,7 +103,16 @@ STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
                                   Pubkey[$USER_PUBKEY]                                                                \
                                   Pubkey[$SPL_TOKEN_PROGRAM_PUBKEY]                                                   \
                                   Pubkey[$ENTRY_MINT_PUBKEY])
-                                  
+
+   
+if [ $RECLAIM_BID_MARKER = true ]; then
+    EXTRA_ACCOUNTS="account $BID_MARKER_MINT_PUBKEY w                                                                 \
+                    account $BID_MARKER_TOKEN_PUBKEY w"
+else
+    EXTRA_ACCOUNTS=
+fi
+
+
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $USER_PUBKEY                                                                                        \
@@ -114,5 +130,6 @@ solxact encode                                                                  
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
+        $EXTRA_ACCOUNTS                                                                                               \
         // Instruction code 14 = ClaimWinning //                                                                      \
         u8 14

@@ -47,7 +47,7 @@ typedef enum
     // Attempt to perform an operation that requires a revealable Entry, for an Entry which is not revealable
     Error_EntryNotRevealable                           = 1013,
 
-    // Attempted to reveal an entry using an NFT account that does not hash to the correct entry hash
+    // Attempted to reveal an entry using a token account that does not hash to the correct entry hash
     Error_InvalidHash                                  = 1014,
 
     // Attempt to purchase an entry which is already owned

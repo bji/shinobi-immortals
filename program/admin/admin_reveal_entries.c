@@ -102,7 +102,7 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
     }
 
     // Keep track of total number of escrow lamports, paid to the authority account by purchasers of "mystery"
-    // un-revealed NFTs, that need to be moved to the admin account now that the entries are revealed.
+    // un-revealed entries, that need to be moved to the admin account now that the entries are revealed.
     uint64_t total_lamports_to_move = 0;
 
     // Reveal entries one by one
@@ -133,7 +133,7 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
             return Error_InvalidAccount_First + 6;
         }
 
-        // This is the account info of the metaplex metadata for the NFT, as passed into the accounts list
+        // This is the account info of the metaplex metadata for the entry, as passed into the accounts list
         const SolAccountInfo *metaplex_metadata_account = &(params->ka[_account_num++]);
 
         // Ensure that it's the correct metadata account for this entry
@@ -243,7 +243,7 @@ static uint64_t reveal_single_entry(const Block *block,
         return Error_InvalidHash;
     }
 
-    // Update the metaplex metadata for the NFT to include the level 0 state.
+    // Update the metaplex metadata for the entry to include the level 0 state.
     uint64_t ret = set_metaplex_metadata_for_level(entry, 0, metaplex_metadata_account, transaction_accounts,
                                                    transaction_accounts_len);
     if (ret) {
