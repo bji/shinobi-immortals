@@ -49,7 +49,7 @@ static uint64_t user_stake(const SolParameters *params)
     // Deserialize the stake account into a Stake instance
     Stake stake;
     if (!decode_stake_account(stake_account, &stake)) {
-        return Error_InvalidAccount_First + 3;
+        return Error_InvalidAccount_First + 4;
     }
 
     // - Must be in Initialized or Stake state
@@ -73,7 +73,7 @@ static uint64_t user_stake(const SolParameters *params)
 
     // Check to make sure that the entry token is owned by the token owner account
     if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
-        return Error_InvalidAccount_First + 4;
+        return Error_InvalidAccount_First + 2;
     }
 
     // Use stake account program to set all authorities to the authority

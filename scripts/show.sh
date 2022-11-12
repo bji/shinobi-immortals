@@ -554,7 +554,7 @@ case $1 in
         PUBKEY=`get_data_pubkey 264 "$ACCOUNT_DATA"`
 
         if [ "$PUBKEY" != "11111111111111111111111111111111" ]; then
-            echo -n '"stake_account":'`get_data_pubkey 264 "$ACCOUNT_DATA"`','
+            echo -n '"stake_account":"'`get_data_pubkey 264 "$ACCOUNT_DATA"`'",'
         fi
 
         echo -n '"stake_initial":'`to_sol \`get_data_u64 296 "$ACCOUNT_DATA"\``','

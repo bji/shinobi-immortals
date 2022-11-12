@@ -87,7 +87,7 @@ if [ -z "$TESTS" ]; then
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    # reveal entres 10 2 0 and 10 2 1
+    # reveal entries 10 2 0 and 10 2 1
     assert user_bid_setup_10_2_f                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
          $ADMIN_PUBKEY 10 2 0 $SALT0 $SALT1                                                                           \
@@ -129,7 +129,7 @@ if [ -z "$TESTS" ]; then
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    # reveal entres 10 3 0 and 10 3 1
+    # reveal entries 10 3 0 and 10 3 1
     assert user_bid_setup_10_3_f                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
          $ADMIN_PUBKEY 10 3 0 $SALT0 $SALT1                                                                           \

@@ -46,8 +46,10 @@ source $SOURCE/test/test_user_refund
 
 source $SOURCE/test/test_user_bid
 
-source $SOURCE/test/test_user_claim_losing                                                                            \
+source $SOURCE/test/test_user_claim_losing
 
 source $SOURCE/test/test_user_claim_winning
+
+source $SOURCE/test/test_user_stake
 
 # teardown

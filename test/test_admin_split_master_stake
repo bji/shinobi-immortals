@@ -79,7 +79,7 @@ fi
 if should_run_test admin_split_master_stake_success; then
     # Create a pre_merge stake account that will be merged in to ensure that the master stake account is large enough
     # to split from
-    make_stake_account $LEDGER/admin.json $LEDGER/pre_merge.json 5 finalized
+    make_stake_account $LEDGER/admin.json $LEDGER/pre_merge.json 5 --commitment=finalized
     # Delegate the pre_merge stake account
     solana -u l delegate-stake -k $LEDGER/admin.json $LEDGER/pre_merge.json $VOTE_PUBKEY >/dev/null 2>/dev/null
     # Wait an epoch for the delegated stake to become delegated

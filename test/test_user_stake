@@ -1,0 +1,353 @@
+BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
+BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
+BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+SALT0=0
+SALT1=1
+SALT2=2
+SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
+SHA2561=`compute_metadata_sha256 $METADATA1 $SALT1`
+SHA2562=`compute_metadata_sha256 $METADATA2 $SALT2`
+
+
+# Create accounts and block
+if [ -z "$TESTS" ]; then
+    # Create stake accounts: delegated_stake, locked_stake, undelegated_stake
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/delegated_stake.json 1000
+    make_stake_account $LEDGER/rich_user2.json $LEDGER/delegated_stake2.json 1000
+    make_stake_account $LEDGER/rich_user2.json $LEDGER/locked_stake.json 1000 --lockup-epoch=100000
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/undelegated_stake.json 1000 --commitment=finalized
+
+    # Delegate the delegated stake accounts
+    echo "Delegating $LEDGER/delegated_stake.json"
+    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated_stake.json $VOTE_PUBKEY                   \
+           >/dev/null 2>/dev/null
+    echo "Delegating $LEDGER/delegated_stake2.json"
+    solana -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated_stake2.json $VOTE_PUBKEY                  \
+           >/dev/null 2>/dev/null
+
+    # 13 0
+    assert user_stake_setup_13_0_a                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 13 0 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                          \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_13_0_b                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 13 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_13_0_c                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 13 0 "http://foo.bar.com" none 2 $SHA2562                                                      \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # set metadata
+    assert user_stake_setup_13_0_d                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 13 0 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_13_0_e                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 13 0 1 0 $BYTE_1                                                                               \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_13_0_f                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 13 0 2 0 $BYTE_2                                                                               \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # reveal entries
+    assert user_stake_setup_13_0_g                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 13 0 0 $SALT0 $SALT1 $SALT2                                                                    \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # rich_user1 buy entry 0
+    assert user_stake_setup_13_0_h                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 13 0 0 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user2 buy entry 1
+    assert user_stake_setup_13_0_i                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 13 0 1 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+
+    # 13 0 0 is owned by rich_user1
+    # 13 0 1 is owned by rich_user2
+    # 13 0 2 is not owned
+fi
+
+    
+export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated_stake.json`
+export     DELEGATED_STAKE2_PUBKEY=`solpda -pubkey $LEDGER/delegated_stake2.json`
+export         LOCKED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/locked_stake.json`
+export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated_stake.json`
+
+# This must be set so that user_stake_tx.sh will use the correct vote account
+export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+
+    
+# Invalid block
+if should_run_test user_stake_bad_block; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[13] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    assert_fail user_stake_bad_block                                                                                  \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1100}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $DELEGATED_STAKE_PUBKEY w                                                                          \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $VOTE_PUBKEY                                                                                       \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           // Instruction code 15 = Stake //                                                                          \
+           u8 15"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Invalid entry
+if should_run_test user_stake_bad_entry; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[13] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    assert_fail user_stake_bad_entry                                                                                  \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $DELEGATED_STAKE_PUBKEY w                                                                          \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $VOTE_PUBKEY                                                                                       \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           // Instruction code 15 = Stake //                                                                          \
+           u8 15"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Entry not owned
+if should_run_test user_stake_entry_not_owned; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[13] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    assert_fail user_stake_entry_not_owned                                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $DELEGATED_STAKE_PUBKEY w                                                                          \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $VOTE_PUBKEY                                                                                       \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           // Instruction code 15 = Stake //                                                                          \
+           u8 15"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[2]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    assert_fail user_stake_entry_not_owned_2                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1036}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $BLOCK_PUBKEY                                                                                      \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $DELEGATED_STAKE_PUBKEY w                                                                          \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $VOTE_PUBKEY                                                                                       \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           account $STAKE_CONFIG_PUBKEY                                                                               \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+           // Instruction code 15 = Stake //                                                                          \
+           u8 15"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Bad stake account
+if should_run_test user_stake_bad_stake_account; then
+    assert_fail user_stake_bad_stake_account                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER1_PUBKEY 13 0 0 $CONFIG_PUBKEY                                                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Someone else's stake account
+if should_run_test user_stake_other_stake_account; then
+    assert_fail user_stake_other_stake_account                                                                        \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER1_PUBKEY 13 0 0 $DELEGATED_STAKE2_PUBKEY                                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Locked stake account
+if should_run_test user_stake_locked_stake_account; then
+    assert_fail user_stake_locked_stake_account                                                                       \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER2_PUBKEY 13 0 1 $LOCKED_STAKE_PUBKEY                                                               \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Success when not delegated
+if should_run_test user_stake_undelegated_stake_account; then
+    assert user_stake_undelegated_stake_account                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER1_PUBKEY 13 0 0 $UNDELEGATED_STAKE_PUBKEY                                                          \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+
+    # Get the undelegated stake account new state
+    RESULT=`solana -u l stake-account $UNDELEGATED_STAKE_PUBKEY`
+    
+    # Check to make sure that it's now owned by the authority
+    STAKE_AUTHORITY=`echo "$RESULT" | grep "^Stake Authority" | cut -d ' ' -f 3`
+    WITHDRAW_AUTHORITY=`echo "$RESULT" | grep "^Withdraw Authority" | cut -d ' ' -f 3`
+    if [ "$STAKE_AUTHORITY" != "$AUTHORITY_PUBKEY" -o "$WITHDRAW_AUTHORITY" != "$AUTHORITY_PUBKEY" ]; then
+        echo "FAIL: user_stake_undelegated_stake_account: Stake account wasn't properly authorized:"
+        echo "$RESULT"
+        exit 1
+    fi
+    
+    # Check to make sure that it's now delegated to the vote account
+    VOTE_ACCOUNT=`echo "$RESULT" | grep "^Delegated Vote Account Address" | cut -d ' ' -f 5`
+    if [ "$VOTE_ACCOUNT" != "$VOTE_PUBKEY" ]; then
+        echo "FAIL: user_stake_undelegated_stake_account: Stake account wasn't properly delegated:"
+        echo "$RESULT"
+        exit 1
+    fi
+
+    # Check to make sure that the entry now records the stake account properly
+    ENTRY_STAKE_PUBKEY=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 13 0 0 |               \
+                        jq -r .owned.stake_account`
+    if [ "$ENTRY_STAKE_PUBKEY" != "$UNDELEGATED_STAKE_PUBKEY" ]; then
+        echo "FAIL: user_stake_undelegated_stake_account: Stake account not recorded in entry"
+        exit 1
+    fi
+fi
+
+
+# Success when already delegated to Shinobi Systems
+if should_run_test user_stake_delegated_stake_account; then
+    assert user_stake_delegated_stake_account                                                                         \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER2_PUBKEY 13 0 1 $DELEGATED_STAKE2_PUBKEY                                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+
+    # Get the undelegated stake account new state
+    RESULT=`solana -u l stake-account $DELEGATED_STAKE2_PUBKEY`
+    
+    # Check to make sure that it's now owned by the authority
+    STAKE_AUTHORITY=`echo "$RESULT" | grep "^Stake Authority" | cut -d ' ' -f 3`
+    WITHDRAW_AUTHORITY=`echo "$RESULT" | grep "^Withdraw Authority" | cut -d ' ' -f 3`
+    if [ "$STAKE_AUTHORITY" != "$AUTHORITY_PUBKEY" -o "$WITHDRAW_AUTHORITY" != "$AUTHORITY_PUBKEY" ]; then
+        echo "FAIL: user_stake_delegated_stake_account: Stake account wasn't properly authorized:"
+        echo "$RESULT"
+        exit 1
+    fi
+    
+    # Check to make sure that it's now delegated to the vote account
+    VOTE_ACCOUNT=`echo "$RESULT" | grep "^Delegated Vote Account Address" | cut -d ' ' -f 5`
+    if [ "$VOTE_ACCOUNT" != "$VOTE_PUBKEY" ]; then
+        echo "FAIL: user_stake_delegated_stake_account: Stake account wasn't properly delegated:"
+        echo "$RESULT"
+        exit 1
+    fi
+
+    # Check to make sure that the entry now records the stake account properly
+    ENTRY_STAKE_PUBKEY=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 13 0 1 |               \
+                        jq -r .owned.stake_account`
+    if [ "$ENTRY_STAKE_PUBKEY" != "$DELEGATED_STAKE2_PUBKEY" ]; then
+        echo "FAIL: user_stake_delegated_stake_account: Stake account not recorded in entry"
+        exit 1
+    fi
+fi
+
+
+# Failure when entry already staked
+if should_run_test user_stake_entry_already_staked; then
+    assert_fail user_stake_entry_already_staked                                                                       \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1036}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER1_PUBKEY 13 0 0 $DELEGATED_STAKE_PUBKEY                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
