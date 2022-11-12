@@ -9,9 +9,6 @@ typedef struct
     // This is the instruction code for Destake
     uint8_t instruction_code;
 
-    // This is the new authority to set on the de-staked stake account
-    SolPubkey new_withdraw_authority_pubkey;
-
     // Minimum stake account delegation in lamports.  If this is provided (i.e. is nonzero), no stake account
     // will be created with a delegation smaller than this.  If not provided, it will be fetched by using the
     // currently buggy stake program GetMinimumDelegation instruction.
@@ -56,7 +53,7 @@ static uint64_t user_destake(const SolParameters *params)
     // Get validated block and entry, which checks all validity of those accounts
     const Block *block = get_validated_block(block_account);
     if (!block) {
-        return Error_InvalidAccount_First;
+        return Error_InvalidAccount_First + 1;
     }
 
     // Ensure that the block is complete; cannot stake in a block that is not complete yet
@@ -112,10 +109,9 @@ static uint64_t user_destake(const SolParameters *params)
         return ret;
     }
 
-    // Use stake account program to set all authorities to the new authority; must do this signed since the
+    // Use stake account program to set all authorities to the token owner; must do this signed since the
     // program authority is currently the withdraw authority of the stake account
-    if (set_stake_authorities_signed(stake_account->key, &(data->new_withdraw_authority_pubkey),
-                                     params->ka, params->ka_num)) {
+    if (set_stake_authorities_signed(stake_account->key, token_owner_account->key, params->ka, params->ka_num)) {
         return Error_SetStakeAuthoritiesFailed;
     }
 

@@ -52,4 +52,6 @@ source $SOURCE/test/test_user_claim_winning
 
 source $SOURCE/test/test_user_stake
 
+source $SOURCE/test/test_user_destake
+
 # teardown

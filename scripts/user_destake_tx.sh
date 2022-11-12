@@ -50,6 +50,12 @@ if [ -z "$SELF_PROGRAM_PUBKEY" ]; then
     SELF_PROGRAM_PUBKEY=$(echo Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG)
 fi
 
+# If MINIMUM_STAKE_LAMPORTS is not set, use 0
+if [ -z "$MINIMUM_STAKE_LAMPORTS" ]; then
+    MINIMUM_STAKE_LAMPORTS=0
+fi
+
+
 # Compute pubkeys
 
       SYSTEM_PROGRAM_PUBKEY=$(echo 11111111111111111111111111111111)
@@ -101,30 +107,29 @@ if [ -z "$TOKEN_PUBKEY" ]; then
                                   Pubkey[$SPL_TOKEN_PROGRAM_PUBKEY]                                                   \
                                   Pubkey[$ENTRY_MINT_PUBKEY])
 fi
-                                  
+
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $USER_PUBKEY                                                                                        \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
-        account $USER_PUBKEY ws \
-        account $BLOCK_PUBKEY \
-        account $ENTRY_PUBKEY w \
-        account $USER_PUBKEY s\
-        account $TOKEN_PUBKEY \
-        account $STAKE_ACCOUNT_PUBKEY w \
-        account $KI_DESTINATION_PUBKEY w \
-        account $USER_PUBKEY \
-        account $MASTER_STAKE_PUBKEY w \
-        account $BRIDGE_PUBKEY w \
-        account $KI_MINT_PUBKEY w \
-        account $AUTHORITY_PUBKEY \
-        account $CLOCK_SYSVAR_PUBKEY \
-        account $SYSTEM_PROGRAM_PUBKEY \
-        account $STAKE_PROGRAM_PUBKEY \
-        account $STAKE_HISTORY_SYSVAR_PUBKEY \
-        account $SPL_TOKEN_PROGRAM_PUBKEY \
-        account $SPLATA_PROGRAM_PUBKEY \
+        account $USER_PUBKEY ws                                                                                       \
+        account $BLOCK_PUBKEY                                                                                         \
+        account $ENTRY_PUBKEY w                                                                                       \
+        account $USER_PUBKEY s                                                                                        \
+        account $TOKEN_PUBKEY                                                                                         \
+        account $STAKE_ACCOUNT_PUBKEY w                                                                               \
+        account $KI_DESTINATION_PUBKEY w                                                                              \
+        account $USER_PUBKEY                                                                                          \
+        account $MASTER_STAKE_PUBKEY w                                                                                \
+        account $BRIDGE_PUBKEY w                                                                                      \
+        account $KI_MINT_PUBKEY w                                                                                     \
+        account $AUTHORITY_PUBKEY                                                                                     \
+        account $CLOCK_SYSVAR_PUBKEY                                                                                  \
+        account $SYSTEM_PROGRAM_PUBKEY                                                                                \
+        account $STAKE_PROGRAM_PUBKEY                                                                                 \
+        account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
+        account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
+        account $SPLATA_PROGRAM_PUBKEY                                                                                \
         // Instruction code 16 = Destake //                                                                           \
         u8 16                                                                                                         \
-        pubkey $USER_PUBKEY                                                                                           \
         u64 $MINIMUM_STAKE_LAMPORTS
