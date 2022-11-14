@@ -1,0 +1,244 @@
+
+# The ki_factor for level 1 appears as an unsigned short-endian 32 bit value at offset 76.  0x1027 is 10000 in
+# little-endian.
+
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x1027 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2618 status=none) | base64 | tr -d '\n'`
+# Metadata to set into entries, only needs to include up to the ki_factor
+METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x1027 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
+SALT0=0
+SALT1=1
+SALT2=2
+SHA2560=`compute_metadata_sha256 $METADATA $SALT0`
+SHA2561=`compute_metadata_sha256 $METADATA $SALT1`
+SHA2562=`compute_metadata_sha256 $METADATA $SALT2`
+
+
+# This must be set so that user_stake_tx.sh will use the correct vote account
+export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+
+
+# Create accounts and block
+if [ -z "$TESTS" ]; then
+    # Create stake accounts: delegated_stake, undelegated_stake
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/delegated3_stake.json 1000
+    make_stake_account $LEDGER/rich_user2.json $LEDGER/delegated3_stake2.json 1000
+    
+    # Delegate the delegated stake accounts
+    echo "Delegating $LEDGER/delegated3_stake.json"
+    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated3_stake.json $VOTE_PUBKEY                  \
+           >/dev/null 2>/dev/null
+    echo "Delegating $LEDGER/delegated3_stake2.json"
+    solana -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated3_stake2.json $VOTE_PUBKEY                 \
+           >/dev/null 2>/dev/null
+
+    # 15 0
+    assert user_stake_setup_15_0_a                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 15 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                       \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_15_0_b                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 15 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_15_0_c                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 15 0 "http://foo.bar.com" none 2 $SHA2562                                                      \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # set metadata
+    assert user_stake_setup_15_0_d                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 15 0 0 0 $METADATA_HEAD                                                                        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_15_0_e                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 15 0 1 0 $METADATA_HEAD                                                                        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert user_stake_setup_15_0_f                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 15 0 2 0 $METADATA_HEAD                                                                        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # reveal entries
+    assert user_stake_setup_15_0_g                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 15 0 0 $SALT0 $SALT1 $SALT2                                                                    \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # rich_user1 buy entry 0
+    assert user_stake_setup_15_0_h                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 15 0 0 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user1 stake entry 0
+    assert user_stake_setup_15_0_i                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER1_PUBKEY 15 0 0 $LEDGER/delegated3_stake.json                                                      \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user2 buy entry 1
+    assert user_stake_setup_15_0_j                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 15 0 1 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user2 stake entry 1
+    assert user_stake_setup_15_0_k                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER2_PUBKEY 15 0 1 $LEDGER/delegated3_stake2.json                                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user2 buy entry 2
+    assert user_stake_setup_15_0_l                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 15 0 2 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+
+    # 15 0 0 is owned and staked by rich_user1
+    # 15 0 1 is owned and staked by rich_user2
+    # 15 0 2 is owned by rich_user1
+    
+fi
+
+    
+export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated3_stake.json`
+export     DELEGATED_STAKE2_PUBKEY=`solpda -pubkey $LEDGER/delegated3_stake2.json`
+
+
+# Invalid entry
+if should_run_test user_harvest_bad_entry; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[15] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_harvest_bad_entry                                                                                \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $RICH_USER1_PUBKEY ws                                                                              \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $DELEGATED_STAKE_PUBKEY                                                                            \
+           account $KI_DESTINATION_PUBKEY w                                                                           \
+           account $RICH_USER1_PUBKEY                                                                                 \
+           account $KI_MINT_PUBKEY w                                                                                  \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+           account $SPLATA_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 17 = Harvest //                                                                        \
+           u8 17"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Entry not owned by the user
+if should_run_test user_harvest_unowned_entry; then
+    assert_fail user_harvest_unowned_entry                                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
+         $RICH_USER1_PUBKEY 15 0 1 $DELEGATED_STAKE_PUBKEY                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Unstaked entry
+if should_run_test user_harvest_unstaked_entry; then
+    assert_fail user_harvest_unowned_entry                                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1039}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
+         $RICH_USER1_PUBKEY 15 0 2 $DELEGATED_STAKE_PUBKEY                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Incorrect stake account (not staked to entry)
+if should_run_test user_harvest_incorrect_stake; then
+    assert_fail user_harvest_incorrect_stake                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
+         $RICH_USER1_PUBKEY 15 0 0 $DELEGATED_STAKE2_PUBKEY                                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Harvest ki -- ensure that: 1) Last harvest ki amount gets set, 2) ki tokens were harvested into ki destination
+if should_run_test user_harvest_success; then
+    # Store the Ki token balance of user's Ki account
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[15] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    KI_BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    if [ "0$KI_BALANCE" -ne 0 ]; then
+        echo "FAIL: user_buy_success expected initial Ki balance 0 on account $KI_DESTINATION_PUBKEY, got:"
+        echo $KI_BALANCE
+        exit 1
+    fi
+    # Make ki destination account ahead of time with system program to test that
+    transfer $LEDGER/rich_user1.json $KI_DESTINATION_PUBKEY 1
+    # Wait until end of epoch to ensure that there has been stake rewards earned and thus Ki to harvest
+    sleep_until_next_epoch
+    assert user_harvest_success                                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
+         $RICH_USER1_PUBKEY 15 0 0 $DELEGATED_STAKE_PUBKEY                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    NEW_KI_BALANCE=`get_token_balance $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    # Ki balance must have grown
+    if ! less_than "$KI_BALANCE" "$NEW_KI_BALANCE"; then
+        echo "FAIL: user_buy_success expected Ki balance to grow, instead:"
+        echo $KI_BALANCE
+        echo $NEW_KI_BALANCE
+        exit 1
+    fi
+    # Harvest when no Ki is due: ensure that nothing happens.
+    KI_BALANCE=$NEW_KI_BALANCE
+    assert user_harvest_success_2                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
+         $RICH_USER1_PUBKEY 15 0 0 $DELEGATED_STAKE_PUBKEY                                                            \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    NEW_KI_BALANCE=`get_token_balance $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    # Ki balance must not have grown
+    if less_than "$KI_BALANCE" "$NEW_KI_BALANCE"; then
+        echo "FAIL: user_buy_success_2 expected Ki balance to stay the same, instead:"
+        echo $KI_BALANCE
+        echo $NEW_KI_BALANCE
+        exit 1
+    fi
+fi

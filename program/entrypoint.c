@@ -65,9 +65,9 @@ typedef enum
     Instruction_LevelUp                       = 18,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
-    // If the entry is staked and the stake account is delegated, this pays any commission owed to the admin account.
-    // If the entry is staked and the stake account is not delegated, this delgates the stake account to Shinobi
-    // Systems so that it can start earning Ki
+    // If the entry is staked and the stake account is delegated, this pays any commission owed into the master stake
+    // account.  If the entry is staked and the stake account is not delegated, this delegates the stake account to
+    // Shinobi Systems so that it can start earning Ki.
     Instruction_TakeCommissionOrDelegate      = 19,
 
     // Special functions -----------------------------------------------------------------------------------------------

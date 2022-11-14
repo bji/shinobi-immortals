@@ -271,6 +271,24 @@ function get_account_data ()
 }
 
 
+function get_token_balance ()
+{
+    local mint=$1
+    local user=$2
+
+    local account=`get_splata_account $mint $user`
+
+    local DATA=`get_account_data $account`
+
+    if [ -z "$DATA" ]; then
+        echo 0
+    else
+        # The amount is at offset 64
+        echo "$DATA" | base64 -d | od -An -j64 -N8 -tu8 -v | tr -d [:space:]
+    fi
+}
+
+
 function hex_digit ()
 {
     local decimal=$1
