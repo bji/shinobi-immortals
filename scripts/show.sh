@@ -589,11 +589,11 @@ case $1 in
 
             echo -n '"ki_factor":'`get_data_u32 $(($OFFSET+8)) "$ACCOUNT_DATA"`','
 
-            echo -n '"name":"'`get_data_string $(($OFFSET+16)) 48 "$ACCOUNT_DATA"`'",'
+            echo -n '"name":"'`get_data_string $(($OFFSET+12)) 48 "$ACCOUNT_DATA"`'",'
 
-            echo -n '"uri":"'`get_data_string $(($OFFSET+64)) 200 "$ACCOUNT_DATA"`'",'
+            echo -n '"uri":"'`get_data_string $(($OFFSET+60)) 200 "$ACCOUNT_DATA"`'",'
 
-            echo -n '"uri_contents_sha256":"'`get_data_sha256 $(($OFFSET+264)) "$ACCOUNT_DATA"`'"'
+            echo -n '"uri_contents_sha256":"'`get_data_sha256 $(($OFFSET+260)) "$ACCOUNT_DATA"`'"'
 
             echo -n '}'
 

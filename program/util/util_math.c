@@ -3,7 +3,7 @@
 
 /**
  * Multiplies [x] by [y] and returns the result.  The result may have overflowed, and if so, the return value
- * [overflowed] will be set to true; otherise the return value [overflowed] will be unchanged.
+ * [overflowed] will be set to true; otherwise the return value [overflowed] will be unchanged.
  **/
 static uint64_t checked_add(const uint64_t x, const uint64_t y, bool *overflowed)
 {
@@ -19,7 +19,7 @@ static uint64_t checked_add(const uint64_t x, const uint64_t y, bool *overflowed
 
 /**
  * Multiplies [x] by [y] and returns the result.  The result may have overflowed, and if so, the return value
- * [overflowed] will be set to true; otherise the return value [overflowed] will be unchanged.
+ * [overflowed] will be set to true; otherwise the return value [overflowed] will be unchanged.
  **/
 static uint64_t checked_multiply(const uint64_t x, const uint64_t y, bool *overflowed)
 {

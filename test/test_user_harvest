@@ -1,10 +1,10 @@
 
-# The ki_factor for level 1 appears as an unsigned short-endian 32 bit value at offset 76.  0x1027 is 10000 in
+# The ki_factor for level 1 appears as an unsigned short-endian 32 bit value at offset 80.  0x1027 is 10000 in
 # little-endian.
 
-METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x1027 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2618 status=none) | base64 | tr -d '\n'`
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2616 status=none) | base64 | tr -d '\n'`
 # Metadata to set into entries, only needs to include up to the ki_factor
-METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x1027 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
+METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -32,81 +32,81 @@ if [ -z "$TESTS" ]; then
            >/dev/null 2>/dev/null
 
     # 15 0
-    assert user_stake_setup_15_0_a                                                                                    \
+    assert user_harvest_setup_15_0_a                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
          $ADMIN_PUBKEY 15 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                       \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    assert user_stake_setup_15_0_b                                                                                    \
+    assert user_harvest_setup_15_0_b                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
          $ADMIN_PUBKEY 15 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    assert user_stake_setup_15_0_c                                                                                    \
+    assert user_harvest_setup_15_0_c                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
          $ADMIN_PUBKEY 15 0 "http://foo.bar.com" none 2 $SHA2562                                                      \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
     # set metadata
-    assert user_stake_setup_15_0_d                                                                                    \
+    assert user_harvest_setup_15_0_d                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
          $ADMIN_PUBKEY 15 0 0 0 $METADATA_HEAD                                                                        \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    assert user_stake_setup_15_0_e                                                                                    \
+    assert user_harvest_setup_15_0_e                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
          $ADMIN_PUBKEY 15 0 1 0 $METADATA_HEAD                                                                        \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
-    assert user_stake_setup_15_0_f                                                                                    \
+    assert user_harvest_setup_15_0_f                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
          $ADMIN_PUBKEY 15 0 2 0 $METADATA_HEAD                                                                        \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
     # reveal entries
-    assert user_stake_setup_15_0_g                                                                                    \
+    assert user_harvest_setup_15_0_g                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
          $ADMIN_PUBKEY 15 0 0 $SALT0 $SALT1 $SALT2                                                                    \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
     # rich_user1 buy entry 0
-    assert user_stake_setup_15_0_h                                                                                    \
+    assert user_harvest_setup_15_0_h                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 15 0 0 \`lamports_from_sol 1001\`                                           \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/rich_user1.json                                                                        \
         | solxact submit l 2>&1`
     # rich_user1 stake entry 0
-    assert user_stake_setup_15_0_i                                                                                    \
+    assert user_harvest_setup_15_0_i                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
          $RICH_USER1_PUBKEY 15 0 0 $LEDGER/delegated3_stake.json                                                      \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/rich_user1.json                                                                        \
         | solxact submit l 2>&1`
     # rich_user2 buy entry 1
-    assert user_stake_setup_15_0_j                                                                                    \
+    assert user_harvest_setup_15_0_j                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
          $ADMIN_PUBKEY $RICH_USER2_PUBKEY 15 0 1 \`lamports_from_sol 1001\`                                           \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/rich_user2.json                                                                        \
         | solxact submit l 2>&1`
     # rich_user2 stake entry 1
-    assert user_stake_setup_15_0_k                                                                                    \
+    assert user_harvest_setup_15_0_k                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
          $RICH_USER2_PUBKEY 15 0 1 $LEDGER/delegated3_stake2.json                                                     \
         | solxact hash l                                                                                              \
         | solxact sign $LEDGER/rich_user2.json                                                                        \
         | solxact submit l 2>&1`
     # rich_user2 buy entry 2
-    assert user_stake_setup_15_0_l                                                                                    \
+    assert user_harvest_setup_15_0_l                                                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 15 0 2 \`lamports_from_sol 1001\`                                           \
         | solxact hash l                                                                                              \
