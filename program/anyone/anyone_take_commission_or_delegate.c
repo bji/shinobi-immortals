@@ -1,19 +1,6 @@
 #pragma once
 
 
-typedef struct
-{
-    // This is the instruction code for TakeCommissionOrDelegate
-    uint8_t instruction_code;
-
-    // Minimum stake account delegation in lamports.  If this is provided (i.e. is nonzero), no stake account will be
-    // created with a delegation smaller than this.  If not provided, it will be fetched by using the currently buggy
-    // stake program GetMinimumDelegation instruction.
-    uint64_t minimum_stake_lamports;
-
-} TakeCommissionOrDelegateData;
-
-
 static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
@@ -31,14 +18,6 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
         DECLARE_ACCOUNT(10, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
     }
     DECLARE_ACCOUNTS_NUMBER(11);
-
-    // Check to make sure input data size is correct
-    if (params->data_len != sizeof(TakeCommissionOrDelegateData)) {
-        return Error_InvalidDataSize;
-    }
-
-    // Data can be safely used now
-    const TakeCommissionOrDelegateData *data = (TakeCommissionOrDelegateData *) params->data;
 
     // Get validated block and entry, which checks all validity of those accounts
     const Block *block = get_validated_block(block_account);
@@ -73,11 +52,6 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
         return Error_InvalidAccount_First + 3;
     }
 
-    // Check to make sure that the master stake account passed in is actually the master stake account
-    if (!is_master_stake_account(master_stake_account->key)) {
-        return Error_InvalidAccount_First + 4;
-    }
-
     // Decode the stake account
     Stake stake;
     if (!decode_stake_account(stake_account, &stake)) {
@@ -107,7 +81,7 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
     }
     // Else, it's initialized, so try charging commission
     else {
-        return charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account,
-                                 stake_account->key, data->minimum_stake_lamports, params->ka, params->ka_num);
+        return charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, stake_account->key,
+                                 params->ka, params->ka_num);
     }
 }

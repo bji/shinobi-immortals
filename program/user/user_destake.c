@@ -4,18 +4,6 @@
 #include "util/util_ki.c"
 #include "util/util_stake.c"
 
-typedef struct
-{
-    // This is the instruction code for Destake
-    uint8_t instruction_code;
-
-    // Minimum stake account delegation in lamports.  If this is provided (i.e. is nonzero), no stake account
-    // will be created with a delegation smaller than this.  If not provided, it will be fetched by using the
-    // currently buggy stake program GetMinimumDelegation instruction.
-    uint64_t minimum_stake_lamports;
-
-} DestakeData;
-
 
 static uint64_t user_destake(const SolParameters *params)
 {
@@ -41,14 +29,6 @@ static uint64_t user_destake(const SolParameters *params)
         DECLARE_ACCOUNT(17,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(18);
-
-    // Make sure that the input data is the correct size
-    if (params->data_len != sizeof(DestakeData)) {
-        return Error_InvalidDataSize;
-    }
-
-    // Cast to instruction data
-    const DestakeData *data = (DestakeData *) params->data;
 
     // Get validated block and entry, which checks all validity of those accounts
     const Block *block = get_validated_block(block_account);
@@ -103,8 +83,8 @@ static uint64_t user_destake(const SolParameters *params)
     }
 
     // Charge commission
-    ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account,
-                            stake_account->key, data->minimum_stake_lamports, params->ka, params->ka_num);
+    ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, stake_account->key,
+                            params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

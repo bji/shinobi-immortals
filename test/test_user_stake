@@ -92,6 +92,9 @@ if [ -z "$TESTS" ]; then
     # 13 0 0 is owned by rich_user1
     # 13 0 1 is owned by rich_user2
     # 13 0 2 is not owned
+
+    # Sleep for an epoch to ensure that delegations all take effect
+    sleep_until_next_epoch
 fi
 
     

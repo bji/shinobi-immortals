@@ -177,46 +177,6 @@ export     DELEGATED_STAKE3_PUBKEY=`solpda -pubkey $LEDGER/delegated2_stake3.jso
 export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated2_stake.json`
 
 
-# Data input incorrect size
-if should_run_test user_destake_bad_data; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[14] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[10] Pubkey[$MINT_PUBKEY]`
-    assert_fail user_destake_bad_data                                                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $BLOCK_PUBKEY                                                                                      \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $TOKEN_PUBKEY                                                                                      \
-           account $DELEGATED_STAKE_PUBKEY w                                                                          \
-           account $KI_DESTINATION_PUBKEY w                                                                           \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $MASTER_STAKE_PUBKEY w                                                                             \
-           account $BRIDGE_PUBKEY w                                                                                   \
-           account $KI_MINT_PUBKEY w                                                                                  \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $CLOCK_SYSVAR_PUBKEY                                                                               \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $STAKE_PROGRAM_PUBKEY                                                                              \
-           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 16 = Destake //                                                                        \
-           u8 16"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
-        | solxact submit l 2>&1`
-fi
-
-
 # Bad block
 if should_run_test user_destake_bad_block; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[14] u32[0]`

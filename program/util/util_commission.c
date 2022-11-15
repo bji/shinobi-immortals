@@ -4,12 +4,10 @@
 
 
 // funding_account is only used to provide transient quantities of SOL for a temporary stake account
-// If 0 is passed in for minimum_stake_lamports, the minimum will be fetched by calling the
-// get_minimum_stake_delegation function.
 static uint64_t charge_commission(const Stake *stake, const Block *block, Entry *entry,
                                   const SolPubkey *funding_account_key, SolAccountInfo *bridge_stake_account,
-                                  const SolPubkey *stake_account_key, uint64_t minimum_stake_lamports,
-                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                                  const SolPubkey *stake_account_key, const SolAccountInfo *transaction_accounts,
+                                  int transaction_accounts_len)
 {
     // Compute commission to charge.  It is the commission as set in the block, times the difference between
     // the current lamports in the stake account minus the lamports that were in the stake account the last
@@ -53,17 +51,11 @@ static uint64_t charge_commission(const Stake *stake, const Block *block, Entry 
         return Error_CreateAccountFailed;
     }
 
-    // Only if minimum_stake_lamports is passed in as 0 should get_minimum_stake_delegation be called.  This is
-    // because that function relies on the currently buggy stake program's GetMinimumDelegation instruction
-    // processing, and until that's fixed, the transaction data is going to have to supply the correct value.  If the
-    // correct value is not supplied, then this transaction may fail because it will try to create a too-small bridge
-    // stake account.  If the value supplied in the transaction is really large, then it will be harmless since the
-    // lamports are always returned to the master stake account in any case.
-    if (minimum_stake_lamports == 0) {
-        ret = get_minimum_stake_delegation(&minimum_stake_lamports);
-        if (ret) {
-            return ret;
-        }
+    // Get minimum stake delegation to ensure that the bridge account is used if necessary.
+    uint64_t minimum_stake_lamports;
+    ret = get_minimum_stake_delegation(&minimum_stake_lamports);
+    if (ret) {
+        return ret;
     }
 
     // If the commission to charge is less than the minimum stake in lamports, then it is necessary to use a more
