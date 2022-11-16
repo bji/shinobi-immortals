@@ -108,7 +108,7 @@ a. solpda, available on github: [https://github.com/bji/solpda](https://github.c
 
 b. solxact, available on github: [https://github.com/bji/solxact](https://github.com/bji/solxact).
 
-You should verify the fidelity of this programs - the source is open and available.
+You should verify the fidelity of these programs - the source is open and available.
 
 Then, run the following command:
 
