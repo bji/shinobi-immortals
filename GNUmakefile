@@ -5,3 +5,7 @@ program.so: $(wildcard program/*.c program/*.h program/*/*.c program/*/*.h) buil
 
 build_program.sh: make_build_program.sh
 	./make_build_program.sh program-key.json super-key.json BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2 > $@
+
+.PHONY: test
+test:
+	SOURCE=`pwd` ./test/test.sh
