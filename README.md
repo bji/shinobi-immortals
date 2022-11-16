@@ -142,3 +142,9 @@ on-chain account data associated with the Shinobi Immortals program.
 ## Programmatic Interaction with Shinobi Immortals
 
 The js directory includes a Javascript API for interaction with Shinobi Immortals.
+
+
+## License
+
+The Shinobi Immortals program and all contents of this repository are Copyright 2022
+by Shinobi Systems LLC, and licensed under the GNU General Public License Version 3.
