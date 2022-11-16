@@ -129,5 +129,5 @@ solxact encode                                                                  
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         account $STAKE_PROGRAM_PUBKEY                                                                                 \
         // Instruction code 20 = Reauthorize //                                                                       \
-        u8 8                                                                                                          \
+        u8 20                                                                                                         \
         pubkey $NEW_AUTHORITY_PUBKEY

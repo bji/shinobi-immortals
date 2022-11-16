@@ -1,0 +1,345 @@
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2616 status=none) | base64 | tr -d '\n'`
+# Metadata to set into entries, only needs to include up to the ki_factor
+METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
+SALT0=0
+SALT1=1
+SALT2=2
+SHA2560=`compute_metadata_sha256 $METADATA $SALT0`
+SHA2561=`compute_metadata_sha256 $METADATA $SALT1`
+SHA2562=`compute_metadata_sha256 $METADATA $SALT2`
+
+
+# This must be set so that user_stake_tx.sh will use the correct vote account
+export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+
+
+# Create accounts and block
+if [ -z "$TESTS" ]; then
+    # Create stake accounts: delegated_stake, undelegated_stake
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/delegated6_stake.json 1000
+    make_stake_account $LEDGER/rich_user2.json $LEDGER/delegated6_stake2.json 1000
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/undelegated6_stake.json 1000
+    
+    # Delegate the delegated stake accounts
+    echo "Delegating $LEDGER/delegated6_stake.json"
+    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated6_stake.json $VOTE_PUBKEY                  \
+           >/dev/null 2>/dev/null
+    echo "Delegating $LEDGER/delegated6_stake2.json"
+    solana -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated6_stake2.json $VOTE_PUBKEY                 \
+           >/dev/null 2>/dev/null
+    # Wait until end of epoch to ensure that these have delegated
+    sleep_until_next_epoch
+
+    # 18 0
+    assert special_reauthorize_setup_18_0_a                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
+         $ADMIN_PUBKEY 18 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                       \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert special_reauthorize_setup_18_0_b                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 18 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert special_reauthorize_setup_18_0_c                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
+         $ADMIN_PUBKEY 18 0 "http://foo.bar.com" none 2 $SHA2562                                                      \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # set metadata
+    assert special_reauthorize_setup_18_0_d                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 18 0 0 0 $METADATA_HEAD                                                                        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert special_reauthorize_setup_18_0_e                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 18 0 1 0 $METADATA_HEAD                                                                        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    assert special_reauthorize_setup_18_0_f                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
+         $ADMIN_PUBKEY 18 0 2 0 $METADATA_HEAD                                                                        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # reveal entries
+    assert special_reauthorize_setup_18_0_g                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
+         $ADMIN_PUBKEY 18 0 0 $SALT0 $SALT1 $SALT2                                                                    \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+    # rich_user1 buy entry 0
+    assert special_reauthorize_setup_18_0_h                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user1 stake entry 0
+    assert special_reauthorize_setup_18_0_i                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER1_PUBKEY 18 0 0 $LEDGER/delegated6_stake.json                                                      \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user2 buy entry 1
+    assert special_reauthorize_setup_18_0_j                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 18 0 1 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user2 stake entry 1
+    assert special_reauthorize_setup_18_0_k                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
+         $RICH_USER2_PUBKEY 18 0 1 $LEDGER/delegated6_stake2.json                                                     \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user2.json                                                                        \
+        | solxact submit l 2>&1`
+    # rich_user2 buy entry 2
+    assert special_reauthorize_setup_18_0_l                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 2 \`lamports_from_sol 1001\`                                           \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+
+    # 18 0 0 is owned and staked by rich_user1
+    # 18 0 1 is owned and staked by rich_user2
+    # 18 0 2 is owned by rich_user1
+
+    # Sleep for an epoch to ensure that delegations all take effect
+    sleep_until_next_epoch
+fi
+
+
+export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated6_stake.json`
+export     DELEGATED_STAKE2_PUBKEY=`solpda -pubkey $LEDGER/delegated6_stake2.json`
+
+
+# Not authorized by admin
+if should_run_test special_reauthorize_not_authorized_by_admin; then
+    assert_fail special_reauthorize_not_authorized_by_admin                                                           \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                               \
+         $RICH_USER1_PUBKEY $RICH_USER1_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $RICH_USER1_PUBKEY   \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Not authorized by user
+if should_run_test special_reauthorize_not_authorized_by_user; then
+    assert_fail special_reauthorize_not_authorized_by_user                                                            \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                               \
+         $ADMIN_PUBKEY $ADMIN_PUBKEY $ADMIN_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $ADMIN_PUBKEY                       \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact submit l 2>&1`
+fi
+
+
+# Bad data size
+if should_run_test special_reauthorize_bad_data; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[18] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                   \
+                                                  Pubkey[$MINT_PUBKEY]`
+    assert_fail special_reauthorize_bad_data                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ENTRY_PUBKEY w                                                                                    \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $METADATA_PUBKEY w                                                                                 \
+           account $DELEGATED_STAKE_PUBKEY w                                                                          \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           // Instruction code 20 = Reauthorize //                                                                    \
+           u8 20"                                                                                                     \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Bad entry
+if should_run_test special_reauthorize_bad_entry; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[18] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                   \
+                                                  Pubkey[$MINT_PUBKEY]`
+    assert_fail special_reauthorize_bad_entry                                                                         \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $METADATA_PUBKEY w                                                                                 \
+           account $DELEGATED_STAKE_PUBKEY w                                                                          \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           // Instruction code 20 = Reauthorize //                                                                    \
+           u8 20                                                                                                      \
+           pubkey $RICH_USER1_PUBKEY"                                                                                 \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Entry not owned
+if should_run_test special_reauthorize_entry_not_owned; then
+    assert_fail special_reauthorize_entry_not_owned                                                                   \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                               \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 1 $DELEGATED_STAKE_PUBKEY $RICH_USER1_PUBKEY        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Bad metaplex metadata account
+if should_run_test special_reauthorize_bad_metadata; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[18] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                   \
+                                                  Pubkey[$MINT_PUBKEY]`
+    assert_fail special_reauthorize_bad_metadata                                                                      \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    `echo "encoding c                                                                                                 \
+           fee_payer $RICH_USER1_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                               \
+           account $CONFIG_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                    \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                               \
+           account $TOKEN_PUBKEY                                                                                      \
+           account $CONFIG_PUBKEY w                                                                                   \
+           account $DELEGATED_STAKE_PUBKEY w                                                                          \
+           account $AUTHORITY_PUBKEY                                                                                  \
+           account $CLOCK_SYSVAR_PUBKEY                                                                               \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+           account $STAKE_PROGRAM_PUBKEY                                                                              \
+           // Instruction code 20 = Reauthorize //                                                                    \
+           u8 20                                                                                                      \
+           pubkey $RICH_USER1_PUBKEY"                                                                                 \
+        | solxact encode                                                                                              \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# No stake account passed in
+if should_run_test special_reauthorize_no_stake; then
+    assert_fail special_reauthorize_no_stake                                                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1106}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED Instruction: Update Metadata Accounts v2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x452"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                               \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY         \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Wrong stake account passed in
+if should_run_test special_reauthorize_bad_stake; then
+    assert_fail special_reauthorize_entry_bad_stake                                                                   \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1106}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED Instruction: Update Metadata Accounts v2","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x452"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                               \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE2_PUBKEY $RICH_USER1_PUBKEY       \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+fi
+
+
+# Success - make sure that metadata has new authority and stake account too
+if should_run_test special_reauthorize_success; then
+    assert special_reauthorize_success                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                               \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $RICH_USER1_PUBKEY        \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    # Check metadata update authority
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[18] u32[0]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]                   \
+                                                  Pubkey[$MINT_PUBKEY]`
+    UPDATE_AUTHORITY=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 18 0 0 |              \
+                      jq -r .update_authority_pubkey`
+    if [ "$UPDATE_AUTHORITY" != "$RICH_USER1_PUBKEY" ]; then
+        echo "FAIL: special_reauthorize_success: Invalid metadata update authority:"
+        echo "$RICH_USER1_PUBKEY"
+        echo "$UPDATE_AUTHORITY"
+        exit 1
+    fi
+    # Check the stake authorities
+    RESULT=`solana -u l stake-account $DELEGATED_STAKE_PUBKEY`
+    STAKE_AUTHORITY=`echo "$RESULT" | grep "^Stake Authority" | cut -d ' ' -f 3`
+    WITHDRAW_AUTHORITY=`echo "$RESULT" | grep "^Withdraw Authority" | cut -d ' ' -f 3`
+    if [ "$STAKE_AUTHORITY" != "$RICH_USER1_PUBKEY" -o "$WITHDRAW_AUTHORITY" != "$RICH_USER1_PUBKEY" ]; then
+        echo "FAIL: special_reauthorize_success: Invalid stake authorities:"
+        echo "$RICH_USER1_PUBKEY"
+        echo "$STAKE_AUTHORITY"
+        echo "$WITHDRAW_AUTHORITY"
+        exit 1
+    fi
+
+    # Success when no stake account is provided
+    assert special_reauthorize_success                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                               \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 2 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY         \
+        | solxact hash l                                                                                              \
+        | solxact sign $LEDGER/admin.json                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                        \
+        | solxact submit l 2>&1`
+    UPDATE_AUTHORITY=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 18 0 2 |              \
+                      jq -r .update_authority_pubkey`
+    if [ "$UPDATE_AUTHORITY" != "$RICH_USER1_PUBKEY" ]; then
+        echo "FAIL: special_reauthorize_success: Invalid metadata update authority:"
+        echo "$RICH_USER1_PUBKEY"
+        echo "$UPDATE_AUTHORITY"
+        exit 1
+    fi
+fi

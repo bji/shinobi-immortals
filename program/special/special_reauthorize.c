@@ -22,7 +22,7 @@ static uint64_t special_reauthorize(const SolParameters *params)
         DECLARE_ACCOUNT(3,   token_owner_account,           ReadOnly,   Signer,      KnownAccount_NotKnown);
         DECLARE_ACCOUNT(4,   token_account,                 ReadOnly,   NotSigner,   KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   entry_metadata_account,        ReadWrite,  NotSigner,   KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(6,   stake_account,                 ReadWrite,  NotSigner,   KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(6,   stake_account,                 ReadOnly,   NotSigner,   KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   authority_account,             ReadOnly,   NotSigner,   KnownAccount_Authority);
         DECLARE_ACCOUNT(8,   clock_sysvar_account,          ReadOnly,   NotSigner,   KnownAccount_ClockSysvar);
         DECLARE_ACCOUNT(9,   metaplex_program_account,      ReadOnly,   NotSigner,   KnownAccount_MetaplexProgram);
@@ -75,7 +75,7 @@ static uint64_t special_reauthorize(const SolParameters *params)
 
     // Check to make sure that the correct metaplex metadata account was provided
     if (!SolPubkey_same(entry_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
-        return Error_InvalidAccount_First + 6;
+        return Error_InvalidAccount_First + 5;
     }
 
     // Set the metaplex metadata authority of the entry to the new authority
@@ -89,7 +89,7 @@ static uint64_t special_reauthorize(const SolParameters *params)
     if (is_staked) {
         // Make sure that the passed-in stake account is the correct one
         if (!SolPubkey_same(stake_account->key, &(entry->owned.stake_account))) {
-            return Error_InvalidAccount_First + 5;
+            return Error_InvalidAccount_First + 6;
         }
 
         // And ensure that it's read-write; couldn't enforce this in the declared accounts list, because the system

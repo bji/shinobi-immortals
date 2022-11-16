@@ -340,56 +340,48 @@ function sleep_until_next_epoch ()
 
 function setup ()
 {
-    if [ -z "$TEST_NO_SETUP" ]; then
-        # Make a temporary directory to hold the validator ledger
-        export LEDGER=`mktemp -d`
-        
-        echo "Starting test validator @ $LEDGER"
-        
-        # Start the test validator
-        solana-test-validator --ledger $LEDGER --ticks-per-slot 16 --slots-per-epoch 100                               \
-                              -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s    \
-                              -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT >/dev/null 2>/dev/null &
-        
-        echo "Waiting 5 seconds for it to settle"
-        
-        # Give it time to start
-        sleep 5
-        
-        # Detect the vote account
-        export VALIDATOR_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1            \
-                                                     | awk '{ print $2 }'`
-        export VOTE_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                 \
-                        | awk '{ print $3 }'                `
-        
-        # Create keys: program, super, admin, rich_user1, rich_user2, poor_user, nonexistent_user
-        make_funded_keypair $LEDGER/program.json 0
-        make_funded_keypair $LEDGER/super.json 100000
-        make_funded_keypair $LEDGER/admin.json 100000
-        make_funded_keypair $LEDGER/rich_user1.json 100000
-        make_funded_keypair $LEDGER/rich_user2.json 100000
-        make_funded_keypair $LEDGER/poor_user.json 0.01
-        make_funded_keypair $LEDGER/nonexistent_user.json 0 finalized
-        
-        # Build the program
-        echo "Making build script"
-        $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $VOTE_PUBKEY > $LEDGER/build_program.sh
-        chmod +x $LEDGER/build_program.sh
-        echo "Building program"
-        (cd $LEDGER;                                                                                                   \
-         SDK_ROOT=~/.local/share/solana/install/active_release/bin/sdk SOURCE_ROOT=$SOURCE ./build_program.sh)
-        
-        # Deploy the program.
-        echo "Deploying program"
-        solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so          \
-               --commitment finalized >/dev/null 2>/dev/null
-    else
-        export VALIDATOR_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1            \
-                                     | awk '{ print $2 }'`
-        export VOTE_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                 \
-                            | awk '{ print $3 }'`
-        export LEDGER=/tmp/tmp.*
-    fi
+    # Make a temporary directory to hold the validator ledger
+    export LEDGER=`mktemp -d`
+    
+    echo "Starting test validator @ $LEDGER"
+    
+    # Start the test validator
+    solana-test-validator --ledger $LEDGER --ticks-per-slot 16 --slots-per-epoch 100                                   \
+                          -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s        \
+                          -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT >/dev/null 2>/dev/null &
+    
+    echo "Waiting 5 seconds for it to settle"
+    
+    # Give it time to start
+    sleep 5
+    
+    # Detect the vote account
+    export VALIDATOR_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                \
+                                                 | awk '{ print $2 }'`
+    export VOTE_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                     \
+                    | awk '{ print $3 }'                `
+    
+    # Create keys: program, super, admin, rich_user1, rich_user2, poor_user, nonexistent_user
+    make_funded_keypair $LEDGER/program.json 0
+    make_funded_keypair $LEDGER/super.json 100000
+    make_funded_keypair $LEDGER/admin.json 100000
+    make_funded_keypair $LEDGER/rich_user1.json 100000
+    make_funded_keypair $LEDGER/rich_user2.json 100000
+    make_funded_keypair $LEDGER/poor_user.json 0.01
+    make_funded_keypair $LEDGER/nonexistent_user.json 0 finalized
+    
+    # Build the program
+    echo "Making build script"
+    $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $VOTE_PUBKEY > $LEDGER/build_program.sh
+    chmod +x $LEDGER/build_program.sh
+    echo "Building program"
+    (cd $LEDGER;                                                                                                       \
+     SDK_ROOT=~/.local/share/solana/install/active_release/bin/sdk SOURCE_ROOT=$SOURCE ./build_program.sh)
+    
+    # Deploy the program.
+    echo "Deploying program"
+    solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
+           --commitment finalized >/dev/null 2>/dev/null
     
 # Compute pubkeys
 

@@ -126,7 +126,11 @@ if [ -z "$TESTS" ]; then
         | solxact submit l 2>&1`
 
     # 17 1 is an incomplete block
+
+    # Sleep for an epoch to ensure that delegations all take effect
+    sleep_until_next_epoch
 fi
+
 
 export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated5_stake.json`
 export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated5_stake.json`
