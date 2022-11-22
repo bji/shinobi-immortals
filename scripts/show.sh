@@ -21,7 +21,7 @@ function usage_exit ()
 
 function pda ()
 {
-    solpda $@ | cut -d . -f 1
+    solxact pda $@ | cut -d . -f 1
 }
 
 function normalize_float ()
@@ -256,28 +256,28 @@ fi
 
 # Compute pubkeys
 
-      SYSTEM_PROGRAM_PUBKEY=$(echo 11111111111111111111111111111111)
-   SPL_TOKEN_PROGRAM_PUBKEY=$(echo TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA)
-      SPLATA_PROGRAM_PUBKEY=$(echo ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL)
-       STAKE_PROGRAM_PUBKEY=$(echo Stake11111111111111111111111111111111111111)
-        CLOCK_SYSVAR_PUBKEY=$(echo SysvarC1ock11111111111111111111111111111111)
-         RENT_SYSVAR_PUBKEY=$(echo SysvarRent111111111111111111111111111111111)
-    METAPLEX_PROGRAM_PUBKEY=$(echo metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s)
-STAKE_HISTORY_SYSVAR_PUBKEY=$(echo SysvarStakeHistory1111111111111111111111111)
-        STAKE_CONFIG_PUBKEY=$(echo StakeConfig11111111111111111111111111111111)
-              CONFIG_PUBKEY=$(pda $PROGRAM_PUBKEY u8[1])
-           AUTHORITY_PUBKEY=$(pda $PROGRAM_PUBKEY u8[2])
-        MASTER_STAKE_PUBKEY=$(pda $PROGRAM_PUBKEY u8[3])
-             KI_MINT_PUBKEY=$(pda $PROGRAM_PUBKEY u8[4])
-     BID_MARKER_MINT_PUBKEY=$(pda $PROGRAM_PUBKEY u8[11])
-         KI_METADATA_PUBKEY=$(pda $METAPLEX_PROGRAM_PUBKEY                                                            \
-                                  String[metadata]                                                                    \
-                                  Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                                    \
-                                  Pubkey[$KI_MINT_PUBKEY])
- BID_MARKER_METADATA_PUBKEY=$(pda $METAPLEX_PROGRAM_PUBKEY                                                            \
-                                  String[metadata]                                                                    \
-                                  Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                                    \
-                                  Pubkey[$BID_MARKER_MINT_PUBKEY])
+      SYSTEM_PROGRAM_PUBKEY="11111111111111111111111111111111"
+   SPL_TOKEN_PROGRAM_PUBKEY="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      SPLATA_PROGRAM_PUBKEY="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+       STAKE_PROGRAM_PUBKEY="Stake11111111111111111111111111111111111111"
+        CLOCK_SYSVAR_PUBKEY="SysvarC1ock11111111111111111111111111111111"
+         RENT_SYSVAR_PUBKEY="SysvarRent111111111111111111111111111111111"
+    METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
+        STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
+              CONFIG_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
+           AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 2 ]`
+        MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 3 ]`
+             KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 ]`
+     BID_MARKER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 ]`
+         KI_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                             \
+                                 [ string metadata                                                                    \
+                                   pubkey $METAPLEX_PROGRAM_PUBKEY                                                    \
+                                   pubkey $KI_MINT_PUBKEY ]`
+ BID_MARKER_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                             \
+                                 [ string metadata                                                                    \
+                                   pubkey $METAPLEX_PROGRAM_PUBKEY                                                    \
+                                   pubkey $BID_MARKER_MINT_PUBKEY ]`
 
 case $1 in
 
@@ -316,7 +316,7 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
 
         ACCOUNT_DATA=`get_account_data $RPC_URL $BLOCK_PUBKEY`
 
@@ -472,11 +472,11 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
 
-        MINT_PUBKEY=`pda $PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[$3]`
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $3 ]`
 
-        ENTRY_PUBKEY=`pda $PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+        ENTRY_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
 
         ACCOUNT_DATA=`get_account_data $RPC_URL $ENTRY_PUBKEY`
 
@@ -614,15 +614,15 @@ case $1 in
             usage_exit
         fi
 
-        USER_PUBKEY=`solpda -pubkey $4`
+        USER_PUBKEY=`solxact pubkey $4`
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
 
-        MINT_PUBKEY=`pda $PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[$3]`
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $3 ]`
 
-        BID_MARKER_PUBKEY=`pda $PROGRAM_PUBKEY u8[12] Pubkey[$MINT_PUBKEY] Pubkey[$USER_PUBKEY]`
+        BID_MARKER_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $USER_PUBKEY ]`
 
-        BID_PUBKEY=`pda $PROGRAM_PUBKEY u8[9] Pubkey[$BID_MARKER_PUBKEY]`
+        BID_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_PUBKEY ]`
 
         ACCOUNT_DATA=`get_account_data $RPC_URL $BID_PUBKEY`
 
@@ -667,9 +667,9 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
 
-        WHITELIST_PUBKEY=`pda $PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+        WHITELIST_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
         
         ACCOUNT_DATA=`get_account_data $RPC_URL $WHITELIST_PUBKEY`
 
@@ -725,12 +725,13 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY u8[14] u32[$1] u32[$2]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
 
-        MINT_PUBKEY=`pda $PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[$3]`
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $3 ]`
 
-        METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY String[metadata] Pubkey[$METAPLEX_PROGRAM_PUBKEY]               \
-                                                      Pubkey[$MINT_PUBKEY]`
+        METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                               \
+                                                        pubkey $METAPLEX_PROGRAM_PUBKEY                               \
+                                                        pubkey $MINT_PUBKEY ]`
 
         ACCOUNT_DATA=`get_account_data $RPC_URL $METADATA_PUBKEY`
 

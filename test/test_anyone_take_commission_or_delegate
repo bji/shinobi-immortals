@@ -132,16 +132,16 @@ if [ -z "$TESTS" ]; then
 fi
 
 
-export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated5_stake.json`
-export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated5_stake.json`
+export      DELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/delegated5_stake.json`
+export    UNDELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/undelegated5_stake.json`
 
 
 # Bad block
 if should_run_test anyone_take_commission_or_delegate_bad_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[17] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[10] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_bad_block                                                          \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \
@@ -171,7 +171,7 @@ fi
 # Incomplete block
 if should_run_test anyone_take_commission_or_delegate_incomplete_block; then
     assert_fail anyone_take_commission_or_delegate_incomplete_block                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh                \
          $RICH_USER1_PUBKEY 17 1 0 $DELEGATED_STAKE_PUBKEY                                                            \
         | solxact hash l                                                                                              \
@@ -182,12 +182,12 @@ fi
 
 # Bad entry
 if should_run_test anyone_take_commission_or_delegate_bad_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[17] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[10] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_bad_entry                                                          \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -214,15 +214,15 @@ fi
 
 # Entry not of block
 if should_run_test anyone_take_commission_or_delegate_entry_not_in_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[17] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[10] Pubkey[$MINT_PUBKEY]`
-    BAD_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[17] u32[1]`
-    BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BAD_BLOCK_PUBKEY] u16[0]`
-    BAD_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$BAD_MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
+    BAD_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 1 ]`
+    BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BAD_BLOCK_PUBKEY u16 0 ]`
+    BAD_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $BAD_MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_entry_not_in_block                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -250,7 +250,7 @@ fi
 # Entry not in owned + staked state
 if should_run_test anyone_take_commission_or_delegate_entry_not_staked; then
     assert_fail anyone_take_commission_or_delegate_entry_not_staked                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1039}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1039}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh                \
          $RICH_USER1_PUBKEY 17 0 2 $DELEGATED_STAKE_PUBKEY                                                            \
         | solxact hash l                                                                                              \
@@ -262,7 +262,7 @@ fi
 # Stake account not staked to entry
 if should_run_test anyone_take_commission_or_delegate_bad_stake; then
     assert_fail anyone_take_commission_or_delegate_entry_bad_stake                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh                \
          $RICH_USER1_PUBKEY 17 0 0 $UNDELEGATED_STAKE_PUBKEY                                                          \
         | solxact hash l                                                                                              \
@@ -273,12 +273,12 @@ fi
 
 # Not master stake account
 if should_run_test anyone_take_commission_or_delegate_bad_master_stake; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[17] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[10] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_bad_master_stake                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \

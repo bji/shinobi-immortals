@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Builds a build script given the Shinobi Immortals program pubkey, superuser pubkey, and vote account.
-# Requires that the solpda program be in the path.
+# Requires that the solxact program be in the path.
 # The resulting script requires the following variables to be defined:
 # SDK_ROOT -- path to the root of the Solana SDK to use for building the program
 # SOURCE_ROOT -- path to the Shinobi Immortals source
@@ -26,38 +26,38 @@ METAPLEX_PROGRAM_PUBKEY=metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
 STAKE_HISTORY_SYSVAR_PUBKEY=SysvarStakeHistory1111111111111111111111111
 STAKE_CONFIG_SYSVAR_PUBKEY=StakeConfig11111111111111111111111111111111
 
-# program derived addresses, emitted by the solpda program in form PUBKEY.BUMP_SEED
-CONFIG_PDA=`solpda --bytes $SELF_PROGRAM_PUBKEY u8[1]`
-AUTHORITY_PDA=`solpda --bytes $SELF_PROGRAM_PUBKEY u8[2]`
-MASTER_STAKE_PDA=`solpda --bytes $SELF_PROGRAM_PUBKEY u8[3]`
-KI_MINT_PDA=`solpda --bytes $SELF_PROGRAM_PUBKEY u8[4]`
-BID_MARKER_MINT_PDA=`solpda --bytes $SELF_PROGRAM_PUBKEY u8[11]`
+# program derived addresses, emitted by the solxact program in form PUBKEY.BUMP_SEED
+CONFIG_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 1 ]`
+AUTHORITY_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 2 ]`
+MASTER_STAKE_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 3 ]`
+KI_MINT_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 4 ]`
+BID_MARKER_MINT_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 11 ]`
 
 # pubkeys that are at fixed addresses
-SYSTEM_PROGRAM_PUBKEY_ARRAY=`solpda -pubkey --bytes $SYSTEM_PROGRAM_PUBKEY`
-METAPLEX_PROGRAM_PUBKEY_ARRAY=`solpda -pubkey --bytes $METAPLEX_PROGRAM_PUBKEY`
-SPL_TOKEN_PROGRAM_PUBKEY_ARRAY=`solpda -pubkey --bytes $SPL_TOKEN_PROGRAM_PUBKEY`
-SPLATA_PROGRAM_PUBKEY_ARRAY=`solpda -pubkey --bytes $SPLATA_PROGRAM_PUBKEY`
-STAKE_PROGRAM_PUBKEY_ARRAY=`solpda -pubkey --bytes $STAKE_PROGRAM_PUBKEY`
-CLOCK_SYSVAR_PUBKEY_ARRAY=`solpda -pubkey --bytes $CLOCK_SYSVAR_PUBKEY`
-RENT_SYSVAR_PUBKEY_ARRAY=`solpda -pubkey --bytes $RENT_SYSVAR_PUBKEY`
-STAKE_HISTORY_SYSVAR_PUBKEY_ARRAY=`solpda -pubkey --bytes $STAKE_HISTORY_SYSVAR_PUBKEY`
-STAKE_CONFIG_SYSVAR_PUBKEY_ARRAY=`solpda -pubkey --bytes $STAKE_CONFIG_SYSVAR_PUBKEY`
-SHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY=`solpda -pubkey --bytes $SHINOBI_SYSTEMS_VOTE_PUBKEY`
+SYSTEM_PROGRAM_PUBKEY_ARRAY=`solxact pubkey bytes $SYSTEM_PROGRAM_PUBKEY`
+METAPLEX_PROGRAM_PUBKEY_ARRAY=`solxact pubkey bytes $METAPLEX_PROGRAM_PUBKEY`
+SPL_TOKEN_PROGRAM_PUBKEY_ARRAY=`solxact pubkey bytes $SPL_TOKEN_PROGRAM_PUBKEY`
+SPLATA_PROGRAM_PUBKEY_ARRAY=`solxact pubkey bytes $SPLATA_PROGRAM_PUBKEY`
+STAKE_PROGRAM_PUBKEY_ARRAY=`solxact pubkey bytes $STAKE_PROGRAM_PUBKEY`
+CLOCK_SYSVAR_PUBKEY_ARRAY=`solxact pubkey bytes $CLOCK_SYSVAR_PUBKEY`
+RENT_SYSVAR_PUBKEY_ARRAY=`solxact pubkey bytes $RENT_SYSVAR_PUBKEY`
+STAKE_HISTORY_SYSVAR_PUBKEY_ARRAY=`solxact pubkey bytes $STAKE_HISTORY_SYSVAR_PUBKEY`
+STAKE_CONFIG_SYSVAR_PUBKEY_ARRAY=`solxact pubkey bytes $STAKE_CONFIG_SYSVAR_PUBKEY`
+SHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY=`solxact pubkey bytes $SHINOBI_SYSTEMS_VOTE_PUBKEY`
 
 # pubkeys derived as metaplex PDAs
-KI_METADATA_PDA=`solpda --bytes $METAPLEX_PROGRAM_PUBKEY \
- String[metadata] \
- Pubkey[$METAPLEX_PROGRAM_PUBKEY] \
- u8\`echo $KI_MINT_PDA | cut -d '.' -f 1\``
-BID_MARKER_METADATA_PDA=`solpda --bytes $METAPLEX_PROGRAM_PUBKEY \
- String[metadata]\
- Pubkey[$METAPLEX_PROGRAM_PUBKEY]\
- u8\`echo $BID_MARKER_MINT_PDA | cut -d '.' -f 1\``
+KI_METADATA_PDA=`solxact pda bytes $METAPLEX_PROGRAM_PUBKEY                                                           \
+                                   [ string metadata                                                                  \
+                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                                  \
+                                     pubkey \`echo "$KI_MINT_PDA" | cut -d '.' -f 1\` ]`
+BID_MARKER_METADATA_PDA=`solxact pda bytes $METAPLEX_PROGRAM_PUBKEY                                                   \
+                                           [ string metadata                                                          \
+                                             pubkey $METAPLEX_PROGRAM_PUBKEY                                          \
+                                             pubkey \`echo "$BID_MARKER_MINT_PDA" | cut -d '.' -f 1\` ]`
 
 # pubkeys that are stored in files
-SUPERUSER_PUBKEY_ARRAY=`solpda -pubkey --bytes $SUPERUSER_PUBKEY`
-SELF_PROGRAM_PUBKEY_ARRAY=`solpda -pubkey --bytes $SELF_PROGRAM_PUBKEY`
+SUPERUSER_PUBKEY_ARRAY=`solxact pubkey bytes $SUPERUSER_PUBKEY`
+SELF_PROGRAM_PUBKEY_ARRAY=`solxact pubkey bytes $SELF_PROGRAM_PUBKEY`
 
 # pubkeys that are PDAs
 CONFIG_PUBKEY_ARRAY=`echo $CONFIG_PDA | cut -d '.' -f 1`

@@ -120,19 +120,19 @@ if [ -z "$TESTS" ]; then
 fi
 
     
-export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated3_stake.json`
-export     DELEGATED_STAKE2_PUBKEY=`solpda -pubkey $LEDGER/delegated3_stake2.json`
+export      DELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/delegated3_stake.json`
+export     DELEGATED_STAKE2_PUBKEY=`solxact pubkey $LEDGER/delegated3_stake2.json`
 
 
 # Invalid entry
 if should_run_test user_harvest_bad_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[15] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_harvest_bad_entry                                                                                \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -160,7 +160,7 @@ fi
 # Entry not owned by the user
 if should_run_test user_harvest_unowned_entry; then
     assert_fail user_harvest_unowned_entry                                                                            \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
          $RICH_USER1_PUBKEY 15 0 1 $DELEGATED_STAKE_PUBKEY                                                            \
         | solxact hash l                                                                                              \
@@ -172,7 +172,7 @@ fi
 # Unstaked entry
 if should_run_test user_harvest_unstaked_entry; then
     assert_fail user_harvest_unowned_entry                                                                            \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1039}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1039}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
          $RICH_USER1_PUBKEY 15 0 2 $DELEGATED_STAKE_PUBKEY                                                            \
         | solxact hash l                                                                                              \
@@ -184,7 +184,7 @@ fi
 # Incorrect stake account (not staked to entry)
 if should_run_test user_harvest_incorrect_stake; then
     assert_fail user_harvest_incorrect_stake                                                                          \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
          $RICH_USER1_PUBKEY 15 0 0 $DELEGATED_STAKE2_PUBKEY                                                           \
         | solxact hash l                                                                                              \
@@ -196,9 +196,9 @@ fi
 # Harvest ki -- ensure that: 1) Last harvest ki amount gets set, 2) ki tokens were harvested into ki destination
 if should_run_test user_harvest_success; then
     # Store the Ki token balance of user's Ki account
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[15] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`

@@ -2,7 +2,7 @@
 
 function pda ()
 {
-    solpda $@ | cut -d . -f 1
+    solxact pda $@ | cut -d . -f 1
 }
 
 
@@ -231,8 +231,8 @@ function get_splata_account ()
     local mint=$1
     local user=$2
 
-    solpda "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" Pubkey[$user] Pubkey[$SPL_TOKEN_PROGRAM_PUBKEY]             \
-           Pubkey[$mint] | cut -d '.' -f 1
+    pda "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" [ pubkey $user pubkey $SPL_TOKEN_PROGRAM_PUBKEY                \
+                                                         pubkey $mint ]
 }
 
 
@@ -305,7 +305,7 @@ function pubkey_binary ()
 {
     local pubkey=$1
 
-    for x in `solpda -pubkey --bytes $1 | tr -d '[' | tr -d ']' | tr ',' ' '`; do hex_digit $x; done | xxd -r -p
+    for x in `solxact pubkey bytes $1 | tr -d '[' | tr -d ']' | tr ',' ' '`; do hex_digit $x; done | xxd -r -p
 }
 
 
@@ -346,19 +346,19 @@ function setup ()
     echo "Starting test validator @ $LEDGER"
     
     # Start the test validator
-    solana-test-validator --ledger $LEDGER --ticks-per-slot 16 --slots-per-epoch 100                                   \
-                          -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s        \
+    solana-test-validator --ledger $LEDGER --ticks-per-slot 16 --slots-per-epoch 100                                  \
+                          -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s       \
                           -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT >/dev/null 2>/dev/null &
     
-    echo "Waiting 5 seconds for it to settle"
+    echo "Waiting 10 seconds for it to settle"
     
     # Give it time to start
-    sleep 5
+    sleep 10
     
     # Detect the vote account
-    export VALIDATOR_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                \
+    export VALIDATOR_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1               \
                                                  | awk '{ print $2 }'`
-    export VOTE_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                     \
+    export VOTE_PUBKEY=`solana -u http://localhost:8899 validators 2>/dev/null | head -2 | tail -1                    \
                     | awk '{ print $3 }'                `
     
     # Create keys: program, super, admin, rich_user1, rich_user2, poor_user, nonexistent_user
@@ -375,45 +375,47 @@ function setup ()
     $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $VOTE_PUBKEY > $LEDGER/build_program.sh
     chmod +x $LEDGER/build_program.sh
     echo "Building program"
-    (cd $LEDGER;                                                                                                       \
+    (cd $LEDGER;                                                                                                      \
      SDK_ROOT=~/.local/share/solana/install/active_release/bin/sdk SOURCE_ROOT=$SOURCE ./build_program.sh)
     
     # Deploy the program.
     echo "Deploying program"
-    solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so              \
+    # Not sure why, but need to sleep to ensure the following succeeds
+    sleep 5
+    solana -k $LEDGER/super.json -u l program deploy --program-id $LEDGER/program.json $LEDGER/program.so             \
            --commitment finalized >/dev/null 2>/dev/null
     
 # Compute pubkeys
 
-    export         SELF_PROGRAM_PUBKEY=`solpda -pubkey $LEDGER/program.json`
-    export            SUPERUSER_PUBKEY=`solpda -pubkey $LEDGER/super.json`
-    export                ADMIN_PUBKEY=`solpda -pubkey $LEDGER/admin.json`
-    export           RICH_USER1_PUBKEY=`solpda -pubkey $LEDGER/rich_user1.json`
-    export           RICH_USER2_PUBKEY=`solpda -pubkey $LEDGER/rich_user2.json`
-    export            POOR_USER_PUBKEY=`solpda -pubkey $LEDGER/poor_user.json`
-    export     NONEXISTENT_USER_PUBKEY=`solpda -pubkey $LEDGER/nonexistent_user.json`
-    export       SYSTEM_PROGRAM_PUBKEY=`echo 11111111111111111111111111111111`
-    export    SPL_TOKEN_PROGRAM_PUBKEY=`echo TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
-    export       SPLATA_PROGRAM_PUBKEY=`echo ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`
-    export        STAKE_PROGRAM_PUBKEY=`echo Stake11111111111111111111111111111111111111`
-    export         CLOCK_SYSVAR_PUBKEY=`echo SysvarC1ock11111111111111111111111111111111`
-    export          RENT_SYSVAR_PUBKEY=`echo SysvarRent111111111111111111111111111111111`
-    export     METAPLEX_PROGRAM_PUBKEY=`echo metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`
-    export STAKE_HISTORY_SYSVAR_PUBKEY=`echo SysvarStakeHistory1111111111111111111111111`
-    export         STAKE_CONFIG_PUBKEY=`echo StakeConfig11111111111111111111111111111111`
-    export               CONFIG_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[1]`
-    export            AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[2]`
-    export         MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[3]`
-    export              KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[4]`
-    export      BID_MARKER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[11]`
+    export         SELF_PROGRAM_PUBKEY=`solxact pubkey $LEDGER/program.json`
+    export            SUPERUSER_PUBKEY=`solxact pubkey $LEDGER/super.json`
+    export                ADMIN_PUBKEY=`solxact pubkey $LEDGER/admin.json`
+    export           RICH_USER1_PUBKEY=`solxact pubkey $LEDGER/rich_user1.json`
+    export           RICH_USER2_PUBKEY=`solxact pubkey $LEDGER/rich_user2.json`
+    export            POOR_USER_PUBKEY=`solxact pubkey $LEDGER/poor_user.json`
+    export     NONEXISTENT_USER_PUBKEY=`solxact pubkey $LEDGER/nonexistent_user.json`
+    export       SYSTEM_PROGRAM_PUBKEY="11111111111111111111111111111111"
+    export    SPL_TOKEN_PROGRAM_PUBKEY="TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    export       SPLATA_PROGRAM_PUBKEY="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+    export        STAKE_PROGRAM_PUBKEY="Stake11111111111111111111111111111111111111"
+    export         CLOCK_SYSVAR_PUBKEY="SysvarC1ock11111111111111111111111111111111"
+    export          RENT_SYSVAR_PUBKEY="SysvarRent111111111111111111111111111111111"
+    export     METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+    export STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
+    export         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
+    export               CONFIG_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
+    export            AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 2 ]`
+    export         MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 3 ]`
+    export              KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 ]`
+    export      BID_MARKER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 ]`
     export          KI_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                  \
-                                            String[metadata]                                                          \
-                                            Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                          \
-                                            Pubkey[$KI_MINT_PUBKEY]`
+                                            [ string metadata                                                         \
+                                              pubkey $METAPLEX_PROGRAM_PUBKEY                                         \
+                                              pubkey $KI_MINT_PUBKEY ]`
     export  BID_MARKER_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                  \
-                                            String[metadata]                                                          \
-                                            Pubkey[$METAPLEX_PROGRAM_PUBKEY]                                          \
-                                            Pubkey[$BID_MARKER_MINT_PUBKEY]`
+                                            [ string metadata                                                         \
+                                              pubkey $METAPLEX_PROGRAM_PUBKEY                                         \
+                                              pubkey $BID_MARKER_MINT_PUBKEY ]`
 }
 
 

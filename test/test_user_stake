@@ -98,10 +98,10 @@ if [ -z "$TESTS" ]; then
 fi
 
     
-export      DELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/delegated_stake.json`
-export     DELEGATED_STAKE2_PUBKEY=`solpda -pubkey $LEDGER/delegated_stake2.json`
-export         LOCKED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/locked_stake.json`
-export    UNDELEGATED_STAKE_PUBKEY=`solpda -pubkey $LEDGER/undelegated_stake.json`
+export      DELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/delegated_stake.json`
+export     DELEGATED_STAKE2_PUBKEY=`solxact pubkey $LEDGER/delegated_stake2.json`
+export         LOCKED_STAKE_PUBKEY=`solxact pubkey $LEDGER/locked_stake.json`
+export    UNDELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/undelegated_stake.json`
 
 # This must be set so that user_stake_tx.sh will use the correct vote account
 export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
@@ -109,10 +109,10 @@ export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
     
 # Invalid block
 if should_run_test user_stake_bad_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[13] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_bad_block                                                                                  \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1100}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \
@@ -141,10 +141,10 @@ fi
 
 # Invalid entry
 if should_run_test user_stake_bad_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[13] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_bad_entry                                                                                  \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \
@@ -173,10 +173,10 @@ fi
 
 # Entry not owned
 if should_run_test user_stake_entry_not_owned; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[13] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[1]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_entry_not_owned                                                                            \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \
@@ -201,9 +201,9 @@ if should_run_test user_stake_entry_not_owned; then
         | solxact sign $LEDGER/rich_user1.json                                                                        \
         | solxact submit l 2>&1`
 
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[2]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[6] Pubkey[$MINT_PUBKEY]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_entry_not_owned_2                                                                          \
     'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1036}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x40c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
     `echo "encoding c                                                                                                 \

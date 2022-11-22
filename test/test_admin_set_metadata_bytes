@@ -2,11 +2,11 @@
 # Make sure that the admin has signed the tx
 if should_run_test admin_set_metadata_bytes_no_auth; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[3] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_no_auth                                                                      \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -29,11 +29,11 @@ fi
 # Bad block
 if should_run_test admin_set_metadata_bytes_bad_block; then
     # Test with block 3 1 which does not exist
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[3] u32[1]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 1 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_bad_block                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SELF_$SOURCE/scripts/admin_set_metadata_bytes_tx.sh                    \
          $ADMIN_PUBKEY 3 1 0 2 \` echo -n 0 | base64\`                                                                \
         | solxact hash l                                                                                              \
@@ -45,10 +45,10 @@ fi
 # Bad entry account
 if should_run_test admin_set_metadata_bytes_bad_entry; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[3] u32[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[100] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 100 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_bad_entry                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -88,7 +88,7 @@ if should_run_test admin_set_metadata_bytes_incomplete_block; then
         | solxact submit l 2>&1`
     # Fail to set metadata because block is complete
     assert_fail admin_set_metadata_bytes_incomplete_block                                                             \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
          $ADMIN_PUBKEY 3 0 0 0 \`echo -n "01" | base64\`                                                              \
         | solxact hash l                                                                                              \
@@ -107,7 +107,7 @@ fi
 if should_run_test admin_set_metadata_bytes_unrevealable_block; then
     # Test with block 3 0
     assert_fail admin_set_metadata_bytes_unrevealable_block                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1008}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f0"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f0"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1008}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f0"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f0"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
          $ADMIN_PUBKEY 3 0 0 0 \`echo -n "01" | base64\`                                                              \
         | solxact hash l                                                                                              \
@@ -130,11 +130,11 @@ fi
 # Short data
 if should_run_test admin_set_metadata_bytes_short_data; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[3] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_short_data                                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -159,7 +159,7 @@ fi
 if should_run_test admin_set_metadata_bytes_beyond_bounds; then
     # Test with block 3 0
     assert_fail admin_set_metadata_bytes_beyond_bounds                                                                \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1301}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x515"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1301}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x515"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
          $ADMIN_PUBKEY 3 0 0 2695 \`echo -n "01" | base64\`                                                           \
         | solxact hash l                                                                                              \
@@ -171,9 +171,9 @@ fi
 # Success
 if should_run_test admin_set_metadata_bytes_success; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[3] u32[0]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     assert admin_set_metadata_bytes_success                                                                           \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
          $ADMIN_PUBKEY 3 0 0 120 \`echo -n "12345678" | base64\`                                                      \

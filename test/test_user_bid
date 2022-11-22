@@ -161,13 +161,13 @@ fi
 # Incorrect data size
 if should_run_test user_bid_bad_data; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[10] u32[2]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[12] Pubkey[$MINT_PUBKEY] Pubkey[$RICH_USER1_PUBKEY]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[9] Pubkey[$BID_MARKER_TOKEN_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     assert_fail user_bid_bad_data                                                                                     \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -193,7 +193,7 @@ fi
 if should_run_test user_bid_too_small; then
     # Test with block 10 2
     assert_fail user_bid_too_small                                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1030}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x406"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x406"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1030}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x406"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x406"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $RICH_USER1_PUBKEY 10 2 0 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                                \
         | solxact hash l                                                                                              \
@@ -205,13 +205,13 @@ fi
 # Bad entry
 if should_run_test user_bid_bad_entry; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[10] u32[2]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[12] Pubkey[$MINT_PUBKEY] Pubkey[$RICH_USER1_PUBKEY]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[9] Pubkey[$BID_MARKER_TOKEN_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     assert_fail user_bid_bad_entry                                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -239,7 +239,7 @@ fi
 if should_run_test user_bid_not_complete; then
     # Test with block 10 0
     assert_fail user_bid_not_complete                                                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $RICH_USER1_PUBKEY 10 0 0 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                                \
         | solxact hash l                                                                                              \
@@ -252,7 +252,7 @@ fi
 if should_run_test user_bid_not_auction; then
     # Test with block 10 1
     assert_fail user_bid_not_auction                                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1029}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x405"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1029}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x405"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $RICH_USER1_PUBKEY 10 1 0 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                                \
         | solxact hash l                                                                                              \
@@ -265,7 +265,7 @@ fi
 if should_run_test user_bid_auction_over; then
     # Test with block 10 3
     assert_fail user_bid_auction_over_not_bidded                                                                      \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1029}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x405"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1029}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x405"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $RICH_USER1_PUBKEY 10 3 1 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                                \
         | solxact hash l                                                                                              \
@@ -273,7 +273,7 @@ if should_run_test user_bid_auction_over; then
         | solxact submit l 2>&1`
 
     assert_fail user_bid_auction_over_was_bidded                                                                      \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1029}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x405"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1029}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x405"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $RICH_USER1_PUBKEY 10 3 0 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                                \
         | solxact hash l                                                                                              \
@@ -285,13 +285,13 @@ fi
 # Bid from account with not enough lamports
 if should_run_test user_bid_insufficient_funds; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[10] u32[2]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[12] Pubkey[$MINT_PUBKEY] Pubkey[$POOR_USER_PUBKEY]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[9] Pubkey[$BID_MARKER_TOKEN_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $POOR_USER_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     assert_fail user_bid_insufficient_funds                                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Transfer: insufficient lamports REDACTED, need REDACTED","Program REDACTED failed: custom program error: 0x1","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x1"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                          \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1}]},"logs":["Program REDACTED invoke [1]","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: InitializeAccount3","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Program REDACTED Instruction: MintTo","Program REDACTED consumed REDACTED compute units","Program REDACTED success","Program REDACTED invoke [2]","Transfer: insufficient lamports REDACTED, need REDACTED","Program REDACTED failed: custom program error: 0x1","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x1"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                  \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $POOR_USER_PUBKEY 10 2 0 \`lamports_from_sol 10\` \`lamports_from_sol 10\`                                   \
         | solxact hash l                                                                                              \
@@ -303,11 +303,11 @@ fi
 # Success
 if should_run_test user_bid_success; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[10] u32[2]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[15] Pubkey[$MINT_PUBKEY]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[12] Pubkey[$MINT_PUBKEY] Pubkey[$RICH_USER1_PUBKEY]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[9] Pubkey[$BID_MARKER_TOKEN_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     # Pre-create the bid marker token account and bid account, to ensure that these being pre-created doesn't
     # break anything
     transfer $LEDGER/admin.json $BID_MARKER_TOKEN_PUBKEY 1
@@ -369,7 +369,7 @@ fi
 if should_run_test user_bid_overbid_too_small; then
     # Test with block 10 2
     assert_fail user_bid_overbid_too_small                                                                            \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1030}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x406"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x406"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1030}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x406"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x406"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $RICH_USER1_PUBKEY 10 2 0 \`lamports_from_sol 20.01\` \`lamports_from_sol 20.01\`                            \
         | solxact hash l                                                                                              \
@@ -381,8 +381,8 @@ fi
 # Outbid another bid by the minimum
 if should_run_test user_bid_outbid_minimum; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[10] u32[2]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[5] Pubkey[$BLOCK_PUBKEY] u16[0]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     assert user_bid_outbid_minimum                                                                                    \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
          $RICH_USER2_PUBKEY 10 2 0 \`lamports_from_sol 0\` \`lamports_from_sol 30\`                                   \

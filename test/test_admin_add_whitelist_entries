@@ -1,10 +1,10 @@
 
 # Make sure that the admin has signed the tx
 if should_run_test admin_add_whitelist_entries_no_auth; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[0]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_no_auth                                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $RICH_USER1_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -27,10 +27,10 @@ fi
 
 # Bad block
 if should_run_test admin_add_whitelist_entries_bad_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[0]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_bad_block                                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1048}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x418"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1048}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x418"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -53,11 +53,11 @@ fi
 
 # Bad whitelist
 if should_run_test admin_add_whitelist_entries_bad_whitelist; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[0]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
-    NONEXISTENT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[255]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    NONEXISTENT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 255 ]`
     assert_fail admin_add_whitelist_entries_bad_whitelist                                                             \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1048}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x418"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1048}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x418"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -80,10 +80,10 @@ fi
 
 # Count too small
 if should_run_test admin_add_whitelist_entries_count_too_small; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[0]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_count_too_small                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1300}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x514"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1300}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x514"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -105,10 +105,10 @@ fi
 
 # Count too large
 if should_run_test admin_add_whitelist_entries_count_too_large; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[0]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_count_too_large                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1300}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x514"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1300}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x514"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -130,10 +130,10 @@ fi
 
 # Short data
 if should_run_test admin_add_whitelist_entries_short_data; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[0]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_short_data                                                                \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -156,10 +156,10 @@ fi
 
 # Long data
 if should_run_test admin_add_whitelist_entries_long_data; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[0]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_long_data                                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `echo "encoding c                                                                                                 \
            fee_payer $ADMIN_PUBKEY                                                                                    \
            program $SELF_PROGRAM_PUBKEY                                                                               \
@@ -257,8 +257,8 @@ fi
 # Add too many
 if should_run_test admin_add_whitelist_entries_too_many; then
     # There are already 30 entries in the 6 1 block, add 269 more
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[14] u32[6] u32[1]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY u8[13] Pubkey[$BLOCK_PUBKEY]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 1 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     PUBKEYS_28="$RICH_USER1_PUBKEY $RICH_USER2_PUBKEY $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                           \
                 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                           \
                 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                           \
@@ -288,7 +288,7 @@ if should_run_test admin_add_whitelist_entries_too_many; then
         | solxact submit l 2>&1`
     # Now try to add two more, which is too many
     assert_fail admin_add_whitelist_entries_too_many                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1050}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x41a"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41a"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1050}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x41a"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41a"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                       \
          $ADMIN_PUBKEY 6 1 $ADMIN_PUBKEY $SUPERUSER_PUBKEY                                                            \
         | solxact hash l                                                                                              \
@@ -314,7 +314,7 @@ if should_run_test admin_add_whitelist_entries_block_exists; then
         | solxact sign $LEDGER/admin.json                                                                             \
         | solxact submit l 2>&1`
     assert_fail admin_add_whitelist_entries_block_exists                                                              \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1049}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x419"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x419"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
+    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1049}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x419"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x419"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                       \
          $ADMIN_PUBKEY 6 0 $RICH_USER1_PUBKEY                                                                         \
         | solxact hash l                                                                                              \

@@ -48,7 +48,7 @@ RUN tar zxf shinobi-immortals.tar.gz --strip-components=1 "*/build_program.sh" "
 RUN find build_program.sh program -type f | sort | xargs cat > build_contents.txt
 
 # Check that the SHA-256 hash of build_program.sh and program files is as expected
-RUN echo "31159927b7cc181bead66776472cc8c2b99ae10a55f8417983d7e27639c7be42 build_contents.txt" | sha256sum -c -
+RUN echo "850da7b7d5a67141488005724fd6936d4ebc1749c62bb68b1df6df9674885227 build_contents.txt" | sha256sum -c -
 
 # Run build_program.sh to build it
 RUN SDK_ROOT=solana-release/bin/sdk SOURCE_ROOT=. sh build_program.sh

@@ -102,11 +102,7 @@ The following steps may be used to verify the program:
 ## Testing
 
 If you like, you can run the tests which verify the functionality of the Shinobi Immortals program.
-To do so, you will need some more tools:
-
-a. solpda, available on github: [https://github.com/bji/solpda](https://github.com/bji/solpda).
-
-b. solxact, available on github: [https://github.com/bji/solxact](https://github.com/bji/solxact).
+To do so, you will need solxact, available on github: [https://github.com/bji/solxact](https://github.com/bji/solxact).
 
 You should verify the fidelity of these programs - the source is open and available.
 
@@ -124,12 +120,10 @@ You can inspect all of the tests that were run by looking at the files in the `t
 ## Issuing Manual Transactions
 
 
-The shinobi-immortals repository contains scripts that can generate all transactions that
-interact with the Shinobi Immortals program.  These are present in the scripts directory,
-and are named ending with '_tx.sh'.  The `solpda` and `solxact` utilities are required to
-use these scripts.  The generated transactions can be piped to solxact commands to apply
-recent blockhash, sign, and submit the transactions.  Examples of doing this are present
-throughout the test scripts.
+The shinobi-immortals repository contains scripts that can generate all transactions that interact with the Shinobi
+Immortals program.  These are present in the scripts directory, and are named ending with '_tx.sh'.  The `solxact`
+utility is required to use these scripts.  The generated transactions can be piped to solxact commands to apply recent
+blockhash, sign, and submit the transactions.  Examples of doing this are present throughout the test scripts.
 
 
 ## Inspecting On-Chain State
