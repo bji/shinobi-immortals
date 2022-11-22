@@ -57,9 +57,9 @@ The following steps may be used to verify the program:
 
    ```$ sha256sum shinobi-immortals.so```
 
-4. The result should be:
+4. The resulting SHA-256 checksum should be:
 
-   `ee1c7c5606c36e58cfe4574be00f9b08ff8b8103aa69f7f0248080358de21aa5`
+   `bf46e8c9804ce323472a7fddac06d352d83e4cb1e69117811971a3a65c49daa5`
 
    This is the signature of the contents of the Shinobi Immortals program.
 

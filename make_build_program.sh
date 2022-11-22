@@ -136,7 +136,7 @@ BID_MARKER_METADATA_PUBKEY_C_ARRAY="$BID_MARKER_METADATA_PUBKEY_C_ARRAY"
     -target bpf                                                                           \\
     -fPIC                                                                                 \\
     -march=bpfel+solana                                                                   \\
-    -I\$SOURCE_ROOT/program                                                               \\
+    -I\$SOURCE_ROOT/program                                                                \\
     -o program.po                                                                         \\
     -c \$SOURCE_ROOT/program/entrypoint.c                                                  \\
     -DSUPERUSER_PUBKEY_ARRAY="\$SUPERUSER_PUBKEY_C_ARRAY"                                  \\
@@ -168,7 +168,7 @@ BID_MARKER_METADATA_PUBKEY_C_ARRAY="$BID_MARKER_METADATA_PUBKEY_C_ARRAY"
     -z notext                                                                             \\
     -shared                                                                               \\
     --Bdynamic                                                                            \\
-    \$SOURCE_ROOT/program/fixed_bpf.ld                                                    \\
+    \$SOURCE_ROOT/program/fixed_bpf.ld                                                     \\
     --entry entrypoint                                                                    \\
     -o program.so                                                                         \\
     program.po
