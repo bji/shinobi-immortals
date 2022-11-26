@@ -141,4 +141,4 @@ The js directory includes a Javascript API for interaction with Shinobi Immortal
 ## License
 
 The Shinobi Immortals program and all contents of this repository are Copyright 2022
-by Shinobi Systems LLC, and licensed under the GNU General Public License Version 3.
+by Shinobi Systems LLC, and licensed under the GNU Lesser General Public License Version 3.
