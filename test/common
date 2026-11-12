@@ -92,6 +92,35 @@ function less_than ()
 }
 
 
+# Print a transaction only once its execution result is available. RPC errors,
+# missing transactions, and missing metadata must never count as confirmation.
+function wait_for_transaction ()
+{
+    local SIGNATURE=$1
+    local JSON
+    local i
+
+    for i in `seq 1 10`; do
+        if JSON=`curl -s --connect-timeout 2 --max-time 2 http://localhost:8899 -X POST                            \
+                      -H "Content-Type: application/json"                                                          \
+                      -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIGNATURE\",\"json\"]}"`; then
+            if echo "$JSON" | jq -e 'type == "object" and .error == null and
+                                    (.result | type == "object") and
+                                    (.result.meta | type == "object") and
+                                    (.result.meta | has("err"))' >/dev/null 2>/dev/null; then
+                echo "$JSON"
+                return 0
+            fi
+        fi
+        if [ "$i" -lt 10 ]; then
+            sleep 1
+        fi
+    done
+
+    return 1
+}
+
+
 function assert ()
 {
     RESULT=$?
@@ -110,22 +139,17 @@ function assert ()
         # so fetch the transaction signature and wait until its results are known
         if [[ "$TEST_OUTPUT" = Transaction\ signature:\ * ]]; then
             SIGNATURE=`echo "$TEST_OUTPUT" | cut -d ' ' -f 3`
-            # Try for at most 10 seconds
-            for i in `seq 1 10`; do
-                JSON=`curl -s http://localhost:8899 -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIGNATURE\",\"json\"]}"`
-                if [ -n "$JSON" ]; then
-                    if [ "`echo $JSON | jq .result`" != "null" -a                                                     \
-                         "`echo $JSON | jq .result.meta`" != "null" -a                                                \
-                         "`echo $JSON | jq .result.meta.err`" != "null" ]; then
-                        echo "FAIL: $TEST_NAME failed when success was expected:"
-                        echo $JSON
-                        exit 1
-                    fi
-                    echo "+ $TEST_NAME"
-                    return
-                fi
-                sleep 1
-            done
+            if ! JSON=`wait_for_transaction "$SIGNATURE"`; then
+                echo "FAIL: $TEST_NAME execution result unavailable after 10 attempts ($SIGNATURE)"
+                exit 1
+            fi
+            if ! echo "$JSON" | jq -e '.result.meta.err == null' >/dev/null; then
+                echo "FAIL: $TEST_NAME failed when success was expected:"
+                echo "$JSON"
+                exit 1
+            fi
+            echo "+ $TEST_NAME"
+            return
         fi
         echo "FAIL: $TEST_NAME failed when success was expected:"
         echo $TEST_OUTPUT
@@ -149,16 +173,13 @@ function assert_fail ()
         # so fetch the transaction signature and wait until its results are known
         if [[ "$TEST_OUTPUT" = Transaction\ signature:\ * ]]; then
             SIGNATURE=`echo "$TEST_OUTPUT" | cut -d ' ' -f 3`
-            # Try for at most 10 seconds
-            for i in `seq 1 10`; do
-                TEST_OUTPUT=`curl -s http://localhost:8899 -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIGNATURE\",\"json\"]}"`
-                if [ -n "$TEST_OUTPUT" ]; then
-                    break
-                fi
-                sleep 1
-            done
-            if [ -z "$TEST_OUTPUT" ]; then
-                echo "FAIL: $TEST_NAME did not land ($SIGNATURE)"
+            if ! TEST_OUTPUT=`wait_for_transaction "$SIGNATURE"`; then
+                echo "FAIL: $TEST_NAME execution result unavailable after 10 attempts ($SIGNATURE)"
+                exit 1
+            fi
+            if echo "$TEST_OUTPUT" | jq -e '.result.meta.err == null' >/dev/null; then
+                echo "FAIL: $TEST_NAME succeeded when failure was expected:"
+                echo "$TEST_OUTPUT"
                 exit 1
             fi
         fi
