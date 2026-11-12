@@ -192,9 +192,8 @@ static uint64_t delete_whitelist_account(const SolAccountInfo *whitelist_account
         }
     }
 
-    // Move the lamports from the whitelist
-    *(destination_account->lamports) += *(whitelist_account->lamports);
-    *(whitelist_account->lamports) = 0;
+    // Delete the whitelist account, transaferring its lamports to the destination account
+    delete_account(whitelist_account, destination_account);
 
     return 0;
 }

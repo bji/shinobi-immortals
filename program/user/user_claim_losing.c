@@ -93,9 +93,8 @@ static uint64_t user_claim_losing(const SolParameters *params)
         }
     }
 
-    // Move the bid account lamports to the bidding account
-    *(bidding_account->lamports) += *(bid_account->lamports);
-    *(bid_account->lamports) = 0;
+    // Delete the bid account, returning its lamports to the bidding account
+    delete_account(bid_account, bidding_account);
 
     return 0;
 }

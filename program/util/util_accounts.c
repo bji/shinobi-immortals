@@ -282,3 +282,14 @@ static uint64_t create_pda(SolAccountInfo *new_account, const SolSignerSeed *see
     return create_account(new_account, funding_account_key, owner_account_key, funding_lamports, space, seeds,
                           seeds_count, transaction_accounts, transaction_accounts_len);
 }
+
+
+// Deletes an account in a safe manner: transfers all lamports to [lamports_recipient], sets its data length to 0.
+// This ensures that subsequent instructions in the same transaction see no data for the account.
+static void delete_account(SolAccountInfo *account, SolAccountInfo *lamports_recipient)
+{
+    *(lamports_recipient->lamports) += *(account->lamports);
+    *(account->lamports) = 0;
+
+    set_account_size(account, 0);
+}

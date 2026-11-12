@@ -114,9 +114,8 @@ static uint64_t user_claim_winning(const SolParameters *params)
     // state
     entry->purchase_price_lamports = *(bid_account->lamports);
 
-    // OK transferred the token, so move the bid account lamports to the admin
-    *(admin_account->lamports) += *(bid_account->lamports);
-    *(bid_account->lamports) = 0;
+    // OK transferred the token, so delete the bid account, moving its lamports to the admin
+    delete_account(bid_account, admin_account);
 
     return 0;
 }

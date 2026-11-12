@@ -9,6 +9,9 @@
 #include "inc/error.h"
 
 
+// xxx need to make an instruction for withdrawing excess SOL from any account that someone might accidentally
+// send SOL to.
+
 // These are all instructions that this program can execute
 typedef enum
 {
