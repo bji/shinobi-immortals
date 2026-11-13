@@ -28,7 +28,7 @@ static uint64_t super_initialize(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
-        DECLARE_ACCOUNT(0,   superuser_account,             ReadOnly,   Signer,     KnownAccount_SuperUser);
+        DECLARE_ACCOUNT(0,   superuser_account,             ReadWrite,  Signer,     KnownAccount_SuperUser);
         DECLARE_ACCOUNT(1,   config_account,                ReadWrite,  NotSigner,  KnownAccount_ProgramConfig);
         DECLARE_ACCOUNT(2,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(3,   master_stake_account,          ReadWrite,  NotSigner,  KnownAccount_MasterStake);

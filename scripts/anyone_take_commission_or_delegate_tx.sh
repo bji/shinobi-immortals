@@ -97,9 +97,6 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
                  BID_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
                                  [ u8 9                                                                               \
                                    $BID_MARKER_TOKEN_PUBKEY ]"
-              BRIDGE_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 10                                                                              
-                                   $ENTRY_MINT_PUBKEY ]"
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $FEE_PAYER_PUBKEY                                                                                   \
@@ -109,7 +106,6 @@ solxact encode                                                                  
         account $ENTRY_PUBKEY w                                                                                       \
         account $ENTRY_STAKE_ACCOUNT_PUBKEY w                                                                         \
         account $MASTER_STAKE_PUBKEY w                                                                                \
-        account $BRIDGE_PUBKEY w                                                                                      \
         account $AUTHORITY_PUBKEY                                                                                     \
         account $CLOCK_SYSVAR_PUBKEY                                                                                  \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \

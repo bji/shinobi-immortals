@@ -10,15 +10,13 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
         DECLARE_ACCOUNT(2,  entry_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,  stake_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(4,  master_stake_account,          ReadWrite,  NotSigner,  KnownAccount_MasterStake);
-        // xxx unused, remove!
-        DECLARE_ACCOUNT(5,  bridge_stake_account,          ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(6,  authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
-        DECLARE_ACCOUNT(7,  clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
-        DECLARE_ACCOUNT(8,  system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
-        DECLARE_ACCOUNT(9,  stake_program_account,         ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
-        DECLARE_ACCOUNT(10, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
+        DECLARE_ACCOUNT(5,  authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(6,  clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
+        DECLARE_ACCOUNT(7,  system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(8,  stake_program_account,         ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
+        DECLARE_ACCOUNT(9,  stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
     }
-    DECLARE_ACCOUNTS_NUMBER(11);
+    DECLARE_ACCOUNTS_NUMBER(10);
 
     // Get validated block and entry, which checks all validity of those accounts
     const Block *block = get_validated_block(block_account);

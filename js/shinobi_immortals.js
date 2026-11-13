@@ -57,7 +57,7 @@ const g_validator_info_pubkey = make_pubkey(g_validator_info_address);
 
 const g_program_authority_pubkey = find_pda([ [ 2 ] ], g_self_program_pubkey)[0];
 const g_program_authority_address = g_program_authority_pubkey.toBase58();
-      
+
 const g_config_pubkey = find_pda([ [ 1 ] ], g_self_program_pubkey)[0];
 const g_config_address = g_config_pubkey.toBase58();
 
@@ -112,11 +112,11 @@ class RpcConnection
         if ((max_requests != null) && ((max_requests.limit == null) || (max_requests.duration == null))) {
             max_requests = null;
         }
-            
+
         if ((max_data != null) && ((max_data.limit == null) || (max_data.duration == null))) {
             max_data = null;
         }
-        
+
         this.max_requests = max_requests;
 
         this.max_data = max_data;
@@ -138,7 +138,7 @@ class RpcConnection
         let pubkey = make_pubkey(address);
         return this.execute(() => { return this.connection.getParsedAccountInfo(pubkey, config); }, 10 * 1024);
     }
-        
+
     async getEpochInfo()
     {
         return this.execute(() => { return this.connection.getEpochInfo(); }, 1024);
@@ -161,7 +161,7 @@ class RpcConnection
         let wallet_pubkey = make_pubkey(wallet_address);
         return this.execute(() => { return this.connection.getBalance(wallet_pubkey); }, 1024);
     }
-    
+
     async getParsedTokenAccountsByOwner(wallet_address, program_address)
     {
         let wallet_pubkey = make_pubkey(wallet_address);
@@ -182,14 +182,14 @@ class RpcConnection
         return this.execute(() => { return this.connection.getParsedProgramAccounts(program_pubkey, config); },
                             20 * 1024);
     }
-    
+
     async getProgramAccounts(program_address, config)
     {
         let program_pubkey = make_pubkey(program_address);
         return this.execute(() => { return this.connection.getProgramAccounts(program_pubkey, config); },
                             20 * 1024);
     }
-    
+
     async getLatestBlockhash()
     {
         return this.execute(() => { return this.connection.getLatestBlockhash(); }, 1024);
@@ -240,7 +240,7 @@ class RpcConnection
         let future = now + (10 * 365 * 24 * 60 * 60 * 1000);
         let request_until = { until : future };
         let data_until = { until : future, data_size : data_size };
-        
+
         // Since these are the most recent they definitely go at the end
         this.requests_array.push(request_until);
         this.data_array.push(data_until);
@@ -361,7 +361,7 @@ class RpcConnections
         // Create a new map and array from new_rpc_endpoints (re-using existing RPC connections)
         let new_map = new Map();
         let new_array = [ ];
-        
+
         for (let descriptor of rpc_endpoint_descriptors) {
             if (typeof(descriptor) == "string") {
                 // Not an object, must be a string, so make it into an object
@@ -378,10 +378,10 @@ class RpcConnections
                 rpc_connection = new RpcConnection(descriptor.rpc_endpoint,
                                                    descriptor.max_requests,
                                                    descriptor.max_data);
-                
+
                 // Check to make sure that the genesis hash is consistent
                 let genesis_hash = await rpc_connection.getGenesisHash();
-                
+
                 if (this.genesis_hash == null) {
                     this.genesis_hash = genesis_hash;
                 }
@@ -393,19 +393,19 @@ class RpcConnections
                      (descriptor.max_data != null)) {
                 rpc_connection.update(descriptor.max_requests, descriptor.max_data);
             }
-            
+
             new_array.push(rpc_connection);
-            
+
             new_map.set(descriptor.rpc_endpoint, rpc_connection);
         }
 
         this.map = new_map;
 
         this.array = new_array;
-        
+
         this.index = 0;
     }
-    
+
     // Runs the async function, passing it an rpc_connection to use, and returning the result.  If the function throws
     // an error, retries it after 2 seconds, for up to 5 retries.  If the RpcConnections is shut down, throws an
     // error.  If the request cannot be run because the connection is overloaded, throws an error.
@@ -439,7 +439,7 @@ class RpcConnections
     {
         return func(this.get());
     }
-    
+
     // Runs an async function at fixed intervals until the RpcConnections is shutdown.
     // - When the function throws an error, re-runs it after 1 second
     // - When the function completes successfully, re-runs it after 1 minute
@@ -450,7 +450,7 @@ class RpcConnections
             if (this.is_shutdown) {
                 return;
             }
-        
+
             try {
                 await func();
 
@@ -460,7 +460,7 @@ class RpcConnections
             catch (error) {
                 // On error, re-run the loop after 1 second
                 console.log("Loop error: " + error);
-                
+
                 await delay(1 * 1000);
             }
         }
@@ -471,7 +471,7 @@ class RpcConnections
     {
         this.is_shutdown = true;
     }
-    
+
     // ----------------------------------------------------------------------------------------------------------------
     // Private implementation details follows -------------------------------------------------------------------------
     // ----------------------------------------------------------------------------------------------------------------
@@ -481,7 +481,7 @@ class RpcConnections
         if (this.is_shutdown) {
             throw new Error("shutdown");
         }
-        
+
         this.index = (this.index + 1) % this.array.length;
 
         return this.array[this.index];
@@ -524,7 +524,7 @@ class Cluster
         this.default_slot_duration_seconds = default_slot_duration_seconds;
 
         this.slots_per_epoch = slots_per_epoch;
-        
+
         this.callbacks = callbacks;
 
         // Map from block address to block
@@ -556,7 +556,7 @@ class Cluster
     shutdown()
     {
         this.is_shutdown = true;
-        
+
         this.rpc_connections.shutdown();
     }
 
@@ -596,9 +596,9 @@ class Cluster
         if (slot_duration_seconds == null) {
             slot_duration_seconds = this.default_slot_duration_seconds;
         }
-        
+
         let now = Date.now();
-        
+
         let slots_elapsed = ((now - this.confirmed_query_time) / (slot_duration_seconds * 1000)) | 0;
 
         let slot = this.confirmed_slot + slots_elapsed;
@@ -636,7 +636,7 @@ class Cluster
     {
         let index = 0;
         let stop = this.entry_count();
-        
+
         return {
             value : () =>
             {
@@ -661,7 +661,7 @@ class Cluster
                 this.shinobi_immortals_vote_account = result.delegation.vote_account;
             }
         }
-            
+
         return this.shinobi_immortals_vote_account;
     }
 
@@ -677,11 +677,11 @@ class Cluster
                 account = account.value;
             }
         }
-        
+
         if (account == null) {
             return null;
         }
-        
+
         let stake = { address : stake_account_address };
 
         if ((account.data.parsed.info.stake == null) ||
@@ -691,10 +691,10 @@ class Cluster
         else {
             let delegation = account.data.parsed.info.stake.delegation;
             stake.delegation = { lamports : delegation.stake, vote_account : delegation.voter };
-            
+
             // If the name of the stake account hasn't been fetched in 1 hour, fetch it now
             let validator_name = await this.get_validator_name(delegation.voter);
-            
+
             if (validator_name != null) {
                 stake.delegation.validator_name = validator_name;
             }
@@ -717,7 +717,7 @@ class Cluster
 
         let block_updated = entry.block.update(block_result.data);
         let entry_updated = entry.update(entry_result.data);
-        
+
         if (block_updated || entry_updated) {
             if ((this.callbacks != null) && (this.callbacks.on_entry_changed != null)) {
                 setTimeout(() => {
@@ -736,11 +736,11 @@ class Cluster
         let epoch_info = await this.rpc_connections.run((rpc_connection) => {
             return rpc_connection.getEpochInfo();
         }, "update_clock get epoch info");
-        
+
         let block_time = await this.rpc_connections.run((rpc_connection) => {
             return rpc_connection.getBlockTime(epoch_info.absoluteSlot);
         }, "update_clock get block time");
-        
+
         // Update the current data
         this.confirmed_query_time = Date.now();
         this.confirmed_epoch = epoch_info.epoch;
@@ -760,7 +760,7 @@ class Cluster
             {
                 return rpc_connection.getMultipleAccountsInfo(block_addresses);
             }, "update blocks get accounts");
-        
+
         let entries_promises = [ ];
 
         let idx;
@@ -786,7 +786,7 @@ class Cluster
             // Initiate an entries query for this block
             entries_promises.push(this.update_entries(block, 0, block_changed));
         }
-        
+
         // Now await completion of all entry queries
         await Promise.all(entries_promises);
 
@@ -796,7 +796,7 @@ class Cluster
         }
         else if ((block_number == 0) && (idx == 0)) {
             // An empty group represents the end of all blocks
-            
+
             // If there is a callback registered to be told when all entries have been updated, call it
             if ((this.callbacks != null) && (this.callbacks.on_entries_update_complete != null)) {
                 setTimeout(() =>  {
@@ -816,11 +816,11 @@ class Cluster
     {
         // Compute account keys
         let entry_addresses = [ ];
-        
+
         for (let i = 0; i < ENTRIES_AT_ONCE; i++) {
             entry_addresses.push(get_entry_address(get_entry_mint_address(block.address, entry_index + i)));
         }
-        
+
         let results = await this.rpc_connections.run((rpc_connection) =>
             {
                 return rpc_connection.getMultipleAccountsInfo(entry_addresses);
@@ -867,7 +867,7 @@ class Cluster
         let validator_name_entry = this.validator_names.get(vote_account);
 
         let now = Date.now();
-        
+
         if ((validator_name_entry != null) && ((validator_name_entry.timeout + (60 * 60 * 1000)) >= now)) {
             return validator_name_entry.name;
         }
@@ -894,7 +894,7 @@ class Cluster
         }
 
         let validator_account = new SolanaWeb3.PublicKey(result.data).toBase58();
-        
+
         try {
             result = await this.rpc_connections.run((rpc_connection) => {
                 // Fetch the validator info account for the vote account
@@ -943,7 +943,7 @@ class Cluster
         }
 
         this.validator_names.set(vote_account, { name : validator_name, timeout : now });
-    
+
         return validator_name;
     }
 }
@@ -1016,7 +1016,7 @@ class Block
         if (this.mysteries_sold_count == this.total_mystery_count) {
             return true;
         }
-        
+
         return (clock.unix_timestamp > this.get_mystery_deadline());
     }
 
@@ -1081,7 +1081,7 @@ class Entry
         this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 312);
         this.owned_last_commission_charge_stake_account_lamports = buffer_le_u64(data, 320);
         this.level = data[328];
-        
+
         this.metadata_level_1_ki = buffer_le_u32(data, 332);
         this.metadata_random = [ buffer_le_u32(data, 336),
                                  buffer_le_u32(data, 340),
@@ -1100,7 +1100,7 @@ class Entry
                                  buffer_le_u32(data, 392),
                                  buffer_le_u32(data, 396) ];
         this.level_metadata = [ ];
-        
+
         for (let i = 0; i < 9; i += 1) {
             this.level_metadata[i] = {
                 form : data[400 + (i * 292)],
@@ -1136,50 +1136,50 @@ class Entry
             this.refund_awarded = new_entry.refund_awarded;
             changed = true;
         }
-        
+
         if (new_entry.commission != this.commission) {
             this.commission = new_entry.commission;
             changed = true;
         }
-        
+
         if (new_entry.auction_highest_bid_lamports != this.auction_highest_bid_lamports) {
             this.auction_highest_bid_lamports = new_entry.auction_highest_bid_lamports;
             changed = true;
         }
-        
+
         if (new_entry.auction_winning_bid_address != this.auction_winning_bid_address) {
             this.auction_winning_bid_address = new_entry.auction_winning_bid_address;
             changed = true;
         }
-        
+
         if (new_entry.owned_stake_account != this.owned_stake_account) {
             this.owned_stake_account = new_entry.owned_stake_account;
             changed = true;
         }
-        
+
         if (new_entry.owned_stake_initial_lamports != this.owned_stake_initial_lamports) {
             this.owned_stake_initial_lamports = new_entry.owned_stake_initial_lamports;
             changed = true;
         }
-        
+
         if (new_entry.owned_stake_epoch != this.owned_stake_epoch) {
             this.owned_stake_epoch = new_entry.owned_stake_epoch;
             changed = true;
         }
-        
+
         if (new_entry.owned_last_ki_harvest_stake_account_lamports !=
             this.owned_last_ki_harvest_stake_account_lamports) {
             this.owned_last_ki_harvest_stake_account_lamports = new_entry.owned_last_ki_harvest_stake_account_lamports;
             changed = true;
         }
-        
+
         if (new_entry.owned_last_commission_charge_stake_account_lamports !=
             this.owned_last_commission_charge_stake_account_lamports) {
             this.owned_last_commission_charge_stake_account_lamports =
                 new_entry.owned_last_commission_charge_stake_account_lamports;
             changed = true;
         }
-        
+
         if (new_entry.level != this.level) {
             this.level = new_entry.level;
             changed = true;
@@ -1188,7 +1188,7 @@ class Entry
         let new_level_metadata = [ ];
 
         let level_metadata_changed = false;
-        
+
         for (let i = 0; i < 9; i += 1) {
             new_level_metadata[i] = {
                 form : data[400 + (i * 292)],
@@ -1247,7 +1247,7 @@ class Entry
         if (len > 200) {
             throw new Error("Invalid metaplex metadata for " + this.metaplex_metadata_address);
         }
-        
+
         return buffer_string(data, offset + 4, len);
     }
 
@@ -1363,7 +1363,7 @@ class Entry
     }
 
     // Private implementation follows ---------------------------------------------------------------------------------
-    
+
     // Cribbed from user_buy.c
     static compute_price(total_seconds, start_price, end_price, seconds_elapsed)
     {
@@ -1404,7 +1404,7 @@ class Entry
 
         let min_result = current_max_bid + (current_max_bid / 50n);
         let max_result = (2n * current_max_bid) + (current_max_bid / 100n);
-    
+
         if (result < min_result) {
             return min_result;
         }
@@ -1433,7 +1433,7 @@ class Wallet
         this.cluster = cluster;
 
         this.wallet_address_holder = { wallet_address : null };
-        
+
         this.set_wallet_address(wallet_address);
 
         // Fetch SOL balance only twice every 5 seconds
@@ -1480,13 +1480,13 @@ class Wallet
     {
         return (this.wallet_address_holder == null) ? null : this.wallet_address_holder.wallet_address;
     }
-    
+
     async get_sol_balance()
     {
         // Save wallet_address_holder so that we know if it changed
         let wallet_address_holder = this.wallet_address_holder;
         let wallet_address = this.wallet_address_holder.wallet_address;
-        
+
         // If the wallet has been "shut down", don't query
         if (wallet_address == null) {
             return null;
@@ -1503,13 +1503,13 @@ class Wallet
             let sol_balance = await this.cluster.rpc_connections.run((rpc_connection) => {
                 return rpc_connection.getBalance(wallet_address);
             }, "update sol balance");
-            
+
             if (wallet_address_holder == this.wallet_address_holder) {
                 this.sol_balance = sol_balance;
                 this.last_balance_fetch_time = Date.now();
             }
         }
-            
+
         return this.sol_balance;
     }
 
@@ -1520,7 +1520,7 @@ class Wallet
         return this.ki_balance;
     }
 
-    // Returns the addresses of entries owned by this 
+    // Returns the addresses of entries owned by this
     async get_entry_addresses()
     {
         await this.update_token_data();
@@ -1575,7 +1575,7 @@ class Wallet
 
         return this.bids_by_entry_address.get(entry_address);
     }
-    
+
     async update_token_data()
     {
         // Save wallet_address_holder so that we know if it changed
@@ -1605,7 +1605,7 @@ class Wallet
             let new_bids_by_entry_address = new Map();
 
             let new_bids_by_entry_mint = new Map();
-            
+
             let promises = [ ];
 
             for (let idx = 0; idx < results.value.length; idx++) {
@@ -1616,15 +1616,15 @@ class Wallet
                     (account.data.parsed.info == null)) {
                     continue;
                 }
-                
+
                 if (account.data.parsed.info.state != "initialized") {
                     continue;
                 }
-                
+
                 if (account.data.parsed.info.tokenAmount.amount == 0) {
                     continue;
                 }
-                
+
                 // Should never happen but just in case
                 if (account.data.parsed.info.owner != wallet_address) {
                     continue;
@@ -1659,7 +1659,7 @@ class Wallet
                 this.entry_addresses = new_entry_addresses;
                 this.bids_by_entry_address = new_bids_by_entry_address;
                 this.bids_by_entry_mint = new_bids_by_entry_mint;
-                
+
                 this.last_tokens_fetch_time = Date.now();
             }
         }
@@ -1705,29 +1705,29 @@ class Wallet
             this.stakes_by_address = new Map();
 
             let now = Date.now();
-            
+
             for (let idx = 0; idx < results.length; idx++) {
                 let account = results[idx].account;
                 let pubkey = results[idx].pubkey;
-                
+
                 if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
                     (account.data.parsed.info == null)) {
                     continue;
                 }
-                
+
                 // Ignore stake accounts that are not initialized or delegated
                 if ((account.data.parsed.type != "initialized") &&
                     (account.data.parsed.type != "delegated")) {
                     continue;
                 }
-                
+
                 // Ignore stake accounts with lockup
                 if (account.data.parsed.info.lockup &&
                     ((account.data.parsed.info.lockup.epoch != 0) ||
                      (account.data.parsed.info.lockup.unixTimestamp != 0))) {
                     continue;
                 }
-                
+
                 let withdrawer = account.data.parsed.info.meta.authorized.withdrawer;
 
                 if (withdrawer != wallet_address) {
@@ -1760,7 +1760,7 @@ class Wallet
     async process_bid(bid_marker_token_address, bids_by_entry_address, bids_by_entry_mint)
     {
         let bid_address = get_bid_address(bid_marker_token_address);
-        
+
         // Read the mint out of the bid account
         let result = await this.cluster.rpc_connections.run((rpc_connection) =>
             {
@@ -1778,7 +1778,7 @@ class Wallet
         let value = { entry_address : entry_address, bid_address : bid_address, lamports : result.lamports };
 
         bids_by_entry_address.set(entry_address, value);
-        
+
         bids_by_entry_mint.set(entry_mint_address, value);
     }
 
@@ -1811,11 +1811,11 @@ class Wallet
                                                                        length : 32 }
                                                      });
             }, "fetch admin address");
-        
+
         if (result == null) {
             return null;
         }
-        
+
         return result.data;
     }
 
@@ -1830,7 +1830,7 @@ class Wallet
     // b. 0 -- to cancel the transaction
     // c. 1 -- to re-try with a new recent blockhash (i.e. a new expiration_slot); which call back into sign_tx again
     //         with an updated version of the transaction
-    
+
     // Returns the string transaction id of the completed transaction.  Throws an error on all failures.
     async buy_entry(entry, maximum_price_lamports, sign_callback)
     {
@@ -1845,7 +1845,7 @@ class Wallet
             return this.make_refund_tx(entry, wallet_address);
         }, sign_callback);
     }
-    
+
     async bid_on_entry(entry, minimum_bid_lamports, maximum_bid_lamports, sign_callback)
     {
         return this.complete_tx((wallet_address) => {
@@ -1867,33 +1867,33 @@ class Wallet
         if (vote_account == null) {
             throw new Error("Shinobi Immortals vote account does not exist");
         }
-        
+
         return this.complete_tx((wallet_address) => {
             return this.make_stake_with_vote_account_tx(entry, stake_account, vote_account, wallet_address);
         }, sign_callback);
     }
-    
+
     async destake_entry(entry, sign_callback)
     {
         return this.complete_tx((wallet_address) => {
             return this.make_destake_tx(entry, wallet_address);
         }, sign_callback);
     }
-    
+
     async harvest_entry(entry, sign_callback)
     {
         return this.complete_tx((wallet_address) => {
             return this.make_harvest_tx(entry, wallet_address);
         }, sign_callback);
     }
-    
+
     async level_up_entry(entry, sign_callback)
     {
         return this.complete_tx((wallet_address) => {
             return this.make_level_up_tx(entry, wallet_address);
         }, sign_callback);
     }
-    
+
     // Private implementation follows ---------------------------------------------------------------------------------
 
     async make_buy_tx(entry, maximum_price_lamports, wallet_address)
@@ -1915,7 +1915,7 @@ class Wallet
                          metaplex_metadata_pubkey : entry.metaplex_metadata_address,
                          maximum_price_lamports : maximum_price_lamports });
     }
-    
+
     async make_refund_tx(entry, wallet_address)
     {
         return _refund_tx({ token_owner_pubkey : wallet_address,
@@ -1924,11 +1924,11 @@ class Wallet
                             buyer_token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
                             refund_destination_pubkey : wallet_address });
     }
-   
+
     async make_bid_tx(entry, minimum_bid_lamports, maximum_bid_lamports, wallet_address)
     {
         let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
-           
+
         return _bid_tx({ bidding_pubkey : wallet_address,
                          entry_pubkey : entry.address,
                          bid_marker_token_pubkey : bid_marker_token_address,
@@ -1936,7 +1936,7 @@ class Wallet
                          minimum_bid_lamports : minimum_bid_lamports,
                          maximum_bid_lamports : maximum_bid_lamports });
     }
-    
+
     async make_claim_tx(entry, won, wallet_address)
     {
         let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
@@ -1944,10 +1944,10 @@ class Wallet
 
         if (won) {
             let admin_address = await this.fetch_admin_address();
-       
+
             let token_destination_address = get_associated_token_address(wallet_address, entry.mint_address);
             let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
-       
+
             return _claim_winning_tx({ bidding_pubkey : wallet_address,
                                        entry_pubkey : entry.address,
                                        bid_pubkey : bid_address,
@@ -1966,7 +1966,7 @@ class Wallet
                                       bid_marker_token_pubkey : bid_marker_token_address });
         }
     }
-    
+
     async make_stake_with_vote_account_tx(entry, stake_address, vote_account_address, wallet_address)
     {
         return _stake_tx({ block_pubkey : entry.block.address,
@@ -1977,7 +1977,7 @@ class Wallet
                            vote_account_pubkey : vote_account_address,
                            withdraw_authority : wallet_address });
     }
-    
+
     async make_destake_tx(entry, wallet_address)
     {
        return _destake_tx({ funding_pubkey : wallet_address,
@@ -1988,10 +1988,9 @@ class Wallet
                             stake_pubkey : entry.owned_stake_account,
                             ki_destination_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
                             ki_destination_owner_pubkey : wallet_address,
-                            bridge_pubkey : get_entry_bridge_address(entry.mint_address),
                             new_withdraw_authority : wallet_address });
     }
-    
+
     async make_harvest_tx(entry, wallet_address)
     {
         return _harvest_tx({ funding_pubkey : wallet_address,
@@ -2002,7 +2001,7 @@ class Wallet
                              ki_destination_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
                              ki_destination_owner_pubkey : wallet_address });
     }
-    
+
     async make_level_up_tx(entry, wallet_address)
     {
         return _level_up_tx({ entry_pubkey : entry.address,
@@ -2012,7 +2011,7 @@ class Wallet
                               ki_source_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
                               ki_source_owner_pubkey : wallet_address });
     }
-    
+
     async complete_tx(tx_maker_func, sign_callback)
     {
         let wallet_address_holder = this.wallet_address_holder;
@@ -2022,7 +2021,7 @@ class Wallet
         }
 
         let wallet_pubkey = make_pubkey(wallet_address);
-                
+
         while (true) {
             let tx = await tx_maker_func(wallet_address);
 
@@ -2030,7 +2029,7 @@ class Wallet
                 // Wallet address changed, so abort
                 throw new Error("Wallet change");
             }
-            
+
             let recent_blockhash_result = await this.cluster.rpc_connections.run((rpc_connection) =>
                 {
                     return rpc_connection.getLatestBlockhash();
@@ -2044,7 +2043,7 @@ class Wallet
             if (recent_blockhash_result == null) {
                 throw new Error("Failed to fetch recent_blockhash_values");
             }
-            
+
             let recent_blockhash = recent_blockhash_result.blockhash;
 
             // It appears that last valid block height is not reported correctly!  Use 120 ...
@@ -2055,14 +2054,14 @@ class Wallet
             tx.recentBlockhash = recent_blockhash;
 
             let tx_base64 = Buffer.Buffer.from(tx.serialize({ verifySignatures : false })).toString("base64");
-            
+
             let result = await sign_callback(tx_base64, recent_blockhash_expiry);
 
             if (wallet_address_holder != this.wallet_address_holder) {
                 // Wallet address changed, so abort
                 throw new Error("Wallet change");
             }
-            
+
             // Return value 0 means abort
             if (result == 0) {
                 return null;
@@ -2087,7 +2086,7 @@ class Wallet
             catch (error) {
                 throw new Error("Invalid transaction: " + error);
             }
-            
+
             // Submit the tx
             return this.submit_tx(raw_tx);
         }
@@ -2152,14 +2151,6 @@ function get_entry_mint_address(block_address, entry_index)
 function get_entry_address(entry_mint_address)
 {
     return find_pda([ [ 15 ],
-                      address_to_buffer(entry_mint_address) ],
-                    g_self_program_pubkey)[0].toBase58();
-}
-
-
-function get_entry_bridge_address(entry_mint_address)
-{
-    return find_pda([ [ 10 ],
                       address_to_buffer(entry_mint_address) ],
                     g_self_program_pubkey)[0].toBase58();
 }

@@ -54,7 +54,7 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Bid = 9,
 
-    PDA_Account_Seed_Prefix_Bridge = 10,
+    PDA_Obsolete_2 = 10,
 
     PDA_Account_Seed_Prefix_Bid_Marker_Mint = 11,
 
@@ -66,7 +66,7 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Entry = 15,
 
-    PDA_Account_Seed_Prefix_Master_Split = 16
+    PDA_Obsolete_3 = 16
 
 } PDA_Account_Seed_Prefix;
 

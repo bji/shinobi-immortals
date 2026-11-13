@@ -105,9 +105,7 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
                                  [ pubkey $USER_PUBKEY                                                                \
                                    pubkey $SPL_TOKEN_PROGRAM_PUBKEY                                                   \
                                    $KI_MINT_PUBKEY ]"
-              BRIDGE_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 10                                                                              \
-                                   $ENTRY_MINT_PUBKEY ]"
+
 if [ -z "$TOKEN_PUBKEY" ]; then 
                TOKEN_PUBKEY="pda $SPLATA_PROGRAM_PUBKEY                                                               \
                                  [ pubkey $USER_PUBKEY                                                                \
@@ -128,7 +126,6 @@ solxact encode                                                                  
         account $KI_DESTINATION_PUBKEY w                                                                              \
         account $USER_PUBKEY                                                                                          \
         account $MASTER_STAKE_PUBKEY w                                                                                \
-        account $BRIDGE_PUBKEY w                                                                                      \
         account $KI_MINT_PUBKEY w                                                                                     \
         account $AUTHORITY_PUBKEY                                                                                     \
         account $CLOCK_SYSVAR_PUBKEY                                                                                  \

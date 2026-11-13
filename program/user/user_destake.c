@@ -18,18 +18,16 @@ static uint64_t user_destake(const SolParameters *params)
         DECLARE_ACCOUNT(6,   ki_destination_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   ki_destination_owner_account,     ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(8,   master_stake_account,             ReadWrite,  NotSigner,  KnownAccount_MasterStake);
-        // xxx unused, remove!
-        DECLARE_ACCOUNT(9,   bridge_stake_account,             ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(10,  ki_mint_account,                  ReadWrite,  NotSigner,  KnownAccount_KiMint);
-        DECLARE_ACCOUNT(11,  authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
-        DECLARE_ACCOUNT(12,  clock_sysvar_account,             ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
-        DECLARE_ACCOUNT(13,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
-        DECLARE_ACCOUNT(14,  stake_program_account,            ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
-        DECLARE_ACCOUNT(15,  stake_history_sysvar_account,     ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
-        DECLARE_ACCOUNT(16,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
-        DECLARE_ACCOUNT(17,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        DECLARE_ACCOUNT(9,   ki_mint_account,                  ReadWrite,  NotSigner,  KnownAccount_KiMint);
+        DECLARE_ACCOUNT(10,  authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(11,  clock_sysvar_account,             ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
+        DECLARE_ACCOUNT(12,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(13,  stake_program_account,            ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
+        DECLARE_ACCOUNT(14,  stake_history_sysvar_account,     ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
+        DECLARE_ACCOUNT(15,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
+        DECLARE_ACCOUNT(16,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
     }
-    DECLARE_ACCOUNTS_NUMBER(18);
+    DECLARE_ACCOUNTS_NUMBER(17);
 
     // Get validated block and entry, which checks all validity of those accounts
     const Block *block = get_validated_block(block_account);

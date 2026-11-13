@@ -50,7 +50,7 @@ static uint64_t user_harvest(const SolParameters *params)
     // Decode the stake account
     Stake stake;
     if (!decode_stake_account(stake_account, &stake)) {
-        return Error_InvalidAccount_First + 5;
+        return Error_InvalidAccount_First + 4;
     }
 
     // Harvest Ki
