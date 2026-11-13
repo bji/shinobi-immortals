@@ -31,6 +31,10 @@ This Repository
 
 This code repository implements the Shinobi Immortals on-chain Solana program.  It also hosts scripts and tools that facilitate administrative use of that program.  And it hosts (or should host) schemas and client libraries that can be used by end users (or websites and tools used by end users) to interact with the program.
 
+Wherever possible, only use POSIX compatible programs and program options in all scripting.  curl and jq are OK.
+
+Comment liberally.  A textual explanation line before non-trivial lines of scripts, for example, is preferred.
+
 
 Downstream
 ----------

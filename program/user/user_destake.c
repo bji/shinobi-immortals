@@ -18,6 +18,7 @@ static uint64_t user_destake(const SolParameters *params)
         DECLARE_ACCOUNT(6,   ki_destination_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   ki_destination_owner_account,     ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(8,   master_stake_account,             ReadWrite,  NotSigner,  KnownAccount_MasterStake);
+        // xxx unused, remove!
         DECLARE_ACCOUNT(9,   bridge_stake_account,             ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(10,  ki_mint_account,                  ReadWrite,  NotSigner,  KnownAccount_KiMint);
         DECLARE_ACCOUNT(11,  authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
@@ -83,8 +84,7 @@ static uint64_t user_destake(const SolParameters *params)
     }
 
     // Charge commission
-    ret = charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, stake_account->key,
-                            params->ka, params->ka_num);
+    ret = charge_commission(&stake, block, entry, funding_account, stake_account->key, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

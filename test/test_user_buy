@@ -7,39 +7,39 @@ if should_run_test user_buy_wrong_admin; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_buy_wrong_admin                                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $RICH_USER1_PUBKEY w                                                                               \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $TOKEN_PUBKEY w                                                                                    \
-           account $MINT_PUBKEY                                                                                       \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY w                                                                                 \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10                                                                                                      \
-           u64 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_wrong_admin                                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $RICH_USER1_PUBKEY w                                                                              \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $BLOCK_PUBKEY w                                                                                   \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY                                                                                      \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY w                                                                                \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10                                                                                                     \
+           u64 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -51,38 +51,38 @@ if should_run_test user_buy_short_data; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_buy_short_data                                                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $TOKEN_PUBKEY w                                                                                    \
-           account $MINT_PUBKEY                                                                                       \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY w                                                                                 \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_short_data                                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $BLOCK_PUBKEY w                                                                                   \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY                                                                                      \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY w                                                                                \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -94,39 +94,39 @@ if should_run_test user_buy_bad_block; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_buy_bad_block                                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1104}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x450"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $CONFIG_PUBKEY w                                                                                   \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $TOKEN_PUBKEY w                                                                                    \
-           account $MINT_PUBKEY                                                                                       \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY w                                                                                 \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10                                                                                                      \
-           u64 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_bad_block                                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $CONFIG_PUBKEY w                                                                                  \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY                                                                                      \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY w                                                                                \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10                                                                                                     \
+           u64 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -149,236 +149,236 @@ SHA2562=`compute_metadata_sha256 $METADATA2 $SALT2`
 if [ -z "$TESTS" ]; then
    # 8 0 -- Not complete
    # create block
-    assert user_buy_setup_8_0                                                                                         \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_0                                                                                        \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     
     # 8 1 -- mystery, still in mystery phase
     # create block
-    assert user_buy_setup_8_1_a                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 1 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_1_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 1 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_setup_8_1_b                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 1 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_1_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 1 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     
     # 8 2 -- mystery, past mystery phase, not revealed
     # create block
-    assert user_buy_setup_8_2_a                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 2 0 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                           \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_2_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 2 0 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_setup_8_2_b                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 2 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_2_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 2 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     
     # 8 3 -- mystery, past mystery phase, revealed
     # create block
-    assert user_buy_setup_8_3_a                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 3 0 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                           \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_3_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 3 0 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_setup_8_3_b                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 3 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_3_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 3 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Ensure it's been 2 seconds so that the block is past its mystery phase
     sleep 2
     # set metadata for entry 0
-    assert user_buy_setup_8_3_c                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 3 0 0 $BYTE_0                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_3_c                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 3 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 1
-    assert user_buy_setup_8_3_d                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 3 1 0 $BYTE_1                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_3_d                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 3 1 0 $BYTE_1                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal
-    assert user_buy_setup_8_3_e                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 8 3 0 $SALT0 $SALT1                                                                            \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_3_e                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 8 3 0 $SALT0 $SALT1                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     
     # 8 4 -- no mystery, in auction
     # create block
-    assert user_buy_setup_8_4_a                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 4 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                           \
-         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_4_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 4 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_setup_8_4_b                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 4 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_4_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 4 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 0
-    assert user_buy_setup_8_4_c                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 4 0 0 $BYTE_0                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_4_c                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 4 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 1
-    assert user_buy_setup_8_4_d                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 4 1 0 $BYTE_1                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_4_d                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 4 1 0 $BYTE_1                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal
-    assert user_buy_setup_8_4_e                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 8 4 0 $SALT0 $SALT1                                                                            \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_4_e                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 8 4 0 $SALT0 $SALT1                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     
     # 8 5 -- no mystery, past auction
     # create block
-    assert user_buy_setup_8_5_a                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 5 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                           \
-         \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                 \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_5_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 5 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_setup_8_5_b                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 5 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_5_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 5 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 0
-    assert user_buy_setup_8_5_c                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 5 0 0 $BYTE_0                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_5_c                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 5 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 1
-    assert user_buy_setup_8_5_d                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 5 1 0 $BYTE_1                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_5_d                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 5 1 0 $BYTE_1                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal
-    assert user_buy_setup_8_5_e                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 8 5 0 $SALT0 $SALT1                                                                            \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_5_e                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 8 5 0 $SALT0 $SALT1                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Auction begins immediately, lasts for 20 seconds.  Put a bid on entry 1.
-    assert user_buy_setup_8_5_f                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER1_PUBKEY 8 5 1 \`lamports_from_sol 10\` \`lamports_from_sol 10\`                                   \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_buy_setup_8_5_f                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 8 5 1 \`lamports_from_sol 10\` \`lamports_from_sol 10\`                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     
     # 8 6 -- no mystery, no auction, not revealed
-    assert user_buy_setup_8_6_a                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 6 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                           \
-         \`lamports_from_sol 1\` false 0 \`lamports_from_sol 1000\` 0                                                 \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_6_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 6 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         \`lamports_from_sol 1\` false 0 \`lamports_from_sol 1000\` 0                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_setup_8_6_b                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 6 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_6_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 6 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 0
-    assert user_buy_setup_8_6_c                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 6 0 0 $BYTE_0                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_6_c                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 6 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 1
-    assert user_buy_setup_8_6_d                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 6 1 0 $BYTE_1                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_6_d                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 6 1 0 $BYTE_1                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     
     # 8 7 -- no mystery, no auction, revealed
-    assert user_buy_setup_8_7_a                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 7 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                           \
-         \`lamports_from_sol 1\` true 1 \`lamports_from_sol 1000\` 0                                                  \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_7_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 7 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         \`lamports_from_sol 1\` true 1 \`lamports_from_sol 1000\` 0                                                 \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_setup_8_7_b                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 7 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_7_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 7 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 0
-    assert user_buy_setup_8_7_c                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 7 0 0 $BYTE_0                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_7_c                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 7 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 1
-    assert user_buy_setup_8_7_d                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 7 1 0 $BYTE_1                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_7_d                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 7 1 0 $BYTE_1                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal
-    assert user_buy_setup_8_7_e                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 8 7 0 $SALT0 $SALT1                                                                            \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_setup_8_7_e                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 8 7 0 $SALT0 $SALT1                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
     # Wait 20 seconds to ensure that auction phase for 8 5 is over
@@ -388,12 +388,12 @@ fi
 
 # Incomplete block
 if should_run_test user_buy_incomplete_block; then
-    assert_fail user_buy_incomplete_block                                                                             \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 0 0 0                                                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_incomplete_block                                                                            \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 0 0 0                                                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -404,39 +404,39 @@ if should_run_test user_buy_wrong_entry; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_buy_wrong_entry                                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $CONFIG_PUBKEY w                                                                                   \
-           account $TOKEN_PUBKEY w                                                                                    \
-           account $MINT_PUBKEY                                                                                       \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY w                                                                                 \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10                                                                                                      \
-           u64 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_wrong_entry                                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $BLOCK_PUBKEY w                                                                                   \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $CONFIG_PUBKEY w                                                                                  \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY                                                                                      \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY w                                                                                \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10                                                                                                     \
+           u64 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -447,42 +447,42 @@ if should_run_test user_buy_wrong_entry_2; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 6 ]`
     MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
     ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    assert_fail user_buy_wrong_entry_2                                                                                \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $ENTRY_PUBKEY1 w                                                                                   \
-           account $TOKEN_PUBKEY w                                                                                    \
-           account $MINT_PUBKEY                                                                                       \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY w                                                                                 \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10                                                                                                      \
-           u64 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_wrong_entry_2                                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $BLOCK_PUBKEY w                                                                                   \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $ENTRY_PUBKEY1 w                                                                                  \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY                                                                                      \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY w                                                                                \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10                                                                                                     \
+           u64 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -493,8 +493,8 @@ if should_run_test user_buy_wrong_token; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
@@ -502,34 +502,34 @@ if should_run_test user_buy_wrong_token; then
     MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
     ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
-    assert_fail user_buy_wrong_token                                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1106}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x452"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $TOKEN_PUBKEY1 w                                                                                   \
-           account $MINT_PUBKEY                                                                                       \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY w                                                                                 \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10                                                                                                      \
-           u64 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_wrong_token                                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $BLOCK_PUBKEY w                                                                                   \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY1 w                                                                                  \
+           account $MINT_PUBKEY                                                                                      \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY w                                                                                \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10                                                                                                     \
+           u64 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -540,8 +540,8 @@ if should_run_test user_buy_wrong_mint; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
@@ -549,34 +549,34 @@ if should_run_test user_buy_wrong_mint; then
     MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
     ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
-    assert_fail user_buy_wrong_mint                                                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1107}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x453"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x453"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $TOKEN_PUBKEY w                                                                                    \
-           account $MINT_PUBKEY1                                                                                      \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY w                                                                                 \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10                                                                                                      \
-           u64 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_wrong_mint                                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x453'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $BLOCK_PUBKEY w                                                                                   \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY1                                                                                     \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY w                                                                                \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10                                                                                                     \
+           u64 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -587,8 +587,8 @@ if should_run_test user_buy_wrong_metadata; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                   \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                   \
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
@@ -596,85 +596,85 @@ if should_run_test user_buy_wrong_metadata; then
     MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
     ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
+    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
+                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
-    assert_fail user_buy_wrong_metadata                                                                               \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1110}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x456"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x456"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY w                                                                                    \
-           account $AUTHORITY_PUBKEY w                                                                                \
-           account $BLOCK_PUBKEY w                                                                                    \
-           account $WHITELIST_PUBKEY w                                                                                \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $TOKEN_PUBKEY w                                                                                    \
-           account $MINT_PUBKEY                                                                                       \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                        \
-           account $RICH_USER1_PUBKEY                                                                                 \
-           account $METADATA_PUBKEY1 w                                                                                \
-           account $SELF_PROGRAM_PUBKEY                                                                               \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           // Instruction code 10 = Buy //                                                                            \
-           u8 10                                                                                                      \
-           u64 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_wrong_metadata                                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x456'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $BLOCK_PUBKEY w                                                                                   \
+           account $WHITELIST_PUBKEY w                                                                               \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY                                                                                      \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $METADATA_PUBKEY1 w                                                                               \
+           account $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 10 = Buy //                                                                           \
+           u8 10                                                                                                     \
+           u64 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
 
 # Entry waiting for reveal when past mystery phase
 if should_run_test user_buy_waiting_for_reveal_1; then
-    assert_fail user_buy_waiting_for_reveal_1                                                                         \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1016}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f8"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f8"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 2 0 0                                                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_waiting_for_reveal_1                                                                        \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f8'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 2 0 0                                                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
 
 # Entry waiting for reveal when no mystery, no auction
 if should_run_test user_buy_waiting_for_reveal_2; then
-    assert_fail user_buy_waiting_for_reveal_2                                                                         \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1016}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f8"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f8"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 6 0 0                                                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_waiting_for_reveal_2                                                                        \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f8'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 6 0 0                                                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
 
 # Entry in auction
 if should_run_test user_buy_in_auction; then
-    assert_fail user_buy_in_auction                                                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1017}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 4 0 0                                                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_in_auction                                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f9'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 4 0 0                                                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
 
 # Entry waiting to be claimed
 if should_run_test user_buy_past_auction; then
-    assert_fail user_buy_past_auction                                                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1018}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3fa"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fa"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 5 1 0                                                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_past_auction                                                                                \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fa'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 5 1 0                                                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -683,11 +683,11 @@ fi
 if should_run_test user_buy_mystery; then
     # Get balance of authority account
     AUTHORITY_BALANCE=`lamports_from_sol \`account_balance $AUTHORITY_PUBKEY\``
-    assert user_buy_mystery                                                                                           \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 1 0 \`lamports_from_sol 10000\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_buy_mystery                                                                                          \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 1 0 \`lamports_from_sol 10000\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Get new balance of authority account
     NEW_AUTHORITY_BALANCE=`lamports_from_sol \`account_balance $AUTHORITY_PUBKEY\``
@@ -697,19 +697,19 @@ if should_run_test user_buy_mystery; then
     fi
     # Now reveal the purchased mystery and ensure that the SOL moves from the authority to the admin
     # set metadata for entry 0
-    assert user_buy_mystery_reveal_setup                                                                              \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 1 0 0 $BYTE_0                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_mystery_reveal_setup                                                                             \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 1 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Get the balance of admin account
     ADMIN_BALANCE=`lamports_from_sol \`account_balance $ADMIN_PUBKEY\``
-    assert user_buy_mystery_reveal                                                                                    \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 8 1 0 $SALT0                                                                                   \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_mystery_reveal                                                                                   \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 8 1 0 $SALT0                                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Get the new balance of the admin account
     NEW_ADMIN_BALANCE=`lamports_from_sol \`account_balance $ADMIN_PUBKEY\``
@@ -730,11 +730,11 @@ fi
 if should_run_test user_buy_normal; then
     # Get balance of admin account
     ADMIN_BALANCE=`lamports_from_sol \`account_balance $ADMIN_PUBKEY\``
-    assert user_buy_normal                                                                                            \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 0 \`lamports_from_sol 10000\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_buy_normal                                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 0 \`lamports_from_sol 10000\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Get new balance of admin account
     NEW_ADMIN_BALANCE=`lamports_from_sol \`account_balance $ADMIN_PUBKEY\``
@@ -747,14 +747,14 @@ if should_run_test user_buy_normal; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    ENTRY_PURCHASE_PRICE=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 8 7 0 |              \
+    ENTRY_PURCHASE_PRICE=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 8 7 0 |             \
                               jq .purchase_price`
     if [ "0$ENTRY_PURCHASE_PRICE" -eq 0 ]; then
         echo "FAIL: user_buy_normal did not set entry purchase price"
         exit 1
     fi
     # Check that the metaplex metadata was updated with primary sale happened set
-    PRIMARY_SALE_HAPPENED=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 8 7 0 |          \
+    PRIMARY_SALE_HAPPENED=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 8 7 0 |         \
                               jq .primary_sale_happened`
     if [ "$PRIMARY_SALE_HAPPENED" != "true" ]; then
         echo "FAIL: user_buy_normal did not set 'primary sale happened' metaplex metadata flag"
@@ -771,36 +771,36 @@ fi
 
 # Token not owned by program because already bought
 if should_run_test user_buy_already_bought; then
-    assert_fail user_buy_already_bought                                                                               \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1015}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f7"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f7"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 0 \`lamports_from_sol 10000\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_already_bought                                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f7'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 0 \`lamports_from_sol 10000\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
 
 # Price is higher than user specified maximum price
 if should_run_test user_buy_price_too_high; then
-    assert_fail user_buy_price_too_high                                                                               \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1047}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x417"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x417"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 1 100                                                                   \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_buy_price_too_high                                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x417'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 1 100                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
 
 # Funding account without enough lamports
 if should_run_test user_buy_insufficient_lamports; then
-    assert_fail user_buy_price_insufficient_lamports                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1019}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3fb"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fb"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $POOR_USER_PUBKEY 8 7 1 \`lamports_from_sol 10000\`                                            \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/poor_user.json                                                                         \
+    assert_fail user_buy_price_insufficient_lamports                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fb'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $POOR_USER_PUBKEY 8 7 1 \`lamports_from_sol 10000\`                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/poor_user.json                                                                        \
         | solxact submit l 2>&1`
 fi
 
@@ -811,11 +811,11 @@ if should_run_test user_buy_normal_2; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     transfer $LEDGER/admin.json $TOKEN_DESTINATION_PUBKEY 1
-    assert user_buy_normal_2                                                                                          \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 1 \`lamports_from_sol 10000\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_buy_normal_2                                                                                         \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 1 \`lamports_from_sol 10000\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -824,93 +824,93 @@ fi
 if should_run_test user_buy_with_whitelist; then
 
     # Create a whitelist for block 8 8 with rich_user1 and rich_user2 in it
-    assert user_buy_whitelist_setup_8_8_a                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                       \
-         $ADMIN_PUBKEY 8 8 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_a                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
+         $ADMIN_PUBKEY 8 8 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
     # 8 8 -- no mystery, no auction, revealed
-    assert user_buy_whitelist_setup_8_8_b                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 8 8 0 3 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                           \
-         \`lamports_from_sol 1\` false 0 \`lamports_from_sol 1000\` $((24*60*60))                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_b                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 8 8 0 3 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         \`lamports_from_sol 1\` false 0 \`lamports_from_sol 1000\` $((24*60*60))                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_buy_whitelist_setup_8_8_c                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 8 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_c                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 8 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_buy_whitelist_setup_8_8_d                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 8 8 "http://foo.bar.com" none 2 $SHA2562                                                       \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_d                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 8 8 "http://foo.bar.com" none 2 $SHA2562                                                      \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 0
-    assert user_buy_whitelist_setup_8_8_e                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 8 0 0 $BYTE_0                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_e                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 8 0 0 $BYTE_0                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 1
-    assert user_buy_whitelist_setup_8_8_f                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 8 1 0 $BYTE_1                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_f                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 8 1 0 $BYTE_1                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata for entry 2
-    assert user_buy_whitelist_setup_8_8_g                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 8 8 2 0 $BYTE_2                                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_g                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 8 8 2 0 $BYTE_2                                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal
-    assert user_buy_whitelist_setup_8_8_h                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 8 8 0 $SALT0 $SALT1 $SALT2                                                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_setup_8_8_h                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 8 8 0 $SALT0 $SALT1 $SALT2                                                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
     # Now admin cannot buy since the admin is not in the whitelist
-    assert_fail user_buy_whitelist_fail                                                                               \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1052}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x41c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $ADMIN_PUBKEY 8 8 0 \`lamports_from_sol 10000\`                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail user_buy_whitelist_fail                                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41c'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $ADMIN_PUBKEY 8 8 0 \`lamports_from_sol 10000\`                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
     # But rich_user1 can buy since it is in the whitelist
-    assert user_buy_whitelist_1                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 8 0 \`lamports_from_sol 10000\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_buy_whitelist_1                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 8 0 \`lamports_from_sol 10000\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     
     # Same for rich_user2
-    assert user_buy_whitelist_2                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 8 8 1 \`lamports_from_sol 10000\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert user_buy_whitelist_2                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 8 8 1 \`lamports_from_sol 10000\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
     
     # Now admin can buy since the whitelist has been exhausted
-    assert user_buy_whitelist_3                                                                                       \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $ADMIN_PUBKEY 8 8 2 \`lamports_from_sol 10000\`                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_buy_whitelist_3                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $ADMIN_PUBKEY 8 8 2 \`lamports_from_sol 10000\`                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi

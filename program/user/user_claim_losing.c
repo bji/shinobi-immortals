@@ -71,6 +71,12 @@ static uint64_t user_claim_losing(const SolParameters *params)
         return Error_InvalidAccount_First;
     }
 
+    // If the mint written into the bid is not the same as that of the entry that was bid on, then the tx has
+    // supplied a mismatched bid + entry combination
+    if (!SolPubkey_same(&(bid->mint_pubkey), &(entry->mint_pubkey))) {
+        return Error_InvalidAccount_First + 2;
+    }
+
     // If this is the winning bid, then can't claim it as a losing bid
     if (SolPubkey_same(bid_account->key, &(entry->auction.winning_bid_pubkey))) {
         return Error_BidWon;

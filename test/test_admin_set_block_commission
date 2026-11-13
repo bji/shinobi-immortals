@@ -3,20 +3,20 @@
 if should_run_test admin_set_block_commission_no_auth; then
     # Test with block 5 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 5 u32 0 ]`
-    assert_fail admin_set_block_commission_no_auth                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $BLOCK_PUBKEY w                                                                                    \
-           // Instruction code 6 = SetBlockCommission //                                                              \
-           u8 6                                                                                                       \
-           u16 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail admin_set_block_commission_no_auth                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $BLOCK_PUBKEY w                                                                                   \
+           // Instruction code 6 = SetBlockCommission //                                                             \
+           u8 6                                                                                                      \
+           u16 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -25,19 +25,19 @@ fi
 if should_run_test admin_set_block_commission_bad_data_size; then
     # Test with block 5 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 5 u32 0 ]`
-    assert_fail admin_set_block_commission_bad_data_size                                                              \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           // Instruction code 6 = SetBlockCommission //                                                              \
-           u8 6"                                                                                                      \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_block_commission_bad_data_size                                                             \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $ADMIN_PUBKEY                                                                                   \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY s                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                   \
+           // Instruction code 6 = SetBlockCommission //                                                             \
+           u8 6"                                                                                                     \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -46,20 +46,20 @@ fi
 if should_run_test admin_set_block_commission_bad_block; then
     # Test with block 5 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 5 u32 0 ]`
-    assert_fail admin_set_block_commission_bad_block                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1100}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY w                                                                                    \
-           // Instruction code 6 = SetBlockCommission //                                                              \
-           u8 6                                                                                                       \
-           u16 0"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_block_commission_bad_block                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $ADMIN_PUBKEY                                                                                   \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY s                                                                                   \
+           account $BLOCK_PUBKEY w                                                                                   \
+           // Instruction code 6 = SetBlockCommission //                                                             \
+           u8 6                                                                                                      \
+           u16 0"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -67,12 +67,12 @@ fi
 # Create incomplete block
 if [ -z "$TESTS" ]; then
     # Test with block 5 0
-    assert admin_reveal_entries_setup                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 5 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_reveal_entries_setup                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 5 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -80,22 +80,22 @@ fi
 # Incomplete block
 if should_run_test admin_set_block_commission_incomplete_block; then
     # Test with block 5 0
-    assert_fail admin_set_block_commission_incomplete_block                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 0    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_block_commission_incomplete_block                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 0   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
 
 # Complete the block
 if [ -z "$TESTS" ]; then
-    assert admin_set_block_commission_setup                                                                           \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 5 0 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_set_block_commission_setup                                                                          \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 5 0 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -103,10 +103,10 @@ fi
 if should_run_test admin_set_block_commission_success; then
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
-    assert admin_set_block_commission_success                                                                         \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 1000 \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_set_block_commission_success                                                                        \
+   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 1000 \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Check to make sure commission is as expected
     BLOCK_JSON=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l block 5 0`
@@ -129,11 +129,11 @@ fi
 # Set commission twice in same epoch
 if should_run_test admin_set_block_commission_reset; then
     # Test with block 5 0
-    assert_fail admin_set_block_commission_reset                                                                      \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1043}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x413"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 2000 \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_block_commission_reset                                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 2000 \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -142,17 +142,17 @@ fi
 if should_run_test admin_set_block_commission_large_change; then
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
-    assert admin_set_block_commission_large_change_setup                                                              \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 2000 \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_set_block_commission_large_change_setup                                                             \
+   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 2000 \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
-    assert_fail admin_set_block_commission_large_change                                                               \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1044}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x414"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 3311 \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_block_commission_large_change                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414'                     \
+   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 3311 \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi

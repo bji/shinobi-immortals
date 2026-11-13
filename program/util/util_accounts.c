@@ -245,12 +245,9 @@ static uint64_t create_account(SolAccountInfo *new_account, const SolPubkey *fun
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
 
-        uint64_t ret = seeds ?
+        return seeds ?
             sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) :
             sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
-        if (ret) {
-            return ret;
-        }
     }
 
     return 0;
@@ -284,12 +281,18 @@ static uint64_t create_pda(SolAccountInfo *new_account, const SolSignerSeed *see
 }
 
 
-// Deletes an account in a safe manner: transfers all lamports to [lamports_recipient], sets its data length to 0.
-// This ensures that subsequent instructions in the same transaction see no data for the account.
+// Deletes an account in a safe manner: transfers all lamports to [lamports_recipient], zeroing its data,
+// then setting its data length to zero, and re-assigning to the System Program.
+// This ensures that subsequent instructions in the same transaction can see none of the old data for the account, and
+// that subsequent re-use of the account in the same transaction is possible because the system program can be used
+// re-alloc it.
 static void delete_account(SolAccountInfo *account, SolAccountInfo *lamports_recipient)
 {
     *(lamports_recipient->lamports) += *(account->lamports);
     *(account->lamports) = 0;
 
+    sol_memset(account->data, 0, account->data_len);
     set_account_size(account, 0);
+
+    account->owner = 0;
 }

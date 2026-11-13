@@ -10,6 +10,7 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
         DECLARE_ACCOUNT(2,  entry_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,  stake_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(4,  master_stake_account,          ReadWrite,  NotSigner,  KnownAccount_MasterStake);
+        // xxx unused, remove!
         DECLARE_ACCOUNT(5,  bridge_stake_account,          ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(6,  authority_account,             ReadOnly,   NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(7,  clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
@@ -81,7 +82,7 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
     }
     // Else, it's initialized, so try charging commission
     else {
-        return charge_commission(&stake, block, entry, funding_account->key, bridge_stake_account, stake_account->key,
-                                 params->ka, params->ka_num);
+        return charge_commission(&stake, block, entry, funding_account, stake_account->key, params->ka,
+                                 params->ka_num);
     }
 }

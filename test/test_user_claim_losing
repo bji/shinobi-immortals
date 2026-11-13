@@ -19,222 +19,222 @@ SHA2563=`compute_metadata_sha256 $METADATA3 $SALT3`
 # Create auction blocks
 if [ -z "$TESTS" ]; then
     # 11 0 -- no auction
-    assert user_bid_setup_11_0_a                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 11 0 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                          \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_0_a                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 11 0 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_bid_setup_11_0_b                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 11 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_0_b                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 11 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata of entries
-    assert user_bid_setup_11_0_c                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 0 0 0 $BYTE_0                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_0_c                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 0 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_0_d                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 0 1 0 $BYTE_1                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_0_d                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 0 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal entries
-    assert user_bid_setup_11_0_e                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 11 0 0 $SALT0 $SALT1                                                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_0_e                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 11 0 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # buy entry 0
-    assert user_bid_setup_11_0_f                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 11 0 0 \`lamports_from_sol 1001\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_bid_setup_11_0_f                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 11 0 0 \`lamports_from_sol 1001\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     
     # 11 1 -- long auction
-    assert user_bid_setup_11_1_a                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 11 1 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                          \
-         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_a                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 11 1 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_bid_setup_11_1_b                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 11 1 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_b                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 11 1 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_1_c                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 11 1 "http://foo.bar.com" none 2 $SHA2562 $SHA2563                                             \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_c                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 11 1 "http://foo.bar.com" none 2 $SHA2562 $SHA2563                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata of entries
-    assert user_bid_setup_11_1_d                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 1 0 0 $BYTE_0                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_d                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 1 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_1_e                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 1 1 0 $BYTE_1                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_e                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 1 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_1_f                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 1 2 0 $BYTE_2                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_f                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 1 2 0 $BYTE_2                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_1_g                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 1 3 0 $BYTE_3                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_g                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 1 3 0 $BYTE_3                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal entries
-    assert user_bid_setup_11_1_h                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 11 1 0 $SALT0 $SALT1                                                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_h                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 11 1 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_1_i                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 11 1 2 $SALT2 $SALT3                                                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_1_i                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 11 1 2 $SALT2 $SALT3                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Bid on entry 0 by rich_user1
-    assert user_bid_setup_11_1_j                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER1_PUBKEY 11 1 0 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_bid_setup_11_1_j                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 11 1 0 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Bid on entry 1 by rich_user2
-    assert user_bid_setup_11_1_k                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER2_PUBKEY 11 1 1 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert user_bid_setup_11_1_k                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 11 1 1 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
     # Bid on entry 2 by rich_user1
-    assert user_bid_setup_11_1_l                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER1_PUBKEY 11 1 2 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_bid_setup_11_1_l                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 11 1 2 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Bid on entry 2 by rich_user2 (outbidding rich_user1)
-    assert user_bid_setup_11_1_m                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER2_PUBKEY 11 1 2 \`lamports_from_sol 2000\` \`lamports_from_sol 2000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert user_bid_setup_11_1_m                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 11 1 2 \`lamports_from_sol 2000\` \`lamports_from_sol 2000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
 
     # 11 2 -- short auction
-    assert user_bid_setup_11_2_a                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 11 2 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                          \
-         \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                 \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_a                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 11 2 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # add entries
-    assert user_bid_setup_11_2_b                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 11 2 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_b                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 11 2 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_2_c                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 11 2 "http://foo.bar.com" none 2 $SHA2562 $SHA2563                                             \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_c                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 11 2 "http://foo.bar.com" none 2 $SHA2562 $SHA2563                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata of entries
-    assert user_bid_setup_11_2_d                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 2 0 0 $BYTE_0                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_d                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 2 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_2_e                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 2 1 0 $BYTE_1                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_e                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 2 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_2_f                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 2 2 0 $BYTE_2                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_f                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 2 2 0 $BYTE_2                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_2_g                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 11 2 3 0 $BYTE_3                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_g                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 11 2 3 0 $BYTE_3                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal entries
-    assert user_bid_setup_11_2_h                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 11 2 0 $SALT0 $SALT1                                                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_h                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 11 2 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_bid_setup_11_2_i                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 11 2 2 $SALT2 $SALT3                                                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_bid_setup_11_2_i                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 11 2 2 $SALT2 $SALT3                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Bid on entry 0 by rich_user1
-    assert user_bid_setup_11_2_j                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER1_PUBKEY 11 2 0 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_bid_setup_11_2_j                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 11 2 0 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Bid on entry 1 by rich_user2
-    assert user_bid_setup_11_2_k                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER2_PUBKEY 11 2 1 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert user_bid_setup_11_2_k                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 11 2 1 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
     # Bid on entry 2 by rich_user1
-    assert user_bid_setup_11_2_l                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER1_PUBKEY 11 2 2 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_bid_setup_11_2_l                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 11 2 2 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Bid on entry 2 by rich_user2 (outbidding rich_user1)
-    assert user_bid_setup_11_2_m                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                          \
-         $RICH_USER2_PUBKEY 11 2 2 \`lamports_from_sol 2000\` \`lamports_from_sol 2000\`                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert user_bid_setup_11_2_m                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 11 2 2 \`lamports_from_sol 2000\` \`lamports_from_sol 2000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
 
     # Now wait 21 seconds to ensure that short auctions have ended
@@ -263,19 +263,19 @@ if should_run_test user_claim_losing_bad_bidding_account; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
     BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
-    assert_fail user_claim_losing_bad_bidding_account                                                                 \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1100}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER2_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER2_PUBKEY ws                                                                              \
-           account $ENTRY_PUBKEY                                                                                      \
-           account $BID_PUBKEY w                                                                                      \
-           // Instruction code 13 = ClaimLosing //                                                                    \
-           u8 13"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert_fail user_claim_losing_bad_bidding_account                                                                \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER2_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER2_PUBKEY ws                                                                             \
+           account $ENTRY_PUBKEY                                                                                     \
+           account $BID_PUBKEY w                                                                                     \
+           // Instruction code 13 = ClaimLosing //                                                                   \
+           u8 13"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -288,19 +288,19 @@ if should_run_test user_claim_losing_bad_entry; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
     BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
-    assert_fail user_claim_losing_bad_entry                                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1101}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44d"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $BID_PUBKEY w                                                                                      \
-           // Instruction code 13 = ClaimLosing //                                                                    \
-           u8 13"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_bad_entry                                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $BID_PUBKEY w                                                                                     \
+           // Instruction code 13 = ClaimLosing //                                                                   \
+           u8 13"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -311,19 +311,19 @@ if should_run_test user_claim_losing_bad_bid; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 11 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    assert_fail user_claim_losing_bad_bid                                                                             \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $ENTRY_PUBKEY                                                                                      \
-           account $CONFIG_PUBKEY w                                                                                   \
-           // Instruction code 13 = ClaimLosing //                                                                    \
-           u8 13"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_bad_bid                                                                            \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $ENTRY_PUBKEY                                                                                     \
+           account $CONFIG_PUBKEY w                                                                                  \
+           // Instruction code 13 = ClaimLosing //                                                                   \
+           u8 13"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -339,19 +339,19 @@ if should_run_test user_claim_losing_bad_bid_2; then
     BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
     BAD_BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $BAD_MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
     BAD_BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BAD_BID_MARKER_TOKEN_PUBKEY ]`
-    assert_fail user_claim_losing_bad_bid_2                                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $RICH_USER1_PUBKEY ws                                                                              \
-           account $ENTRY_PUBKEY                                                                                      \
-           account $BAD_BID_PUBKEY w                                                                                  \
-           // Instruction code 13 = ClaimLosing //                                                                    \
-           u8 13"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_bad_bid_2                                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $ENTRY_PUBKEY                                                                                     \
+           account $BAD_BID_PUBKEY w                                                                                 \
+           // Instruction code 13 = ClaimLosing //                                                                   \
+           u8 13"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -359,12 +359,12 @@ fi
 # Entry never had an auction, is unowned (failure)
 if should_run_test user_claim_losing_no_auction_unowned; then
     # Test with block 11 0
-    assert_fail user_claim_losing_no_auction_unowned                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1031}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x407"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 0 1                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_no_auction_unowned                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 0 1                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -372,12 +372,12 @@ fi
 # Entry never had an auction, is owned (failure)
 if should_run_test user_claim_losing_no_auction_owned; then
     # Test with block 11 0
-    assert_fail user_claim_losing_no_auction_owned                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1031}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x407"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 0 0                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_no_auction_owned                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 0 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -385,12 +385,12 @@ fi
 # Entry in auction, there is no bidder (failure)
 if should_run_test user_claim_losing_in_auction_no_bidder; then
     # Test with block 11 1
-    assert_fail user_claim_losing_in_auction_no_bidder                                                                \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 1 3                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_in_auction_no_bidder                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 1 3                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -398,12 +398,12 @@ fi
 # Entry in auction, is not a bidder (failure)
 if should_run_test user_claim_losing_in_auction_not_bidder; then
     # Test with block 11 1
-    assert_fail user_claim_losing_in_auction_not_bidder                                                               \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 1 1                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_in_auction_not_bidder                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 1 1                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -411,12 +411,12 @@ fi
 # Entry in auction, is the winning bidder (failure)
 if should_run_test user_claim_losing_in_auction_winning_bidder; then
     # Test with block 11 1
-    assert_fail user_claim_losing_in_auction_winning_bidder                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1032}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x408"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 1 0                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_in_auction_winning_bidder                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 1 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -428,11 +428,11 @@ if should_run_test user_claim_losing_in_auction_losing_bidder; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
-    assert user_claim_losing_in_auction_losing_bidder                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 1 2                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_claim_losing_in_auction_losing_bidder                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 1 2                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 
     # Check to make sure that if bid marker account is not to be reclaimed, then it is not
@@ -446,12 +446,12 @@ fi
 # Entry in auction, can't claim it twice
 if should_run_test user_claim_losing_in_auction_losing_bidder_again; then
     # Test with block 11 1
-    assert_fail user_claim_losing_in_auction_losing_bidder_again                                                      \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 1 2                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_in_auction_losing_bidder_again                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 1 2                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -459,12 +459,12 @@ fi
 # Entry post-auction, no bidder (failure)
 if should_run_test user_claim_losing_post_auction_no_bidder; then
     # Test with block 11 2
-    assert_fail user_claim_losing_post_auction_no_bidder                                                              \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1031}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x407"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 2 3                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_post_auction_no_bidder                                                             \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 2 3                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -472,12 +472,43 @@ fi
 # Entry post-auction, is not a bidder (failure)
 if should_run_test user_claim_losing_post_auction_not_bidder; then
     # Test with block 11 2
-    assert_fail user_claim_losing_post_auction_not_bidder                                                             \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 2 1                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_post_auction_not_bidder                                                            \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 2 1                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# A winning bid cannot be refunded by supplying a different auction's entry.
+# Entry 0's winning bid belongs to rich_user1; entry 1 is an eligible post-auction
+# entry with a different winner.  Before the mint check, this combination drained
+# entry 0's winning escrow because it was not entry 1's recorded winning bid.
+if should_run_test user_claim_losing_mismatched_entry_winning_bid; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 11 u32 2 ]`
+    WINNING_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    OTHER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
+    OTHER_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $OTHER_MINT_PUBKEY ]`
+    WINNING_MARKER_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $WINNING_MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    WINNING_BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $WINNING_MARKER_PUBKEY ]`
+
+    # Encode the mismatched accounts explicitly: the normal transaction builder
+    # derives the bid and entry from the same mint.  Supply only three accounts
+    # so optional marker reclamation cannot independently reject the attack.
+    assert_fail user_claim_losing_mismatched_entry_winning_bid                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `solxact encode                                                                                                  \
+         encoding c                                                                                                  \
+         fee_payer $RICH_USER1_PUBKEY                                                                                \
+         program $SELF_PROGRAM_PUBKEY                                                                                \
+         account $RICH_USER1_PUBKEY ws                                                                               \
+         account $OTHER_ENTRY_PUBKEY                                                                                 \
+         account $WINNING_BID_PUBKEY w                                                                               \
+         u8 13                                                                                                       \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -485,12 +516,12 @@ fi
 # Entry post-auction, is the winning bidder (failure)
 if should_run_test user_claim_losing_post_auction_winning_bidder; then
     # Test with block 11 2
-    assert_fail user_claim_losing_post_auction_winning_bidder                                                         \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1032}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x408"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 2 0                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_post_auction_winning_bidder                                                        \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 2 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -502,11 +533,11 @@ if should_run_test user_claim_losing_post_auction_losing_bidder; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
-    assert user_claim_losing_post_auction_losing_bidder                                                               \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 2 2 true                                                                               \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_claim_losing_post_auction_losing_bidder                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 2 2 true                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 
     # Check to make sure that if bid marker account is to be reclaimed, then it is
@@ -521,11 +552,11 @@ fi
 # Entry post-auction, can't claim it twice
 if should_run_test user_claim_losing_post_auction_losing_bidder_again; then
     # Test with block 11 2
-    assert_fail user_claim_losing_post_auction_losing_bidder_again                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                 \
-         $RICH_USER1_PUBKEY 11 2 2                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_claim_losing_post_auction_losing_bidder_again                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 2 2                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi

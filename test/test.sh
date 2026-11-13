@@ -61,5 +61,3 @@ source $SOURCE/test/test_user_level_up
 source $SOURCE/test/test_anyone_take_commission_or_delegate
 
 source $SOURCE/test/test_special_reauthorize
-
-teardown

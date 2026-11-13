@@ -253,10 +253,12 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
         // Encoding the data for metaplex requires using Borsch serialize format, eugh.
         uint8_t data[BORSH_SIZE_U8 /* instruction code */ +
                      METAPLEX_METADATA_DATA_SIZE /* data */ +
-                     BORSH_SIZE_BOOL /* is_mutable */];
-        uint8_t *d = borsh_encode_u8(data, 16); // instruction code 16 = CreateMetadataAccountV2
+                     BORSH_SIZE_BOOL /* is_mutable */ +
+                     BORSH_SIZE_BOOL /* option(collection_details) */];
+        uint8_t *d = borsh_encode_u8(data, 33); // instruction code 33 = CreateMetadataAccountV3
         d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, &(Constants.authority_pubkey));
         d = borsh_encode_bool(d, true); // is_mutable
+        d = borsh_encode_bool(d, false); // option(collection_details)
 
         instruction.data = data;
         instruction.data_len = ((uint64_t) d) - ((uint64_t) instruction.data);

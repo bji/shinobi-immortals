@@ -6,13 +6,13 @@
 # Also set the names to the level.  This is used to ensure that metaplex metadata is being updated.  The first
 # character of the name is at 80 + (level * 292).
 
-METADATA=`(echo 0x64000000 | xxd -r | tr -d '\n';                                                                     \
-           dd if=/dev/zero bs=1 count=64 status=none;                                                                 \
-           for i in \`seq 0 8\`; do                                                                                   \
-               dd if=/dev/zero bs=1 count=8 status=none;                                                              \
-               echo 0xf4240000 | xxd -r | tr -d '\n';                                                                 \
-               printf "%x" $i;                                                                                        \
-               dd if=/dev/zero bs=1 count=279 status=none;                                                            \
+METADATA=`(echo 0x64000000 | xxd -r | tr -d '\n';                                                                    \
+           dd if=/dev/zero bs=1 count=64 status=none;                                                                \
+           for i in \`seq 0 8\`; do                                                                                  \
+               dd if=/dev/zero bs=1 count=8 status=none;                                                             \
+               echo 0xf4240000 | xxd -r | tr -d '\n';                                                                \
+               printf "%x" $i;                                                                                       \
+               dd if=/dev/zero bs=1 count=279 status=none;                                                           \
            done) | base64 | tr -d '\n'`
 METADATA_PIECE1=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none           | base64 | tr -d '\n'`
 METADATA_PIECE2=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
@@ -35,111 +35,111 @@ if [ -z "$TESTS" ]; then
     
     # Delegate the delegated stake accounts
     echo "Delegating $LEDGER/delegated4_stake.json"
-    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated4_stake.json $VOTE_PUBKEY                  \
+    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated4_stake.json $VOTE_PUBKEY                 \
            >/dev/null 2>/dev/null
 
     # 16 0
-    assert user_level_up_setup_16_0_a                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 16 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                       \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_a                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 16 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_b                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 16 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_b                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 16 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_c                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 16 0 "http://foo.bar.com" none 2 $SHA2562                                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_c                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 16 0 "http://foo.bar.com" none 2 $SHA2562                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # set metadata
-    assert user_level_up_setup_16_0_d                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 0 0 $METADATA_PIECE1                                                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_d                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 0 0 $METADATA_PIECE1                                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_e                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 0 900 $METADATA_PIECE2                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_e                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 0 900 $METADATA_PIECE2                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_f                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 0 1800 $METADATA_PIECE3                                                                   \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_f                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 0 1800 $METADATA_PIECE3                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_g                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 1 0 $METADATA_PIECE1                                                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_g                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 1 0 $METADATA_PIECE1                                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_h                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 1 900 $METADATA_PIECE2                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_h                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 1 900 $METADATA_PIECE2                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_i                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 1 1800 $METADATA_PIECE3                                                                   \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_i                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 1 1800 $METADATA_PIECE3                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_j                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 2 0 $METADATA_PIECE1                                                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_j                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 2 0 $METADATA_PIECE1                                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_k                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 2 900 $METADATA_PIECE2                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_k                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 2 900 $METADATA_PIECE2                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    assert user_level_up_setup_16_0_l                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 16 0 2 1800 $METADATA_PIECE3                                                                   \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_l                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 2 1800 $METADATA_PIECE3                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # reveal entries
-    assert user_level_up_setup_16_0_p                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                              \
-         $ADMIN_PUBKEY 16 0 0 $SALT0 $SALT1 $SALT2                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert user_level_up_setup_16_0_p                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 16 0 0 $SALT0 $SALT1 $SALT2                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # rich_user1 buy entry 0
-    assert user_level_up_setup_16_0_q                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 16 0 0 \`lamports_from_sol 1001\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_level_up_setup_16_0_q                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 16 0 0 \`lamports_from_sol 1001\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # rich_user1 stake entry 0
-    assert user_level_up_setup_16_0_r                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                        \
-         $RICH_USER1_PUBKEY 16 0 0 $LEDGER/delegated4_stake.json                                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_level_up_setup_16_0_r                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 16 0 0 $LEDGER/delegated4_stake.json                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # rich_user2 buy entry 1
-    assert user_level_up_setup_16_0_s                                                                                 \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                          \
-         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 16 0 1 \`lamports_from_sol 1001\`                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert user_level_up_setup_16_0_s                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 16 0 1 \`lamports_from_sol 1001\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
 
     # 16 0 0 is owned and staked by rich_user1
@@ -155,31 +155,31 @@ if should_run_test user_level_up_bad_entry; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                             \
-                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                             \
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
+                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_level_up_bad_entry                                                                               \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1100}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44c"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY w                                                                                   \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $TOKEN_PUBKEY                                                                                      \
-           account $ENTRY_METADATA_PUBKEY w                                                                           \
-           account $KI_SOURCE_PUBKEY w                                                                                \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $KI_MINT_PUBKEY w                                                                                  \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                        \
-           u8 18"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_level_up_bad_entry                                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $CONFIG_PUBKEY w                                                                                  \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $KI_SOURCE_PUBKEY w                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -189,31 +189,31 @@ if should_run_test user_level_up_unowned_entry; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                             \
-                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                             \
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
+                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_level_up_unowned_entry                                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1040}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x410"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x410"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $TOKEN_PUBKEY                                                                                      \
-           account $ENTRY_METADATA_PUBKEY w                                                                           \
-           account $KI_SOURCE_PUBKEY w                                                                                \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $KI_MINT_PUBKEY w                                                                                  \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                        \
-           u8 18"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_level_up_unowned_entry                                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x410'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $KI_SOURCE_PUBKEY w                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -223,31 +223,31 @@ if should_run_test user_level_up_unowned_token; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                             \
-                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                             \
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
+                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_level_up_unowned_token                                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $TOKEN_PUBKEY                                                                                      \
-           account $ENTRY_METADATA_PUBKEY w                                                                           \
-           account $KI_SOURCE_PUBKEY w                                                                                \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $KI_MINT_PUBKEY w                                                                                  \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                        \
-           u8 18"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_level_up_unowned_token                                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $KI_SOURCE_PUBKEY w                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -257,36 +257,36 @@ if should_run_test user_level_up_incorrect_metadata; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                             \
-                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                             \
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
+                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
     BAD_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $BAD_MINT_PUBKEY ]`
-    BAD_ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                         \
-                                                              pubkey $METAPLEX_PROGRAM_PUBKEY                         \
+    BAD_ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                        \
+                                                              pubkey $METAPLEX_PROGRAM_PUBKEY                        \
                                                               pubkey $BAD_MINT_PUBKEY ]`
-    assert_fail user_level_up_incorrect_metadata                                                                      \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1103}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44f"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $TOKEN_PUBKEY                                                                                      \
-           account $BAD_ENTRY_METADATA_PUBKEY w                                                                       \
-           account $KI_SOURCE_PUBKEY w                                                                                \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $KI_MINT_PUBKEY w                                                                                  \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                        \
-           u8 18"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_level_up_incorrect_metadata                                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $BAD_ENTRY_METADATA_PUBKEY w                                                                      \
+           account $KI_SOURCE_PUBKEY w                                                                               \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -296,54 +296,54 @@ if should_run_test user_level_up_incorrect_ki; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                             \
-                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                             \
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
+                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    assert_fail user_level_up_incorrect_ki                                                                            \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $TOKEN_PUBKEY                                                                                      \
-           account $ENTRY_METADATA_PUBKEY w                                                                           \
-           account $CONFIG_PUBKEY w                                                                                   \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $KI_MINT_PUBKEY w                                                                                  \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                        \
-           u8 18"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_level_up_incorrect_ki                                                                           \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $CONFIG_PUBKEY w                                                                                  \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 
     # Ki account not owned by user
-    assert_fail user_level_up_incorrect_ki_2                                                                          \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $ENTRY_PUBKEY w                                                                                    \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $TOKEN_PUBKEY                                                                                      \
-           account $ENTRY_METADATA_PUBKEY w                                                                           \
-           account $RICH_USER2_PUBKEY w                                                                               \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $KI_MINT_PUBKEY w                                                                                  \
-           account $AUTHORITY_PUBKEY                                                                                  \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                        \
-           u8 18"                                                                                                     \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_level_up_incorrect_ki_2                                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $RICH_USER2_PUBKEY w                                                                              \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -354,28 +354,28 @@ if should_run_test user_level_up_insufficient_ki; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER2_PUBKEY`
     # Set up insufficient Ki account
-    assert user_level_up_insufficient_ki_setup                                                                        \
-    `echo "encoding rust_borsh                                                                                        \
-           fee_payer $RICH_USER2_PUBKEY                                                                               \
-           program $SPLATA_PROGRAM_PUBKEY                                                                             \
-           account $RICH_USER2_PUBKEY ws                                                                              \
-           account $KI_SOURCE_PUBKEY w                                                                                \
-           account $RICH_USER2_PUBKEY                                                                                 \
-           account $KI_MINT_PUBKEY                                                                                    \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
-           // Instruction code 0 = Create //                                                                          \
-           enum 0"                                                                                                    \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert user_level_up_insufficient_ki_setup                                                                       \
+    `echo "encoding rust_borsh                                                                                       \
+           fee_payer $RICH_USER2_PUBKEY                                                                              \
+           program $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $RICH_USER2_PUBKEY ws                                                                             \
+           account $KI_SOURCE_PUBKEY w                                                                               \
+           account $RICH_USER2_PUBKEY                                                                                \
+           account $KI_MINT_PUBKEY                                                                                   \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           // Instruction code 0 = Create //                                                                         \
+           enum 0"                                                                                                   \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
-    assert_fail user_level_up_insufficient_ki                                                                         \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1105}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x451"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                     \
-         $RICH_USER2_PUBKEY 16 0 1                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user2.json                                                                        \
+    assert_fail user_level_up_insufficient_ki                                                                        \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                    \
+         $RICH_USER2_PUBKEY 16 0 1                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -385,11 +385,11 @@ if should_run_test user_level_up_success; then
     # Wait an epoch to ensure that the stake account earns rewards
     sleep_until_next_epoch
     # Harvest Ki
-    assert user_level_up_success_setup                                                                                \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                      \
-         $RICH_USER1_PUBKEY 16 0 0 $DELEGATED_STAKE_PUBKEY                                                            \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_level_up_success_setup                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                     \
+         $RICH_USER1_PUBKEY 16 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Get initial Ki balance
     KI_BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
@@ -401,11 +401,11 @@ if should_run_test user_level_up_success; then
         exit 1
     fi
     # Level up
-    assert user_level_up_success                                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                     \
-         $RICH_USER1_PUBKEY 16 0 0                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert user_level_up_success                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                    \
+         $RICH_USER1_PUBKEY 16 0 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
     # Check that level is now 1
     NEW_LEVEL=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0 | jq .level`
@@ -439,24 +439,24 @@ if should_run_test user_level_up_past_9; then
         # Wait an epoch to ensure that the stake account earns rewards
         sleep_until_next_epoch
         # Harvest Ki
-        assert user_level_up_past_9_setup                                                                             \
-        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                  \
-             $RICH_USER1_PUBKEY 16 0 0 $DELEGATED_STAKE_PUBKEY                                                        \
-            | solxact hash l                                                                                          \
-            | solxact sign $LEDGER/rich_user1.json                                                                    \
+        assert user_level_up_past_9_setup                                                                            \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                 \
+             $RICH_USER1_PUBKEY 16 0 0 $DELEGATED_STAKE_PUBKEY                                                       \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/rich_user1.json                                                                   \
             | solxact submit l 2>&1`
-        assert user_level_up_past_9_setup_2                                                                           \
-        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                 \
-         $RICH_USER1_PUBKEY 16 0 0                                                                                    \
-            | solxact hash l                                                                                          \
-            | solxact sign $LEDGER/rich_user1.json                                                                    \
+        assert user_level_up_past_9_setup_2                                                                          \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                \
+         $RICH_USER1_PUBKEY 16 0 0                                                                                   \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/rich_user1.json                                                                   \
             | solxact submit l 2>&1`        
     done
-    assert_fail user_level_up_past_9                                                                                  \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1041}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x411"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                     \
-         $RICH_USER1_PUBKEY 16 0 0                                                                                    \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail user_level_up_past_9                                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                    \
+         $RICH_USER1_PUBKEY 16 0 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi

@@ -5,23 +5,23 @@ if should_run_test admin_set_metadata_bytes_no_auth; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    assert_fail admin_set_metadata_bytes_no_auth                                                                      \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1004}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ec"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $RICH_USER1_PUBKEY                                                                               \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $RICH_USER1_PUBKEY s                                                                               \
-           account $BLOCK_PUBKEY                                                                                      \
-           account $ENTRY_PUBKEY w                                                                                    \
-           // Instruction code 4 = SetMetadataBytesData //                                                            \
-           u8 4                                                                                                       \
-           u16 0                                                                                                      \
-           u16 2                                                                                                      \
-           u8 0 1"                                                                                                    \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert_fail admin_set_metadata_bytes_no_auth                                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                   \
+           // Instruction code 4 = SetMetadataBytesData //                                                           \
+           u8 4                                                                                                      \
+           u16 0                                                                                                     \
+           u16 2                                                                                                     \
+           u8 0 1"                                                                                                   \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -32,12 +32,12 @@ if should_run_test admin_set_metadata_bytes_bad_block; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 1 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    assert_fail admin_set_metadata_bytes_bad_block                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SELF_$SOURCE/scripts/admin_set_metadata_bytes_tx.sh                    \
-         $ADMIN_PUBKEY 3 1 0 2 \` echo -n 0 | base64\`                                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_metadata_bytes_bad_block                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SELF_$SOURCE/scripts/admin_set_metadata_bytes_tx.sh                   \
+         $ADMIN_PUBKEY 3 1 0 2 \` echo -n 0 | base64\`                                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -47,23 +47,23 @@ if should_run_test admin_set_metadata_bytes_bad_entry; then
     # Test with block 3 0
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 100 pubkey $BLOCK_PUBKEY ]`
-    assert_fail admin_set_metadata_bytes_bad_entry                                                                    \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1102}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x44e"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY                                                                                      \
-           account $ENTRY_PUBKEY w                                                                                    \
-           // Instruction code 4 = SetMetadataBytesData //                                                            \
-           u8 4                                                                                                       \
-           u16 0                                                                                                      \
-           u16 2                                                                                                      \
-           u8 0 1"                                                                                                    \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_metadata_bytes_bad_entry                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $ADMIN_PUBKEY                                                                                   \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY s                                                                                   \
+           account $BLOCK_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                   \
+           // Instruction code 4 = SetMetadataBytesData //                                                           \
+           u8 4                                                                                                      \
+           u16 0                                                                                                     \
+           u16 2                                                                                                     \
+           u8 0 1"                                                                                                   \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -72,57 +72,57 @@ fi
 if should_run_test admin_set_metadata_bytes_incomplete_block; then
     # Test with block 3 0
     # Create the block
-    assert admin_set_metadata_bytes_bytes_incomplete_block_setup                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                \
-         $ADMIN_PUBKEY 3 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_set_metadata_bytes_bytes_incomplete_block_setup                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 3 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Create entry 0
-    assert admin_set_metadata_bytes_bytes_incomplete_block_setup2                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 3 0 "http://foo.bar.com" none 0 \`sha256_of 0\`                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_set_metadata_bytes_bytes_incomplete_block_setup2                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 3 0 "http://foo.bar.com" none 0 \`sha256_of 0\`                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Fail to set metadata because block is complete
-    assert_fail admin_set_metadata_bytes_incomplete_block                                                             \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1007}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3ef"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 3 0 0 0 \`echo -n "01" | base64\`                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_metadata_bytes_incomplete_block                                                            \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ef'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 3 0 0 0 \`echo -n "01" | base64\`                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Finish setting up the block
-    assert admin_set_metadata_bytes_bytes_incomplete_block_setup3                                                     \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                        \
-         $ADMIN_PUBKEY 3 0 "http://foo.bar.com" none 1 \`sha256_of 1\`                                                \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_set_metadata_bytes_bytes_incomplete_block_setup3                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 3 0 "http://foo.bar.com" none 1 \`sha256_of 1\`                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
 
 if should_run_test admin_set_metadata_bytes_unrevealable_block; then
     # Test with block 3 0
-    assert_fail admin_set_metadata_bytes_unrevealable_block                                                           \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1008}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3f0"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f0"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 3 0 0 0 \`echo -n "01" | base64\`                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_metadata_bytes_unrevealable_block                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f0'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 3 0 0 0 \`echo -n "01" | base64\`                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
 
 if [ -z "$TESTS" ]; then
     # Buy one entry to make the block revealable
-    assert admin_set_metadata_bytes_setup                                                                             \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh $ADMIN_PUBKEY $RICH_USER1_PUBKEY         \
-         3 0 0 \`lamports_from_sol 10000\`                                                                            \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/rich_user1.json                                                                        \
+    assert admin_set_metadata_bytes_setup                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh $ADMIN_PUBKEY $RICH_USER1_PUBKEY        \
+         3 0 0 \`lamports_from_sol 10000\`                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
 
@@ -133,24 +133,24 @@ if should_run_test admin_set_metadata_bytes_short_data; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    assert_fail admin_set_metadata_bytes_short_data                                                                   \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1001}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x3e9"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `echo "encoding c                                                                                                 \
-           fee_payer $ADMIN_PUBKEY                                                                                    \
-           program $SELF_PROGRAM_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY                                                                                     \
-           account $ADMIN_PUBKEY s                                                                                    \
-           account $BLOCK_PUBKEY                                                                                      \
-           account $ENTRY_PUBKEY w                                                                                    \
-           // Instruction code 4 = SetMetadataBytesData //                                                            \
-           u8 4                                                                                                       \
-           u16 0                                                                                                      \
-           // Len says 3 but only 2 bytes provided //                                                                 \
-           u16 3                                                                                                      \
-           u8 0 1"                                                                                                    \
-        | solxact encode                                                                                              \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_metadata_bytes_short_data                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $ADMIN_PUBKEY                                                                                   \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $CONFIG_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY s                                                                                   \
+           account $BLOCK_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                   \
+           // Instruction code 4 = SetMetadataBytesData //                                                           \
+           u8 4                                                                                                      \
+           u16 0                                                                                                     \
+           // Len says 3 but only 2 bytes provided //                                                                \
+           u16 3                                                                                                     \
+           u8 0 1"                                                                                                   \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -158,12 +158,12 @@ fi
 # Beyond bounds of metadata
 if should_run_test admin_set_metadata_bytes_beyond_bounds; then
     # Test with block 3 0
-    assert_fail admin_set_metadata_bytes_beyond_bounds                                                                \
-    'ERROR: {"error":{"code":-32002,"data":{"accounts":null,"err":{"InstructionError":[0,{"Custom":1301}]},"logs":["Program REDACTED invoke [1]","Program REDACTED consumed REDACTED compute units","Program REDACTED failed: custom program error: 0x515"],"returnData":null},"message":"Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515"},"id":1,"jsonrpc":"2.0"} Try solxact help for help'                                                        \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 3 0 0 2695 \`echo -n "01" | base64\`                                                           \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert_fail admin_set_metadata_bytes_beyond_bounds                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 3 0 0 2695 \`echo -n "01" | base64\`                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
@@ -174,11 +174,11 @@ if should_run_test admin_set_metadata_bytes_success; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    assert admin_set_metadata_bytes_success                                                                           \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                          \
-         $ADMIN_PUBKEY 3 0 0 120 \`echo -n "12345678" | base64\`                                                      \
-        | solxact hash l                                                                                              \
-        | solxact sign $LEDGER/admin.json                                                                             \
+    assert admin_set_metadata_bytes_success                                                                          \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 3 0 0 120 \`echo -n "12345678" | base64\`                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
     # Check to ensure that the data is correct.  Entry metadata is 332 bytes offset from beginning of the

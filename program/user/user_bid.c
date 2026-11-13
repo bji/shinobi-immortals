@@ -3,6 +3,7 @@
 #include "util/util_accounts.c"
 #include "util/util_bid.c"
 #include "util/util_math.c"
+#include "util/util_calculations.c"
 
 typedef struct
 {
@@ -16,10 +17,6 @@ typedef struct
     uint64_t maximum_bid_lamports;
 
 } BidData;
-
-
-static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
-                                    uint64_t seconds_elapsed);
 
 
 static uint64_t user_bid(const SolParameters *params)
@@ -117,57 +114,4 @@ static uint64_t user_bid(const SolParameters *params)
 
     // Not done yet
     return 0;
-}
-
-
-static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
-                                    uint64_t seconds_elapsed)
-{
-    // If the maximum possible bid has been achieved, return 0
-    if (current_max_bid == UINT64_MAX) {
-        return 0;
-    }
-
-    // If there have been no bids yet, then use the initial minimum.  Only once the first bid is cast, does the
-    // minimum bid increment come into play.
-    if (current_max_bid < initial_minimum_bid) {
-        return initial_minimum_bid;
-    }
-
-    // Sanitize the seconds elapsed
-    if (seconds_elapsed >= auction_duration) {
-        seconds_elapsed = (auction_duration - 1);
-    }
-
-    // This is a curve based on the formula: y = p * ((1 / (101 - (100 * (a / b)))) + 1.01)
-    // Where a is seconds_elapsed, b is auction_duration, and p is current_max_bid.  This is a curve that goes
-    // from a multiple of 1.02 of the current_max_bid at time 0, up to 2.01x the current_max_bid at the end
-    // of the time range.
-    uint64_t a = seconds_elapsed;
-    uint64_t b = auction_duration;
-    uint64_t p = current_max_bid;
-
-    // Keep track of whether any of the math for computing the minimum bid overflows
-    bool overflow = false;
-
-    // result = (p * (((1000 * b) / ((b + (b / 100)) - a)) + 101000)) / 100000
-    // The term involving b and a cannot overflow since b was originally a uint32_t value; and a is less than b.
-    uint64_t result = checked_multiply(p, ((1000 * b) / ((b + (b / 100)) - a)) + 101000, &overflow) / 100000;
-
-    // Check for overflow
-    if (overflow) {
-        // Overflow has occurred.  This means that the formula can't be used to compute the maximum next bid because
-        // the numbers are too large.  This would only happen with extremely large bids, millions of dollars' worth.
-        // But to be safe, in this case, instead of computing an invalid minimum next bid, just use 1/8 more than the
-        // previous bid.
-        overflow = false;
-        result = checked_add(current_max_bid, (current_max_bid >> 3), &overflow);
-
-        // If this also overflowed, then use the maximum possible bid.
-        if (overflow) {
-            result = UINT64_MAX;
-        }
-    }
-
-    return result;
 }

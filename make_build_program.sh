@@ -126,19 +126,10 @@ KI_METADATA_PUBKEY_C_ARRAY="$KI_METADATA_PUBKEY_C_ARRAY"
 BID_MARKER_MINT_PUBKEY_C_ARRAY="$BID_MARKER_MINT_PUBKEY_C_ARRAY"
 BID_MARKER_METADATA_PUBKEY_C_ARRAY="$BID_MARKER_METADATA_PUBKEY_C_ARRAY"
 
-\$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/clang                                       \\
-    -fno-builtin                                                                          \\
-    -fno-zero-initialized-in-bss                                                          \\
-    -fno-data-sections                                                                    \\
-    -std=c2x                                                                              \\
-    -I\$SDK_ROOT/bpf/c/inc                                                                 \\
-    -O3                                                                                   \\
-    -target bpf                                                                           \\
-    -fPIC                                                                                 \\
-    -march=bpfel+solana                                                                   \\
+\$SDK_ROOT/build.sh                                                                        \\
+    \$SOURCE_ROOT/program/entrypoint.c                                                     \\
+    program.so                                                                             \\
     -I\$SOURCE_ROOT/program                                                                \\
-    -o program.po                                                                         \\
-    -c \$SOURCE_ROOT/program/entrypoint.c                                                  \\
     -DSUPERUSER_PUBKEY_ARRAY="\$SUPERUSER_PUBKEY_C_ARRAY"                                  \\
     -DCONFIG_PUBKEY_ARRAY="\$CONFIG_PUBKEY_C_ARRAY"                                        \\
     -DCONFIG_BUMP_SEED="\$CONFIG_BUMP_SEED"                                                \\
@@ -164,16 +155,5 @@ BID_MARKER_METADATA_PUBKEY_C_ARRAY="$BID_MARKER_METADATA_PUBKEY_C_ARRAY"
     -DSTAKE_HISTORY_SYSVAR_PUBKEY_ARRAY="\$STAKE_HISTORY_SYSVAR_PUBKEY_C_ARRAY"            \\
     -DSTAKE_CONFIG_SYSVAR_PUBKEY_ARRAY="\$STAKE_CONFIG_SYSVAR_PUBKEY_C_ARRAY"
 
-\$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/ld.lld                                      \\
-    -z notext                                                                             \\
-    -shared                                                                               \\
-    --Bdynamic                                                                            \\
-    \$SOURCE_ROOT/program/fixed_bpf.ld                                                     \\
-    --entry entrypoint                                                                    \\
-    -o program.so                                                                         \\
-    program.po
-
-rm program.po
-
-strip -s -R .comment --strip-unneeded program.so
+strip -s --strip-unneeded program.so
 EOF

@@ -27,19 +27,10 @@ KI_METADATA_PUBKEY_C_ARRAY="{95,105,135,153,232,240,25,47,48,30,118,232,246,249,
 BID_MARKER_MINT_PUBKEY_C_ARRAY="{50,93,116,81,245,55,111,7,147,234,11,23,77,132,23,6,166,82,147,167,119,81,92,21,67,16,88,56,5,125,32,78}"
 BID_MARKER_METADATA_PUBKEY_C_ARRAY="{255,14,199,239,218,36,110,120,153,227,116,80,206,96,6,69,203,81,57,48,172,48,204,169,246,51,99,9,4,232,31,2}"
 
-$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/clang                                       \
-    -fno-builtin                                                                          \
-    -fno-zero-initialized-in-bss                                                          \
-    -fno-data-sections                                                                    \
-    -std=c2x                                                                              \
-    -I$SDK_ROOT/bpf/c/inc                                                                 \
-    -O3                                                                                   \
-    -target bpf                                                                           \
-    -fPIC                                                                                 \
-    -march=bpfel+solana                                                                   \
+$SDK_ROOT/build.sh                                                                        \
+    $SOURCE_ROOT/program/entrypoint.c                                                     \
+    program.so                                                                             \
     -I$SOURCE_ROOT/program                                                                \
-    -o program.po                                                                         \
-    -c $SOURCE_ROOT/program/entrypoint.c                                                  \
     -DSUPERUSER_PUBKEY_ARRAY="$SUPERUSER_PUBKEY_C_ARRAY"                                  \
     -DCONFIG_PUBKEY_ARRAY="$CONFIG_PUBKEY_C_ARRAY"                                        \
     -DCONFIG_BUMP_SEED="$CONFIG_BUMP_SEED"                                                \
@@ -65,15 +56,4 @@ $SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/clang                             
     -DSTAKE_HISTORY_SYSVAR_PUBKEY_ARRAY="$STAKE_HISTORY_SYSVAR_PUBKEY_C_ARRAY"            \
     -DSTAKE_CONFIG_SYSVAR_PUBKEY_ARRAY="$STAKE_CONFIG_SYSVAR_PUBKEY_C_ARRAY"
 
-$SDK_ROOT/bpf/dependencies/bpf-tools/llvm/bin/ld.lld                                      \
-    -z notext                                                                             \
-    -shared                                                                               \
-    --Bdynamic                                                                            \
-    $SOURCE_ROOT/program/fixed_bpf.ld                                                     \
-    --entry entrypoint                                                                    \
-    -o program.so                                                                         \
-    program.po
-
-rm program.po
-
-strip -s -R .comment --strip-unneeded program.so
+strip -s --strip-unneeded program.so

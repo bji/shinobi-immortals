@@ -10,20 +10,20 @@ typedef struct
 
 } SplitMasterStakeData;
 
-
 // The Pre-Merge account, if it is non-zero, is a stake account that will be merged into the master stake account
-// prior to splitting stake from the master account.  This allows smaller-than-minimum-stake-account-size stake
+// prior to splitting stake from the master account.  It must have the admin account as its withdraw authority, and
+// must be a valid stake account actively delegated to Shinobi Systems and thus mergeable into the master stake
+// account.
+//
+// This allows smaller-than-minimum-stake-account-size stake
 // to be split off of the master stake account: the merge will presumably push the master stake account to a size
 // large enough that a split of everything remaining would produce a split-stake where neither side is smaller
 // than the minimum.
 
 // i.e. if the minimum is 100 SOL (god forbid), and the master stake account has 120 SOL, then the only way to
 // split off of 20 (which can't be done directly as the split account would be 20 SOL, lower than the minimum of
-// 100) would be to first merge in an 80 SOL stake account, resulting in a 200 SOL master account, then split
-// 100 SOL off of it.
-
-// This means that the merge account has to be delegated to Shinobi Systems and have earned stake rewards, and
-// it also must have the program authority as its stake and withdraw authorities.
+// 100) would be to first merge in a 100 SOL stake account, resulting in a 220 SOL master account, then split
+// 120 SOL off of it.
 
 static uint64_t admin_split_master_stake(const SolParameters *params)
 {
@@ -45,14 +45,6 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
     // Ensure that this transaction is admin authenticated
     if (!is_admin_account(config_account, admin_account->key)) {
         return Error_PermissionDenied;
-    }
-
-    // If the pre_merge_account is not all zeroes, then it must be ReadWrite
-    if (is_empty_pubkey(pre_merge_account->key)) {
-        pre_merge_account = 0;
-    }
-    else if (!pre_merge_account->is_writable) {
-        return Error_InvalidAccountPermissions_First + 3;
     }
 
     // Get the instruction data
@@ -85,12 +77,28 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
     }
 
     // If the pre_merge_account was given, then its stake would be split out after being merged too
-    if (pre_merge_account) {
-        // Decode the pre_merge stake account
-        if (!decode_stake_account(pre_merge_account, &stake)) {
-            return Error_InvalidAccount_First + 4;
+    if (pre_merge_account && !is_empty_pubkey(pre_merge_account->key)) {
+        // This must be a writable account to be a valid stake account
+        if (!pre_merge_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 4;
         }
-        to_split += stake.stake.delegation.stake;
+        Stake pre_merge_account_decoded;
+        // Decode the pre_merge stake account
+        if (!decode_stake_account(pre_merge_account, &pre_merge_account_decoded)) {
+            return Error_InvalidData_First + 4;
+        }
+        if (pre_merge_account_decoded.state != StakeState_Stake) {
+            return Error_InvalidData_First + 4;
+        }
+        if (!is_admin_account(config_account, &(pre_merge_account_decoded.meta.authorize.withdrawer))) {
+            return Error_InvalidData_First + 4;
+        }
+        // Any other errors with the stake account such as being inactive, etc, will simply cause the stake
+        // merge to fail later
+
+        // Increase the lamports to split back out of the master later to include those that will be merged in so that
+        // the pre_merge_account's stake is returned to the admin
+        to_split += pre_merge_account_decoded.stake.delegation.stake;
     }
 
     // The split will be into the master_stake_split_account, which will be set with the withdraw authority of

@@ -101,7 +101,7 @@ static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, const S
 // Checks the ensure that the given system account address is stored in the whitelist for the given block.  If the
 // block has no whitelist, then this check succeeds.  Otherwise, if the account is in the whitelist, its first entry
 // in the whitelist is cleared and true is returned, otherwise false is returned.
-static bool whitelist_check(const SolAccountInfo *whitelist_account, const SolPubkey *block_address,
+static bool whitelist_check(SolAccountInfo *whitelist_account, const SolPubkey *block_address,
                             const SolPubkey *system_account_address)
 {
     // Compute the whitelist address
@@ -156,8 +156,8 @@ static bool whitelist_check(const SolAccountInfo *whitelist_account, const SolPu
 // Deletes a whitelist, returning the lamports in it to the destination account.  An empty whitelist can always
 // be deleted.  This is not allowed if the block exists, uses a non-empty whitelist, and is not yet past its
 // whitelist phase.
-static uint64_t delete_whitelist_account(const SolAccountInfo *whitelist_account, const SolAccountInfo *block_account,
-                                         const Clock *clock, const SolAccountInfo *destination_account,
+static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, const SolAccountInfo *block_account,
+                                         const Clock *clock, SolAccountInfo *destination_account,
                                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     // Compute the whitelist address

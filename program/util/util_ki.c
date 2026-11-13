@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/util_math.c"
+#include "util/util_calculations.c"
 #include "util/util_stake.c"
 
 
@@ -22,18 +22,7 @@ static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInf
 
     // If there is potentially Ki to harvest, then harvest it
     if (harvest_amount > 0) {
-        // Reduce the amount to harvest, to discourage very large Ki harvests per entry.  The amount to harvest is the
-        // function:
-        // x = (x - (x^4/106666^3))
-        // To avoid rounding errors, this is refactored.
-        uint64_t f = checked_multiply(harvest_amount, harvest_amount, &overflow) / 106666ul;
-
-        // harvest_amount * 10666ul cannot overflow since the original value was divided by LAMPORTS_PER_SOL
-        harvest_amount = ((harvest_amount * 106666ul) - checked_multiply(f, f, &overflow)) / 1066666ul;
-
-        // Because Ki tokens have a decimal place count of 1, which is necessary to comply with metaplex metadata
-        // standards for fungible tokens, multiply the actual number of Ki by 10.
-        harvest_amount = checked_multiply(harvest_amount, 10, &overflow);
+        harvest_amount = compute_ki_reduction(harvest_amount, &overflow);
 
         // Only if the amount to harvest is > 0, and only if an overflow didn't occur when computing it, is the
         // harvest of tokens performed

@@ -2,6 +2,7 @@
 
 #include "inc/types.h"
 #include "util/util_math.c"
+#include "util/util_calculations.c"
 #include "util/util_token.c"
 #include "util/util_transfer_lamports.c"
 #include "util/util_whitelist.c"
@@ -18,11 +19,6 @@ typedef struct
     uint64_t maximum_price_lamports;
 
 } BuyData;
-
-
-// If start_price > 100,000 SOL, rounding errors could be significant.
-static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
-                              uint64_t seconds_elapsed);
 
 
 static uint64_t user_buy(const SolParameters *params)
@@ -229,49 +225,4 @@ static uint64_t user_buy(const SolParameters *params)
     // Finally, close the entry's token account since it will never be used again.  The lamports go to the admin
     // account.
     return close_entry_token(entry, admin_account->key, params->ka, params->ka_num);
-}
-
-
-static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
-                              uint64_t seconds_elapsed)
-{
-    // Once the elapsed seconds hits the total seconds, the result is always end_price
-    if (seconds_elapsed >= total_seconds) {
-        return end_price;
-    }
-
-    uint64_t delta = start_price - end_price;
-
-    // This is a curve based on the formula: y = (1 / (100x + 1)) - (1 / 101)
-    // To avoid rounding errors in math, work with lamports / 1000
-    delta /= 1000ul;
-    end_price /= 1000ul;
-
-    // Keep track of overflow, and if it occurs, use the end price
-    bool overflow = false;
-
-    // ac = delta * 101ul (cannot overflow since delta was already divided by 1000)
-    uint64_t ac = delta * 101ul;
-
-    // ab = ((100ul * delta * seconds_elapsed) / total_seconds) + delta (100 * delta cannot overflow)
-    uint64_t ab = checked_add((checked_multiply(100ul * delta, seconds_elapsed, &overflow) / total_seconds),
-                              delta,
-                              &overflow);
-
-    // bc = ((100ul * 101ul * seconds_elapsed) / total-seconds) + 101ul
-    uint64_t bc = checked_add(checked_multiply(100ul * 101ul, seconds_elapsed, &overflow) / total_seconds,
-                              101ul,
-                              &overflow);
-
-    // price = (end_price + ((ac - ab) / bc)) * 1000ul
-    uint64_t price = checked_multiply(checked_add(end_price, ((ac - ab) / bc), &overflow),
-                                      1000ul,
-                                      &overflow);
-
-    // Overflow would only occur with impossibly huge seconds_elapsed or end_price
-    if (overflow) {
-        price = end_price;
-    }
-
-    return price;
 }
