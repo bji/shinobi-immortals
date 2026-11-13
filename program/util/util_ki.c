@@ -4,12 +4,20 @@
 #include "util/util_stake.c"
 
 
-// Checks to make sure that the destination account is a valid token account for the Ki mint and returns false
-// if not, or on any other error, and true on success
+// Checks to make sure that the destination account is a valid token account for the Ki mint and returns 0 on
+// success and a non-zero Error code on failure.
 static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInfo *destination_account,
                            const SolPubkey *destination_account_owner_key, const SolPubkey *funding_key,
-                           const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                           uint64_t current_epoch, const SolAccountInfo *transaction_accounts,
+                           int transaction_accounts_len)
 {
+    // If the stake account is currently activating or deactivating, then don't harvest Ki.  Activating or
+    // deactivating stake accounts pass into this function in situations in which Ki should not be harvested.
+    if ((stake->stake.delegation.activation_epoch >= current_epoch) ||
+        (stake->stake.delegation.deactivation_epoch != UINT64_MAX)) {
+        return 0;
+    }
+
     // Keep track of overflow.  If overflow occurs at all, then the harvest is zero.  Overflow can only occur in
     // situations where the Ki earnings were so large that they would be zero under the reduction schedule.
     bool overflow = false;

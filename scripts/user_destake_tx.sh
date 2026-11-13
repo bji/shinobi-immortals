@@ -33,11 +33,6 @@ require $BLOCK_NUMBER
 require $ENTRY_INDEX
 require $STAKE_ACCOUNT_PUBKEY
 
-# If MINIMUM_STAKE_LAMPORTS is not set, use 0
-if [ -z "$MINIMUM_STAKE_LAMPORTS" ]; then
-    MINIMUM_STAKE_LAMPORTS=0
-fi
-
 # Compute program, block, entry, and related pubkeys.  These may not all be valid, depending on input parameters
 # to the script, but any that are invalid won't be used by the solxact encode command that follows.
 
@@ -135,5 +130,4 @@ solxact encode                                                                  
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
         // Instruction code 16 = Destake //                                                                           \
-        u8 16                                                                                                         \
-        u64 $MINIMUM_STAKE_LAMPORTS
+        u8 16

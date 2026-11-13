@@ -47,8 +47,8 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
         return Error_PermissionDenied;
     }
 
-    // Get the instruction data
-    if (params->data_len < sizeof(SplitMasterStakeData)) {
+    // Ensure that the instruction data is exactly the correct size, with no trailing data
+    if (params->data_len != sizeof(SplitMasterStakeData)) {
         return Error_InvalidDataSize;
     }
 

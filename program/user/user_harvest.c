@@ -20,6 +20,11 @@ static uint64_t user_harvest(const SolParameters *params)
     }
     DECLARE_ACCOUNTS_NUMBER(12);
 
+    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
+    if (params->data_len != 1) {
+        return Error_InvalidDataSize;
+    }
+
     // This is the entry data
     Entry *entry = get_validated_entry(entry_account);
     if (!entry) {
@@ -55,5 +60,5 @@ static uint64_t user_harvest(const SolParameters *params)
 
     // Harvest Ki
     return harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-                      funding_account->key, params->ka, params->ka_num);
+                      funding_account->key, clock.epoch, params->ka, params->ka_num);
 }

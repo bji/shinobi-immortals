@@ -372,11 +372,9 @@ typedef struct __attribute__((__packed__))
 } util_MoveStakeInstructionData;
 
 
-// lamports is assumed to be at least the stake account minimum or this will fail
-// moves via [bridge_account] which will be created as a PDA of the program
 static uint64_t move_stake_signed(const SolPubkey *from_account_key, const SolPubkey *to_account_key,
-                                  uint64_t lamports, SolAccountInfo *funding_account,
-                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                                  uint64_t lamports, const SolAccountInfo *transaction_accounts,
+                                  int transaction_accounts_len)
 {
     SolInstruction instruction;
     instruction.program_id = &(Constants.stake_program_pubkey);

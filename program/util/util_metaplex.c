@@ -416,7 +416,7 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
         }
         data += ret, data_len -= ret;
 
-        // Decode symbol, string of at most 4 characters
+        // Decode symbol, string of at most 10 characters
         ret = borsh_decode_string(data, data_len, sizeof(symbol) - 1, symbol);
         if (!ret) {
             return Error_InvalidMetadataValues;

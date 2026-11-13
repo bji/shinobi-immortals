@@ -29,6 +29,11 @@ static uint64_t user_destake(const SolParameters *params)
     }
     DECLARE_ACCOUNTS_NUMBER(17);
 
+    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
+    if (params->data_len != 1) {
+        return Error_InvalidDataSize;
+    }
+
     // Get validated block and entry, which checks all validity of those accounts
     const Block *block = get_validated_block(block_account);
     if (!block) {
@@ -76,13 +81,13 @@ static uint64_t user_destake(const SolParameters *params)
     // Harvest Ki.  Must be done before commission is charged since commission charge actually reduces the number of
     // lamports in the stake account, which would affect Ki harvest calculations
     uint64_t ret = harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-                              funding_account->key, params->ka, params->ka_num);
+                              funding_account->key, clock.epoch, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }
 
     // Charge commission
-    ret = charge_commission(&stake, block, entry, funding_account, stake_account->key, params->ka, params->ka_num);
+    ret = charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
     if (ret) {
         return ret;
     }

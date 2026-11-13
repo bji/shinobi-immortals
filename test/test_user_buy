@@ -410,7 +410,7 @@ if should_run_test user_buy_wrong_entry; then
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_wrong_entry                                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -456,7 +456,7 @@ if should_run_test user_buy_wrong_entry_2; then
     MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
     ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
     assert_fail user_buy_wrong_entry_2                                                                               \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -503,7 +503,7 @@ if should_run_test user_buy_wrong_token; then
     ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
     assert_fail user_buy_wrong_token                                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x453'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -550,7 +550,7 @@ if should_run_test user_buy_wrong_mint; then
     ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
     TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
     assert_fail user_buy_wrong_mint                                                                                  \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x453'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x454'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -600,7 +600,7 @@ if should_run_test user_buy_wrong_metadata; then
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
     assert_fail user_buy_wrong_metadata                                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x456'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x457'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \

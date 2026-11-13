@@ -184,7 +184,6 @@ if should_run_test user_destake_bad_block; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail user_destake_bad_block                                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
@@ -199,7 +198,6 @@ if should_run_test user_destake_bad_block; then
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
@@ -209,8 +207,7 @@ if should_run_test user_destake_bad_block; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 16"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -237,7 +234,6 @@ if should_run_test user_destake_bad_entry; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail user_destake_bad_block                                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
     `echo "encoding c                                                                                                \
@@ -252,7 +248,6 @@ if should_run_test user_destake_bad_entry; then
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
@@ -262,8 +257,7 @@ if should_run_test user_destake_bad_entry; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 16"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -278,7 +272,6 @@ if should_run_test user_destake_entry_wrong_block; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     BAD_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 2 ]`
     assert_fail user_destake_entry_wrong_block                                                                       \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
@@ -294,7 +287,6 @@ if should_run_test user_destake_entry_wrong_block; then
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
@@ -304,8 +296,7 @@ if should_run_test user_destake_entry_wrong_block; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 16"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -320,7 +311,6 @@ if should_run_test user_destake_entry_not_staked; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail user_destake_entry_not_staked                                                                        \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c'                     \
     `echo "encoding c                                                                                                \
@@ -335,7 +325,6 @@ if should_run_test user_destake_entry_not_staked; then
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
@@ -345,8 +334,7 @@ if should_run_test user_destake_entry_not_staked; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 16"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -361,7 +349,6 @@ if should_run_test user_destake_entry_not_owned; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail user_destake_entry_not_owned                                                                         \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
     `echo "encoding c                                                                                                \
@@ -376,7 +363,6 @@ if should_run_test user_destake_entry_not_owned; then
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
@@ -386,8 +372,7 @@ if should_run_test user_destake_entry_not_owned; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 16"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \

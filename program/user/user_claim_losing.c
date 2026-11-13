@@ -21,6 +21,11 @@ static uint64_t user_claim_losing(const SolParameters *params)
         DECLARE_ACCOUNTS_NUMBER(3);
     }
 
+    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
+    if (params->data_len != 1) {
+        return Error_InvalidDataSize;
+    }
+
     // Get the validated entry account data
     const Entry *entry = get_validated_entry(entry_account);
     if (!entry) {

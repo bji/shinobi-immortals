@@ -10,7 +10,7 @@ function require ()
         cat <<EOF
 
 Usage: anyone_take_commission_or_delegate_tx.sh <FEE_PAYER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> \\
-                                                <ENTRY_STAKE_ACCOUNT_PUBKEY> [<MINIMUM_STAKE_LAMPORTS>]
+                                                <ENTRY_STAKE_ACCOUNT_PUBKEY>
 
 EOF
         exit 1
@@ -22,17 +22,12 @@ GROUP_NUMBER=$2
 BLOCK_NUMBER=$3
 ENTRY_INDEX=$4
 ENTRY_STAKE_ACCOUNT_PUBKEY=$5
-MINIMUM_STAKE_LAMPORTS=$6
 
 require $FEE_PAYER_PUBKEY
 require $GROUP_NUMBER
 require $BLOCK_NUMBER
 require $ENTRY_INDEX
 require $ENTRY_STAKE_ACCOUNT_PUBKEY
-
-if [ -z "$MINIMUM_STAKE_LAMPORTS" ]; then
-    MINIMUM_STAKE_LAMPORTS=0
-fi
 
 # Compute program, block, entry, and related pubkeys.  These may not all be valid, depending on input parameters
 # to the script, but any that are invalid won't be used by the solxact encode command that follows.
@@ -101,7 +96,6 @@ solxact encode                                                                  
         encoding c                                                                                                    \
         fee_payer $FEE_PAYER_PUBKEY                                                                                   \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
-        account $FEE_PAYER_PUBKEY ws                                                                                  \
         account $BLOCK_PUBKEY                                                                                         \
         account $ENTRY_PUBKEY w                                                                                       \
         account $ENTRY_STAKE_ACCOUNT_PUBKEY w                                                                         \
@@ -111,6 +105,7 @@ solxact encode                                                                  
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $STAKE_PROGRAM_PUBKEY                                                                                 \
         account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
+        account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                          \
+        account $STAKE_CONFIG_PUBKEY                                                                                  \
         // Instruction code 19 = TakeCommissionOrDelegate //                                                          \
-        u8 19                                                                                                         \
-        u64 $MINIMUM_STAKE_LAMPORTS
+        u8 19

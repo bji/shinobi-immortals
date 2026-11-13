@@ -27,8 +27,37 @@ if [ -z "$TESTS" ]; then
     echo "Delegating $LEDGER/delegated5_stake2.json"
     solana -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated5_stake2.json $VOTE_PUBKEY                \
            >/dev/null 2>/dev/null
+
+    # Create a second vote account, standing in for a validator other than Shinobi Systems, so that stake accounts
+    # delegated elsewhere can be staked to entries.  It never votes, which doesn't matter for these tests.
+    echo "Creating other vote account"
+    solana-keygen new -o $LEDGER/other_validator.json --no-bip39-passphrase --force --silent
+    solana-keygen new -o $LEDGER/other_vote.json --no-bip39-passphrase --force --silent
+    # The vote program requires the validator identity account to be funded when creating the vote account
+    transfer $LEDGER/rich_user1.json `solxact pubkey $LEDGER/other_validator.json` 10
+    solana -u l create-vote-account -k $LEDGER/rich_user1.json $LEDGER/other_vote.json $LEDGER/other_validator.json  \
+           $RICH_USER1_PUBKEY --commitment finalized >/dev/null
+    OTHER_VOTE_PUBKEY=`solxact pubkey $LEDGER/other_vote.json`
+
+    # Create stake accounts delegated to the other vote account:
+    # - elsewhere5_stake: will still be active elsewhere when staked to an entry
+    # - elsewhere5_stake2: will be deactivated, and fully inactive, when staked to an entry
+    # - elsewhere5_stake3: will be deactivated immediately before being staked to an entry, so still cooling down
+    for i in "" 2 3; do
+        make_stake_account $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake$i.json 1000
+        echo "Delegating $LEDGER/elsewhere5_stake$i.json to other vote account"
+        # --force is needed because the other vote account never votes, so it has no root slot, and the solana
+        # command line tool otherwise refuses to delegate to it
+        solana -u l delegate-stake --force -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake$i.json                \
+               $OTHER_VOTE_PUBKEY >/dev/null 2>/dev/null
+    done
+
     # Wait until end of epoch to ensure that these have delegated
     sleep_until_next_epoch
+
+    # Deactivate elsewhere5_stake2 now; the sleep at the end of setup lets its cooldown complete
+    echo "Deactivating $LEDGER/elsewhere5_stake2.json"
+    solana -u l deactivate-stake -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake2.json >/dev/null 2>/dev/null
 
     # 17 0
     assert anyone_take_commission_or_delegate_setup_17_0_a                                                           \
@@ -127,6 +156,54 @@ if [ -z "$TESTS" ]; then
 
     # 17 1 is an incomplete block
 
+    # 17 2: a complete, revealed block whose three entries are all owned by rich_user1 and not yet staked.  Used by the
+    # tests of staking stake accounts that are delegated to a validator other than Shinobi Systems.
+    assert anyone_take_commission_or_delegate_setup_17_2_a                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 17 2 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Add the entries two then one, since adding three in one transaction exceeds the compute limit
+    assert anyone_take_commission_or_delegate_setup_17_2_b                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 17 2 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert anyone_take_commission_or_delegate_setup_17_2_b2                                                          \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 17 2 "http://foo.bar.com" none 2 $SHA2562                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Set the metadata of each entry
+    for i in 0 1 2; do
+        assert anyone_take_commission_or_delegate_setup_17_2_c_$i                                                    \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                     \
+             $ADMIN_PUBKEY 17 2 $i 0 $METADATA_HEAD                                                                  \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/admin.json                                                                        \
+            | solxact submit l 2>&1`
+    done
+    # Reveal the entries
+    assert anyone_take_commission_or_delegate_setup_17_2_d                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 17 2 0 $SALT0 $SALT1 $SALT2                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # rich_user1 buys each entry
+    for i in 0 1 2; do
+        assert anyone_take_commission_or_delegate_setup_17_2_e_$i                                                    \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                     \
+             $ADMIN_PUBKEY $RICH_USER1_PUBKEY 17 2 $i \`lamports_from_sol 1001\`                                     \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/rich_user1.json                                                                   \
+            | solxact submit l 2>&1`
+    done
+
     # Sleep for an epoch to ensure that delegations all take effect
     sleep_until_next_epoch
 fi
@@ -134,6 +211,10 @@ fi
 
 export      DELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/delegated5_stake.json`
 export    UNDELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/undelegated5_stake.json`
+export           OTHER_VOTE_PUBKEY=`solxact pubkey $LEDGER/other_vote.json`
+export      ELSEWHERE_STAKE_PUBKEY=`solxact pubkey $LEDGER/elsewhere5_stake.json`
+export     ELSEWHERE_STAKE2_PUBKEY=`solxact pubkey $LEDGER/elsewhere5_stake2.json`
+export     ELSEWHERE_STAKE3_PUBKEY=`solxact pubkey $LEDGER/elsewhere5_stake3.json`
 
 
 # Bad block
@@ -141,26 +222,24 @@ if should_run_test anyone_take_commission_or_delegate_bad_block; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_bad_block                                                         \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $RICH_USER1_PUBKEY ws                                                                             \
            account $CONFIG_PUBKEY                                                                                    \
            account $ENTRY_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
            // Instruction code 19 = TakeCommissionOrDelegate //                                                      \
-           u8 19                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 19"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -185,26 +264,24 @@ if should_run_test anyone_take_commission_or_delegate_bad_entry; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_bad_entry                                                         \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY                                                                                     \
            account $CONFIG_PUBKEY w                                                                                  \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
            // Instruction code 19 = TakeCommissionOrDelegate //                                                      \
-           u8 19                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 19"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -217,29 +294,27 @@ if should_run_test anyone_take_commission_or_delegate_entry_not_in_block; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     BAD_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 1 ]`
     BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BAD_BLOCK_PUBKEY u16 0 ]`
     BAD_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $BAD_MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_entry_not_in_block                                                \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY                                                                                     \
            account $BAD_ENTRY_PUBKEY w                                                                               \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $MASTER_STAKE_PUBKEY w                                                                            \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
            // Instruction code 19 = TakeCommissionOrDelegate //                                                      \
-           u8 19                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 19"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -262,7 +337,7 @@ fi
 # Stake account not staked to entry
 if should_run_test anyone_take_commission_or_delegate_bad_stake; then
     assert_fail anyone_take_commission_or_delegate_entry_bad_stake                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh               \
          $RICH_USER1_PUBKEY 17 0 0 $UNDELEGATED_STAKE_PUBKEY                                                         \
         | solxact hash l                                                                                             \
@@ -276,26 +351,24 @@ if should_run_test anyone_take_commission_or_delegate_bad_master_stake; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BRIDGE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 pubkey $MINT_PUBKEY ]`
     assert_fail anyone_take_commission_or_delegate_bad_master_stake                                                  \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
-           account $BRIDGE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
            // Instruction code 19 = TakeCommissionOrDelegate //                                                      \
-           u8 19                                                                                                     \
-           u64 0"                                                                                                    \
+           u8 19"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -321,4 +394,204 @@ if should_run_test anyone_take_commission_or_delegate_success_take_commission; t
         echo "FAIL: anyone_take_commission_or_delegate_entry_success_take_commission: master stake didn't increase"
         exit 1
     fi
+fi
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Stake accounts delegated to a validator other than Shinobi Systems (current_issues.txt issues 5 and 13).  These
+# tests run in order and depend on each other.
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Prints the value of a field of the JSON description of a stake account, or "null" if it is not present
+function stake_field ()
+{
+    local STAKE_PUBKEY=$1
+    local FIELD=$2
+
+    solana -u l stake-account $STAKE_PUBKEY --output json | jq -r ".$FIELD"
+}
+
+
+# Prints a u64 value stored at a byte offset within an account's data
+function account_u64 ()
+{
+    local ACCOUNT_PUBKEY=$1
+    local OFFSET=$2
+
+    get_account_data $ACCOUNT_PUBKEY $OFFSET 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'
+}
+
+
+# Byte offsets within Entry of owned.last_ki_harvest_stake_account_lamports and
+# owned.last_commission_charge_stake_account_lamports
+ENTRY_KI_BASELINE_OFFSET=312
+ENTRY_COMMISSION_BASELINE_OFFSET=320
+
+
+# Prints the entry account address of entry $1 of block 17 2
+function block_17_2_entry ()
+{
+    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 2 ]`
+    local MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $1 ]`
+    pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]
+}
+
+
+# Fails the test named $1 with the message $2
+function fail_test ()
+{
+    echo "FAIL: $1: $2"
+    exit 1
+}
+
+
+# Checks that the stake account $2 is delegated to vote account $3, has the program authority as both staker and
+# withdrawer, and has deactivation state $4 ("deactivated" or "active"); fails test $1 if not
+function check_stake ()
+{
+    local TEST_NAME=$1
+    local STAKE_PUBKEY=$2
+    local EXPECTED_VOTE_PUBKEY=$3
+    local EXPECTED_STATE=$4
+
+    local JSON=`solana -u l stake-account $STAKE_PUBKEY --output json`
+    local VOTER=`echo "$JSON" | jq -r .delegatedVoteAccountAddress`
+    local DEACTIVATION_EPOCH=`echo "$JSON" | jq -r .deactivationEpoch`
+
+    if [ "$VOTER" != "$EXPECTED_VOTE_PUBKEY" ]; then
+        fail_test $TEST_NAME "stake account delegated to $VOTER, expected $EXPECTED_VOTE_PUBKEY"
+    fi
+    if [ "`echo "$JSON" | jq -r .staker`" != "$AUTHORITY_PUBKEY" ] ||
+       [ "`echo "$JSON" | jq -r .withdrawer`" != "$AUTHORITY_PUBKEY" ]; then
+        fail_test $TEST_NAME "stake account authorities are not the program authority"
+    fi
+    if [ "$EXPECTED_STATE" = "deactivated" ] && [ "$DEACTIVATION_EPOCH" = "null" ]; then
+        fail_test $TEST_NAME "stake account is not deactivated"
+    fi
+    if [ "$EXPECTED_STATE" = "active" ] && [ "$DEACTIVATION_EPOCH" != "null" ]; then
+        fail_test $TEST_NAME "stake account is deactivated (epoch $DEACTIVATION_EPOCH)"
+    fi
+}
+
+
+# Checks that both of entry $2's baselines equal the delegated stake of stake account $3; fails test $1 if not
+function check_baselines ()
+{
+    local TEST_NAME=$1
+    local ENTRY_PUBKEY=$2
+    local STAKE_PUBKEY=$3
+
+    local DELEGATED=`stake_field $STAKE_PUBKEY delegatedStake`
+    local KI_BASELINE=`account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`
+    local COMMISSION_BASELINE=`account_u64 $ENTRY_PUBKEY $ENTRY_COMMISSION_BASELINE_OFFSET`
+
+    if [ "$KI_BASELINE" != "$DELEGATED" ]; then
+        fail_test $TEST_NAME "Ki baseline $KI_BASELINE, expected delegated stake $DELEGATED"
+    fi
+    if [ "$COMMISSION_BASELINE" != "$DELEGATED" ]; then
+        fail_test $TEST_NAME "commission baseline $COMMISSION_BASELINE, expected delegated stake $DELEGATED"
+    fi
+}
+
+
+# Stake an entry with a stake account that is active and delegated elsewhere: Stake must succeed, take over the stake
+# account's authorities, and deactivate it (leaving it delegated to the other validator until it is redelegated).
+if should_run_test anyone_take_commission_or_delegate_stake_elsewhere_active; then
+    # Start at the beginning of an epoch, so that the stake account is still cooling down for the next test
+    sleep_until_next_epoch
+    assert anyone_take_commission_or_delegate_stake_elsewhere_active                                                 \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 17 2 0 $ELSEWHERE_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    check_stake anyone_take_commission_or_delegate_stake_elsewhere_active $ELSEWHERE_STAKE_PUBKEY                    \
+                $OTHER_VOTE_PUBKEY deactivated
+fi
+
+
+# Redelegating a stake account that is still cooling down must fail; the stake program refuses with
+# StakeError::TooSoonToRedelegate (3)
+if should_run_test anyone_take_commission_or_delegate_redelegate_too_soon; then
+    assert_fail anyone_take_commission_or_delegate_redelegate_too_soon                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3'                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh               \
+         $RICH_USER2_PUBKEY 17 2 0 $ELSEWHERE_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# After the cooldown, anyone can redelegate the stake account to Shinobi Systems.  Before that, 100 SOL is deposited
+# into the stake account while it is inactive; redelegation includes those lamports in the delegated stake, and the
+# entry's baselines must be reset to the new delegated stake so that the deposit is not counted as staking rewards.
+if should_run_test anyone_take_commission_or_delegate_redelegate; then
+    transfer $LEDGER/rich_user1.json $ELSEWHERE_STAKE_PUBKEY 100
+    sleep_until_next_epoch
+    # rich_user2 runs the crank, to show that anyone can
+    assert anyone_take_commission_or_delegate_redelegate                                                             \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh               \
+         $RICH_USER2_PUBKEY 17 2 0 $ELSEWHERE_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    check_stake anyone_take_commission_or_delegate_redelegate $ELSEWHERE_STAKE_PUBKEY $VOTE_PUBKEY active
+    # The delegated stake must include the deposit, which makes the baseline check below meaningful.  Without the
+    # deposit it would be just under 1000 SOL (1000 SOL less the rent-exempt reserve); with it, just under 1100 SOL.
+    DELEGATED=`stake_field $ELSEWHERE_STAKE_PUBKEY delegatedStake`
+    if less_than $DELEGATED `lamports_from_sol 1050`; then
+        fail_test anyone_take_commission_or_delegate_redelegate "delegated stake $DELEGATED doesn't include deposit"
+    fi
+    check_baselines anyone_take_commission_or_delegate_redelegate `block_17_2_entry 0` $ELSEWHERE_STAKE_PUBKEY
+fi
+
+
+# Running the crank again while the redelegated stake account is still activating must succeed and change nothing:
+# no commission is charged on an activating stake account
+if should_run_test anyone_take_commission_or_delegate_redelegated_activating; then
+    MASTER_STAKE=`stake_field $MASTER_STAKE_PUBKEY delegatedStake`
+    assert anyone_take_commission_or_delegate_redelegated_activating                                                 \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh               \
+         $RICH_USER2_PUBKEY 17 2 0 $ELSEWHERE_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    if [ "`stake_field $MASTER_STAKE_PUBKEY delegatedStake`" != "$MASTER_STAKE" ]; then
+        fail_test anyone_take_commission_or_delegate_redelegated_activating "commission was charged"
+    fi
+    check_baselines anyone_take_commission_or_delegate_redelegated_activating `block_17_2_entry 0`                   \
+                    $ELSEWHERE_STAKE_PUBKEY
+fi
+
+
+# Stake an entry with a stake account that was delegated elsewhere and is now fully inactive: Stake must delegate it
+# to Shinobi Systems immediately, with the baselines set to the new delegated stake
+if should_run_test anyone_take_commission_or_delegate_stake_elsewhere_inactive; then
+    assert anyone_take_commission_or_delegate_stake_elsewhere_inactive                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 17 2 1 $ELSEWHERE_STAKE2_PUBKEY                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    check_stake anyone_take_commission_or_delegate_stake_elsewhere_inactive $ELSEWHERE_STAKE2_PUBKEY                 \
+                $VOTE_PUBKEY active
+    check_baselines anyone_take_commission_or_delegate_stake_elsewhere_inactive `block_17_2_entry 1`                 \
+                    $ELSEWHERE_STAKE2_PUBKEY
+fi
+
+
+# Stake an entry with a stake account that was delegated elsewhere and is still cooling down: Stake tries to
+# delegate it to Shinobi Systems, which the stake program refuses with StakeError::TooSoonToRedelegate (3)
+if should_run_test anyone_take_commission_or_delegate_stake_elsewhere_cooling; then
+    echo "Deactivating $LEDGER/elsewhere5_stake3.json"
+    solana -u l deactivate-stake -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake3.json --commitment finalized    \
+           >/dev/null 2>/dev/null
+    assert_fail anyone_take_commission_or_delegate_stake_elsewhere_cooling                                           \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3'                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 17 2 2 $ELSEWHERE_STAKE3_PUBKEY                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
 fi

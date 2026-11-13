@@ -22,6 +22,11 @@ static uint64_t user_stake(const SolParameters *params)
     }
     DECLARE_ACCOUNTS_NUMBER(12);
 
+    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
+    if (params->data_len != 1) {
+        return Error_InvalidDataSize;
+    }
+
     // This is the block data
     const Block *block = get_validated_block(block_account);
     if (!block) {
@@ -82,9 +87,14 @@ static uint64_t user_stake(const SolParameters *params)
         return Error_SetStakeAuthoritiesFailed;
     }
 
-    // If the stake account is in an initialized state, then it's not delegated, so delegate it to Shinobi Systems.
-    // The amount of SOL that it will have as delegated after this delegation
-    if (stake.state == StakeState_Initialized) {
+    // If the stake account is in an initialized state, or it's staked with a deactivation epoch (meaning it was
+    // deactivated already), delegate it to Shinobi Systems.  If the deactivation is partially complete (which would
+    // occur if Solana has had such high levels of stake movement that total stake movement is being spread across
+    // multiple epochs - something that has never happened in the history of Solana), then this will fail; but it can
+    // be tried again later when the deactivation is complete.
+    if ((stake.state == StakeState_Initialized) ||
+        ((stake.state == StakeState_Stake) &&
+         (stake.stake.delegation.deactivation_epoch != UINT64_MAX))) {
         if (delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
                                   params->ka, params->ka_num)) {
             return Error_FailedToDelegate;

@@ -72,22 +72,22 @@ static uint64_t user_buy(const SolParameters *params)
     // This is the entry data
     Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
-        return Error_InvalidAccount_First + 5;
+        return Error_InvalidAccount_First + 6;
     }
 
     // Check that the correct token account address is supplied
     if (!SolPubkey_same(entry_token_account->key, &(entry->token_pubkey))) {
-        return Error_InvalidAccount_First + 6;
+        return Error_InvalidAccount_First + 7;
     }
 
     // Check that the correct mint account address is supplied
     if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
-        return Error_InvalidAccount_First + 7;
+        return Error_InvalidAccount_First + 8;
     }
 
     // Check that the correct metaplex metadata account is supplied
     if (!SolPubkey_same(entry_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
-        return Error_InvalidAccount_First + 10;
+        return Error_InvalidAccount_First + 11;
     }
 
     // Get the clock sysvar, needed below

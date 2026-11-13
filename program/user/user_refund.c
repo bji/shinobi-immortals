@@ -14,6 +14,11 @@ static uint64_t user_refund(const SolParameters *params)
     }
     DECLARE_ACCOUNTS_NUMBER(6);
 
+    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
+    if (params->data_len != 1) {
+        return Error_InvalidDataSize;
+    }
+
     // Get validated block account
     const Block *block = get_validated_block(block_account);
     if (!block) {

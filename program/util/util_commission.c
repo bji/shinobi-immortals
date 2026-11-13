@@ -4,11 +4,17 @@
 #include "util/util_calculations.c"
 
 
-// funding_account is only used to provide transient quantities of SOL for a temporary stake account
 static uint64_t charge_commission(const Stake *stake, const Block *block, Entry *entry,
-                                  SolAccountInfo *funding_account, const SolPubkey *stake_account_key,
+                                  const SolPubkey *stake_account_key, uint64_t current_epoch,
                                   const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
+    // If the stake account is currently activating or deactivating, then don't charge commission.  Activating or
+    // deactivating stake accounts pass into this function in situations in which commission should not be charged.
+    if ((stake->stake.delegation.activation_epoch >= current_epoch) ||
+        (stake->stake.delegation.deactivation_epoch != UINT64_MAX)) {
+        return 0;
+    }
+
     // Compute commission to charge.  It is the commission as set in the block, times the difference between
     // the current lamports in the stake account minus the lamports that were in the stake account the last
     // time commission was charged.
@@ -25,13 +31,11 @@ static uint64_t charge_commission(const Stake *stake, const Block *block, Entry 
     // entry has had at least one commission collection.
     entry->commission = block->commission;
 
-    // If there is commission to take, do so
+    // If there is commission to take, do so, by moving that number of lamports out of the stake account and into
+    // the master stake account.
     if (commission_lamports > 0) {
-        // The commission to charge is at not at least the minimum stake account size, so to charge commission:
-        // - Split commission_lamports off of stake_account into bridge_stake_account
-        // - Merge bridge_stake_account into master_stake_account
         return move_stake_signed(stake_account_key, &(Constants.master_stake_pubkey), commission_lamports,
-                                 funding_account, transaction_accounts, transaction_accounts_len);
+                                 transaction_accounts, transaction_accounts_len);
     }
     else {
         return 0;

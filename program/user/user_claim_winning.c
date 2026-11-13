@@ -32,6 +32,11 @@ static uint64_t user_claim_winning(const SolParameters *params)
         DECLARE_ACCOUNTS_NUMBER(13);
     }
 
+    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
+    if (params->data_len != 1) {
+        return Error_InvalidDataSize;
+    }
+
     // This is the entry data
     Entry *entry = get_validated_entry(entry_account);
     if (!entry) {
