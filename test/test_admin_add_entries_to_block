@@ -540,7 +540,7 @@ if [ -z "$TESTS" ]; then
     "last_commission_charge_stake": 0
   },
   "level": 0,
-  "most_recent_level_credits_window": 0,
+  "most_recent_ki_applied_window": 0,
   "ki_applied_this_window": 0,
   "total_level_credits": 0,
   "metadata": {

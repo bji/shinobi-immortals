@@ -15,7 +15,8 @@ static uint64_t charge_commission(const Stake *stake, const Block *block, Entry 
         return 0;
     }
 
-    // Compute commission to charge.  It is the commission as set in the block, times the difference between
+    // Compute commission to charge.  compute_commission returns 0 if the delegated stake is at or below the
+    // commission baseline, so commission_lamports never exceeds the delegated stake.  It is the commission as set in the block, times the difference between
     // the current lamports in the stake account minus the lamports that were in the stake account the last
     // time commission was charged.
     uint64_t commission_lamports =
@@ -25,6 +26,24 @@ static uint64_t charge_commission(const Stake *stake, const Block *block, Entry 
     // Update the entry's last_commission_charge_stake_account_lamports to the value it will hold after the commission
     // has been charged.
     entry->owned.last_commission_charge_stake_account_lamports = (stake->stake.delegation.stake - commission_lamports);
+
+    // Ki is earned on staking rewards before this program's commission is taken out of them.  Moving the commission
+    // out of the stake account reduces its delegated stake, so lower the Ki baseline by the same amount; otherwise
+    // the next Ki harvest would see the commission as missing rewards, and the Ki earned would depend upon whether
+    // the permissionless commission charge happened to run before or after the harvest.  Since both the delegated
+    // stake and the Ki baseline drop by the same amount, a Ki baseline at or below the delegated stake stays so.
+    //
+    // The Ki baseline is set from delegated stake and so should always be far larger than any commission, which is a
+    // fraction of rewards.  If it somehow were not, do not let the subtraction wrap, and do not set the baseline to
+    // zero either, since that would make the entire stake look like rewards to the next harvest.  Instead, treat the
+    // rewards as already harvested by setting the baseline to the stake that remains after the commission, just as
+    // harvest_ki does when it finds the stake below the baseline.
+    if (entry->owned.last_ki_harvest_stake_account_lamports >= commission_lamports) {
+        entry->owned.last_ki_harvest_stake_account_lamports -= commission_lamports;
+    }
+    else {
+        entry->owned.last_ki_harvest_stake_account_lamports = (stake->stake.delegation.stake - commission_lamports);
+    }
 
     // Update the entry's commission with the current value from the block, so that the next commission collection
     // will use it.  In this way, when a block's commission is changed, it doesn't affect any given entry until that

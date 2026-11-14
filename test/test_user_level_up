@@ -428,8 +428,8 @@ function apply_level_ki_and_check ()
     first=$(echo "$before" | jq -r '.metadata.level_1_credits')
     factor=$(echo "$before" | jq -r '.metadata.level_metadata[0].ki_factor')
     bps=$(echo "$before" | jq -r '.metadata.expected_annual_reward_bps')
-    old_window=$(echo "$before" | jq -r '.most_recent_level_credits_window')
-    new_window=$(echo "$after" | jq -r '.most_recent_level_credits_window')
+    old_window=$(echo "$before" | jq -r '.most_recent_ki_applied_window')
+    new_window=$(echo "$after" | jq -r '.most_recent_ki_applied_window')
     # The window that the program recorded must be the one containing the time at which it ran, which is no
     # later than now
     if [ "$new_window" -gt "$((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS))" ] ||
@@ -537,7 +537,7 @@ for invalid_case in zero overflow; do
             | solxact sign $LEDGER/rich_user1.json                                                                   \
             | solxact submit l 2>&1`
         AFTER=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0)
-        PROGRESSION_FIELDS='[.level,.most_recent_level_credits_window,.ki_applied_this_window,.total_level_credits]'
+        PROGRESSION_FIELDS='[.level,.most_recent_ki_applied_window,.ki_applied_this_window,.total_level_credits]'
         BEFORE_PROGRESSION=$(echo "$BEFORE" | jq -c "$PROGRESSION_FIELDS")
         AFTER_PROGRESSION=$(echo "$AFTER" | jq -c "$PROGRESSION_FIELDS")
         if [ "$BEFORE_PROGRESSION" != "$AFTER_PROGRESSION" ] ||

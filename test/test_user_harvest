@@ -217,7 +217,7 @@ if should_run_test user_harvest_success; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
-    NEW_KI_BALANCE=`get_token_balance $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    NEW_KI_BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     # Ki balance must have grown
     if ! less_than "$KI_BALANCE" "$NEW_KI_BALANCE"; then
         echo "FAIL: user_buy_success expected Ki balance to grow, instead:"
@@ -233,7 +233,7 @@ if should_run_test user_harvest_success; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
-    NEW_KI_BALANCE=`get_token_balance $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    NEW_KI_BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     # Ki balance must not have grown
     if less_than "$KI_BALANCE" "$NEW_KI_BALANCE"; then
         echo "FAIL: user_buy_success_2 expected Ki balance to stay the same, instead:"

@@ -494,6 +494,160 @@ function check_baselines ()
 }
 
 
+# Charging commission must lower the Ki baseline by exactly the commission moved out of the stake account, so that Ki
+# is earned on rewards before commission regardless of whether a harvest or the commission charge runs first
+# (current_issues.txt issue 4).  The commission baseline must equal the delegated stake left after the charge.
+if should_run_test anyone_take_commission_or_delegate_commission_lowers_ki_baseline; then
+    TEST_NAME=anyone_take_commission_or_delegate_commission_lowers_ki_baseline
+    # Entry 0 of block 17 0, which is staked with DELEGATED_STAKE_PUBKEY
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    # Wait until end of epoch so that there are new rewards to charge commission on
+    sleep_until_next_epoch
+    # Record the delegated stake and both baselines before the commission charge
+    DELEGATED_BEFORE=`stake_field $DELEGATED_STAKE_PUBKEY delegatedStake`
+    KI_BASELINE_BEFORE=`account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`
+    assert $TEST_NAME                                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh               \
+         $RICH_USER1_PUBKEY 17 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # Record the delegated stake and both baselines after the commission charge
+    DELEGATED_AFTER=`stake_field $DELEGATED_STAKE_PUBKEY delegatedStake`
+    KI_BASELINE_AFTER=`account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`
+    COMMISSION_BASELINE_AFTER=`account_u64 $ENTRY_PUBKEY $ENTRY_COMMISSION_BASELINE_OFFSET`
+    # The commission moved out is the drop in delegated stake; there must have been some, or this tests nothing
+    COMMISSION_MOVED=$((DELEGATED_BEFORE - DELEGATED_AFTER))
+    if [ $COMMISSION_MOVED -le 0 ]; then
+        fail_test $TEST_NAME "no commission was charged (delegated stake $DELEGATED_BEFORE -> $DELEGATED_AFTER)"
+    fi
+    # The Ki baseline must have dropped by exactly the commission moved out
+    if [ $((KI_BASELINE_BEFORE - KI_BASELINE_AFTER)) -ne $COMMISSION_MOVED ]; then
+        fail_test $TEST_NAME "Ki baseline $KI_BASELINE_BEFORE -> $KI_BASELINE_AFTER, expected a drop of $COMMISSION_MOVED"
+    fi
+    # The commission baseline must be the delegated stake remaining after the charge
+    if [ "$COMMISSION_BASELINE_AFTER" != "$DELEGATED_AFTER" ]; then
+        fail_test $TEST_NAME "commission baseline $COMMISSION_BASELINE_AFTER, expected delegated stake $DELEGATED_AFTER"
+    fi
+fi
+
+
+# Prints the Ki token base units (ten per whole Ki) that a harvest should mint for earned lamports $1, current
+# delegated stake lamports $2, and ki_factor $3.  This independently mirrors harvest_ki() using dc's arbitrary
+# precision integers (see ki_reference in test/calculation_vectors.sh): the earnings are scaled by the 500 SOL
+# effective-stake ratio K*(K+x)/(K*K+K*x+x*x), with K=500 and x the stake in whole SOL; the effective lamports are
+# converted to whole Ki by multiplying whole SOL and remaining lamports by the factor separately; and the result is
+# multiplied by ten for the token's one decimal place.  Stakes in these tests are far below the one billion SOL above
+# which the program rounds x to ten SOL, so that rounding is not reproduced here.
+function expected_ki_mint ()
+{
+    local EARNED=$1
+    local STAKE=$2
+    local FACTOR=$3
+
+    # x, the stake in whole SOL
+    local X=`printf '%s\n' "$STAKE 1000000000 / p" | dc`
+    # Effective earned lamports
+    local EFFECTIVE=`printf '%s\n' "$EARNED 500 500 $X + * * 250000 500 $X * + $X d * + / p" | dc`
+    # Whole Ki: whole SOL times factor, plus remaining lamports times factor divided by lamports per SOL; then ten
+    # token base units per Ki
+    printf '%s\n' "$EFFECTIVE 1000000000 / $FACTOR * $EFFECTIVE 1000000000 % $FACTOR * 1000000000 / + 10 * p" | dc
+}
+
+
+# Harvest, then charge commission, then harvest again: the second harvest must mint Ki on the full rewards earned
+# since the first harvest, including the part that the commission charge moved out of the stake account, because Ki
+# is earned on rewards before commission (current_issues.txt issue 4).  Uses entry 0 of block 17 0, owned by
+# rich_user1 and staked with DELEGATED_STAKE_PUBKEY, whose level 0 ki_factor is 10000 (see METADATA above).
+if should_run_test anyone_take_commission_or_delegate_harvest_commission_harvest; then
+    TEST_NAME=anyone_take_commission_or_delegate_harvest_commission_harvest
+    KI_FACTOR=10000
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+
+    # First harvest, which consumes all rewards earned so far and sets the Ki baseline to the delegated stake
+    assert ${TEST_NAME}_harvest_1                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                     \
+         $RICH_USER1_PUBKEY 17 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    STAKE_AT_HARVEST_1=`stake_field $DELEGATED_STAKE_PUBKEY delegatedStake`
+    if [ "`account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`" != "$STAKE_AT_HARVEST_1" ]; then
+        fail_test $TEST_NAME "first harvest did not set the Ki baseline to the delegated stake $STAKE_AT_HARVEST_1"
+    fi
+    KI_BALANCE_1=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+
+    # Let rewards accumulate until the commission on them is large enough to change the Ki minted, so that the test
+    # can tell Ki earned on rewards before commission from Ki earned on rewards after commission.  At about 1000 SOL
+    # of stake the effective-stake ratio is about 0.43, so with a factor of 10000 one whole Ki needs about 0.00023
+    # SOL of commission; at the block's 10% commission (6553/65535), 0.005 SOL of rewards gives about 2 Ki of
+    # difference.  Give up after 20 epochs.
+    EPOCHS_WAITED=0
+    while true; do
+        sleep_until_next_epoch
+        EPOCHS_WAITED=$((EPOCHS_WAITED + 1))
+        # The epoch in which the rest of the test must complete, so that no further rewards arrive part way through
+        TEST_EPOCH=`current_epoch`
+        STAKE_BEFORE_COMMISSION=`stake_field $DELEGATED_STAKE_PUBKEY delegatedStake`
+        if [ $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) -ge 5000000 ]; then
+            break
+        fi
+        if [ $EPOCHS_WAITED -ge 20 ]; then
+            fail_test $TEST_NAME "only $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) lamports of rewards after 20 epochs"
+        fi
+    done
+    REWARDS=$((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1))
+
+    # Charge commission, which moves part of the rewards out of the stake account
+    assert ${TEST_NAME}_commission                                                                                   \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh               \
+         $RICH_USER1_PUBKEY 17 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    STAKE_AFTER_COMMISSION=`stake_field $DELEGATED_STAKE_PUBKEY delegatedStake`
+    COMMISSION_MOVED=$((STAKE_BEFORE_COMMISSION - STAKE_AFTER_COMMISSION))
+    if [ $COMMISSION_MOVED -le 0 ]; then
+        fail_test $TEST_NAME "no commission was charged on $REWARDS lamports of rewards"
+    fi
+
+    # Second harvest
+    assert ${TEST_NAME}_harvest_2                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                     \
+         $RICH_USER1_PUBKEY 17 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    KI_MINTED=$((`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY` - KI_BALANCE_1))
+
+    # If an epoch boundary passed since the rewards were measured, more rewards may have arrived and the expected
+    # amounts below would be wrong
+    if [ "`current_epoch`" != "$TEST_EPOCH" ]; then
+        fail_test $TEST_NAME "epoch changed from $TEST_EPOCH during the test, so its measurements are invalid; rerun it"
+    fi
+
+    # The harvest sees the stake left after the commission, so the effective-stake ratio uses that stake
+    EXPECTED_GROSS=`expected_ki_mint $REWARDS $STAKE_AFTER_COMMISSION $KI_FACTOR`
+    # What would have been minted had commission been deducted from the rewards first (the old behavior)
+    EXPECTED_NET=`expected_ki_mint $((REWARDS - COMMISSION_MOVED)) $STAKE_AFTER_COMMISSION $KI_FACTOR`
+    if [ "$EXPECTED_GROSS" = "$EXPECTED_NET" ]; then
+        fail_test $TEST_NAME "rewards $REWARDS and commission $COMMISSION_MOVED cannot distinguish gross from net Ki"
+    fi
+    if [ "$KI_MINTED" != "$EXPECTED_GROSS" ]; then
+        fail_test $TEST_NAME "minted $KI_MINTED Ki base units on $REWARDS lamports of rewards (commission $COMMISSION_MOVED); expected $EXPECTED_GROSS (net of commission would be $EXPECTED_NET)"
+    fi
+
+    # The second harvest consumed all rewards, so the Ki baseline is now the delegated stake
+    if [ "`account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`" != "$STAKE_AFTER_COMMISSION" ]; then
+        fail_test $TEST_NAME "second harvest did not set the Ki baseline to the delegated stake $STAKE_AFTER_COMMISSION"
+    fi
+fi
+
+
 # Stake an entry with a stake account that is active and delegated elsewhere: Stake must succeed, take over the stake
 # account's authorities, and deactivate it (leaving it delegated to the other validator until it is redelegated).
 if should_run_test anyone_take_commission_or_delegate_stake_elsewhere_active; then
