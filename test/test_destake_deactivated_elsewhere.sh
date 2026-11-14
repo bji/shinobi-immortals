@@ -276,7 +276,7 @@ BLOCK_COMMISSION=6553
 KI_FACTOR=1000000000
 
 # Entry metadata; only the level 0 ki_factor, at byte offset 76, is nonzero
-METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 00ca9a3b | xxd -r -p; dd if=/dev/zero bs=1 count=2620 status=none) | base64 | tr -d '\n'`
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 00ca9a3b | xxd -r -p; dd if=/dev/zero bs=1 count=2764 status=none) | base64 | tr -d '\n'`
 # Metadata to set into entries, only needs to include up to the ki_factor
 METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 00ca9a3b | xxd -r -p) | base64 | tr -d '\n'`
 SALT0=0

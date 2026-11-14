@@ -107,6 +107,19 @@ static void number_string(uint8_t *buf, uint32_t number, uint8_t digits)
 }
 
 
+// Returns the length of the zero-terminated string [str], but at most [max_len].  No byte beyond the first [max_len]
+// bytes of [str] is read, so this is safe for fixed-size fields whose contents may fill the field with no
+// terminating zero (such as LevelMetadata.name and LevelMetadata.uri).
+static uint32_t bounded_string_length(const uint8_t *str, uint32_t max_len)
+{
+    uint32_t len = 0;
+    while ((len < max_len) && str[len]) {
+        len++;
+    }
+    return len;
+}
+
+
 // [data] must have at least METAPLEX_METADATA_DATA_SIZE bytes in it.  Returns the pointer to the byte immediately
 // after the end of data
 static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, const uint8_t *symbol, const uint8_t *uri,
@@ -124,22 +137,13 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, con
         MetaplexMetadataOneCreator *metadata = (MetaplexMetadataOneCreator *) data;
         sol_memset(metadata, 0, sizeof(*metadata));
         metadata->name_len = 32;
-        uint32_t len = sol_strlen((const char *) name);
-        if (len > metadata->name_len) {
-            len = metadata->name_len;
-        }
+        uint32_t len = bounded_string_length(name, metadata->name_len);
         sol_memcpy(metadata->name, name, len);
         metadata->symbol_len = 10;
-        len = sol_strlen((const char *) symbol);
-        if (len > metadata->symbol_len) {
-            len = metadata->symbol_len;
-        }
+        len = bounded_string_length(symbol, metadata->symbol_len);
         sol_memcpy(metadata->symbol, symbol, len);
         metadata->uri_len = 200;
-        len = sol_strlen((const char *) uri);
-        if (len > metadata->uri_len) {
-            len = metadata->uri_len;
-        }
+        len = bounded_string_length(uri, metadata->uri_len);
         sol_memcpy(metadata->uri, uri, len);
         metadata->has_creators = true;
         metadata->creator_count = 1;
@@ -151,22 +155,13 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, con
         MetaplexMetadataTwoCreators *metadata = (MetaplexMetadataTwoCreators *) data;
         sol_memset(metadata, 0, sizeof(*metadata));
         metadata->name_len = 32;
-        uint32_t len = sol_strlen((const char *) name);
-        if (len > metadata->name_len) {
-            len = metadata->name_len;
-        }
+        uint32_t len = bounded_string_length(name, metadata->name_len);
         sol_memcpy(metadata->name, name, len);
         metadata->symbol_len = 10;
-        len = sol_strlen((const char *) symbol);
-        if (len > metadata->symbol_len) {
-            len = metadata->symbol_len;
-        }
+        len = bounded_string_length(symbol, metadata->symbol_len);
         sol_memcpy(metadata->symbol, symbol, len);
         metadata->uri_len = 200;
-        len = sol_strlen((const char *) uri);
-        if (len > metadata->uri_len) {
-            len = metadata->uri_len;
-        }
+        len = bounded_string_length(uri, metadata->uri_len);
         sol_memcpy(metadata->uri, uri, len);
         metadata->has_creators = true;
         metadata->creator_count = 2;
@@ -179,22 +174,13 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, con
         MetaplexMetadataThreeCreators *metadata = (MetaplexMetadataThreeCreators *) data;
         sol_memset(metadata, 0, sizeof(*metadata));
         metadata->name_len = 32;
-        uint32_t len = sol_strlen((const char *) name);
-        if (len > metadata->name_len) {
-            len = metadata->name_len;
-        }
+        uint32_t len = bounded_string_length(name, metadata->name_len);
         sol_memcpy(metadata->name, name, len);
         metadata->symbol_len = 10;
-        len = sol_strlen((const char *) symbol);
-        if (len > metadata->symbol_len) {
-            len = metadata->symbol_len;
-        }
+        len = bounded_string_length(symbol, metadata->symbol_len);
         sol_memcpy(metadata->symbol, symbol, len);
         metadata->uri_len = 200;
-        len = sol_strlen((const char *) uri);
-        if (len > metadata->uri_len) {
-            len = metadata->uri_len;
-        }
+        len = bounded_string_length(uri, metadata->uri_len);
         sol_memcpy(metadata->uri, uri, len);
         metadata->has_creators = true;
         metadata->creator_count = 3;

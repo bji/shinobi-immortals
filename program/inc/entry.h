@@ -37,8 +37,14 @@ typedef struct
     // This is the number of Ki tokens earned per 1 SOL of stake rewards earned by stake accounts staked to the entry.
     uint32_t ki_factor;
 
-    // Name of the entry at each level (metaplex metadata maximum name length of 48)
-    uint8_t name[48];
+    // Name of the entry at each level.  32 bytes is the Metaplex metadata maximum name length.  The name is padded
+    // with zero bytes; a 32 byte name has no terminating zero.
+    uint8_t name[32];
+
+    // Title of the entry at each level: an additional line of identifying text, for example "Master Swordsman" for an
+    // entry named "Harajuki Katsudo".  It is not part of the Metaplex metadata, so wallets will not show it, but game
+    // UIs can.  Like the name, it is padded with zero bytes, and a 32 byte title has no terminating zero.
+    uint8_t title[32];
 
     // Metadata URL of the entry at this level (metaplex metadata uri length is 200)
     uint8_t uri[200];

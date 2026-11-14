@@ -7,11 +7,11 @@
 # a small level_1_credits every contribution earns 0 credits no matter how large it is, and the credit checks would
 # compare 0 with 0.  With this value, even a 1 Ki contribution earns many tenths of a credit.  As a consequence the
 # entry never actually reaches level 1 in these tests.
-# The ki_factor for levels appears as an unsigned little-endian 32 bit value at offset 76 + (level * 292).
+# The ki_factor for levels appears as an unsigned little-endian 32 bit value at offset 76 + (level * 308).
 # 0xf4240000 is 9460 in little-endian.
 # Also set the names to the level.  This is used to ensure that metaplex metadata is being updated.  The first
-# character of the name is at 80 + (level * 292).
-# The last 4 bytes, at offset 2696, are expected_annual_reward_bps as a little-endian 32 bit value.  0xea010000 is
+# character of the name is at 80 + (level * 308).
+# The last 4 bytes, at offset 2840, are expected_annual_reward_bps as a little-endian 32 bit value.  0xea010000 is
 # 490 (4.90% per year) in little-endian.
 
 METADATA=`(echo 0x00286bee | xxd -r | tr -d '\n';                                                                    \
@@ -20,12 +20,13 @@ METADATA=`(echo 0x00286bee | xxd -r | tr -d '\n';                               
                dd if=/dev/zero bs=1 count=8 status=none;                                                             \
                echo 0xf4240000 | xxd -r | tr -d '\n';                                                                \
                printf "%x" $i;                                                                                       \
-               dd if=/dev/zero bs=1 count=279 status=none;                                                           \
+               dd if=/dev/zero bs=1 count=295 status=none;                                                           \
            done;                                                                                                     \
            echo 0xea010000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
 METADATA_PIECE1=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none           | base64 | tr -d '\n'`
 METADATA_PIECE2=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
-METADATA_PIECE3=`echo "$METADATA" | base64 -d | dd bs=1           status=none skip=1800 | base64 | tr -d '\n'`
+METADATA_PIECE3=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=1800 | base64 | tr -d '\n'`
+METADATA_PIECE4=`echo "$METADATA" | base64 -d | dd bs=1           status=none skip=2700 | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -86,6 +87,12 @@ if [ -z "$TESTS" ]; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
+    assert user_level_up_setup_16_0_f2                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 0 2700 $METADATA_PIECE4                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
     assert user_level_up_setup_16_0_g                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
          $ADMIN_PUBKEY 16 0 1 0 $METADATA_PIECE1                                                                     \
@@ -104,6 +111,12 @@ if [ -z "$TESTS" ]; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
+    assert user_level_up_setup_16_0_i2                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 1 2700 $METADATA_PIECE4                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
     assert user_level_up_setup_16_0_j                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
          $ADMIN_PUBKEY 16 0 2 0 $METADATA_PIECE1                                                                     \
@@ -119,6 +132,12 @@ if [ -z "$TESTS" ]; then
     assert user_level_up_setup_16_0_l                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
          $ADMIN_PUBKEY 16 0 2 1800 $METADATA_PIECE3                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_level_up_setup_16_0_l2                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 2 2700 $METADATA_PIECE4                                                                  \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

@@ -1081,9 +1081,9 @@ class Entry
         this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 312);
         this.owned_last_commission_charge_stake_account_lamports = buffer_le_u64(data, 320);
         this.level = data[328];
-        this.most_recent_ki_applied_window = buffer_le_u64(data, 3032);
-        this.ki_applied_this_window = buffer_le_u64(data, 3040);
-        this.total_level_credits = buffer_le_u64(data, 3048);
+        this.most_recent_ki_applied_window = buffer_le_u64(data, 3176);
+        this.ki_applied_this_window = buffer_le_u64(data, 3184);
+        this.total_level_credits = buffer_le_u64(data, 3192);
 
         this.metadata_level_1_credits = buffer_le_u32(data, 332);
         this.metadata_random = [ buffer_le_u32(data, 336),
@@ -1106,17 +1106,18 @@ class Entry
 
         for (let i = 0; i < 9; i += 1) {
             this.level_metadata[i] = {
-                form : data[400 + (i * 292)],
-                skill : data[404 + (i * 292)],
-                ki_factor : buffer_le_u32(data, 408 + (i * 292)),
-                name : buffer_string(data, 412 + (i * 292), 48),
-                uri : buffer_string(data, 460 + (i * 292), 200),
-                uri_contents_sha256 : buffer_sha256(data, 660 + (i * 292))
+                form : data[400 + (i * 308)],
+                skill : data[404 + (i * 308)],
+                ki_factor : buffer_le_u32(data, 408 + (i * 308)),
+                name : buffer_string(data, 412 + (i * 308), 32),
+                title : buffer_string(data, 444 + (i * 308), 32),
+                uri : buffer_string(data, 476 + (i * 308), 200),
+                uri_contents_sha256 : buffer_sha256(data, 676 + (i * 308))
             };
         }
 
         // Expected annual stake reward rate in basis points, which calibrates the level credits curve
-        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3028);
+        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3172);
     }
 
     update(data)
@@ -1205,17 +1206,19 @@ class Entry
 
         for (let i = 0; i < 9; i += 1) {
             new_level_metadata[i] = {
-                form : data[400 + (i * 292)],
-                skill : data[404 + (i * 292)],
-                ki_factor : buffer_le_u32(data, 408 + (i * 292)),
-                name : buffer_string(data, 412 + (i * 292), 48),
-                uri : buffer_string(data, 460 + (i * 292), 200),
-                uri_contents_sha256 : buffer_sha256(data, 660 + (i * 292))
+                form : data[400 + (i * 308)],
+                skill : data[404 + (i * 308)],
+                ki_factor : buffer_le_u32(data, 408 + (i * 308)),
+                name : buffer_string(data, 412 + (i * 308), 32),
+                title : buffer_string(data, 444 + (i * 308), 32),
+                uri : buffer_string(data, 476 + (i * 308), 200),
+                uri_contents_sha256 : buffer_sha256(data, 676 + (i * 308))
             };
             if ((new_level_metadata[i].form != this.level_metadata[i].form) ||
                 (new_level_metadata[i].skill != this.level_metadata[i].skill) ||
                 (new_level_metadata[i].ki_factor != this.level_metadata[i].ki_factor) ||
                 (new_level_metadata[i].name != this.level_metadata[i].name) ||
+                (new_level_metadata[i].title != this.level_metadata[i].title) ||
                 (new_level_metadata[i].uri != this.level_metadata[i].uri) ||
                 (new_level_metadata[i].uri_contents_sha256 != this.level_metadata[i].uri_contents_sha256)) {
                 level_metadata_changed = true;

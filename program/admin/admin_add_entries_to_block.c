@@ -15,7 +15,8 @@ typedef struct
     // This is the instruction code for AddEntriesToBlockData
     uint8_t instruction_code;
 
-    // This is the initial uri to use as the uri member of the metaplex metadata.  Its maximum length is 100.
+    // This is the initial uri to use as the uri member of the metaplex metadata.  Its maximum length is 200, the
+    // Metaplex maximum; it is padded with zero bytes, and a 200 byte uri has no terminating zero.
     uint8_t metaplex_metadata_uri[200];
 
     // This is the additional creator pubkey to add to the meteplex metadata, or all zeroes to add no second

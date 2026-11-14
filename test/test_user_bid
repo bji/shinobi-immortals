@@ -2,9 +2,9 @@
 BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
 BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
-METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2

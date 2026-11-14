@@ -200,8 +200,8 @@ if [ -z "$TESTS" ]; then
 fi
 
 # Need metadata to set.  Use something very simple as the actual contents do not matter.
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
@@ -462,4 +462,103 @@ if should_run_test admin_reveal_entries_rereveal; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
+fi
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Full-length name, title and uri (current_issues.txt issue 19).  LevelMetadata.name is 32 bytes, the Metaplex
+# maximum, and LevelMetadata.uri is 200 bytes, also the Metaplex maximum.  LevelMetadata.title is 32 bytes and is not
+# part of the Metaplex metadata.  A value that fills its field has no terminating zero.  Revealing an entry writes its
+# level 0 name and uri into its Metaplex metadata, which must receive them in full (and without reading beyond their
+# fields).  So reveal an entry whose level 0 name, title and uri fill their fields, then check the entry (as decoded by
+# scripts/show.sh) and the Metaplex metadata account.
+# ---------------------------------------------------------------------------------------------------------------------
+
+if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
+    TEST_NAME=admin_reveal_entries_full_length_name_title_and_uri
+    # 32 byte name and title, and 200 byte uri; none has a terminating zero within its field
+    FULL_NAME="ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"
+    FULL_TITLE="Master Swordsman of the Northern"
+    FULL_URI="https://example.com/`printf 'x%.0s' \`seq 1 180\``"
+    if [ ${#FULL_NAME} -ne 32 ] || [ ${#FULL_TITLE} -ne 32 ] || [ ${#FULL_URI} -ne 200 ]; then
+        echo "FAIL: $TEST_NAME: test name, title or uri has the wrong length"
+        exit 1
+    fi
+    # EntryMetadata (see "EntryMetadata layout" in instructions.txt): level_1_credits and random (68 bytes), then
+    # level 0's LevelMetadata: form, skill and padding, and ki_factor (12 bytes), name (32), title (32), uri (200),
+    # and uri_contents_sha256 (32); then levels 1-8 (8 * 308 bytes) and expected_annual_reward_bps (4), all zero.
+    # 2844 bytes in all.
+    FULL_METADATA_FILE=$LEDGER/full_length_metadata.bin
+    (dd if=/dev/zero bs=1 count=80 status=none;
+     printf '%s' "$FULL_NAME";
+     printf '%s' "$FULL_TITLE";
+     printf '%s' "$FULL_URI";
+     dd if=/dev/zero bs=1 count=$((32 + 8*308 + 4)) status=none) > $FULL_METADATA_FILE
+    if [ `wc -c < $FULL_METADATA_FILE` -ne 2844 ]; then
+        echo "FAIL: $TEST_NAME: metadata is `wc -c < $FULL_METADATA_FILE` bytes, expected 2844"
+        exit 1
+    fi
+    FULL_METADATA=`base64 < $FULL_METADATA_FILE | tr -d '\n'`
+    FULL_SALT=7
+    FULL_SHA256=`compute_metadata_sha256 $FULL_METADATA $FULL_SALT`
+
+    # 4 1: one entry and no mysteries, so it is revealable as soon as it is complete
+    assert ${TEST_NAME}_create_block                                                                                 \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 4 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                          \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert ${TEST_NAME}_add_entries                                                                                  \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 4 1 "http://foo.bar.com" none 0 $FULL_SHA256                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Set the metadata in four pieces, since all of it does not fit in one transaction
+    for PIECE in "0 900" "900 900" "1800 900" "2700 144"; do
+        read -r PIECE_START PIECE_LEN <<< "$PIECE"
+        PIECE_DATA=`dd if=$FULL_METADATA_FILE bs=1 skip=$PIECE_START count=$PIECE_LEN status=none | base64 | tr -d '\n'`
+        assert ${TEST_NAME}_set_metadata_$PIECE_START                                                                \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                     \
+             $ADMIN_PUBKEY 4 1 0 $PIECE_START $PIECE_DATA                                                            \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/admin.json                                                                        \
+            | solxact submit l 2>&1`
+    done
+    assert ${TEST_NAME}_reveal                                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 4 1 0 $FULL_SALT                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+
+    # The entry's level 0 name, title and uri, as decoded by scripts/show.sh, must be exactly the full-length values
+    ENTRY_JSON=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 4 1 0`
+    if [ "`echo "$ENTRY_JSON" | jq -r '.metadata.level_metadata[0].name'`" != "$FULL_NAME" ] ||
+       [ "`echo "$ENTRY_JSON" | jq -r '.metadata.level_metadata[0].title'`" != "$FULL_TITLE" ] ||
+       [ "`echo "$ENTRY_JSON" | jq -r '.metadata.level_metadata[0].uri'`" != "$FULL_URI" ]; then
+        echo "FAIL: $TEST_NAME: show.sh decoded name, title or uri incorrectly:"
+        echo "$ENTRY_JSON" | jq '.metadata.level_metadata[0]'
+        exit 1
+    fi
+
+    # The Metaplex metadata account holds: key (1 byte), update authority (32), mint (32), then the name, symbol and
+    # uri, each as a u32 length followed by that many bytes.  The program always writes a 32 byte name, a 10 byte
+    # symbol, and a 200 byte uri, zero-padded, so the name is at bytes 69-100 and the uri at bytes 119-318.
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 1 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY            \
+                                                          pubkey $MINT_PUBKEY ]`
+    METAPLEX_NAME=`get_account_data $ENTRY_METADATA_PUBKEY 69 32 | base64 -d | tr -d '\0'`
+    METAPLEX_URI=`get_account_data $ENTRY_METADATA_PUBKEY 119 200 | base64 -d | tr -d '\0'`
+    if [ "$METAPLEX_NAME" != "$FULL_NAME" ]; then
+        echo "FAIL: $TEST_NAME: Metaplex name is \"$METAPLEX_NAME\", expected \"$FULL_NAME\""
+        exit 1
+    fi
+    if [ "$METAPLEX_URI" != "$FULL_URI" ]; then
+        echo "FAIL: $TEST_NAME: Metaplex uri is \"$METAPLEX_URI\", expected \"$FULL_URI\""
+        exit 1
+    fi
 fi

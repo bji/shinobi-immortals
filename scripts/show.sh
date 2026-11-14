@@ -492,8 +492,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -ne 3056 ]; then
-            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3056"
+        if [ $ACCOUNT_DATA_LEN -ne 3200 ]; then
+            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3200"
             exit 1
         fi
 
@@ -576,9 +576,9 @@ case $1 in
 
         # Progression uses token-base-unit precision (tenths); these counters
         # persist across stake changes and are appended after the old metadata.
-        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3032 "$ACCOUNT_DATA"`','
-        echo -n '"ki_applied_this_window":'`get_data_u64 3040 "$ACCOUNT_DATA"`','
-        echo -n '"total_level_credits":'`get_data_u64 3048 "$ACCOUNT_DATA"`','
+        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3176 "$ACCOUNT_DATA"`','
+        echo -n '"ki_applied_this_window":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
+        echo -n '"total_level_credits":'`get_data_u64 3192 "$ACCOUNT_DATA"`','
 
         echo -n '"metadata":{'
 
@@ -593,18 +593,20 @@ case $1 in
         echo -n `get_data_u32 396 "$ACCOUNT_DATA"`'],"level_metadata":['
 
         for i in `seq 0 8`; do
-            OFFSET=$(($i*292+400))
+            OFFSET=$(($i*308+400))
             echo -n '{"form":'`get_data_u32 $(($OFFSET+0)) "$ACCOUNT_DATA"`','
 
             echo -n '"skill":'`get_data_u8 $(($OFFSET+4)) "$ACCOUNT_DATA"`','
 
             echo -n '"ki_factor":'`get_data_u32 $(($OFFSET+8)) "$ACCOUNT_DATA"`','
 
-            echo -n '"name":"'`get_data_string $(($OFFSET+12)) 48 "$ACCOUNT_DATA"`'",'
+            echo -n '"name":"'`get_data_string $(($OFFSET+12)) 32 "$ACCOUNT_DATA"`'",'
 
-            echo -n '"uri":"'`get_data_string $(($OFFSET+60)) 200 "$ACCOUNT_DATA"`'",'
+            echo -n '"title":"'`get_data_string $(($OFFSET+44)) 32 "$ACCOUNT_DATA"`'",'
 
-            echo -n '"uri_contents_sha256":"'`get_data_sha256 $(($OFFSET+260)) "$ACCOUNT_DATA"`'"'
+            echo -n '"uri":"'`get_data_string $(($OFFSET+76)) 200 "$ACCOUNT_DATA"`'",'
+
+            echo -n '"uri_contents_sha256":"'`get_data_sha256 $(($OFFSET+276)) "$ACCOUNT_DATA"`'"'
 
             echo -n '}'
 
@@ -613,7 +615,7 @@ case $1 in
             fi
         done            
 
-        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3028 "$ACCOUNT_DATA"`
+        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3172 "$ACCOUNT_DATA"`
 
         echo '}}'
 
