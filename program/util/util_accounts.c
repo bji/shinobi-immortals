@@ -294,5 +294,5 @@ static void delete_account(SolAccountInfo *account, SolAccountInfo *lamports_rec
     sol_memset(account->data, 0, account->data_len);
     set_account_size(account, 0);
 
-    account->owner = 0;
+    sol_memset(account->owner, 0, sizeof(*(account->owner)));
 }
