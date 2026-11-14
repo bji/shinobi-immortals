@@ -60,6 +60,16 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
         return Error_InvalidAccount_First + 2;
     }
 
+    // The master stake's delegation should never be below its minimum, since nothing in this program reduces it below
+    // that, but a future stake program change such as slashing could.  Refuse to split rather than letting the
+    // subtraction below wrap to an enormous value, which would allow splitting off the master stake account's entire
+    // balance; with the master stake account emptied, every commission charge (and therefore every Destake with
+    // commission owed) would fail.  A delegation exactly at the mimimum is also rejected, since there's nothing left
+    // to split.
+    if (stake.stake.delegation.stake <= MASTER_STAKE_ACCOUNT_MIN_LAMPORTS) {
+        return Error_InvalidData_First + 3;
+    }
+
     // Determine the maximum number of lamports that could be split off from the master stake account and still
     // leave it at its minimum delegation.
     uint64_t to_split = stake.stake.delegation.stake - MASTER_STAKE_ACCOUNT_MIN_LAMPORTS;
