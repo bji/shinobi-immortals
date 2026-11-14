@@ -26,6 +26,36 @@ static_assert((LEVEL_CREDIT_WINDOW_SECONDS > 0) && ((SECONDS_PER_YEAR / LEVEL_CR
               "LEVEL_CREDIT_WINDOW_SECONDS must be non-zero and give at least 3 level credit windows per year");
 #define LEVEL_CREDIT_WINDOWS_PER_YEAR (SECONDS_PER_YEAR / LEVEL_CREDIT_WINDOW_SECONDS)
 
+// floor((value * numerator) / denominator), with (numerator <= denominator) and (denominator > 0).  Reduce after each
+// addition rather than forming a potentially overflowing product.
+static uint64_t multiply_fraction(uint64_t value, uint64_t numerator, uint64_t denominator)
+{
+    uint64_t remainder = 0;
+    uint64_t result = 0;
+    for (unsigned bit = 64; bit > 0; --bit) {
+        uint64_t digit = 0;
+        // Double the remainder modulo denominator without overflowing.
+        if (remainder >= denominator - remainder) {
+            remainder -= denominator - remainder;
+            digit = 1;
+        }
+        else {
+            remainder += remainder;
+        }
+        if ((value >> (bit - 1)) & 1) {
+            if (remainder >= denominator - numerator) {
+                remainder -= denominator - numerator;
+                digit++;
+            }
+            else {
+                remainder += numerator;
+            }
+        }
+        result = (result << 1) + digit;
+    }
+    return result;
+}
+
 // If start_price > 100,000 SOL, rounding errors could be significant.
 static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
                               uint64_t seconds_elapsed)
@@ -34,6 +64,8 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
     if (seconds_elapsed >= total_seconds) {
         return end_price;
     }
+
+    uint64_t original_end_price = end_price;
 
     uint64_t delta = start_price - end_price;
 
@@ -48,24 +80,25 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
     // ac = delta * 101ul (cannot overflow since delta was already divided by 1000)
     uint64_t ac = delta * 101ul;
 
-    // ab = ((100ul * delta * seconds_elapsed) / total_seconds) + delta (100 * delta cannot overflow)
-    uint64_t ab = checked_add((checked_multiply(100ul * delta, seconds_elapsed, &overflow) / total_seconds),
-                              delta,
-                              &overflow);
+    // ab = ((100ul * delta * seconds_elapsed) / total_seconds) + delta [100 * delta cannot overflow].
+    // The product 100 * delta * seconds_elapsed can overflow for large prices and long durations (for example, a
+    // 100,000 SOL start price after about 21 days), so it is never formed: multiply_fraction() computes the same
+    // floor without it.  It requires seconds_elapsed <= total_seconds and total_seconds > 0, both guaranteed by the
+    // early return above.  The result is less than 100 * delta, so adding delta cannot overflow either.
+    uint64_t ab = checked_add(multiply_fraction(100ul * delta, seconds_elapsed, total_seconds), delta, &overflow);
 
-    // bc = ((100ul * 101ul * seconds_elapsed) / total-seconds) + 101ul
-    uint64_t bc = checked_add(checked_multiply(100ul * 101ul, seconds_elapsed, &overflow) / total_seconds,
-                              101ul,
-                              &overflow);
+    // bc = ((100ul * 101ul * seconds_elapsed) / total_seconds) + 101ul, computed the same way
+    uint64_t bc = checked_add(multiply_fraction(100ul * 101ul, seconds_elapsed, total_seconds), 101ul, &overflow);
 
     // price = (end_price + ((ac - ab) / bc)) * 1000ul
     uint64_t price = checked_multiply(checked_add(end_price, ((ac - ab) / bc), &overflow),
                                       1000ul,
                                       &overflow);
 
-    // Overflow would only occur with impossibly huge seconds_elapsed or end_price
+    // With the intermediate products avoided above, overflow cannot occur for any input that reaches this point;
+    // this is a defensive fallback only.  Use the original (undivided) end price, not the divided one.
     if (overflow) {
-        price = end_price;
+        price = original_end_price;
     }
 
     return price;
@@ -215,36 +248,6 @@ static uint64_t compute_level_credit_window(uint64_t unix_timestamp, uint64_t mo
 
     // Never move backwards relative to the window already recorded for the entry
     return (window < most_recent_window) ? most_recent_window : window;
-}
-
-// floor(value*numerator/denominator), with numerator <= denominator and denominator > 0.  Reduce after each addition
-// rather than forming a potentially overflowing product.
-static uint64_t multiply_fraction(uint64_t value, uint64_t numerator, uint64_t denominator)
-{
-    uint64_t remainder = 0;
-    uint64_t result = 0;
-    for (unsigned bit = 64; bit > 0; --bit) {
-        uint64_t digit = 0;
-        // Double the remainder modulo denominator without overflowing.
-        if (remainder >= denominator - remainder) {
-            remainder -= denominator - remainder;
-            digit = 1;
-        }
-        else {
-            remainder += remainder;
-        }
-        if ((value >> (bit - 1)) & 1) {
-            if (remainder >= denominator - numerator) {
-                remainder -= denominator - numerator;
-                digit++;
-            }
-            else {
-                remainder += numerator;
-            }
-        }
-        result = (result << 1) + digit;
-    }
-    return result;
 }
 
 // Cumulative level requirement in tenths of a credit. There are eight upgrades from displayed level 1 (index 0) to
