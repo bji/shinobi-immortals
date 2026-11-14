@@ -87,7 +87,8 @@ typedef struct
 
     // This is the timestamp that the number of mysteries sold became equal to the total_mystery_count, at which
     // time the reveal grace period begins.  If there were no mysteries for this block, then this is the timestamp
-    // at which the last entry was added.
+    // at which the last entry was added.  If the mystery phase instead ends because mystery_phase_duration elapses
+    // with mysteries unsold, this stays 0; use get_mystery_phase_end_timestamp() rather than reading it directly.
     timestamp_t mystery_phase_end_timestamp;
 
     // Commission currently charged per epoch for staked entries.  This value can be updated but not more often than

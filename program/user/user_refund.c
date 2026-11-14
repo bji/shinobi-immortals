@@ -53,8 +53,12 @@ static uint64_t user_refund(const SolParameters *params)
         return Error_EntryNotRevealable;
     }
 
-    // Check to make sure that the block's reveal grace period has passed
-    if ((block->mystery_phase_end_timestamp + block->config.reveal_period_duration) > clock.unix_timestamp) {
+    // Check to make sure that the block's reveal grace period has passed.  The grace period begins when the mystery
+    // phase ends, whether because all mysteries were sold or because the mystery phase duration elapsed;
+    // get_mystery_phase_end_timestamp() handles both cases.  (Using mystery_phase_end_timestamp directly would be
+    // wrong in the second case, because it is still 0 then, which would open refunds as soon as the block became
+    // revealable.)
+    if ((get_mystery_phase_end_timestamp(block) + block->config.reveal_period_duration) > clock.unix_timestamp) {
         return Error_EntryWaitingForReveal;
     }
 

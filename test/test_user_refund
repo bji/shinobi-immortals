@@ -508,3 +508,125 @@ if should_run_test user_refund_already_refunded; then
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 fi
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Mystery phase that ends by timeout, with mysteries still unsold (current_issues.txt issue 8).  The reveal grace
+# period must be measured from the end of the mystery phase (block_start_timestamp + mystery_phase_duration), not from
+# mystery_phase_end_timestamp, which is only set when all mysteries sell and so is still 0 here.  Without the fix, a
+# refund was available as soon as the block became revealable.
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Seconds that the mystery phase of block 9 3 lasts, and the reveal grace period that follows it.  The grace period is
+# long enough that the first refund attempt below is certain to be made within it.
+REFUND_TIMEOUT_MYSTERY_PHASE_DURATION=10
+REFUND_TIMEOUT_REVEAL_PERIOD_DURATION=60
+
+
+# Waits until the validator's Clock.unix_timestamp, which is what the program compares against, is greater than $1
+function wait_for_clock_after ()
+{
+    local END=$1
+
+    while [ `clock_unix_timestamp` -le $END ]; do
+        echo "Waiting for $((END - `clock_unix_timestamp` + 1)) more seconds of cluster clock time"
+        sleep 1
+    done
+}
+
+
+if should_run_test user_refund_mystery_timeout; then
+    TEST_NAME=user_refund_mystery_timeout
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 9 u32 3 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER2_PUBKEY`
+
+    # 9 3: two entries, both mysteries, with a short mystery phase and a longer reveal grace period
+    assert ${TEST_NAME}_setup_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 9 3 0 2 2 $REFUND_TIMEOUT_MYSTERY_PHASE_DURATION \`lamports_from_sol 1000\`                   \
+         $REFUND_TIMEOUT_REVEAL_PERIOD_DURATION \`lamports_from_sol 1\` false $((24*60*60))                          \
+         \`lamports_from_sol 1000\` 0                                                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Adding the entries completes the block, which starts the mystery phase.  The clock read after that is no earlier
+    # than block_start_timestamp, so waiting relative to it waits at least as long as the program requires.
+    assert ${TEST_NAME}_setup_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 9 3 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    BLOCK_START_UPPER_BOUND=`clock_unix_timestamp`
+    # rich_user2 buys mystery 9 3 0; mystery 9 3 1 is never sold, so the mystery phase can only end by timeout
+    assert ${TEST_NAME}_setup_c                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 9 3 0 \`lamports_from_sol 10000\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # Wait for the mystery phase to time out, so that the block is revealable
+    wait_for_clock_after $((BLOCK_START_UPPER_BOUND + REFUND_TIMEOUT_MYSTERY_PHASE_DURATION))
+
+    # The block is now revealable but the reveal grace period has not passed, so the refund must fail with
+    # Error_EntryWaitingForReveal (1016).  Getting that error, rather than Error_EntryNotRevealable (1013), also shows
+    # that the block really is revealable.
+    AUTHORITY_BEFORE=`solana -u l balance --lamports $AUTHORITY_PUBKEY | cut -d ' ' -f 1`
+    ENTRY_BEFORE=`get_account_data $ENTRY_PUBKEY`
+    assert_fail ${TEST_NAME}_too_soon                                                                                \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3f8'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER2_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER2_PUBKEY s                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $TOKEN_DESTINATION_PUBKEY                                                                         \
+           account $RICH_USER2_PUBKEY w                                                                              \
+           // Instruction code 11 = Refund //                                                                        \
+           u8 11"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    # The rejected refund must have changed nothing
+    if [ "`solana -u l balance --lamports $AUTHORITY_PUBKEY | cut -d ' ' -f 1`" != "$AUTHORITY_BEFORE" ] ||
+       [ "`get_account_data $ENTRY_PUBKEY`" != "$ENTRY_BEFORE" ]; then
+        echo "FAIL: ${TEST_NAME}_too_soon: rejected refund changed the authority balance or the entry"
+        exit 1
+    fi
+
+    # Wait for the reveal grace period to pass
+    wait_for_clock_after $((BLOCK_START_UPPER_BOUND + REFUND_TIMEOUT_MYSTERY_PHASE_DURATION                          \
+                            + REFUND_TIMEOUT_REVEAL_PERIOD_DURATION))
+
+    # Now the refund must succeed, and move exactly the purchase price (purchase_price_lamports, the u64 at byte
+    # offset 208 of the entry) from the authority to rich_user2
+    PURCHASE_PRICE=`get_account_data $ENTRY_PUBKEY 208 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'`
+    AUTHORITY_BEFORE=`solana -u l balance --lamports $AUTHORITY_PUBKEY | cut -d ' ' -f 1`
+    assert ${TEST_NAME}_success                                                                                      \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER2_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER2_PUBKEY s                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $TOKEN_DESTINATION_PUBKEY                                                                         \
+           account $RICH_USER2_PUBKEY w                                                                              \
+           // Instruction code 11 = Refund //                                                                        \
+           u8 11"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    AUTHORITY_AFTER=`solana -u l balance --lamports $AUTHORITY_PUBKEY | cut -d ' ' -f 1`
+    if [ $((AUTHORITY_BEFORE - AUTHORITY_AFTER)) -ne $PURCHASE_PRICE ]; then
+        echo "FAIL: ${TEST_NAME}_success: authority paid out $((AUTHORITY_BEFORE - AUTHORITY_AFTER)), expected $PURCHASE_PRICE"
+        exit 1
+    fi
+fi

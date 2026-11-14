@@ -96,3 +96,26 @@ static bool is_complete_block_revealable(const Block *block, const Clock *clock)
     timestamp_t mystery_phase_end = block->block_start_timestamp + block->config.mystery_phase_duration;
     return (clock->unix_timestamp > mystery_phase_end);
 }
+
+
+// Returns the timestamp at which the block's mystery phase ended (or will end), from which the reveal grace period is
+// measured.  This assumes that the block is complete.
+//
+// The mystery phase ends in one of two ways:
+// - All mysteries are sold (including the case where there are no mysteries at all).  The time at which that happened
+//   was recorded in mystery_phase_end_timestamp, by user_buy when the last mystery was sold, or by
+//   admin_add_entries_to_block when the block was completed with no mysteries.
+// - The mystery phase duration elapses with mysteries still unsold.  Nothing records that event, so
+//   mystery_phase_end_timestamp is still 0; the end of the phase is computed instead, as
+//   is_complete_block_revealable() does.
+static timestamp_t get_mystery_phase_end_timestamp(const Block *block)
+{
+    // If all mysteries were sold, then the recorded timestamp is when that happened
+    if (block->mysteries_sold_count == block->config.total_mystery_count) {
+        return block->mystery_phase_end_timestamp;
+    }
+
+    // Otherwise the mystery phase ends (or ended) when its duration elapses.  block_start_timestamp is a recent clock
+    // value and mystery_phase_duration is a uint32_t, so this sum cannot overflow.
+    return block->block_start_timestamp + block->config.mystery_phase_duration;
+}
