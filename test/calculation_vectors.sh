@@ -137,19 +137,44 @@ for ((elapsed=0; elapsed<1000; ++elapsed)); do
     emit "bid/curve/$elapsed" 3 1000 1000000 1000000 "$elapsed" "$expected"
 done
 
-for raw in 0 1 10 100 1000 10000 50000 100000 106666; do
-    # Clamp negative mathematical rewards before division and deciKi conversion.
-    # Compute f=floor(raw^2/106666), then max(0,raw*106666-f^2).
-    # The dc macro z clears a negative result and replaces it with zero:
-    # d duplicates the result, and "0 >z" invokes z when 0 is greater than it.
-    # Finally divide by 1066666 and multiply by 10, preserving protocol rounding.
-    expected=$(dc_calc "$raw 106666 * $raw d * 106666 / d * - [c 0] sz d 0 >z 1066666 / 10 * p")
-    emit "Ki/normal/$raw" 4 "$raw" 0 0 0 "$expected"
+# Independently evaluate the total-stake multiplier using dc's arbitrary-size
+# integers. Operand a is whole Ki earned; b is total delegated stake in lamports.
+# Include sub-SOL rounding boundaries, the old curve's intercept, and UINT64_MAX.
+# The reference keeps K=500 and rounds x to ten SOL above one billion SOL.
+# This is mathematically equivalent to changing units in the production code;
+# dc can safely evaluate the full product and quotient directly.
+function ki_reference ()
+{
+    local raw=$1 stake=$2 stake_sol
+    stake_sol=$(dc_calc "$stake 1000000000 / p")
+    if [ "$stake_sol" -gt 1000000000 ]; then
+        stake_sol=$(dc_calc "$stake_sol 10 / 10 * p")
+    fi
+    dc_calc "$raw 10 * 500 500 $stake_sol + * * 250000 500 $stake_sol * + $stake_sol d * + / p"
+}
+
+for stake in 0 1 999999999 1000000000 10000000000 20000000000 250000000000 500000000000                              \
+             1000000000000 1000999999999 2500000000000 5000000000000                                                 \
+             10000000000000 25000000000000                                                                           \
+             50000000000000 100000000000000 106666000000000 500000000000000                                          \
+             999999999999999999 1000000000000000000 1000000000999999999                                              \
+             1000000001000000000 1000000009000000000 1000000010000000000 "$MAX"; do
+    for raw in 0 1 10 1000 200000 1844674407370955161; do
+        # Convert to deciKi first, then apply K*(K+x)/(K*K+K*x+x*x), K=500.
+        expected=$(ki_reference "$raw" "$stake")
+        emit "Ki/stake/$stake/earnings/$raw" 4 "$raw" "$stake" 0 0 "$expected"
+    done
 done
-# On multiplication overflow, BPF checks the flag and ignores the numeric result.
+# Random wide inputs exercise binary division and large total stakes.
+for ((i=0; i<64; ++i)); do
+    stake=${random_values[i]}
+    raw=$(dc_calc "${random_values[i+64]} 1844674407370955162 % p")
+    expected=$(ki_reference "$raw" "$stake")
+    emit "Ki/random/$i" 4 "$raw" "$stake" 0 0 "$expected"
+done
+# Overflow flags are sticky, and deciKi conversion must reject values above u64.
 emit Ki/multiplication-overflow 4 "$MAX" 0 0 0 0 1
-emit Ki/negative-reward 4 200000 0 0 0 0 0 0                                                                         \
-    'unsigned reduction underflow (current_issues.txt issue 3)'
+emit Ki/sticky-overflow 4 1 50000000000000 0 0 0 1 1
 
 # Commission is floor((current-baseline)*rate/65535). Start with the zero-delta,
 # zero-rate and full-rate endpoints before sampling bounded random earnings.

@@ -24,7 +24,15 @@ do not prevent later batches from running.
 Known defects print XFAIL with "currently expected to fail" and a reason. They
 do not fail the suite. XPASS fails the suite so fixed defects must have their
 expected-failure annotations reviewed. The current expected defects are price
-floor rounding, Ki reduction underflow, and commission overflow/underflow.
+floor rounding and commission overflow/underflow.
+
+Ki calculations scale earnings by effective total stake, using a 500 SOL
+asymptote: effective(x) = 500*x*(500+x)/(250000+500*x+x*x).
+The curve input is delegated stake rounded down to whole SOL. Above one billion
+SOL it rounds down to ten SOL to keep all calculations within uint64_t.
+Earnings are converted to deciKi before applying the ratio.
+Operation 4 takes whole Ki earnings in argument a and total stake lamports in b.
+Vectors cover small balances, rounding boundaries, large stakes, and overflow.
 
 Requirements: pinned Agave 4.4.0 and platform-tools v1.57 on Linux x86_64,
 solxact, Bash, dc, jq, curl, and standard Linux coreutils.
@@ -40,7 +48,7 @@ Occupied blocks are rejected. The runner stops only its own validator PID.
 Set KEEP_CALCULATION_LEDGER=1 to retain artifacts, logs, and ledger for diagnosis.
 --limit N runs only the first N cases; --verbose prints every individual result.
 
-To compile only: bash test/build_calculation_tests.sh /tmp/calculation-build
+To compile only: mkdir -p /tmp/codex; TMPDIR=/tmp/codex bash test/build_calculation_tests.sh /tmp/codex/calculation-build
 To inspect the vectors without a validator: bash test/calculation_vectors.sh
 
 Vectors are pipe-delimited rows: name, expected-failure reason (possibly empty),

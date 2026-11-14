@@ -101,23 +101,53 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
     return result;
 }
 
-// Preserves the existing integer rounding and overflow behavior.
-static uint64_t compute_ki_reduction(uint64_t harvest_amount, bool *overflow)
+// Scale whole Ki earnings by effective stake / actual stake, returning deciKi.
+// For x SOL and K = 500 SOL, effective(x) = ((K * x) * (K + x)) / ((K * K) + (K * x) + (x * x)).
+// Cancelling x gives the multiplier (K * (K + x)) / ((K * K) + (K * x) + (x * x)), also defined at zero.
+static uint64_t compute_ki_harvest(uint64_t harvest_amount, uint64_t stake_lamports, bool *overflow)
 {
-    // Reduce the amount to harvest, to discourage very large Ki harvests per entry.  The amount to harvest is the
-    // function:
-    // x = (x - (x^4/106666^3))
-    // To avoid rounding errors, this is refactored.
-    uint64_t f = checked_multiply(harvest_amount, harvest_amount, overflow) / 106666ul;
+    // Round the curve input down by less than one SOL for ordinary balances.
+    uint64_t stake_sol = stake_lamports / 1000000000ul;
+    uint64_t ceiling_sol = 500ul;
 
-    // harvest_amount * 10666ul cannot overflow since the original value was divided by LAMPORTS_PER_SOL
-    harvest_amount = ((harvest_amount * 106666ul) - checked_multiply(f, f, overflow)) / 1066666ul;
+    // Above one billion SOL, use ten-SOL units for BOTH x and K. This leaves the ratio unchanged apart from rounding
+    // the input down by less than ten SOL. Even UINT64_MAX lamports then gives x <= 1,844,674,407 units.
+    if (stake_sol > 1000000000ul) {
+        stake_sol /= 10;
+        ceiling_sol /= 10;
+    }
 
-    // Because Ki tokens have a decimal place count of 1, which is necessary to comply with metaplex metadata
-    // standards for fungible tokens, multiply the actual number of Ki by 10.
-    harvest_amount = checked_multiply(harvest_amount, 10, overflow);
+    // In either unit system, the numerator is below 501 billion and the denominator is below 3.5 quintillion. Even
+    // three times the denominator fits in uint64_t, which also bounds the division intermediates below.
+    uint64_t numerator = ceiling_sol * (ceiling_sol + stake_sol);
+    uint64_t denominator = numerator + (stake_sol * stake_sol);
 
-    return harvest_amount;
+    // Convert to the token's one-decimal-place units before reducing earnings.
+    uint64_t deciki = checked_multiply(harvest_amount, 10, overflow);
+    if (*overflow) {
+        return 0;
+    }
+
+    // Compute floor((deciki * numerator) / denominator) without forming the product, which could overflow even though
+    // the final answer fits in uint64_t.  Process one input bit at a time. The remainder stays below denominator;
+    // each step is below (3 * denominator) and requires at most two subtractions.  Because numerator <= denominator,
+    // the final result fits in uint64_t.
+    uint64_t remainder = 0;
+    uint64_t result = 0;
+    for (unsigned bit = 64; bit > 0; --bit) {
+        remainder = (remainder << 1) + (((deciki >> (bit - 1)) & 1) ? numerator : 0);
+        uint64_t digit = 0;
+        if (remainder >= denominator) {
+            remainder -= denominator;
+            digit = 1;
+            if (remainder >= denominator) {
+                remainder -= denominator;
+                digit = 2;
+            }
+        }
+        result = (result << 1) + digit;
+    }
+    return result;
 }
 
 static uint64_t compute_commission(uint64_t current_stake, uint64_t baseline, uint16_t commission)

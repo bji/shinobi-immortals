@@ -18,8 +18,14 @@ static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInf
         return 0;
     }
 
-    // Keep track of overflow.  If overflow occurs at all, then the harvest is zero.  Overflow can only occur in
-    // situations where the Ki earnings were so large that they would be zero under the reduction schedule.
+    // A decrease in delegated stake is not earnings. Reset the baseline rather than allowing unsigned subtraction to
+    // turn that decrease into a reward.
+    if (stake->stake.delegation.stake < entry->owned.last_ki_harvest_stake_account_lamports) {
+        entry->owned.last_ki_harvest_stake_account_lamports = stake->stake.delegation.stake;
+        return 0;
+    }
+
+    // Keep track of overflow; an unrepresentable harvest must not mint tokens.
     bool overflow = false;
 
     // Amount of Ki to harvest is the stake account earnings since the last harvest: it is the number of SOL earned
@@ -30,7 +36,9 @@ static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInf
 
     // If there is potentially Ki to harvest, then harvest it
     if (harvest_amount > 0) {
-        harvest_amount = compute_ki_reduction(harvest_amount, &overflow);
+        // Scale earnings by the effective-to-actual total stake ratio. The curve limits effective stake to 500 SOL,
+        // not Ki per harvest.
+        harvest_amount = compute_ki_harvest(harvest_amount, stake->stake.delegation.stake, &overflow);
 
         // Only if the amount to harvest is > 0, and only if an overflow didn't occur when computing it, is the
         // harvest of tokens performed

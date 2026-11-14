@@ -81,7 +81,7 @@ uint64_t entrypoint(const uint8_t *input)
             break;
 
         case 4:
-            actual_result = compute_ki_reduction(a, &overflow);
+            actual_result = compute_ki_harvest(a, b, &overflow);
             break;
 
         case 5:
