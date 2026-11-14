@@ -8,7 +8,7 @@ if should_run_test admin_set_block_commission_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $BLOCK_PUBKEY w                                                                                   \
            // Instruction code 6 = SetBlockCommission //                                                             \
@@ -30,7 +30,7 @@ if should_run_test admin_set_block_commission_bad_data_size; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            // Instruction code 6 = SetBlockCommission //                                                             \
@@ -51,7 +51,7 @@ if should_run_test admin_set_block_commission_bad_block; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            // Instruction code 6 = SetBlockCommission //                                                             \

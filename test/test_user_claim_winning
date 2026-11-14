@@ -3,10 +3,10 @@ BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
 BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
 BYTE_3=`echo -n 3 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA3=`(echo -n 3; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA3=`(echo -n 3; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -273,7 +273,7 @@ if should_run_test user_claim_winning_bad_bidding_account; then
            account $RICH_USER2_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY w                                                                                   \
            account $BID_PUBKEY w                                                                                     \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $TOKEN_PUBKEY w                                                                                   \
            account $MINT_PUBKEY                                                                                      \
@@ -308,9 +308,9 @@ if should_run_test user_claim_winning_bad_entry; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $BID_PUBKEY w                                                                                     \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $TOKEN_PUBKEY w                                                                                   \
            account $MINT_PUBKEY                                                                                      \
@@ -347,7 +347,7 @@ if should_run_test user_claim_winning_bad_admin; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY w                                                                                   \
            account $BID_PUBKEY w                                                                                     \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY w                                                                              \
            account $TOKEN_PUBKEY w                                                                                   \
            account $MINT_PUBKEY                                                                                      \
@@ -384,9 +384,9 @@ if should_run_test user_claim_winning_bad_token; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY w                                                                                   \
            account $BID_PUBKEY w                                                                                     \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $MINT_PUBKEY                                                                                      \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
@@ -421,10 +421,10 @@ if should_run_test user_claim_winning_bad_mint; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY w                                                                                   \
            account $BID_PUBKEY w                                                                                     \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $TOKEN_PUBKEY w                                                                                   \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
@@ -457,7 +457,7 @@ if should_run_test user_claim_winning_bad_bid; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY w                                                                                   \
            account $ENTRY_PUBKEY w                                                                                   \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $TOKEN_PUBKEY w                                                                                   \
            account $MINT_PUBKEY                                                                                      \
@@ -499,7 +499,7 @@ if should_run_test user_claim_winning_bad_bid_2; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY w                                                                                   \
            account $BAD_BID_PUBKEY w                                                                                 \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $TOKEN_PUBKEY w                                                                                   \
            account $MINT_PUBKEY                                                                                      \

@@ -8,7 +8,7 @@ static uint64_t user_claim_winning(const SolParameters *params)
         DECLARE_ACCOUNT(0,   bidding_account,                  ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(1,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,   bid_account,                      ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(3,   config_account,                   ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(3,   state_account,                    ReadOnly,   NotSigner,  KnownAccount_ProgramState);
         DECLARE_ACCOUNT(4,   admin_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   entry_token_account,              ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(6,   entry_mint_account,               ReadOnly,   NotSigner,  KnownAccount_NotKnown);
@@ -44,7 +44,7 @@ static uint64_t user_claim_winning(const SolParameters *params)
     }
 
     // Ensure that the correct admin account was passed in
-    if (!is_admin_account(config_account, admin_account->key)) {
+    if (!is_admin_account(state_account, admin_account->key)) {
         return Error_InvalidAccount_First + 4;
     }
 

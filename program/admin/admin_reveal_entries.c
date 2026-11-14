@@ -46,7 +46,7 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
-        DECLARE_ACCOUNT(0,   config_account,                ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(0,   state_account,                 ReadOnly,   NotSigner,  KnownAccount_ProgramState);
         DECLARE_ACCOUNT(1,   admin_account,                 ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,   block_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
@@ -61,7 +61,7 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(6 + (entry_count * 2));
 
     // Ensure the the transaction has been authenticated by the admin
-    if (!is_admin_account(config_account, admin_account->key)) {
+    if (!is_admin_account(state_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
 

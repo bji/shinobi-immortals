@@ -1,9 +1,9 @@
 BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
 BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -25,13 +25,13 @@ if [ -z "$TESTS" ]; then
 
     # Delegate the delegated stake accounts
     echo "Delegating $LEDGER/delegated2_stake.json"
-    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated2_stake.json $VOTE_PUBKEY                 \
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated2_stake.json $VOTE_PUBKEY                 \
            >/dev/null 2>/dev/null
     echo "Delegating $LEDGER/delegated2_stake2.json"
-    solana -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated2_stake2.json $VOTE_PUBKEY                \
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated2_stake2.json $VOTE_PUBKEY                \
            >/dev/null 2>/dev/null
     echo "Delegating $LEDGER/delegated2_stake3.json"
-    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated2_stake3.json $VOTE_PUBKEY                \
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated2_stake3.json $VOTE_PUBKEY                \
            >/dev/null 2>/dev/null
 
     # 14 0
@@ -190,7 +190,7 @@ if should_run_test user_destake_bad_block; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -241,7 +241,7 @@ if should_run_test user_destake_bad_entry; then
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY                                                                                     \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \

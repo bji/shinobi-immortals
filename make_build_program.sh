@@ -27,7 +27,7 @@ STAKE_HISTORY_SYSVAR_PUBKEY=SysvarStakeHistory1111111111111111111111111
 STAKE_CONFIG_SYSVAR_PUBKEY=StakeConfig11111111111111111111111111111111
 
 # program derived addresses, emitted by the solxact program in form PUBKEY.BUMP_SEED
-CONFIG_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 1 ]`
+STATE_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 1 ]`
 AUTHORITY_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 2 ]`
 MASTER_STAKE_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 3 ]`
 KI_MINT_PDA=`solxact pda bytes $SELF_PROGRAM_PUBKEY [ u8 4 ]`
@@ -60,7 +60,7 @@ SUPERUSER_PUBKEY_ARRAY=`solxact pubkey bytes $SUPERUSER_PUBKEY`
 SELF_PROGRAM_PUBKEY_ARRAY=`solxact pubkey bytes $SELF_PROGRAM_PUBKEY`
 
 # pubkeys that are PDAs
-CONFIG_PUBKEY_ARRAY=`echo $CONFIG_PDA | cut -d '.' -f 1`
+STATE_PUBKEY_ARRAY=`echo $STATE_PDA | cut -d '.' -f 1`
 AUTHORITY_PUBKEY_ARRAY=`echo $AUTHORITY_PDA | cut -d '.' -f 1`
 MASTER_STAKE_PUBKEY_ARRAY=`echo $MASTER_STAKE_PDA | cut -d '.' -f 1`
 KI_MINT_PUBKEY_ARRAY=`echo $KI_MINT_PDA | cut -d '.' -f 1`
@@ -69,7 +69,7 @@ BID_MARKER_MINT_PUBKEY_ARRAY=`echo $BID_MARKER_MINT_PDA | cut -d '.' -f 1`
 BID_MARKER_METADATA_PUBKEY_ARRAY=`echo $BID_MARKER_METADATA_PDA | cut -d '.' -f 1`
 
 # bump seeds that derive PDAs
-CONFIG_BUMP_SEED=`echo $CONFIG_PDA | cut -d '.' -f 2`
+STATE_BUMP_SEED=`echo $STATE_PDA | cut -d '.' -f 2`
 AUTHORITY_BUMP_SEED=`echo $AUTHORITY_PDA | cut -d '.' -f 2`
 MASTER_STAKE_BUMP_SEED=`echo $MASTER_STAKE_PDA | cut -d '.' -f 2`
 KI_MINT_BUMP_SEED=`echo $KI_MINT_PDA | cut -d '.' -f 2`
@@ -88,7 +88,7 @@ RENT_SYSVAR_PUBKEY_C_ARRAY=`echo "$RENT_SYSVAR_PUBKEY_ARRAY" | tr '[' '{' | tr '
 STAKE_HISTORY_SYSVAR_PUBKEY_C_ARRAY=`echo "$STAKE_HISTORY_SYSVAR_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
 STAKE_CONFIG_SYSVAR_PUBKEY_C_ARRAY=`echo "$STAKE_CONFIG_SYSVAR_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
 SHINOBI_SYSTEMS_VOTE_PUBKEY_C_ARRAY=`echo "$SHINOBI_SYSTEMS_VOTE_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
-CONFIG_PUBKEY_C_ARRAY=`echo "$CONFIG_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
+STATE_PUBKEY_C_ARRAY=`echo "$STATE_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
 AUTHORITY_PUBKEY_C_ARRAY=`echo "$AUTHORITY_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
 MASTER_STAKE_PUBKEY_C_ARRAY=`echo "$MASTER_STAKE_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
 KI_MINT_PUBKEY_C_ARRAY=`echo "$KI_MINT_PUBKEY_ARRAY" | tr '[' '{' | tr ']' '}'`
@@ -101,7 +101,7 @@ cat <<EOF
 
 set -e
 
-CONFIG_BUMP_SEED="$CONFIG_BUMP_SEED"
+STATE_BUMP_SEED="$STATE_BUMP_SEED"
 AUTHORITY_BUMP_SEED="$AUTHORITY_BUMP_SEED"
 MASTER_STAKE_BUMP_SEED="$MASTER_STAKE_BUMP_SEED"
 KI_MINT_BUMP_SEED="$KI_MINT_BUMP_SEED"
@@ -118,7 +118,7 @@ RENT_SYSVAR_PUBKEY_C_ARRAY="$RENT_SYSVAR_PUBKEY_C_ARRAY"
 STAKE_HISTORY_SYSVAR_PUBKEY_C_ARRAY="$STAKE_HISTORY_SYSVAR_PUBKEY_C_ARRAY"
 STAKE_CONFIG_SYSVAR_PUBKEY_C_ARRAY="$STAKE_CONFIG_SYSVAR_PUBKEY_C_ARRAY"
 SHINOBI_SYSTEMS_VOTE_PUBKEY_C_ARRAY="$SHINOBI_SYSTEMS_VOTE_PUBKEY_C_ARRAY"
-CONFIG_PUBKEY_C_ARRAY="$CONFIG_PUBKEY_C_ARRAY"
+STATE_PUBKEY_C_ARRAY="$STATE_PUBKEY_C_ARRAY"
 AUTHORITY_PUBKEY_C_ARRAY="$AUTHORITY_PUBKEY_C_ARRAY"
 MASTER_STAKE_PUBKEY_C_ARRAY="$MASTER_STAKE_PUBKEY_C_ARRAY"
 KI_MINT_PUBKEY_C_ARRAY="$KI_MINT_PUBKEY_C_ARRAY"
@@ -131,8 +131,8 @@ BID_MARKER_METADATA_PUBKEY_C_ARRAY="$BID_MARKER_METADATA_PUBKEY_C_ARRAY"
     program.so                                                                             \\
     -I\$SOURCE_ROOT/program                                                                \\
     -DSUPERUSER_PUBKEY_ARRAY="\$SUPERUSER_PUBKEY_C_ARRAY"                                  \\
-    -DCONFIG_PUBKEY_ARRAY="\$CONFIG_PUBKEY_C_ARRAY"                                        \\
-    -DCONFIG_BUMP_SEED="\$CONFIG_BUMP_SEED"                                                \\
+    -DSTATE_PUBKEY_ARRAY="\$STATE_PUBKEY_C_ARRAY"                                          \\
+    -DSTATE_BUMP_SEED="\$STATE_BUMP_SEED"                                                  \\
     -DAUTHORITY_PUBKEY_ARRAY="\$AUTHORITY_PUBKEY_C_ARRAY"                                  \\
     -DAUTHORITY_BUMP_SEED="\$AUTHORITY_BUMP_SEED"                                          \\
     -DMASTER_STAKE_PUBKEY_ARRAY="\$MASTER_STAKE_PUBKEY_C_ARRAY"                            \\

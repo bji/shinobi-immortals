@@ -9,7 +9,7 @@ if should_run_test super_initialize_wrong_super; then
            program $SELF_PROGRAM_PUBKEY                                                                              \
            // Incorrect super user account //                                                                        \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -44,7 +44,7 @@ if should_run_test super_initialize_unsigned_super; then
            program $SELF_PROGRAM_PUBKEY                                                                              \
            // Correct super user account but not a signer //                                                         \
            account $SUPERUSER_PUBKEY                                                                                 \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -70,15 +70,15 @@ if should_run_test super_initialize_unsigned_super; then
         | solxact submit l 2>&1`
 fi
 
-# Issue an invalid super_initialize tx with wrong config
-if should_run_test super_initialize_wrong_config; then
-    assert_fail super_initialize_wrong_config                                                                        \
+# Issue an invalid super_initialize tx with wrong state
+if should_run_test super_initialize_wrong_state; then
+    assert_fail super_initialize_wrong_state                                                                         \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           // Incorrect config account //                                                                            \
+           // Incorrect state account //                                                                             \
            account $RICH_USER2_PUBKEY w                                                                              \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
@@ -105,16 +105,16 @@ if should_run_test super_initialize_wrong_config; then
         | solxact submit l 2>&1`
 fi
 
-# Issue an invalid super_initialize tx with wrong config permissions
-if should_run_test super_initialize_wrong_config_permissions; then
-    assert_fail super_initialize_wrong_config_permissions                                                            \
+# Issue an invalid super_initialize tx with wrong state permissions
+if should_run_test super_initialize_wrong_state_permissions; then
+    assert_fail super_initialize_wrong_state_permissions                                                             \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b1'                     \
     `echo "encoding c                                                                                                \
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           // Correct config account, wrong permissions (should be w) //                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           // Correct state account, wrong permissions (should be w) //                                              \
+           account $STATE_PUBKEY                                                                                     \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -148,7 +148,7 @@ if should_run_test super_initialize_wrong_authority; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            // Incorrect authority account //                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
            account $MASTER_STAKE_PUBKEY w                                                                            \
@@ -183,7 +183,7 @@ if should_run_test super_initialize_wrong_authority_permissions; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            // Correct authority account, wrong permissions (should be w) //                                          \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $MASTER_STAKE_PUBKEY w                                                                            \
@@ -218,7 +218,7 @@ if should_run_test super_initialize_wrong_master_stake; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            // Incorrect master stake account //                                                                      \
            account $RICH_USER2_PUBKEY w                                                                              \
@@ -253,7 +253,7 @@ if should_run_test super_initialize_wrong_master_stake_permissions; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            // Correct master stake account, wrong permissions (should be w) //                                       \
            account $MASTER_STAKE_PUBKEY                                                                              \
@@ -287,7 +287,7 @@ if should_run_test super_initialize_wrong_vote_account; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            // Wrong Shinobi Systems vote account //                                                                  \
@@ -322,7 +322,7 @@ if should_run_test super_initialize_wrong_ki_mint; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -357,7 +357,7 @@ if should_run_test super_initialize_wrong_ki_mint_permissions; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -392,7 +392,7 @@ if should_run_test super_initialize_wrong_ki_metadata; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -427,7 +427,7 @@ if should_run_test super_initialize_wrong_ki_metadata_permissions; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -462,7 +462,7 @@ if should_run_test super_initialize_wrong_bid_marker_mint; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -497,7 +497,7 @@ if should_run_test super_initialize_wrong_bid_marker_mint_permissions; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -532,7 +532,7 @@ if should_run_test super_initialize_wrong_bid_marker_metadata; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -567,7 +567,7 @@ if should_run_test super_initialize_wrong_bid_marker_metadata_permissions; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -602,7 +602,7 @@ if should_run_test super_initialize_wrong_clock_sysvar; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -637,7 +637,7 @@ if should_run_test super_initialize_wrong_rent_sysvar; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -672,7 +672,7 @@ if should_run_test super_initialize_wrong_stake_history_sysvar; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -707,7 +707,7 @@ if should_run_test super_initialize_wrong_stake_config; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -742,7 +742,7 @@ if should_run_test super_initialize_wrong_system_program; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -777,7 +777,7 @@ if should_run_test super_initialize_wrong_stake_program; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -812,7 +812,7 @@ if should_run_test super_initialize_wrong_spl_token_program; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -847,7 +847,7 @@ if should_run_test super_initialize_wrong_metaplex_program; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -882,7 +882,7 @@ if should_run_test super_initialize_missing_account; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -915,7 +915,7 @@ if should_run_test super_initialize_short_data; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -947,7 +947,7 @@ if should_run_test super_initialize_long_data; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -985,7 +985,7 @@ if should_run_test super_initialize_insufficent_lamports; then
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $VOTE_PUBKEY                                                                                      \
@@ -1014,10 +1014,10 @@ if should_run_test super_initialize_insufficent_lamports; then
 fi    
 
 
-# Issue a valid super_initialize tx and check to make sure that the correct config account was created
-# This test cannot be skipped since the creation of a config account is a prerequisite for all other tests
-# Send lamports to the config account, to ensure that if the account already exists, it is properly re-owned
-transfer $LEDGER/admin.json $CONFIG_PUBKEY 0.1
+# Issue a valid super_initialize tx and check to make sure that the correct state account was created
+# This test cannot be skipped since the creation of a state account is a prerequisite for all other tests
+# Send lamports to the state account, to ensure that if the account already exists, it is properly re-owned
+transfer $LEDGER/admin.json $STATE_PUBKEY 0.1
 assert super_initialize_success                                                                                      \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY                                   \
      $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $ADMIN_PUBKEY                                          \
@@ -1025,12 +1025,12 @@ assert super_initialize_success                                                 
     | solxact sign $LEDGER/super.json                                                                                \
     | solxact submit l 2>&1`
 
-# Ensure that the config account was created and that its contents are as expected -- should be the admin pubkey
-EXPECTED_CONFIG_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
-CONFIG_ACCOUNT_DATA=`get_account_data $CONFIG_PUBKEY`
-if [ "$EXPECTED_CONFIG_ACCOUNT_DATA" != "$CONFIG_ACCOUNT_DATA" ]; then
+# Ensure that the state account was created and that its contents are as expected -- should be the admin pubkey
+EXPECTED_STATE_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
+STATE_ACCOUNT_DATA=`get_account_data $STATE_PUBKEY 0 36`
+if [ "$EXPECTED_STATE_ACCOUNT_DATA" != "$STATE_ACCOUNT_DATA" ]; then
     echo "FAIL: super_initialize_success: Incorrect account contents:"
-    diff <(echo "$EXPECTED_CONFIG_ACCOUNT_DATA") <(echo "$CONFIG_ACCOUNT_DATA")
+    diff <(echo "$EXPECTED_STATE_ACCOUNT_DATA") <(echo "$STATE_ACCOUNT_DATA")
     exit 1
 fi
 
@@ -1038,6 +1038,8 @@ fi
 # Issue a valid additional super_initialize tx that should fail because the initialize cannot be repeated once
 # it is completed
 if should_run_test super_initialize_again; then
+    # Preserve the entire account so a rejected initialization cannot silently change any state.
+    STATE_ACCOUNT_BEFORE=$(get_account_data $STATE_PUBKEY)
     assert_fail super_initialize_again                                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY                               \
@@ -1045,13 +1047,21 @@ if should_run_test super_initialize_again; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
         | solxact submit l 2>&1`
+
+    STATE_ACCOUNT_AFTER=$(get_account_data $STATE_PUBKEY)
+    if [ "$STATE_ACCOUNT_BEFORE" != "$STATE_ACCOUNT_AFTER" ]; then
+        echo "FAIL: super_initialize_again changed state account contents:"
+        diff <(echo "$STATE_ACCOUNT_BEFORE") <(echo "$STATE_ACCOUNT_AFTER")
+        exit 1
+    fi
 fi
 
-# Ensure that the config account still has the expected contents
-EXPECTED_CONFIG_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
-CONFIG_ACCOUNT_DATA=`get_account_data $CONFIG_PUBKEY`
-if [ "$EXPECTED_CONFIG_ACCOUNT_DATA" != "$CONFIG_ACCOUNT_DATA" ]; then
+# Ensure that the state account still has the expected contents.  The whole account is compared, which also checks
+# that it is exactly 36 bytes (data type and admin pubkey).
+EXPECTED_STATE_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
+STATE_ACCOUNT_DATA=`get_account_data $STATE_PUBKEY`
+if [ "$EXPECTED_STATE_ACCOUNT_DATA" != "$STATE_ACCOUNT_DATA" ]; then
     echo "FAIL: super_initialize_success: Incorrect account contents:"
-    diff <(echo "$EXPECTED_CONFIG_ACCOUNT_DATA") <(echo "$CONFIG_ACCOUNT_DATA")
+    diff <(echo "$EXPECTED_STATE_ACCOUNT_DATA") <(echo "$STATE_ACCOUNT_DATA")
     exit 1
 fi

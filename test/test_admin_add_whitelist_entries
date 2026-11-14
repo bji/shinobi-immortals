@@ -8,7 +8,7 @@ if should_run_test admin_add_whitelist_entries_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY                                                                                     \
@@ -34,10 +34,10 @@ if should_run_test admin_add_whitelist_entries_bad_block; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $WHITELIST_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 8 = AddWhitelistEntries //                                                            \
@@ -61,11 +61,11 @@ if should_run_test admin_add_whitelist_entries_bad_whitelist; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $NONEXISTENT_PUBKEY                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 8 = AddWhitelistEntries //                                                            \
            u8 8                                                                                                      \
@@ -87,7 +87,7 @@ if should_run_test admin_add_whitelist_entries_count_too_small; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY                                                                                     \
@@ -112,7 +112,7 @@ if should_run_test admin_add_whitelist_entries_count_too_large; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY                                                                                     \
@@ -137,7 +137,7 @@ if should_run_test admin_add_whitelist_entries_short_data; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY                                                                                     \
@@ -163,7 +163,7 @@ if should_run_test admin_add_whitelist_entries_long_data; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY                                                                                     \

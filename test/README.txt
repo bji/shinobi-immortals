@@ -30,9 +30,14 @@ Ki calculations scale earnings by effective total stake, using a 500 SOL
 asymptote: effective(x) = 500*x*(500+x)/(250000+500*x+x*x).
 The curve input is delegated stake rounded down to whole SOL. Above one billion
 SOL it rounds down to ten SOL to keep all calculations within uint64_t.
-Earnings are converted to deciKi before applying the ratio.
-Operation 4 takes whole Ki earnings in argument a and total stake lamports in b.
-Vectors cover small balances, rounding boundaries, large stakes, and overflow.
+The ratio is applied to earned lamports first. Effective earnings are then
+converted to whole Ki with ki_factor, preserving fractional SOL until after
+multiplication. Only the final mint uses ten token base units per whole Ki.
+Operation 4 takes earned lamports in a and current stake lamports in b.
+Operation 16 converts effective lamports (a) with a uint32_t factor (b).
+Operation 17 checks the complete pipeline: earned lamports (a), current stake
+lamports (b), and ki_factor (c). Vectors include 500 epochs of earnings,
+50 effective SOL with UINT32_MAX factor, and full-range stake balances.
 
 Requirements: pinned Agave 4.4.0 and platform-tools v1.57 on Linux x86_64,
 solxact, Bash, dc, jq, curl, and standard Linux coreutils.
@@ -55,6 +60,7 @@ Vectors are pipe-delimited rows: name, expected-failure reason (possibly empty),
 operation, initial-overflow, expected-failure flag, expected-overflow, four
 arguments, expected value. A fixed-seed 64-bit LCG supplies repeatable random
 inputs; dc performs all wide arithmetic, including overflow reference results.
-Operations: 0 add, 1 multiply, 2 price, 3 minimum bid, 4 Ki, 5 commission.
+Operations: 0 add, 1 multiply, 2 price, 3 minimum bid, 4 Ki, 5 commission,
+6 window level credits, 7 cumulative level requirement, 8 multiply fraction.
 The driver keeps binary transactions in files and decodes returned unsigned
 64-bit values with od, without lossy shell/JSON numeric conversions.

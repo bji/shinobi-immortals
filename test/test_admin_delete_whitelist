@@ -8,7 +8,7 @@ if should_run_test admin_delete_whitelist_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY                                                                                     \
            account $WHITELIST_PUBKEY w                                                                               \
@@ -30,9 +30,9 @@ if should_run_test admin_delete_whitelist_wrong_block; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY ws                                                                                  \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $WHITELIST_PUBKEY w                                                                               \
            // Instruction code 9 = DeleteWhitelist //                                                                \
            u8 9"                                                                                                     \
@@ -52,10 +52,10 @@ if should_run_test admin_delete_whitelist_wrong_whitelist; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY                                                                                     \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            // Instruction code 9 = DeleteWhitelist //                                                                \
            u8 9"                                                                                                     \
         | solxact encode                                                                                             \

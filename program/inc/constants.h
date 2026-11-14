@@ -36,7 +36,7 @@
 // account types would result in overlapping addresses, the addresses in fact never overlap
 typedef enum
 {
-    PDA_Account_Seed_Prefix_Config = 1,
+    PDA_Account_Seed_Prefix_State = 1,
 
     PDA_Account_Seed_Prefix_Authority = 2,
 
@@ -83,12 +83,12 @@ typedef struct
     // This is the pubkey bytes of the superuser
     SolPubkey superuser_pubkey;
 
-    // This is the account address of the program config.  It is a program derived address using the
-    // program id and config_seed_bytes
-    SolPubkey config_pubkey;
+    // This is the account address of the program state.  It is a program derived address using the
+    // program id and state_seed_bytes
+    SolPubkey state_pubkey;
 
-    // These are the seed bytes used to derive the config_pubkey address
-    uint8_t config_seed_bytes[2];
+    // These are the seed bytes used to derive the state_pubkey address
+    uint8_t state_seed_bytes[2];
 
     // This is the account address of the authority account.  The authority account is used by the program as the
     // authority anywhere that an authority is needed, because the program can sign this authority.  This is computed
@@ -180,11 +180,11 @@ static const _Constants Constants =
     // superuser_pubkey
     SUPERUSER_PUBKEY_ARRAY,
 
-    // config_pubkey
-    CONFIG_PUBKEY_ARRAY,
+    // state_pubkey
+    STATE_PUBKEY_ARRAY,
 
-    // config_seed_bytes
-    { PDA_Account_Seed_Prefix_Config, CONFIG_BUMP_SEED },
+    // state_seed_bytes
+    { PDA_Account_Seed_Prefix_State, STATE_BUMP_SEED },
 
     // authority_pubkey
     AUTHORITY_PUBKEY_ARRAY,

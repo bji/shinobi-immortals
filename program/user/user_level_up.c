@@ -1,6 +1,14 @@
 #pragma once
 
-#include "util/util_math.c"
+#include "util/util_calculations.c"
+
+typedef struct
+{
+    uint8_t instruction_code;
+
+    uint64_t ki_to_apply;
+} LevelUpData;
+
 
 static uint64_t user_level_up(const SolParameters *params)
 {
@@ -19,10 +27,11 @@ static uint64_t user_level_up(const SolParameters *params)
     }
     DECLARE_ACCOUNTS_NUMBER(10);
 
-    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
-    if (params->data_len != 1) {
+    // Ensure that the instruction data is the correct size
+    if (params->data_len != sizeof(LevelUpData)) {
         return Error_InvalidDataSize;
     }
+    const LevelUpData *data = (const LevelUpData *) params->data;
 
     // This is the entry data
     Entry *entry = get_validated_entry(entry_account);
@@ -35,6 +44,15 @@ static uint64_t user_level_up(const SolParameters *params)
     if (sol_get_clock_sysvar(&clock)) {
         return Error_FailedToGetClock;
     }
+    // The current level credit window, numbered from the Unix epoch.  The cluster's clock is never before 1970,
+    // but don't allow a negative timestamp to be converted into a huge unsigned window number.
+    if (clock.unix_timestamp < 0) {
+        return Error_FailedToGetClock;
+    }
+    // A clock that has stepped backwards is clamped to the entry's recorded window, so that it can never be used to
+    // obtain a fresh credit curve (see compute_level_credit_window)
+    uint64_t window = compute_level_credit_window((uint64_t) clock.unix_timestamp,
+                                                  entry->most_recent_ki_applied_window, LEVEL_CREDIT_WINDOW_SECONDS);
 
     // Check to make sure that the entry is Owned or OwnedAndStaked
     switch (get_entry_state(0, entry, &clock)) {
@@ -59,17 +77,71 @@ static uint64_t user_level_up(const SolParameters *params)
         return Error_InvalidAccount_First + 3;
     }
 
-    // Compute how much Ki to burn from the source account.  Since on-chain Ki are stored with decimal places 1,
-    // or in other words "DeciKi", multiply ki_to_burn by 10 since 10 on-chain tokens equals one Ki.  Keep track
-    // of overflow, and if it occurs, use the maximum value.
-    bool overflow = false;
-    uint64_t ki_to_burn = checked_multiply(entry->metadata.level_1_ki, 10, &overflow);
-    for (uint8_t i = 0; i < entry->level; i++) {
-        // Multiply by 1.5x
-        ki_to_burn = checked_add(ki_to_burn, (ki_to_burn >> 1), &overflow);
+    // Contributions must be positive and use a fixed level-zero ki_factor.
+    // Changing levels must not change the curve within a window or retroactively
+    // change the credit attributed to earlier contributions in that window.
+    if (!data->ki_to_apply || !entry->metadata.level_1_credits ||
+        !entry->metadata.level_metadata[0].ki_factor || !entry->metadata.expected_annual_reward_bps) {
+        return Error_InvalidData_First;
     }
 
-    // If overflow occurred, then use the max value.
+    // Reset only the window's raw contribution counter; lifetime credits persist.
+    uint64_t previous_ki = ((entry->most_recent_ki_applied_window == window) ? entry->ki_applied_this_window : 0);
+    bool overflow = false;
+    uint64_t old_credits = compute_level_credits(entry->metadata.level_1_credits,
+                                                 entry->metadata.level_metadata[0].ki_factor,
+                                                 entry->metadata.expected_annual_reward_bps,
+                                                 previous_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &overflow);
+    if (overflow) {
+        return Error_InvalidData_First;
+    }
+
+    // Never burn more Ki than is needed to reach the maximum level.  The credits still needed are the level 9
+    // requirement less the credits already earned; the window curve must therefore reach old_credits plus that
+    // amount.  Find the smallest window Ki total that does so, and limit this contribution to the difference between
+    // that and what the window has already received.  The entry is below level 9 (checked above), so it still needs
+    // credits; and since metadata cannot change after reveal, total_level_credits is below the level 9 requirement.
+    uint64_t max_level_requirement = compute_level_requirement(entry->metadata.level_1_credits, 8);
+    uint64_t ki_to_apply = data->ki_to_apply;
+    if (entry->total_level_credits >= max_level_requirement) {
+        // Defensive only: there is nothing left to earn, so no Ki would be burned
+        return Error_AlreadyAtMaxLevel;
+    }
+    uint64_t target_credits = checked_add(old_credits, max_level_requirement - entry->total_level_credits, &overflow);
+    if (overflow) {
+        return Error_InvalidData_First;
+    }
+    uint64_t ki_needed = compute_level_credits_ki_needed(entry->metadata.level_1_credits,
+                                                         entry->metadata.level_metadata[0].ki_factor,
+                                                         entry->metadata.expected_annual_reward_bps,
+                                                         target_credits, LEVEL_CREDIT_WINDOWS_PER_YEAR);
+    // UINT64_MAX means the remaining credits cannot all be earned in this window, so no limit applies.  Otherwise
+    // ki_needed > previous_ki, because previous_ki only reaches old_credits, which is below the target.
+    if ((ki_needed != UINT64_MAX) && (ki_needed > previous_ki) && (ki_to_apply > (ki_needed - previous_ki))) {
+        ki_to_apply = ki_needed - previous_ki;
+    }
+    // Fail rather than burn nothing
+    if (!ki_to_apply) {
+        return Error_AlreadyAtMaxLevel;
+    }
+
+    uint64_t new_ki = checked_add(previous_ki, ki_to_apply, &overflow);
+    uint64_t new_credits = compute_level_credits(entry->metadata.level_1_credits,
+                                                 entry->metadata.level_metadata[0].ki_factor,
+                                                 entry->metadata.expected_annual_reward_bps,
+                                                 new_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &overflow);
+    if (overflow || (new_credits < old_credits)) {
+        return Error_InvalidData_First;
+    }
+    uint64_t total_credits = checked_add(entry->total_level_credits, new_credits - old_credits, &overflow);
+    if (overflow) {
+        return Error_InvalidData_First;
+    }
+
+    // The number of mint Tokens to actually use is 10 times the number of Ki, because the Mint stores 10 mint tokens
+    // per 1 Ki due to the fact that it has 1 decimal place.  Only the (possibly limited) amount actually applied is
+    // burned, and only that amount needs to be present in the source account.
+    uint64_t ki_to_burn = checked_multiply(ki_to_apply, 10, &overflow);
     if (overflow) {
         ki_to_burn = UINT64_MAX;
     }
@@ -87,9 +159,19 @@ static uint64_t user_level_up(const SolParameters *params)
         return ret;
     }
 
-    // Increase the entry's level
-    entry->level += 1;
+    entry->most_recent_ki_applied_window = window;
+    entry->ki_applied_this_window = new_ki;
+    entry->total_level_credits = total_credits;
 
-    // Update the metaplex metadata
-    return set_metaplex_metadata_for_level(entry, entry->level, entry_metadata_account, params->ka, params->ka_num);
+    // One contribution can cross multiple cumulative thresholds. It can also
+    // earn credits without changing level; update metadata only when needed.
+    uint8_t previous_level = entry->level;
+    while ((entry->level < 8) &&
+           (total_credits >= compute_level_requirement(entry->metadata.level_1_credits, entry->level + 1))) {
+        entry->level++;
+    }
+    if (entry->level != previous_level) {
+        return set_metaplex_metadata_for_level(entry, entry->level, entry_metadata_account, params->ka, params->ka_num);
+    }
+    return 0;
 }

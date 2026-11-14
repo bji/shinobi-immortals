@@ -5,7 +5,7 @@
 #include "inc/constants.h"
 #include "inc/error.h"
 #include "inc/instruction_accounts.h"
-#include "inc/program_config.h"
+#include "inc/program_state.h"
 #include "util/util_accounts.c"
 
 // Data passed to this program for UpdateAdmin function
@@ -23,7 +23,7 @@ static uint64_t super_set_admin(const SolParameters *params)
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
         DECLARE_ACCOUNT(0,   superuser_account,             ReadOnly,   Signer,     KnownAccount_SuperUser);
-        DECLARE_ACCOUNT(1,   config_account,                ReadWrite,  NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(1,   state_account,                 ReadWrite,  NotSigner,  KnownAccount_ProgramState);
     }
     DECLARE_ACCOUNTS_NUMBER(2);
 
@@ -34,20 +34,20 @@ static uint64_t super_set_admin(const SolParameters *params)
 
     const UpdateAdminData *data = (UpdateAdminData *) params->data;
 
-    // Ensure that the config account data is the correct size
-    if (config_account->data_len != sizeof(ProgramConfig)) {
+    // Ensure that the program_state account data is the correct size
+    if (state_account->data_len != sizeof(ProgramState)) {
         return Error_InvalidAccount_First + 1;
     }
 
-    ProgramConfig *config = (ProgramConfig *) (config_account->data);
+    ProgramState *program_state = (ProgramState *) (state_account->data);
 
-    // Ensure that the config account is of the correct type
-    if (config->data_type != DataType_ProgramConfig) {
+    // Ensure that the program_state account is of the correct type
+    if (program_state->data_type != DataType_ProgramState) {
         return Error_InvalidAccount_First + 1;
     }
 
     // Update the admin pubkey
-    config->admin_pubkey = data->admin_pubkey;
+    program_state->admin_pubkey = data->admin_pubkey;
 
     return 0;
 }

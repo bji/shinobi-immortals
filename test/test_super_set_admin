@@ -1,4 +1,3 @@
-
 # Make sure that set_admin can only be done by the superuser
 if should_run_test super_set_admin_wrong_super; then
     assert_fail super_set_admin_wrong_super                                                                          \
@@ -8,7 +7,7 @@ if should_run_test super_set_admin_wrong_super; then
            program $SELF_PROGRAM_PUBKEY                                                                              \
            // Wrong superuser //                                                                                     \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            // Instruction code 1 = UpdateAdmin //                                                                    \
            u8 1                                                                                                      \
            // Admin pubkey //                                                                                        \
@@ -21,14 +20,14 @@ fi
 
 
 # Make sure that attempting to overwrite some other account doesn't succeed
-if should_run_test super_set_admin_wrong_config; then
-    assert_fail super_set_admin_wrong_config                                                                         \
+if should_run_test super_set_admin_wrong_state; then
+    assert_fail super_set_admin_wrong_state                                                                         \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
            fee_payer $SUPERUSER_PUBKEY                                                                               \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $SUPERUSER_PUBKEY s                                                                               \
-           // Wrong config account //                                                                                \
+           // Wrong state account //                                                                                \
            account $SUPERUSER_PUBKEY w                                                                               \
            // Instruction code 1 = UpdateAdmin //                                                                    \
            u8 1                                                                                                      \
@@ -49,12 +48,12 @@ if should_run_test super_set_admin_success; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
         | solxact submit l 2>&1`
-    # Check to make sure that the config account has the expected contents
-    EXPECTED_CONFIG_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $RICH_USER1_PUBKEY) | base64`
-    CONFIG_ACCOUNT_DATA=`get_account_data $CONFIG_PUBKEY`
-    if [ "$EXPECTED_CONFIG_ACCOUNT_DATA" != "$CONFIG_ACCOUNT_DATA" ]; then
+    # Check to make sure that the state account has the expected contents
+    EXPECTED_STATE_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $RICH_USER1_PUBKEY) | base64`
+    STATE_ACCOUNT_DATA=`get_account_data $STATE_PUBKEY 0 36`
+    if [ "$EXPECTED_STATE_ACCOUNT_DATA" != "$STATE_ACCOUNT_DATA" ]; then
         echo "FAIL: super_set_admin_success (1): Incorrect account contents:"
-        diff <(echo "$EXPECTED_CONFIG_ACCOUNT_DATA") <(echo "$CONFIG_ACCOUNT_DATA")
+        diff <(echo "$EXPECTED_STATE_ACCOUNT_DATA") <(echo "$STATE_ACCOUNT_DATA")
         exit 1
     fi
     # Now change it back
@@ -64,12 +63,12 @@ if should_run_test super_set_admin_success; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
         | solxact submit l 2>&1`
-    # Check to make sure that the config account has the expected contents
-    EXPECTED_CONFIG_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
-    CONFIG_ACCOUNT_DATA=`get_account_data $CONFIG_PUBKEY`
-    if [ "$EXPECTED_CONFIG_ACCOUNT_DATA" != "$CONFIG_ACCOUNT_DATA" ]; then
+    # Check to make sure that the state account has the expected contents
+    EXPECTED_STATE_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
+    STATE_ACCOUNT_DATA=`get_account_data $STATE_PUBKEY 0 36`
+    if [ "$EXPECTED_STATE_ACCOUNT_DATA" != "$STATE_ACCOUNT_DATA" ]; then
         echo "FAIL: super_set_admin_success (2): Incorrect account contents:"
-        diff <(echo "$EXPECTED_CONFIG_ACCOUNT_DATA") <(echo "$CONFIG_ACCOUNT_DATA")
+        diff <(echo "$EXPECTED_STATE_ACCOUNT_DATA") <(echo "$STATE_ACCOUNT_DATA")
         exit 1
     fi
 fi

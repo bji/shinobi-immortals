@@ -9,8 +9,8 @@ typedef enum
     // account
     DataType_Invalid        = 0,
 
-    // Program config
-    DataType_ProgramConfig  = 1,
+    // Program state
+    DataType_ProgramState  = 1,
 
     // Block
     DataType_Block          = 2,

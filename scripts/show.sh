@@ -2,7 +2,7 @@
 
 function usage_exit ()
 {
-    echo "Usage: show.sh [-u $RPC_SPECIFIER] config"
+    echo "Usage: show.sh [-u $RPC_SPECIFIER] state"
     echo "       show.sh [-u $RPC_SPECIFIER] block <GROUP_NUMBER> <BLOCK_NUMBER>"
     echo "       show.sh [-u $RPC_SPECIFIER] entry <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>"
     echo "       show.sh [-u $RPC_SPECIFIER] bid <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <BIDDER_PUBKEY>"
@@ -265,7 +265,7 @@ fi
     METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
-              CONFIG_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
+              STATE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
            AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 2 ]`
         MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 3 ]`
              KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 ]`
@@ -281,7 +281,7 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
 
 case $1 in
 
-    config)
+    state)
 
         shift
 
@@ -289,10 +289,10 @@ case $1 in
             usage_exit
         fi
 
-        ACCOUNT_DATA=`get_account_data $RPC_URL $CONFIG_PUBKEY`
+        ACCOUNT_DATA=`get_account_data $RPC_URL $STATE_PUBKEY`
 
         if [ -z "$ACCOUNT_DATA" ]; then
-            echo "Config account does not exist"
+            echo "State account does not exist"
             exit 0
         fi
 
@@ -305,7 +305,12 @@ case $1 in
 
         ADMIN_PUBKEY=`get_data_pubkey 4 "$ACCOUNT_DATA"`
 
-        echo '{"config_account":"$CONFIG_PUBKEY","admin_pubkey":"$ADMIN_PUBKEY"}'
+        # State is 36 bytes: the data type followed by the admin pubkey
+        if [ "$(echo "$ACCOUNT_DATA" | base64 -d | wc -c)" -ne 36 ]; then
+            echo "State account has invalid size; expected 36"
+            exit 1
+        fi
+        printf '{"state_account":"%s","admin_pubkey":"%s"}\n' "$STATE_PUBKEY" "$ADMIN_PUBKEY"
     ;;
 
     block)
@@ -487,8 +492,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -ne 3032 ]; then
-            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected 3032"
+        if [ $ACCOUNT_DATA_LEN -ne 3056 ]; then
+            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3056"
             exit 1
         fi
 
@@ -569,9 +574,15 @@ case $1 in
 
         echo -n '"level":'`get_data_u8 328 "$ACCOUNT_DATA"`','
 
+        # Progression uses token-base-unit precision (tenths); these counters
+        # persist across stake changes and are appended after the old metadata.
+        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3032 "$ACCOUNT_DATA"`','
+        echo -n '"ki_applied_this_window":'`get_data_u64 3040 "$ACCOUNT_DATA"`','
+        echo -n '"total_level_credits":'`get_data_u64 3048 "$ACCOUNT_DATA"`','
+
         echo -n '"metadata":{'
 
-        echo -n '"level_1_ki":'`get_data_u32 332 "$ACCOUNT_DATA"`','
+        echo -n '"level_1_credits":'`get_data_u32 332 "$ACCOUNT_DATA"`','
 
         echo -n '"random":['
 
@@ -602,7 +613,9 @@ case $1 in
             fi
         done            
 
-        echo ']}}'
+        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3028 "$ACCOUNT_DATA"`
+
+        echo '}}'
 
     ;;
 

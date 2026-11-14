@@ -18,7 +18,7 @@ if should_run_test user_buy_wrong_admin; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY w                                                                              \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -62,7 +62,7 @@ if should_run_test user_buy_short_data; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -105,10 +105,10 @@ if should_run_test user_buy_bad_block; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $WHITELIST_PUBKEY w                                                                               \
            account $ENTRY_PUBKEY w                                                                                   \
            account $TOKEN_PUBKEY w                                                                                   \
@@ -134,9 +134,9 @@ fi
 BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
 BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -415,12 +415,12 @@ if should_run_test user_buy_wrong_entry; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BLOCK_PUBKEY w                                                                                   \
            account $WHITELIST_PUBKEY w                                                                               \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $TOKEN_PUBKEY w                                                                                   \
            account $MINT_PUBKEY                                                                                      \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
@@ -461,7 +461,7 @@ if should_run_test user_buy_wrong_entry_2; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -508,7 +508,7 @@ if should_run_test user_buy_wrong_token; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -555,7 +555,7 @@ if should_run_test user_buy_wrong_mint; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -605,7 +605,7 @@ if should_run_test user_buy_wrong_metadata; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BLOCK_PUBKEY w                                                                                   \

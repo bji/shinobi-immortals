@@ -8,7 +8,7 @@ if should_run_test admin_create_block_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -58,11 +58,11 @@ if should_run_test admin_create_block_overwrite; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            // Should not be able to overwrite the config account //                                                  \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
@@ -109,7 +109,7 @@ if should_run_test admin_create_block_wrong_block; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            // Should not be able to write an invalid block address //                                                \
@@ -162,7 +162,7 @@ if should_run_test admin_create_block_zero_entries; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -213,7 +213,7 @@ if should_run_test admin_create_block_bad_mystery_count; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -264,7 +264,7 @@ if should_run_test admin_create_block_bad_mystery_start_price; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -315,7 +315,7 @@ if should_run_test admin_create_block_bad_mystery_price; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -366,7 +366,7 @@ if should_run_test admin_create_block_bad_auction_duration; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -417,7 +417,7 @@ if should_run_test admin_create_block_bad_final_start_price; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -468,7 +468,7 @@ if should_run_test admin_create_block_bad_final_start_price_2; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -519,7 +519,7 @@ if should_run_test admin_create_block_bad_minimum_price; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \

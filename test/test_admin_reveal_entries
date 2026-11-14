@@ -13,7 +13,7 @@ if should_run_test admin_reveal_entries_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $BLOCK_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
@@ -46,7 +46,7 @@ if should_run_test admin_reveal_entries_incorrect_number_of_accounts; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
@@ -84,7 +84,7 @@ if should_run_test admin_reveal_entries_short_data; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
@@ -125,7 +125,7 @@ if should_run_test admin_reveal_entries_long_data; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
@@ -166,9 +166,9 @@ if should_run_test admin_reveal_entries_bad_block; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
@@ -200,8 +200,8 @@ if [ -z "$TESTS" ]; then
 fi
 
 # Need metadata to set.  Use something very simple as the actual contents do not matter.
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
@@ -300,13 +300,13 @@ if should_run_test admin_reveal_entries_bad_entry; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $METADATA_PUBKEY0 w                                                                               \
            account $ENTRY_PUBKEY0 w                                                                                  \
            account $METADATA_PUBKEY1 w                                                                               \
@@ -340,14 +340,14 @@ if should_run_test admin_reveal_entries_bad_metadata; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $ENTRY_PUBKEY0 w                                                                                  \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $ENTRY_PUBKEY1 w                                                                                  \
            account $METADATA_PUBKEY1 w                                                                               \
            // Instruction code 5 = RevealEntriesData //                                                              \
@@ -380,7 +380,7 @@ if should_run_test admin_reveal_entries_wrong_entry; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY w                                                                                   \
            account $AUTHORITY_PUBKEY w                                                                               \
@@ -389,7 +389,7 @@ if should_run_test admin_reveal_entries_wrong_entry; then
            account $ENTRY_PUBKEY1 w                                                                                  \
            account $METADATA_PUBKEY0 w                                                                               \
            account $ENTRY_PUBKEY0 w                                                                                  \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            // Instruction code 5 = RevealEntriesData //                                                              \
            u8 5                                                                                                      \
            u16 0                                                                                                     \

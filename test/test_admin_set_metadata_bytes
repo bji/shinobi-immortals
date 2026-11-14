@@ -10,7 +10,7 @@ if should_run_test admin_set_metadata_bytes_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
@@ -52,7 +52,7 @@ if should_run_test admin_set_metadata_bytes_bad_entry; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
@@ -138,7 +138,7 @@ if should_run_test admin_set_metadata_bytes_short_data; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
@@ -155,13 +155,13 @@ if should_run_test admin_set_metadata_bytes_short_data; then
 fi
 
 
-# Beyond bounds of metadata
+# Beyond bounds of metadata: 2 bytes at offset 2699 end one byte past the 2700-byte metadata
 if should_run_test admin_set_metadata_bytes_beyond_bounds; then
     # Test with block 3 0
     assert_fail admin_set_metadata_bytes_beyond_bounds                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
-         $ADMIN_PUBKEY 3 0 0 2695 \`echo -n "01" | base64\`                                                          \
+         $ADMIN_PUBKEY 3 0 0 2699 \`echo -n "01" | base64\`                                                          \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

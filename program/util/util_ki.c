@@ -25,43 +25,41 @@ static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInf
         return 0;
     }
 
-    // Keep track of overflow; an unrepresentable harvest must not mint tokens.
-    bool overflow = false;
+    // Apply the effective-stake curve to earned lamports.  The baseline comparison above guarantees earnings <= the
+    // current stake, bounding effective earnings to less than 510 SOL even at uint64_t limits (500 SOL ceiling plus a
+    // conservative allowance for stake-input rounding).
+    uint64_t actual_earnings_lamports =
+        stake->stake.delegation.stake - entry->owned.last_ki_harvest_stake_account_lamports;
+    uint64_t effective_earnings_lamports =
+        compute_effective_stake_earnings(actual_earnings_lamports, stake->stake.delegation.stake);
 
-    // Amount of Ki to harvest is the stake account earnings since the last harvest: it is the number of SOL earned
-    // times the ki_factor.
-    uint64_t harvest_amount =
-        (checked_multiply(stake->stake.delegation.stake - entry->owned.last_ki_harvest_stake_account_lamports,
-                          entry->metadata.level_metadata[entry->level].ki_factor, &overflow) / LAMPORTS_PER_SOL);
-
-    // If there is potentially Ki to harvest, then harvest it
-    if (harvest_amount > 0) {
-        // Scale earnings by the effective-to-actual total stake ratio. The curve limits effective stake to 500 SOL,
-        // not Ki per harvest.
-        harvest_amount = compute_ki_harvest(harvest_amount, stake->stake.delegation.stake, &overflow);
-
-        // Only if the amount to harvest is > 0, and only if an overflow didn't occur when computing it, is the
-        // harvest of tokens performed
-        if ((harvest_amount > 0) && !overflow) {
-            // Ensure that the destination account exists
-            uint64_t ret = create_associated_token_account_idempotent(destination_account, &(Constants.ki_mint_pubkey),
-                                                                      destination_account_owner_key, funding_key,
-                                                                      transaction_accounts, transaction_accounts_len);
-            if (ret) {
-                return ret;
-            }
-
-            // Mint the harvest_amount to the destination_account.
-            ret = mint_tokens(&(Constants.ki_mint_pubkey), destination_account->key, harvest_amount,
-                              transaction_accounts, transaction_accounts_len);
-            if (ret) {
-                return ret;
-            }
-        }
-
-        // Update the entry's last_ki_harvest_stake_account_lamports to the new value.
-        entry->owned.last_ki_harvest_stake_account_lamports = stake->stake.delegation.stake;
+    // Convert effective SOL earnings to whole Ki
+    uint64_t harvest_amount = compute_ki_harvest(effective_earnings_lamports,
+                                                 entry->metadata.level_metadata[entry->level].ki_factor);
+    if (!harvest_amount) {
+        // Leave the baseline unchanged so a sub-Ki reward can accumulate.
+        return 0;
     }
+
+    uint64_t ret = create_associated_token_account_idempotent(destination_account, &(Constants.ki_mint_pubkey),
+                                                              destination_account_owner_key, funding_key,
+                                                              transaction_accounts, transaction_accounts_len);
+    if (ret) {
+        return ret;
+    }
+
+    // Only the SPL Token boundary uses base units: ten base units equal one Ki.
+    // Effective earnings < 510 SOL and a uint32_t factor bound whole Ki below
+    // 510*UINT32_MAX; multiplying that by ten also fits comfortably in uint64_t.
+    uint64_t mint_amount = harvest_amount * 10;
+    ret = mint_tokens(&(Constants.ki_mint_pubkey), destination_account->key, mint_amount,
+                      transaction_accounts, transaction_accounts_len);
+    if (ret) {
+        return ret;
+    }
+
+    // A successful positive harvest consumes the processed rewards
+    entry->owned.last_ki_harvest_stake_account_lamports = stake->stake.delegation.stake;
 
     return 0;
 }

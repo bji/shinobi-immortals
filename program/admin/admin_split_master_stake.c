@@ -29,7 +29,7 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
-        DECLARE_ACCOUNT(0,  config_account,                ReadOnly,   NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(0,  state_account,                 ReadOnly,   NotSigner,  KnownAccount_ProgramState);
         DECLARE_ACCOUNT(1,  admin_account,                 ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,  master_stake_account,          ReadWrite,  NotSigner,  KnownAccount_MasterStake);
         DECLARE_ACCOUNT(3,  split_into_account,            ReadWrite,  Signer,     KnownAccount_NotKnown);
@@ -43,7 +43,7 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
     DECLARE_ACCOUNTS_NUMBER(10);
 
     // Ensure that this transaction is admin authenticated
-    if (!is_admin_account(config_account, admin_account->key)) {
+    if (!is_admin_account(state_account, admin_account->key)) {
         return Error_PermissionDenied;
     }
 
@@ -90,7 +90,7 @@ static uint64_t admin_split_master_stake(const SolParameters *params)
         if (pre_merge_account_decoded.state != StakeState_Stake) {
             return Error_InvalidData_First + 4;
         }
-        if (!is_admin_account(config_account, &(pre_merge_account_decoded.meta.authorize.withdrawer))) {
+        if (!is_admin_account(state_account, &(pre_merge_account_decoded.meta.authorize.withdrawer))) {
             return Error_InvalidData_First + 4;
         }
         // Any other errors with the stake account such as being inactive, etc, will simply cause the stake

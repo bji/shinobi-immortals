@@ -9,7 +9,7 @@ if should_run_test admin_add_entries_to_block_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -65,7 +65,7 @@ if should_run_test admin_add_entries_to_block_too_few_sha256; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -118,7 +118,7 @@ if should_run_test admin_add_entries_to_block_too_many_sha256; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -173,7 +173,7 @@ if should_run_test admin_add_entries_to_block_bad_block; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -226,7 +226,7 @@ if should_run_test admin_add_entries_to_block_bad_entry; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -280,7 +280,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_mint; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -333,7 +333,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_token; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -387,7 +387,7 @@ if should_run_test admin_add_entries_to_block_bad_entry_metadata; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
@@ -540,8 +540,11 @@ if [ -z "$TESTS" ]; then
     "last_commission_charge_stake": 0
   },
   "level": 0,
+  "most_recent_level_credits_window": 0,
+  "ki_applied_this_window": 0,
+  "total_level_credits": 0,
   "metadata": {
-    "level_1_ki": 0,
+    "level_1_credits": 0,
     "random": [
       0,
       0,
@@ -633,7 +636,8 @@ if [ -z "$TESTS" ]; then
         "uri": "",
         "uri_contents_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
       }
-    ]
+    ],
+    "expected_annual_reward_bps": 0
   }
 }
 EOF`

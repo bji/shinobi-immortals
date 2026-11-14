@@ -81,7 +81,7 @@ uint64_t entrypoint(const uint8_t *input)
             break;
 
         case 4:
-            actual_result = compute_ki_harvest(a, b, &overflow);
+            actual_result = compute_effective_stake_earnings(a, b);
             break;
 
         case 5:
@@ -91,14 +91,67 @@ uint64_t entrypoint(const uint8_t *input)
             actual_result = compute_commission(a, b, c);
             break;
 
+        case 6:
+            // a packs two uint32_t inputs: level_1_credits in the low 32 bits and expected_annual_reward_bps in the
+            // high 32 bits, because each case carries only four operands
+            if (b > UINT32_MAX) {
+                return 4;
+            }
+            actual_result = compute_level_credits((uint32_t) a, b, (uint32_t) (a >> 32), c,
+                                                  d ? d : LEVEL_CREDIT_WINDOWS_PER_YEAR, &overflow);
+            break;
+
+        case 7:
+            if ((a > UINT32_MAX) || (b > 8)) {
+                return 4;
+            }
+            actual_result = compute_level_requirement(a, b);
+            break;
+
+        case 8:
+            if (!c || (b > c)) {
+                return 4;
+            }
+            actual_result = multiply_fraction(a, b, c);
+            break;
+
+        case 9:
+            // a is the timestamp, b the recorded window, c the window length (0 selects the built-in length)
+            actual_result = compute_level_credit_window(a, b, c ? c : LEVEL_CREDIT_WINDOW_SECONDS);
+            break;
+
+        case 10:
+            // a packs level_1_credits (low 32 bits) and expected_annual_reward_bps (high 32 bits) as for case 6;
+            // b is ki_factor, c the target credits, d the windows per year (0 selects the built-in value)
+            if (b > UINT32_MAX) {
+                return 4;
+            }
+            actual_result = compute_level_credits_ki_needed((uint32_t) a, b, (uint32_t) (a >> 32), c,
+                                                            d ? d : LEVEL_CREDIT_WINDOWS_PER_YEAR);
+            break;
+
+        case 16:
+            if ((a > 510000000000ul) || (b > UINT32_MAX)) {
+                return 4;
+            }
+            actual_result = compute_ki_harvest(a, b);
+            break;
+
+        case 17:
+            if ((a > b) || (c > UINT32_MAX)) {
+                return 4;
+            }
+            actual_result = compute_ki_harvest(compute_effective_stake_earnings(a, b), c);
+            break;
+
         default:
             return 5;
         }
 
-        /* Ki's caller discards the value when overflow is set. */
+        /* Level-credit conversion rejects the value when overflow is set. */
         bool matches =
             ((overflow == expected_overflow) &&
-             (((operation == 4) && overflow) ||
+             (((operation == 6) && overflow) ||
               (actual_result == expected_result)));
 
         unsigned status = expected_failure ? (matches ? 3 : 1) : (matches ? 0 : 2);

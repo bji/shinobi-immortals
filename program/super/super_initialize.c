@@ -5,7 +5,7 @@
 #include "inc/constants.h"
 #include "inc/error.h"
 #include "inc/instruction_accounts.h"
-#include "inc/program_config.h"
+#include "inc/program_state.h"
 #include "inc/types.h"
 #include "util/util_accounts.c"
 #include "util/util_metaplex.c"
@@ -29,7 +29,7 @@ static uint64_t super_initialize(const SolParameters *params)
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
         DECLARE_ACCOUNT(0,   superuser_account,             ReadWrite,  Signer,     KnownAccount_SuperUser);
-        DECLARE_ACCOUNT(1,   config_account,                ReadWrite,  NotSigner,  KnownAccount_ProgramConfig);
+        DECLARE_ACCOUNT(1,   state_account,                 ReadWrite,  NotSigner,  KnownAccount_ProgramState);
         DECLARE_ACCOUNT(2,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(3,   master_stake_account,          ReadWrite,  NotSigner,  KnownAccount_MasterStake);
         DECLARE_ACCOUNT(4,   shinobi_systems_vote_account,  ReadOnly,   NotSigner,  KnownAccount_ShinobiSystemsVote);
@@ -55,27 +55,27 @@ static uint64_t super_initialize(const SolParameters *params)
 
     const InitializeData *data = (InitializeData *) params->data;
 
-    // If the config account already exists, then fail, because can't re-create the config account, can only modify it
+    // If the program_state account already exists, then fail, because can't re-create the program_state account, can only modify it
     // after it's created
-    if (config_account->data_len > 0) {
+    if (state_account->data_len > 0) {
         return Error_InvalidAccount_First + 1;
     }
 
-    // Create the config account.  The config account is derived from a fixed seed.
+    // Create the program_state account.  The program_state account is derived from a fixed seed.
     {
-        const uint8_t *seed_bytes = (uint8_t *) Constants.config_seed_bytes;
-        SolSignerSeed seed = { seed_bytes, sizeof(Constants.config_seed_bytes) };
+        const uint8_t *seed_bytes = (uint8_t *) Constants.state_seed_bytes;
+        SolSignerSeed seed = { seed_bytes, sizeof(Constants.state_seed_bytes) };
 
-        if (create_pda(config_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
-                       get_rent_exempt_minimum(sizeof(ProgramConfig)), sizeof(ProgramConfig), params->ka,
+        if (create_pda(state_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
+                       get_rent_exempt_minimum(sizeof(ProgramState)), sizeof(ProgramState), params->ka,
                        params->ka_num)) {
             return Error_CreateAccountFailed;
         }
 
-        // Set the initial contents of the config account.
-        ProgramConfig *config = (ProgramConfig *) (config_account->data);
-        config->data_type = DataType_ProgramConfig;
-        config->admin_pubkey = data->admin_pubkey;
+        // Set the initial contents of the program_state account.
+        ProgramState *program_state = (ProgramState *) (state_account->data);
+        program_state->data_type = DataType_ProgramState;
+        program_state->admin_pubkey = data->admin_pubkey;
     }
 
     // Create the authority account.  The authority account is derived from a fixed seed and doesn't hold any data.

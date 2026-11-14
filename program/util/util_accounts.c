@@ -3,7 +3,7 @@
 #include "solana_sdk.h"
 
 #include "inc/constants.h"
-#include "inc/program_config.h"
+#include "inc/program_state.h"
 #include "util/util_rent.c"
 #include "util/util_transfer_lamports.c"
 
@@ -51,39 +51,39 @@ static bool is_superuser_pubkey(const SolPubkey *pubkey)
 }
 
 
-static bool is_config_account(const SolPubkey *pubkey)
+static bool is_state_account(const SolPubkey *pubkey)
 {
-    return SolPubkey_same(&(Constants.config_pubkey), pubkey);
+    return SolPubkey_same(&(Constants.state_pubkey), pubkey);
 }
 
 
-static bool get_admin_account_address(const SolAccountInfo *config_account, SolPubkey *fill_in)
+static bool get_admin_account_address(const SolAccountInfo *state_account, SolPubkey *fill_in)
 {
-    // The identity of the admin is loaded from the config account; ensure that this is the actual one true config
+    // The identity of the admin is loaded from the program_state account; ensure that this is the actual one true program_state
     // account
-    if (!is_config_account(config_account->key)) {
+    if (!is_state_account(state_account->key)) {
         return false;
     }
 
     // The data must be correctly sized
-    if (config_account->data_len != sizeof(ProgramConfig)) {
+    if (state_account->data_len != sizeof(ProgramState)) {
         return false;
     }
 
-    // Get a reference to the admin pubkey from the config
-    const ProgramConfig *config = (ProgramConfig *) (config_account->data);
+    // Get a reference to the admin pubkey from the program_state
+    const ProgramState *program_state = (ProgramState *) (state_account->data);
 
-    *fill_in = config->admin_pubkey;
+    *fill_in = program_state->admin_pubkey;
 
     return true;
 }
 
 
-static bool is_admin_account(const SolAccountInfo *config_account, const SolPubkey *pubkey)
+static bool is_admin_account(const SolAccountInfo *state_account, const SolPubkey *pubkey)
 {
-    // Get a reference to the admin pubkey from the config
+    // Get a reference to the admin pubkey from the program_state
     SolPubkey admin_pubkey;
-    if (!get_admin_account_address(config_account, &admin_pubkey)) {
+    if (!get_admin_account_address(state_account, &admin_pubkey)) {
         return false;
     }
 

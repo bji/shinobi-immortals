@@ -80,7 +80,7 @@ when its value contains spaces or shell-special characters:
 
 ```sh
 bash sdk/build.sh source.c /tmp/program.so \
-    -DCONFIG_BUMP_SEED=253 \
+    -DSTATE_BUMP_SEED=253 \
     '-DSUPERUSER_PUBKEY_ARRAY={149, 75, 37}' \
     '-DMESSAGE="hello world"'
 ```

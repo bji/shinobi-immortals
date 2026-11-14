@@ -138,7 +138,7 @@ for ((elapsed=0; elapsed<1000; ++elapsed)); do
 done
 
 # Independently evaluate the total-stake multiplier using dc's arbitrary-size
-# integers. Operand a is whole Ki earned; b is total delegated stake in lamports.
+# integers. Operand a is earned lamports; b is total delegated stake in lamports.
 # Include sub-SOL rounding boundaries, the old curve's intercept, and UINT64_MAX.
 # The reference keeps K=500 and rounds x to ten SOL above one billion SOL.
 # This is mathematically equivalent to changing units in the production code;
@@ -150,7 +150,7 @@ function ki_reference ()
     if [ "$stake_sol" -gt 1000000000 ]; then
         stake_sol=$(dc_calc "$stake_sol 10 / 10 * p")
     fi
-    dc_calc "$raw 10 * 500 500 $stake_sol + * * 250000 500 $stake_sol * + $stake_sol d * + / p"
+    dc_calc "$raw 500 500 $stake_sol + * * 250000 500 $stake_sol * + $stake_sol d * + / p"
 }
 
 for stake in 0 1 999999999 1000000000 10000000000 20000000000 250000000000 500000000000                              \
@@ -159,8 +159,8 @@ for stake in 0 1 999999999 1000000000 10000000000 20000000000 250000000000 50000
              50000000000000 100000000000000 106666000000000 500000000000000                                          \
              999999999999999999 1000000000000000000 1000000000999999999                                              \
              1000000001000000000 1000000009000000000 1000000010000000000 "$MAX"; do
-    for raw in 0 1 10 1000 200000 1844674407370955161; do
-        # Convert to deciKi first, then apply K*(K+x)/(K*K+K*x+x*x), K=500.
+    for raw in 0 1 10 1000 200000 1844674407370955161 "$MAX"; do
+        # Apply K*(K+x)/(K*K+K*x+x*x), K=500.
         expected=$(ki_reference "$raw" "$stake")
         emit "Ki/stake/$stake/earnings/$raw" 4 "$raw" "$stake" 0 0 "$expected"
     done
@@ -172,8 +172,8 @@ for ((i=0; i<64; ++i)); do
     expected=$(ki_reference "$raw" "$stake")
     emit "Ki/random/$i" 4 "$raw" "$stake" 0 0 "$expected"
 done
-# Overflow flags are sticky, and deciKi conversion must reject values above u64.
-emit Ki/multiplication-overflow 4 "$MAX" 0 0 0 0 1
+# Effective earnings use a bounded ratio without multiplication overflow.
+emit Ki/full-width-earnings 4 "$MAX" 0 0 0 "$MAX"
 emit Ki/sticky-overflow 4 1 50000000000000 0 0 0 1 1
 
 # Commission is floor((current-baseline)*rate/65535). Start with the zero-delta,
@@ -198,5 +198,195 @@ done
 # overflow: full commission equals the reward, and a balance decrease earns none.
 emit commission/large-reward 5 300000000000000 0 65535 0 300000000000000 0 0                                         \
     'multiplication overflows before division'
-emit commission/decreased-balance 5 99900000000 100000000000 6553 0 0 0 0                                            \
-    'unsigned earnings subtraction underflows'
+emit commission/decreased-balance 5 99900000000 100000000000 6553 0 0
+# Stake exactly at the baseline, and the smallest and largest possible decreases, also earn no commission.
+emit commission/unchanged-balance 5 100000000000 100000000000 65535 0 0
+emit commission/decreased-by-one 5 99999999999 100000000000 65535 0 0
+emit commission/decreased-to-zero 5 0 "$MAX" 65535 0 0
+
+# Cumulative level thresholds use the same fixed-point rounding as the metadata
+# schedule, independently evaluated with arbitrary precision rather than C code.
+for first_cost in 1 100 4294967295; do
+    cost=$(dc_calc "$first_cost 10 * p")
+    total=0
+    emit "level/threshold/$first_cost/0" 7 "$first_cost" 0 0 0 0
+    for ((level=1; level<=8; ++level)); do
+        total=$(dc_calc "$total $cost + p")
+        emit "level/threshold/$first_cost/$level" 7 "$first_cost" "$level" 0 0 "$total"
+        cost=$(dc_calc "$cost d 2 / + p")
+    done
+    for factor in 1 1000 1000000 4294967295; do
+        for bps in 1 490 4294967295; do
+            # Operand a packs level_1_credits (low 32 bits) with expected_annual_reward_bps (high 32 bits).
+            packed=$(dc_calc "$bps 4294967296 * $first_cost + p")
+            # B = factor*500*(bps/10000)/N whole Ki = factor*bps/(20*N), with N the default 73 windows per year
+            # (5 day windows).  Sample around B and 5B, then large contributions, including ones whose 4*N*k cannot
+            # fit uint64_t.
+            normal=$(dc_calc "$factor $bps * 1460 / p")
+            five_normal=$(dc_calc "$normal 5 * p")
+            for contribution in 0 1 "$normal" "$five_normal" 1000000000 63173781074347779; do
+                # P(k) = 24*L*k / (factor*bps + 4*N*k); both terms are non-negative, so the denominator exceeds
+                # uint64_t exactly when either the product or the sum overflows.
+                denominator=$(dc_calc "$factor $bps * 292 $contribution * + p")
+                if [ "$(dc_calc "$MAX $denominator - [1 sF] sz 0 sF 0 >z lF p")" = 1 ]; then
+                    emit "level/overflow/$first_cost/$factor/$bps/$contribution" 6 "$packed" "$factor"         \
+                         "$contribution" 0 0 1
+                else
+                    expected=$(dc_calc "$total 24 * $contribution * $denominator / p")
+                    emit "level/credits/$first_cost/$factor/$bps/$contribution" 6 "$packed" "$factor"          \
+                         "$contribution" 0 "$expected"
+                fi
+            done
+        done
+    done
+done
+# 2104533975040 = 490 << 32, and 2104533975140 = (490 << 32) + 100
+emit level/zero-first-cost 6 2104533975040 1000 1 0 0 1
+emit level/zero-factor 6 2104533975140 0 1 0 0 1
+emit level/zero-reward-rate 6 100 1000 1 0 0 1
+emit level/scale-overflow 6 2104533975140 1000 "$MAX" 0 0 1
+emit level/sticky-overflow 6 2104533975140 1000 1 0 0 1 1
+
+# Exercise the overflow-free product/division with arbitrary full-width operands.
+for ((i=0; i<64; ++i)); do
+    value=${random_values[i]}
+    denominator=${random_values[i+64]}
+    numerator=$(dc_calc "${random_values[i+128]} $denominator % p")
+    expected=$(dc_calc "$value $numerator * $denominator / p")
+    emit "fraction/random/$i" 8 "$value" "$numerator" "$denominator" 0 "$expected"
+done
+emit fraction/full-width-identity 8 "$MAX" "$MAX" "$MAX" 0 "$MAX"
+emit fraction/full-width-half 8 "$MAX" 9223372036854775808 "$MAX" 0 9223372036854775808
+
+# Credit conversion must use the supplied windows per year, not the default constant.
+for windows in 1 73 340 365 525600 1000000; do
+    # level_1_credits=100 gives 49,257 tenths of a lifetime credit after integer rounding.
+    total=0 cost=1000
+    for ((i=0; i<8; ++i)); do
+        total=$(dc_calc "$total $cost + p")
+        cost=$(dc_calc "$cost d 2 / + p")
+    done
+    # factor=1000, bps=490 (packed with level_1_credits=100 as 2104533975140), and k=1000
+    expected=$(dc_calc "$total 24 * 1000 * 1000 490 * 4 $windows * 1000 * + / p")
+    emit "level/windows-per-year/$windows" 6 2104533975140 1000 1000 "$windows" "$expected"
+done
+
+# Ki needed for a window's curve to reach a target number of credits, used to avoid burning more Ki than is needed
+# to reach the maximum level.  With A = 24*L, C = factor*bps and D = 4*N, P(k) = floor(A*k / (C + D*k)), and the
+# least k with P(k) >= T is ceil(T*C / (A - T*D)), or unreachable (UINT64_MAX) when A <= T*D.  dc evaluates this
+# exactly.  Where the forward calculation fits in 64 bits, also check that P(k) reaches the target and P(k-1) does not,
+# so that the result is confirmed to be the smallest sufficient amount.
+for first_cost in 1 100 4294967295; do
+    # L, the level 9 requirement in tenths of a credit, by the same recurrence as compute_level_requirement
+    total=0 cost=$(dc_calc "$first_cost 10 * p")
+    for ((i=0; i<8; ++i)); do
+        total=$(dc_calc "$total $cost + p")
+        cost=$(dc_calc "$cost d 2 / + p")
+    done
+    for factor in 1 1000 4294967295; do
+        for bps in 1 490 4294967295; do
+            packed=$(dc_calc "$bps 4294967296 * $first_cost + p")
+            c=$(dc_calc "$factor $bps * p")
+            for windows in 73 525600; do
+                a=$(dc_calc "$total 24 * p")
+                d=$(dc_calc "$windows 4 * p")
+                # The largest reachable target is the largest integer below A/D
+                top=$(dc_calc "$a 1 - $d / p")
+                for target in 1 2 $(dc_calc "$top 2 / p") $(dc_calc "$top 1 - p") "$top" $(dc_calc "$top 1 + p") "$MAX"; do
+                    # Skip targets that came out as zero or negative for tiny curves (dc prints negatives with '-')
+                    case "$target" in 0|-*) continue ;; esac
+                    td=$(dc_calc "$target $d * p")
+                    # In dc, "X Y !<x" runs macro x unless Y < X; so this prints 1 when T*D >= A (unreachable)
+                    unreachable=$(dc_calc "0 sr $a $td [1sr]sx !<x lr p")
+                    if [ "$unreachable" = 1 ]; then
+                        expected=$MAX
+                    else
+                        e=$(dc_calc "$a $td - p")
+                        expected=$(dc_calc "$target $c * $e + 1 - $e / p")
+                        # Results that do not fit below UINT64_MAX are also reported as UINT64_MAX.  So are results
+                        # for which the forward calculation overflows (C + D*k >= 2^64): the program would reject a
+                        # contribution reaching that window total anyway, so no limit is needed.
+                        if [ "$(dc_calc "0 sr $expected $MAX [1sr]sx !>x lr p")" = 1 ] ||
+                           [ "$(dc_calc "0 sr $c $d $expected * + $MOD [1sr]sx !>x lr p")" = 1 ]; then
+                            expected=$MAX
+                        fi
+                    fi
+                    emit "level/ki-needed/$first_cost/$factor/$bps/$windows/$target" 10 "$packed" "$factor"         \
+                        "$target" "$windows" "$expected"
+                    # Cross-check against the forward curve where it does not overflow: C + D*k < 2^64
+                    if [ "$expected" != "$MAX" ]; then
+                        for k in "$expected" $(dc_calc "$expected 1 - p"); do
+                            fits=$(dc_calc "0 sr $c $d $k * + $MOD [1sr]sx >x lr p")
+                            if [ "$fits" = 1 ] && [ "$(dc_calc "0 sr $k 0 [1sr]sx !>x lr p")" = 1 ]; then
+                                credits=$(dc_calc "$a $k * $c $d $k * + / p")
+                                emit "level/ki-needed-check/$first_cost/$factor/$bps/$windows/$target/$k" 6         \
+                                    "$packed" "$factor" "$k" "$windows" "$credits"
+                            fi
+                        done
+                    fi
+                done
+            done
+        done
+    done
+done
+emit level/ki-needed/zero-target 10 2104533975140 1000 0 73 0
+emit level/ki-needed/zero-first-cost 10 2104533975040 1000 1 73 "$MAX"
+emit level/ki-needed/zero-factor 10 2104533975140 0 1 73 "$MAX"
+emit level/ki-needed/zero-reward-rate 10 100 1000 1 73 "$MAX"
+
+# Level credit windows: timestamp / length, but never earlier than the entry's recorded window, so that a clock
+# stepping backwards across a boundary cannot reset the credit curve.  Check both the production 5 day length and
+# the 60 second test length, around boundaries and at the extremes.
+for length in 432000 60; do
+    for timestamp in 0 1 $((length - 1)) "$length" $((length + 1)) $((length * 6 - 1)) $((length * 6)) 1763078400 "$MAX"; do
+        window=$(dc_calc "$timestamp $length / p")
+        # Nothing recorded yet, and the same window already recorded: the computed window is used
+        emit "window/$length/$timestamp/fresh" 9 "$timestamp" 0 "$length" 0 "$window"
+        emit "window/$length/$timestamp/same" 9 "$timestamp" "$window" "$length" 0 "$window"
+        # A recorded window later than the clock's (the clock stepped backwards): clamp to the recorded window
+        for later in 1 1000; do
+            recorded=$(dc_calc "$window $later + p")
+            if [ "$(dc_calc "$recorded $MOD / p")" = 0 ]; then
+                emit "window/$length/$timestamp/backwards/$later" 9 "$timestamp" "$recorded" "$length" 0 "$recorded"
+            fi
+        done
+        # A recorded window earlier than the clock's: the clock's (new) window is used
+        if [ "$window" != 0 ]; then
+            emit "window/$length/$timestamp/forward" 9 "$timestamp" $(dc_calc "$window 1 - p") "$length" 0 "$window"
+        fi
+    done
+    emit "window/$length/recorded-max" 9 0 "$MAX" "$length" 0 "$MAX"
+done
+
+# The second harvest stage applies a uint32_t factor to effective lamports,
+# returning whole Ki. Include the 50-SOL example, fractional SOL boundaries,
+# and the conservative upper bound implied by the rounded effective-stake curve.
+for effective in 0 1 14435 999999999 1000000000 1000000001 50000000000 510000000000; do
+    for factor in 0 1 50000 70000 4294967295; do
+        expected=$(dc_calc "$effective $factor * 1000000000 / p")
+        emit "harvest/convert/$effective/$factor" 16 "$effective" "$factor" 0 0 "$expected"
+    done
+done
+
+# Test the full production ordering, reducing lamport earnings before applying
+# ki_factor. Earnings cannot exceed current delegated stake in a real account.
+for stake in 100000000 10000000000 500000000000 5000000000000 1000000009000000000 "$MAX"; do
+    epoch_rewards=$(dc_calc "$stake 14435 * 100000000 / p")
+    long_rewards=$(dc_calc "$epoch_rewards 500 * p")
+    for earnings in 0 1 "$epoch_rewards" "$long_rewards" "$stake"; do
+        effective=$(ki_reference "$earnings" "$stake")
+        for factor in 1 70000 4294967295; do
+            expected=$(dc_calc "$effective $factor * 1000000000 / p")
+            emit "harvest/pipeline/$stake/$earnings/$factor" 17 "$earnings" "$stake" "$factor" 0 "$expected"
+        done
+    done
+done
+# Independent random valid account balances and reward deltas.
+for ((i=0; i<64; ++i)); do
+    stake=${random_values[i]}
+    earnings=$(dc_calc "${random_values[i+64]} $stake 1 + % p")
+    factor=$(dc_calc "${random_values[i+128]} 4294967296 % p")
+    effective=$(ki_reference "$earnings" "$stake")
+    expected=$(dc_calc "$effective $factor * 1000000000 / p")
+    emit "harvest/pipeline/random/$i" 17 "$earnings" "$stake" "$factor" 0 "$expected"
+done

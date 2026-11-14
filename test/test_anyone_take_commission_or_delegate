@@ -1,4 +1,4 @@
-METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2616 status=none) | base64 | tr -d '\n'`
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2620 status=none) | base64 | tr -d '\n'`
 # Metadata to set into entries, only needs to include up to the ki_factor
 METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
 SALT0=0
@@ -22,10 +22,10 @@ if [ -z "$TESTS" ]; then
     
     # Delegate the delegated stake accounts
     echo "Delegating $LEDGER/delegated5_stake.json"
-    solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated5_stake.json $VOTE_PUBKEY                 \
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated5_stake.json $VOTE_PUBKEY                 \
            >/dev/null 2>/dev/null
     echo "Delegating $LEDGER/delegated5_stake2.json"
-    solana -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated5_stake2.json $VOTE_PUBKEY                \
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated5_stake2.json $VOTE_PUBKEY                \
            >/dev/null 2>/dev/null
 
     # Create a second vote account, standing in for a validator other than Shinobi Systems, so that stake accounts
@@ -48,7 +48,7 @@ if [ -z "$TESTS" ]; then
         echo "Delegating $LEDGER/elsewhere5_stake$i.json to other vote account"
         # --force is needed because the other vote account never votes, so it has no root slot, and the solana
         # command line tool otherwise refuses to delegate to it
-        solana -u l delegate-stake --force -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake$i.json                \
+        solana_stake -u l delegate-stake --force -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake$i.json                \
                $OTHER_VOTE_PUBKEY >/dev/null 2>/dev/null
     done
 
@@ -57,7 +57,7 @@ if [ -z "$TESTS" ]; then
 
     # Deactivate elsewhere5_stake2 now; the sleep at the end of setup lets its cooldown complete
     echo "Deactivating $LEDGER/elsewhere5_stake2.json"
-    solana -u l deactivate-stake -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake2.json >/dev/null 2>/dev/null
+    solana_stake -u l deactivate-stake -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake2.json >/dev/null 2>/dev/null
 
     # 17 0
     assert anyone_take_commission_or_delegate_setup_17_0_a                                                           \
@@ -227,7 +227,7 @@ if should_run_test anyone_take_commission_or_delegate_bad_block; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ENTRY_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $MASTER_STAKE_PUBKEY w                                                                            \
@@ -270,7 +270,7 @@ if should_run_test anyone_take_commission_or_delegate_bad_entry; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $BLOCK_PUBKEY                                                                                     \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $AUTHORITY_PUBKEY                                                                                 \
@@ -585,7 +585,7 @@ fi
 # delegate it to Shinobi Systems, which the stake program refuses with StakeError::TooSoonToRedelegate (3)
 if should_run_test anyone_take_commission_or_delegate_stake_elsewhere_cooling; then
     echo "Deactivating $LEDGER/elsewhere5_stake3.json"
-    solana -u l deactivate-stake -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake3.json --commitment finalized    \
+    solana_stake -u l deactivate-stake -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake3.json --commitment finalized    \
            >/dev/null 2>/dev/null
     assert_fail anyone_take_commission_or_delegate_stake_elsewhere_cooling                                           \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3'                       \

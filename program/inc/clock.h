@@ -1,6 +1,6 @@
 #pragma once
 
-#include "inc/types.h"
+#include "types.h"
 
 
 // This is the type of the data stored in the clock sysvar

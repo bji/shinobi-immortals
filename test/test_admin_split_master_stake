@@ -10,7 +10,7 @@ if should_run_test admin_split_master_stake_no_auth; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $LEDGER/split_into.json ws                                                                        \
@@ -38,7 +38,7 @@ if should_run_test admin_split_master_stake_bad_data; then
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ADMIN_PUBKEY s                                                                                   \
            account $MASTER_STAKE_PUBKEY w                                                                            \
            account $LEDGER/split_into.json ws                                                                        \
@@ -82,14 +82,14 @@ if should_run_test admin_split_master_stake_bad_pre_merge_owner; then
     # to split from
     make_stake_account $LEDGER/admin.json $LEDGER/pre_merge.json 5 --commitment=finalized
     # Delegate the pre_merge stake account
-    solana -u l delegate-stake -k $LEDGER/admin.json $LEDGER/pre_merge.json $VOTE_PUBKEY >/dev/null 2>/dev/null
+    solana_stake -u l delegate-stake -k $LEDGER/admin.json $LEDGER/pre_merge.json $VOTE_PUBKEY >/dev/null 2>/dev/null
     # Wait an epoch for the delegated stake to become delegated
     sleep_until_next_epoch
     # Wait an epoch for the delegated stake to earn rewards
     sleep_until_next_epoch
     # Change the pre_merge_account authorities to the program authority to make it an illegal pre_merge_account
     # target (because this would allow user stake accounts to be used as pre_merge_accounts)
-    solana -u l -k $LEDGER/admin.json stake-authorize $LEDGER/pre_merge.json                                         \
+    solana_stake -u l -k $LEDGER/admin.json stake-authorize $LEDGER/pre_merge.json                                         \
            --new-stake-authority $AUTHORITY_PUBKEY --new-withdraw-authority $AUTHORITY_PUBKEY                        \
            --commitment=finalized >/dev/null 2>/dev/null
     assert_fail admin_split_master_bad_pre_merge_owner                                                               \
@@ -111,7 +111,7 @@ if should_run_test admin_split_master_stake_success; then
     # to split from
     make_stake_account $LEDGER/admin.json $LEDGER/pre_merge.json 5 --commitment=finalized
     # Delegate the pre_merge stake account
-    solana -u l delegate-stake -k $LEDGER/admin.json $LEDGER/pre_merge.json $VOTE_PUBKEY >/dev/null 2>/dev/null
+    solana_stake -u l delegate-stake -k $LEDGER/admin.json $LEDGER/pre_merge.json $VOTE_PUBKEY >/dev/null 2>/dev/null
     # Wait an epoch for the delegated stake to become delegated
     sleep_until_next_epoch
     # Wait an epoch for the delegated stake to earn rewards

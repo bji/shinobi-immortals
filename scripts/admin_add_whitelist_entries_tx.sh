@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -53,7 +53,7 @@ fi
     METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
-              CONFIG_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 1 ]"
+              STATE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 1 ]"
            AUTHORITY_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 2 ]"
         MASTER_STAKE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 3 ]"
              KI_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 4 ]"
@@ -103,7 +103,7 @@ solxact encode                                                                  
         encoding c                                                                                                    \
         fee_payer $ADMIN_PUBKEY                                                                                       \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
-        account $CONFIG_PUBKEY                                                                                        \
+        account $STATE_PUBKEY                                                                                        \
         account $ADMIN_PUBKEY s                                                                                       \
         account $ADMIN_PUBKEY ws                                                                                      \
         account $BLOCK_PUBKEY                                                                                         \

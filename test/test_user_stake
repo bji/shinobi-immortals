@@ -1,9 +1,9 @@
 BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
 BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
-METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2695 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2699 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -21,10 +21,10 @@ make_stake_account $LEDGER/rich_user1.json $LEDGER/undelegated_stake.json 1000 -
 
 # Delegate the delegated stake accounts
 echo "Delegating $LEDGER/delegated_stake.json"
-solana -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated_stake.json $VOTE_PUBKEY                      \
+solana_stake -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated_stake.json $VOTE_PUBKEY                      \
        >/dev/null 2>/dev/null
 echo "Delegating $LEDGER/delegated_stake2.json"
-solana -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated_stake2.json $VOTE_PUBKEY                     \
+solana_stake -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated_stake2.json $VOTE_PUBKEY                     \
        >/dev/null 2>/dev/null
 
 # 13 0
@@ -116,7 +116,7 @@ if should_run_test user_stake_bad_block; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $CONFIG_PUBKEY                                                                                    \
+           account $STATE_PUBKEY                                                                                    \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -149,7 +149,7 @@ if should_run_test user_stake_bad_entry; then
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $BLOCK_PUBKEY                                                                                     \
-           account $CONFIG_PUBKEY w                                                                                  \
+           account $STATE_PUBKEY w                                                                                  \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
@@ -233,7 +233,7 @@ if should_run_test user_stake_bad_stake_account; then
     assert_fail user_stake_bad_stake_account                                                                         \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
-         $RICH_USER1_PUBKEY 13 0 0 $CONFIG_PUBKEY                                                                    \
+         $RICH_USER1_PUBKEY 13 0 0 $STATE_PUBKEY                                                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`

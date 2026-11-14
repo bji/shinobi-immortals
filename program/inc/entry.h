@@ -52,14 +52,23 @@ typedef struct
 
 typedef struct
 {
-    // Number of ki to achieve level 1.  Each subsequent level requires 50% more Ki to achieve than the previous.
-    uint32_t level_1_ki;
+    // Number of whole level credits to achieve level 1.  Each subsequent level requires 50% more level credits to
+    // achieve than the previous.
+    uint32_t level_1_credits;
 
     // These are random numbers that can be used by other programs.  These values are randomly generated per entry.
     uint32_t random[16];
 
     // Metadata for each of the 9 levels
     LevelMetadata level_metadata[9];
+
+    // The expected annual stake reward rate, in basis points (1/100ths of a percent), of a stake account delegated to
+    // the Shinobi Systems validator, as estimated for the year following this entry's creation.  This is the rate at
+    // which the stake account's balance is expected to grow from staking rewards (i.e. after validator commission).
+    // It calibrates the level credits curve: combined with the number of level credit windows per year, it gives the
+    // per-window Ki production of a 500 effective SOL stake account, which is the contribution rate that levels an
+    // entry fully in about one year.  It must be non-zero for the entry to be levelled up.
+    uint32_t expected_annual_reward_bps;
 
 } EntryMetadata;
 
@@ -179,5 +188,16 @@ typedef struct
 
     // This is the entry's metadata
     EntryMetadata metadata;
+
+    // The level credit window (Clock.unix_timestamp / LEVEL_CREDIT_WINDOW_SECONDS) in which ki_applied_this_window
+    // was most recently changed.
+    uint64_t most_recent_ki_applied_window;
+
+    // Cumulative Ki contributed in that window.
+    // Multiple contributions earn P(new total) - P(old total), preventing transaction splitting.
+    uint64_t ki_applied_this_window;
+
+    // Lifetime level credits in tenths of a credit. Never deducted or reset on level-up or transfer.
+    uint64_t total_level_credits;
 
 } Entry;

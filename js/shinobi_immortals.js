@@ -58,8 +58,8 @@ const g_validator_info_pubkey = make_pubkey(g_validator_info_address);
 const g_program_authority_pubkey = find_pda([ [ 2 ] ], g_self_program_pubkey)[0];
 const g_program_authority_address = g_program_authority_pubkey.toBase58();
 
-const g_config_pubkey = find_pda([ [ 1 ] ], g_self_program_pubkey)[0];
-const g_config_address = g_config_pubkey.toBase58();
+const g_program_state_pubkey = find_pda([ [ 1 ] ], g_self_program_pubkey)[0];
+const g_program_state_address = g_program_state_pubkey.toBase58();
 
 const g_master_stake_pubkey = find_pda([ [ 3 ] ], g_self_program_pubkey)[0];
 const g_master_stake_address = g_master_stake_pubkey.toBase58();
@@ -1081,8 +1081,11 @@ class Entry
         this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 312);
         this.owned_last_commission_charge_stake_account_lamports = buffer_le_u64(data, 320);
         this.level = data[328];
+        this.most_recent_ki_applied_window = buffer_le_u64(data, 3032);
+        this.ki_applied_this_window = buffer_le_u64(data, 3040);
+        this.total_level_credits = buffer_le_u64(data, 3048);
 
-        this.metadata_level_1_ki = buffer_le_u32(data, 332);
+        this.metadata_level_1_credits = buffer_le_u32(data, 332);
         this.metadata_random = [ buffer_le_u32(data, 336),
                                  buffer_le_u32(data, 340),
                                  buffer_le_u32(data, 344),
@@ -1111,6 +1114,9 @@ class Entry
                 uri_contents_sha256 : buffer_sha256(data, 660 + (i * 292))
             };
         }
+
+        // Expected annual stake reward rate in basis points, which calibrates the level credits curve
+        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3028);
     }
 
     update(data)
@@ -1183,6 +1189,14 @@ class Entry
         if (new_entry.level != this.level) {
             this.level = new_entry.level;
             changed = true;
+        }
+
+        // Contributions can change progression without changing the level.
+        for (const field of [ "most_recent_ki_applied_window", "ki_applied_this_window", "total_level_credits" ]) {
+            if (new_entry[field] != this[field]) {
+                this[field] = new_entry[field];
+                changed = true;
+            }
         }
 
         let new_level_metadata = [ ];
@@ -1805,7 +1819,7 @@ class Wallet
     {
         let result = await this.cluster.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getAccountInfo(g_config_address,
+                return rpc_connection.getAccountInfo(g_program_state_address,
                                                      {
                                                          dataSlice : { offset : 4,
                                                                        length : 32 }
@@ -1887,10 +1901,11 @@ class Wallet
         }, sign_callback);
     }
 
-    async level_up_entry(entry, sign_callback)
+    // ki_to_apply is whole Ki; use a decimal string for large integer amounts.
+    async level_up_entry(entry, ki_to_apply, sign_callback)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_level_up_tx(entry, wallet_address);
+            return this.make_level_up_tx(entry, ki_to_apply, wallet_address);
         }, sign_callback);
     }
 
@@ -1903,7 +1918,7 @@ class Wallet
         let token_destination_address = get_associated_token_address(wallet_address, entry.mint_address);
 
         return _buy_tx({ funding_pubkey : wallet_address,
-                         config_pubkey : g_config_address,
+                         state_pubkey : g_program_state_address,
                          admin_pubkey : admin_address,
                          block_pubkey : entry.block.address,
                          whitelist_pubkey : get_whitelist_address(entry.block.address),
@@ -1951,7 +1966,7 @@ class Wallet
             return _claim_winning_tx({ bidding_pubkey : wallet_address,
                                        entry_pubkey : entry.address,
                                        bid_pubkey : bid_address,
-                                       config_pubkey : g_config_address,
+                                       state_pubkey : g_program_state_address,
                                        admin_pubkey : admin_address,
                                        entry_token_pubkey : entry.token_address,
                                        entry_mint_pubkey : entry.mint_address,
@@ -2002,14 +2017,15 @@ class Wallet
                              ki_destination_owner_pubkey : wallet_address });
     }
 
-    async make_level_up_tx(entry, wallet_address)
+    async make_level_up_tx(entry, ki_to_apply, wallet_address)
     {
         return _level_up_tx({ entry_pubkey : entry.address,
                               token_owner_pubkey : wallet_address,
                               token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
                               entry_metaplex_metadata_pubkey : entry.metaplex_metadata_address,
                               ki_source_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
-                              ki_source_owner_pubkey : wallet_address });
+                              ki_source_owner_pubkey : wallet_address,
+                              ki_to_apply : ki_to_apply });
     }
 
     async complete_tx(tx_maker_func, sign_callback)

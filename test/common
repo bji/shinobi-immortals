@@ -262,6 +262,37 @@ function make_funded_keypair ()
 }
 
 
+# Run a solana CLI stake command, retrying while the stake program rejects it with EpochRewardsActive (stake program
+# error 16, 0x10).  At the start of each epoch the runtime distributes stake rewards over several slots, and stake
+# accounts cannot be modified until it finishes; with the test validator's short epochs, setup commands land in
+# that window often enough to make the suite fail intermittently.  Any other error is reported and returned at once.
+function solana_stake ()
+{
+    local attempt output
+
+    for attempt in `seq 1 60`; do
+        if output=`solana "$@" 2>&1`; then
+            echo "$output"
+            return 0
+        fi
+        # The error is reported as "custom program error: 0x10;" when the transaction fails simulation, and as
+        # "custom program error: 0x10" at the end of the output when it passes simulation but fails on chain; in
+        # both cases the failed transaction changed nothing, so it is safe to retry.  The hex digit check
+        # ensures that other errors such as 0x100 do not match.
+        if printf '%s\n' "$output" | grep -Eq 'custom program error: 0x10($|[^0-9a-fA-F])'; then
+            # Rewards are still being distributed; wait and try again
+            sleep 1
+        else
+            echo "$output" >&2
+            return 1
+        fi
+    done
+
+    echo "$output" >&2
+    return 1
+}
+
+
 function make_stake_account ()
 {
     local AUTHORITY_KEY_FILE=$1
@@ -272,7 +303,7 @@ function make_stake_account ()
 
     solana-keygen new -o $STAKE_KEY_FILE --no-bip39-passphrase --force --silent
 
-    solana -u l create-stake-account -k $AUTHORITY_KEY_FILE $STAKE_KEY_FILE $SOL $4 >/dev/null
+    solana_stake -u l create-stake-account -k $AUTHORITY_KEY_FILE $STAKE_KEY_FILE $SOL $4 >/dev/null
 }
 
 
@@ -388,8 +419,82 @@ function sleep_until_next_epoch ()
 }
 
 
+# Write a single byte value at a byte offset within a file, without changing the file's length
+function poke_byte ()
+{
+    local FILE=$1
+    local OFFSET=$2
+    local VALUE=$3
+
+    printf "\\$(printf '%03o' $VALUE)" | dd of=$FILE bs=1 seek=$OFFSET conv=notrunc status=none
+}
+
+
+# Create a genesis fixture for an Entry that is already at level index 8 (displayed level 9).  Level progression is
+# time-gated by design (months of epochs), so no sequence of transactions on a local validator can reach the maximum
+# level; the only way to test the maximum-level rejection is to start the validator with such an Entry already in
+# place.  Only the fields that LevelUp examines before rejecting a maximum-level entry are set; all others are zero.
+# Sets MAX_LEVEL_ENTRY_PUBKEY and writes $FIXTURES/max_level_entry.json.
+# Byte offsets (which must match program/inc/entry.h, and which are also used by scripts/show.sh):
+#   0   data_type (u32): 3 = DataType_Entry
+#   168 reveal_sha256: all zero, meaning revealed
+#   208 purchase_price_lamports (u64): non-zero, meaning owned
+#   328 level (u8): 8
+#   332 metadata.level_1_credits (u32): 100
+function make_max_level_entry_fixture ()
+{
+    local PROGRAM_PUBKEY=$1
+    local DATA_FILE=$FIXTURES/max_level_entry.bin
+    # sizeof(Entry)
+    local SIZE=3056
+    # Rent exempt minimum: (data size + 128 bytes account overhead) * 3480 lamports/byte-year * 2 years
+    local LAMPORTS=$(((SIZE + 128) * 3480 * 2))
+
+    # The fixture's address is arbitrary; LevelUp does not derive or check the entry account's address
+    solana-keygen new -o $FIXTURES/max_level_entry_address.json --no-bip39-passphrase --silent
+    export MAX_LEVEL_ENTRY_PUBKEY=`solxact pubkey $FIXTURES/max_level_entry_address.json`
+
+    # Start with all zeroes, then set the individual fields
+    dd if=/dev/zero of=$DATA_FILE bs=$SIZE count=1 status=none
+    poke_byte $DATA_FILE 0 3
+    poke_byte $DATA_FILE 208 1
+    poke_byte $DATA_FILE 328 8
+    poke_byte $DATA_FILE 332 100
+
+    # Write the account in the JSON format that solana-test-validator --account loads
+    cat > $FIXTURES/max_level_entry.json <<EOF
+{"pubkey":"$MAX_LEVEL_ENTRY_PUBKEY","account":{"lamports":$LAMPORTS,"data":["`base64 < $DATA_FILE | tr -d '\n'`","base64"],"owner":"$PROGRAM_PUBKEY","executable":false,"rentEpoch":0,"space":$SIZE}}
+EOF
+}
+
+
+# The validator's current Clock.unix_timestamp, which is what the program uses to determine level credit windows.
+# The Clock sysvar's unix_timestamp is the signed 64 bit value at byte offset 32.
+function clock_unix_timestamp ()
+{
+    get_account_data $CLOCK_SYSVAR_PUBKEY 32 8 | base64 -d | od -An -td8 | tr -d ' '
+}
+
+
+# Wait until the validator's clock is in a later level credit window than it is now
+function sleep_until_next_level_credit_window ()
+{
+    local START_WINDOW=$((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS))
+
+    echo "Waiting for level credit window $START_WINDOW to complete"
+    while [ $((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS)) -eq $START_WINDOW ]; do
+        sleep 1
+    done
+}
+
+
 function setup ()
 {
+    # The level credit window length that the test program is built with (production uses 5 days).  It must give at
+    # least 3 windows per 365 day year (see util_calculations.c).  60 seconds is long enough for consecutive level-up transactions to usually land in the
+    # same window, and short enough to wait for the next window.
+    export LEVEL_CREDIT_WINDOW_SECONDS=60
+
     # Make a temporary directory to hold the validator ledger
     export LEDGER=`mktemp -d`
 
@@ -400,11 +505,22 @@ function setup ()
 
     # On exit be sure to kill the test validator and clean up after it
     trap "teardown $LEDGER" EXIT
-    
+
+    # Genesis fixtures live outside of the ledger directory so that the validator's --reset cannot disturb them
+    export FIXTURES=$LEDGER-fixtures
+    mkdir $FIXTURES
+
+    # The program keypair must exist before the validator starts, because the fixture accounts below are owned by
+    # the program.  It is moved into the ledger directory, where the rest of the tests expect it, once the
+    # validator is running.
+    solana-keygen new -o $FIXTURES/program.json --no-bip39-passphrase --silent
+    make_max_level_entry_fixture `solxact pubkey $FIXTURES/program.json`
+
     # Start the test validator
     solana-test-validator --alpenglow --ledger $LEDGER --ticks-per-slot 16 --slots-per-epoch 100 --reset             \
                           -u https://api.mainnet-beta.solana.com -c metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s      \
-                          -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT >/dev/null &
+                          -c PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT                                             \
+                          --account $MAX_LEVEL_ENTRY_PUBKEY $FIXTURES/max_level_entry.json >/dev/null &
     
     echo "Waiting 10 seconds for it to settle"
     
@@ -416,7 +532,8 @@ function setup ()
     export VOTE_PUBKEY=`solana -u http://localhost:8899 validators | head -2 | tail -1 | awk '{ print $3 }'`
     
     # Create keys: program, super, admin, rich_user1, rich_user2, poor_user, nonexistent_user
-    make_funded_keypair $LEDGER/program.json 0
+    # The program keypair was created before the validator started (see above); it needs no funds
+    mv $FIXTURES/program.json $LEDGER/program.json
     make_funded_keypair $LEDGER/super.json 100000
     make_funded_keypair $LEDGER/admin.json 100000
     make_funded_keypair $LEDGER/rich_user1.json 100000
@@ -426,7 +543,19 @@ function setup ()
     
     # Build the program
     echo "Making build script"
-    $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $VOTE_PUBKEY > $LEDGER/build_program.sh
+    $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $VOTE_PUBKEY > $LEDGER/build_program.sh.in
+    # The test program differs from a production build in exactly one respect: a short level credit window, so that
+    # window rollover can be tested in real time.  Production builds have no way to set this (the generated build
+    # script has no override hook), so the define is inserted here, into the test's copy of the build script only,
+    # immediately after the program include directory argument.
+    awk -v WINDOW=$LEVEL_CREDIT_WINDOW_SECONDS                                                                       \
+        '{ print } /^ *-I\$SOURCE_ROOT\/program / { print "    -DLEVEL_CREDIT_WINDOW_SECONDS=" WINDOW "ul \\" }'     \
+        $LEDGER/build_program.sh.in > $LEDGER/build_program.sh
+    # Fail loudly if the build script's format changed and the define could not be inserted
+    if ! grep -q -- "-DLEVEL_CREDIT_WINDOW_SECONDS=${LEVEL_CREDIT_WINDOW_SECONDS}ul" $LEDGER/build_program.sh; then
+        echo "FAIL: could not insert LEVEL_CREDIT_WINDOW_SECONDS into the test build script"
+        exit 1
+    fi
     chmod +x $LEDGER/build_program.sh
     echo "Building program"
     (cd $LEDGER;                                                                                                     \
@@ -457,7 +586,7 @@ function setup ()
     export     METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
     export STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
     export         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
-    export               CONFIG_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
+    export               STATE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
     export            AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 2 ]`
     export         MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 3 ]`
     export              KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 ]`
@@ -481,5 +610,5 @@ function teardown ()
 
     killall -9 solana-test-validator
 
-    rm -rf $LEDGER
+    rm -rf $LEDGER $LEDGER-fixtures
 }

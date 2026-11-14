@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -9,7 +9,10 @@ function require ()
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: user_level_up_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> [<TOKEN_PUBKEY>]
+Usage: user_level_up_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <KI_AMOUNT> [<TOKEN_PUBKEY>]
+
+KI_AMOUNT is the contribution in whole Ki: 10 means ten Ki.
+The contribution earns level credits even if no level threshold is crossed.
 
 If <TOKEN_PUBKEY> is not provided, it is assumed to be the Associated Token Account.
 
@@ -22,12 +25,14 @@ USER_PUBKEY=$1
 GROUP_NUMBER=$2
 BLOCK_NUMBER=$3
 ENTRY_INDEX=$4
-TOKEN_PUBKEY=$5
+KI_AMOUNT=$5
+TOKEN_PUBKEY=$6
 
 require $USER_PUBKEY
 require $GROUP_NUMBER
 require $BLOCK_NUMBER
 require $ENTRY_INDEX
+require $KI_AMOUNT
 
 # Compute program, block, entry, and related pubkeys.  These may not all be valid, depending on input parameters
 # to the script, but any that are invalid won't be used by the solxact encode command that follows.
@@ -47,7 +52,7 @@ fi
     METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
-              CONFIG_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 1 ]"
+              STATE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 1 ]"
            AUTHORITY_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 2 ]"
         MASTER_STAKE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 3 ]"
              KI_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 4 ]"
@@ -118,4 +123,5 @@ solxact encode                                                                  
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         // Instruction code 18 = LevelUp //                                                                           \
-        u8 18
+        u8 18                                                                                                        \
+        u64 $KI_AMOUNT

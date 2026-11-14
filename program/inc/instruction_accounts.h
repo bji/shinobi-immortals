@@ -6,7 +6,7 @@ typedef enum
 {
     KnownAccount_NotKnown,
     KnownAccount_SuperUser,
-    KnownAccount_ProgramConfig,
+    KnownAccount_ProgramState,
     KnownAccount_Authority,
     KnownAccount_MasterStake,
     KnownAccount_KiMint,
@@ -68,8 +68,8 @@ static bool check_known_account(const SolAccountInfo *account, KnownAccount know
         known_pubkey = &(Constants.superuser_pubkey);
         break;
 
-    case KnownAccount_ProgramConfig:
-        known_pubkey = &(Constants.config_pubkey);
+    case KnownAccount_ProgramState:
+        known_pubkey = &(Constants.state_pubkey);
         break;
 
     case KnownAccount_Authority:
