@@ -56,7 +56,7 @@ static uint64_t get_rent_exempt_minimum(uint64_t account_size)
     }
 
     fraction *= min;
-    fraction /= 0x3FF;
+    fraction /= 0x400;
 
     return min + fraction;
 }

@@ -540,10 +540,29 @@ function setup ()
     make_funded_keypair $LEDGER/rich_user2.json 100000
     make_funded_keypair $LEDGER/poor_user.json 0.01
     make_funded_keypair $LEDGER/nonexistent_user.json 0 finalized
-    
+
+    # Choose the vote account that the program is built to treat as Shinobi Systems.  Normally this is the test
+    # validator's own vote account.  But the test validator is the only validator that votes, and so the only one
+    # whose delegators earn rewards; a test that needs stake to earn rewards at a validator other than Shinobi Systems
+    # sets SEPARATE_SHINOBI_SYSTEMS_VOTE=1, which creates a new vote account (which never votes) to stand in for
+    # Shinobi Systems, leaving the test validator's vote account to play the part of some other validator.
+    if [ -n "$SEPARATE_SHINOBI_SYSTEMS_VOTE" ]; then
+        echo "Creating separate Shinobi Systems vote account"
+        solana-keygen new -o $LEDGER/shinobi_validator.json --no-bip39-passphrase --force --silent
+        solana-keygen new -o $LEDGER/shinobi_vote.json --no-bip39-passphrase --force --silent
+        # The vote program requires the validator identity account to be funded when creating the vote account
+        transfer $LEDGER/rich_user1.json `solxact pubkey $LEDGER/shinobi_validator.json` 10
+        solana -u l create-vote-account -k $LEDGER/rich_user1.json $LEDGER/shinobi_vote.json                         \
+               $LEDGER/shinobi_validator.json `solxact pubkey $LEDGER/rich_user1.json` --commitment finalized >/dev/null
+        export SHINOBI_SYSTEMS_VOTE_PUBKEY=`solxact pubkey $LEDGER/shinobi_vote.json`
+    else
+        export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+    fi
+
     # Build the program
     echo "Making build script"
-    $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $VOTE_PUBKEY > $LEDGER/build_program.sh.in
+    $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $SHINOBI_SYSTEMS_VOTE_PUBKEY               \
+        > $LEDGER/build_program.sh.in
     # The test program differs from a production build in exactly one respect: a short level credit window, so that
     # window rollover can be tested in real time.  Production builds have no way to set this (the generated build
     # script has no override hook), so the define is inserted here, into the test's copy of the build script only,
