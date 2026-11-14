@@ -285,8 +285,8 @@ if should_run_test admin_create_block_bad_mystery_start_price; then
            u16 5                                                                                                     \
            // Mystery Phase Duration //                                                                              \
            u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports (bad, must be <= 100,000 SOL) //                                          \
-           u64 \`lamports_from_sol 100000.00001\`                                                                    \
+           // Mystery Start Price Lamports (bad, must be <= 100,000,000 SOL) //                                      \
+           u64 \`lamports_from_sol 100000000.00001\`                                                                 \
            // Reveal Period Duration //                                                                              \
            u32 $((24*60*60))                                                                                         \
            // Minimum Price Lamports //                                                                              \
@@ -448,8 +448,8 @@ if should_run_test admin_create_block_bad_final_start_price; then
            bool false                                                                                                \
            // Duration (bad, must be nonzero) //                                                                     \
            u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports (bad, must be <= 100,000 SOL) //                                            \
-           u64 \`lamports_from_sol 100000.001\`                                                                      \
+           // Final Start Price Lamports (bad, must be <= 100,000,000 SOL) //                                        \
+           u64 \`lamports_from_sol 100000000.001\`                                                                   \
            // Whitelist Duration //                                                                                  \
            u32 0                                                                                                     \
            ]"                                                                                                        \

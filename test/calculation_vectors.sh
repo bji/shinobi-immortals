@@ -109,45 +109,73 @@ emit price/end 2 100 1000000 100000 100 100000
 emit price/after-end 2 100 1000000 100000 "$MAX" 100000
 emit price/constant 2 100 1000000 1000000 50 1000000
 # Duration 100 makes the intermediate time divisions exact. Independently
-# evaluate the documented rational curve, then round to 1000 lamports.
+# evaluate the documented rational curve, in whole lamports.
 # For start S, end E and elapsed t, the reference is
-# E + (S-E)*(100-t)/(101*(1+t)); dc's integer division supplies each floor.
+# E + (S-E)*(100-t)/(101*(1+t)); dc's integer division supplies the floor.
 for ((elapsed=0; elapsed<=100; ++elapsed)); do
-    expected=$(dc_calc "100000000000000 1000000000 - 100 $elapsed - * 101 1 $elapsed + * / 1000000000 + 1000 / 1000 * p")
+    expected=$(dc_calc "100000000000000 1000000000 - 100 $elapsed - * 101 1 $elapsed + * / 1000000000 + p")
     emit "price/curve/$elapsed" 2 100 100000000000000 1000000000 "$elapsed" "$expected"
 done
 # Long durations with the maximum start price (current_issues.txt issue 12).  For a 100,000 SOL start and a 1 SOL
-# floor, the product 100*delta*elapsed (delta in thousands of lamports) exceeds 2^64 from elapsed second 1844693 on;
-# compute_price used to overflow there and fall back to the floor (once at 1/1000 of it).  It must instead follow the
-# curve for the whole duration.
+# floor, the product 100*delta*elapsed exceeds 2^64 from elapsed second 1845 on (from second 1844693 on in the
+# earlier thousand-lamport arithmetic); compute_price used to overflow there and fall back to the floor (once at
+# 1/1000 of it).  It must instead follow the curve for the whole duration.
 # Over a 365 day duration, elapsed times that are multiples of 1/100 of the duration make the time divisions exact,
-# so the same rational reference as above applies, with t = 100*elapsed/duration.  Points on both sides of the old
-# overflow threshold (t = 5 is below it, t = 6 above) and near the end are checked.
+# so the same rational reference as above applies, with t = 100*elapsed/duration.  Points across the curve, from
+# well past the overflow thresholds to near the end, are checked.
 PRICE_LONG_DURATION=$((365*24*60*60))
 for t in 1 5 6 10 25 50 75 90 99; do
     elapsed=$((PRICE_LONG_DURATION / 100 * t))
-    expected=$(dc_calc "100000000000000 1000000000 - 100 $t - * 101 1 $t + * / 1000000000 + 1000 / 1000 * p")
+    expected=$(dc_calc "100000000000000 1000000000 - 100 $t - * 101 1 $t + * / 1000000000 + p")
     emit "price/long-duration/t$t" 2 "$PRICE_LONG_DURATION" 100000000000000 1000000000 "$elapsed" "$expected"
 done
-# Elapsed times around the old overflow threshold, and durations up to the uint32_t maximum, do not divide evenly.
-# For these the reference applies each of the curve's floors explicitly, in dc's arbitrary precision (so no
-# intermediate value can overflow), with d = (S-E)/1000 and e = E/1000:
-#   1000 * (e + floor((101*d - floor(100*d*t/T) - d) / (floor(10100*t/T) + 101)))
+# Elapsed times around the overflow thresholds, durations up to the uint32_t maximum, and prices that are not whole
+# multiples of anything do not divide evenly.  For these the reference applies each of the curve's floors
+# explicitly, in dc's arbitrary precision (so no intermediate value can overflow), in whole lamports, with d = S-E:
+#   E + floor((101*d - floor(100*d*t/T) - d) / (floor(10100*t/T) + 101))
 function price_floor_reference ()
 {
     local T=$1 S=$2 E=$3 t=$4
-    dc_calc "$S $E - 1000 / sd $E 1000 / se 101 ld * 100 ld * $t * $T / - ld - 10100 $t * $T / 101 + / le + 1000 * p"
+    dc_calc "$S $E - sd 101 ld * 100 ld * $t * $T / - ld - 10100 $t * $T / 101 + / $E + p"
 }
-for case in "$PRICE_LONG_DURATION 1844692" "$PRICE_LONG_DURATION 1844693" "$PRICE_LONG_DURATION 1844694"           \
-            "$PRICE_LONG_DURATION $((PRICE_LONG_DURATION - 1))" "4294967295 1844693" "4294967295 2147483647"          \
-            "4294967295 4294967294"; do
+for case in "$PRICE_LONG_DURATION 1844" "$PRICE_LONG_DURATION 1845" "$PRICE_LONG_DURATION 1844692"                             "$PRICE_LONG_DURATION 1844693" "$PRICE_LONG_DURATION 1844694"                                                        "$PRICE_LONG_DURATION $((PRICE_LONG_DURATION - 1))" "4294967295 1844693" "4294967295 2147483647"                      "4294967295 4294967294"; do
     read -r duration elapsed <<< "$case"
     expected=$(price_floor_reference "$duration" 100000000000000 1000000000 "$elapsed")
     emit "price/long-duration/T$duration-elapsed$elapsed" 2 "$duration" 100000000000000 1000000000 "$elapsed" "$expected"
 done
-# An equal, non-1000-aligned start/end price exposes truncation below the floor.
-emit price/minimum-rounding 2 100 1001999 1001999 50 1001999 0 0                                                     \
-    '1000-lamport rounding undercuts the minimum'
+# Prices that are not multiples of 1000 lamports are computed to the lamport, and never fall below the floor.  (The
+# earlier thousand-lamport arithmetic rounded the floor down, so that an Immortal could sell for up to 999 lamports
+# below its minimum price.)  An equal start and end price must return exactly that price at any time, and a falling
+# curve between two non-aligned prices must follow the reference, ending one second before the end at or above the
+# floor.
+emit price/minimum-rounding 2 100 1001999 1001999 50 1001999
+for elapsed in 0 1 50 99; do
+    expected=$(price_floor_reference 100 99999123456789 1000000999 "$elapsed")
+    emit "price/unaligned/$elapsed" 2 100 99999123456789 1000000999 "$elapsed" "$expected"
+done
+for elapsed in 1 1844 1845 31535999; do
+    expected=$(price_floor_reference "$PRICE_LONG_DURATION" 99999123456789 1000000999 "$elapsed")
+    emit "price/unaligned/long-$elapsed" 2 "$PRICE_LONG_DURATION" 99999123456789 1000000999 "$elapsed" "$expected"
+done
+# The largest start price that admin_create_block accepts, 100,000,000 SOL, must not overflow at any point on the
+# curve.  (101 times the price drop, the largest intermediate value, would overflow above about 182,000,000 SOL.)
+# Points on a 365 day curve at exact 1/100 steps use the rational reference; points that do not divide evenly,
+# including on the longest possible (uint32_t maximum) duration and with a floor that is not a multiple of 1000
+# lamports, use the explicit floor reference.
+PRICE_MAX_START=100000000000000000
+for t in 0 1 6 50 99; do
+    elapsed=$((PRICE_LONG_DURATION / 100 * t))
+    expected=$(dc_calc "$PRICE_MAX_START 1000000000 - 100 $t - * 101 1 $t + * / 1000000000 + p")
+    emit "price/max-start/t$t" 2 "$PRICE_LONG_DURATION" "$PRICE_MAX_START" 1000000000 "$elapsed" "$expected"
+done
+for case in "$PRICE_LONG_DURATION 1 1000000000" "$PRICE_LONG_DURATION 2 1000000000"                               \
+            "$PRICE_LONG_DURATION 1844693 1000000999" "$PRICE_LONG_DURATION $((PRICE_LONG_DURATION - 1)) 1000000999"  \
+            "4294967295 1 1000000000" "4294967295 2147483647 1000000999" "4294967295 4294967294 1000000999"; do
+    read -r duration elapsed floor <<< "$case"
+    expected=$(price_floor_reference "$duration" "$PRICE_MAX_START" "$floor" "$elapsed")
+    emit "price/max-start/T$duration-elapsed$elapsed-floor$floor" 2 "$duration" "$PRICE_MAX_START" "$floor"           \
+         "$elapsed" "$expected"
+done
 
 # Bid boundaries exercise the first bid, the maximum-bid sentinel, time clamping,
 # and both overflow fallbacks: adding one eighth and saturating at UINT64_MAX.
@@ -223,10 +251,14 @@ for ((i=0; i<128; ++i)); do
     expected=$(dc_calc "$reward $rate * 65535 / p")
     emit "commission/normal/$i" 5 "$current" "$baseline" "$rate" 0 "$expected"
 done
-# These references express intended behavior rather than reproducing unsigned
-# overflow: full commission equals the reward, and a balance decrease earns none.
-emit commission/large-reward 5 300000000000000 0 65535 0 300000000000000 0 0                                         \
-    'multiplication overflows before division'
+# Rewards large enough that reward * rate exceeds 2^64 (above about 281,000 SOL at the
+# maximum rate) must still give the exact result: full commission equals the reward,
+# and other rates give the floor of reward * rate / 65535.  A balance decrease earns none.
+emit commission/large-reward 5 300000000000000 0 65535 0 300000000000000
+emit commission/large-reward-rate 5 300000000000000 0 6553 0 $(dc_calc "300000000000000 6553 * 65535 / p")
+emit commission/max-reward-full-rate 5 "$MAX" 0 65535 0 "$MAX"
+emit commission/max-reward-max-minus-one 5 "$MAX" 0 65534 0 $(dc_calc "$MAX 65534 * 65535 / p")
+emit commission/max-reward-rate-one 5 "$MAX" 0 1 0 $(dc_calc "$MAX 65535 / p")
 emit commission/decreased-balance 5 99900000000 100000000000 6553 0 0
 # Stake exactly at the baseline, and the smallest and largest possible decreases, also earn no commission.
 emit commission/unchanged-balance 5 100000000000 100000000000 65535 0 0

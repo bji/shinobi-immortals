@@ -61,9 +61,8 @@ static uint64_t admin_create_block(const SolParameters *params)
         if (config->total_mystery_count > config->total_entry_count) {
             return Error_InvalidData_First + 1;
         }
-        // Ensure that the initial mystery price is no more than 100,000 SOL, to avoid rounding errors in mystery
-        // price computation
-        if (config->mystery_start_price_lamports > (100ul * 1000ul * LAMPORTS_PER_SOL)) {
+        // Ensure that the initial mystery price is no more than 100,000,000 SOL to avoid overflow
+        if (config->mystery_start_price_lamports > (100ul * 1000ul * 1000ul * LAMPORTS_PER_SOL)) {
             return Error_InvalidData_First + 2;
         }
         // Ensure that the final mystery price is not greater than the initial mystery price
@@ -77,8 +76,8 @@ static uint64_t admin_create_block(const SolParameters *params)
         return Error_InvalidData_First + 4;
     }
 
-    // Ensure that the final start price is no more than 100,000 SOL, to avoid rounding errors in price calculations
-    if (config->final_start_price_lamports > (100ul * 1000ul * LAMPORTS_PER_SOL)) {
+    // Ensure that the final start price is no more than 100,000,000 SOL, to avoid overflow
+    if (config->final_start_price_lamports > (100ul * 1000ul * 1000ul * LAMPORTS_PER_SOL)) {
         return Error_InvalidData_First + 5;
     }
     // Ensure that the final start price is >= the minimum price

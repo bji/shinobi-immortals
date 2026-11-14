@@ -23,8 +23,8 @@ do not prevent later batches from running.
 
 Known defects print XFAIL with "currently expected to fail" and a reason. They
 do not fail the suite. XPASS fails the suite so fixed defects must have their
-expected-failure annotations reviewed. The current expected defects are price
-floor rounding and commission overflow/underflow.
+expected-failure annotations reviewed. There are currently no expected defects;
+price floor rounding and commission overflow were fixed.
 
 Ki calculations scale earnings by effective total stake, using a 500 SOL
 asymptote: effective(x) = 500*x*(500+x)/(250000+500*x+x*x).

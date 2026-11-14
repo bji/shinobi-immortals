@@ -56,7 +56,14 @@ static uint64_t multiply_fraction(uint64_t value, uint64_t numerator, uint64_t d
     return result;
 }
 
-// If start_price > 100,000 SOL, rounding errors could be significant.
+// Returns the price at seconds_elapsed into a price curve that falls from start_price to end_price over
+// total_seconds, which requires start_price >= end_price.  The curve is y = (1 / (100x + 1)) - (1 / 101), where
+// x = seconds_elapsed / total_seconds; it runs from 100/101 at x = 0 down to 0 at x = 1.  The price is
+// end_price + (start_price - end_price) * y, rounded down, computed in whole lamports.  So the price starts just below
+// start_price (about 99% of the way from end_price to it) and falls to end_price; since the term added to end_price
+// is never negative, the price is never below end_price.  Callers' prices are limited to 100,000,000 SOL
+// (see admin_create_block), far below the roughly 182 million SOL at which the intermediate values below would
+// overflow; if they ever did overflow, end_price is returned.
 static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
                               uint64_t seconds_elapsed)
 {
@@ -65,40 +72,37 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
         return end_price;
     }
 
-    uint64_t original_end_price = end_price;
-
+    // The amount by which the price falls over the whole curve
     uint64_t delta = start_price - end_price;
-
-    // This is a curve based on the formula: y = (1 / (100x + 1)) - (1 / 101)
-    // To avoid rounding errors in math, work with lamports / 1000
-    delta /= 1000ul;
-    end_price /= 1000ul;
 
     // Keep track of overflow, and if it occurs, use the end price
     bool overflow = false;
 
-    // ac = delta * 101ul (cannot overflow since delta was already divided by 1000)
-    uint64_t ac = delta * 101ul;
+    // With x = seconds_elapsed / total_seconds, the amount added to end_price is
+    //     delta * ((1 / (100x + 1)) - (1 / 101)) = (101 * delta - (100 * delta * x + delta)) / (101 * (100x + 1))
+    // which is computed as (ac - ab) / bc, with each time term rounded down:
 
-    // ab = ((100ul * delta * seconds_elapsed) / total_seconds) + delta [100 * delta cannot overflow].
+    // ac = 101 * delta
+    uint64_t ac = checked_multiply(delta, 101ul, &overflow);
+
+    // ab = ((100 * delta * seconds_elapsed) / total_seconds) + delta.
     // The product 100 * delta * seconds_elapsed can overflow for large prices and long durations (for example, a
-    // 100,000 SOL start price after about 21 days), so it is never formed: multiply_fraction() computes the same
+    // 100,000 SOL start price after about 31 minutes), so it is never formed: multiply_fraction() computes the same
     // floor without it.  It requires seconds_elapsed <= total_seconds and total_seconds > 0, both guaranteed by the
-    // early return above.  The result is less than 100 * delta, so adding delta cannot overflow either.
-    uint64_t ab = checked_add(multiply_fraction(100ul * delta, seconds_elapsed, total_seconds), delta, &overflow);
+    // early return above.  The result is at most 100 * delta, so ab is at most ac, and ac - ab cannot underflow.
+    uint64_t ab = checked_add(multiply_fraction(checked_multiply(delta, 100ul, &overflow), seconds_elapsed,
+                                                total_seconds),
+                              delta, &overflow);
 
-    // bc = ((100ul * 101ul * seconds_elapsed) / total_seconds) + 101ul, computed the same way
+    // bc = ((100 * 101 * seconds_elapsed) / total_seconds) + 101, computed the same way
     uint64_t bc = checked_add(multiply_fraction(100ul * 101ul, seconds_elapsed, total_seconds), 101ul, &overflow);
 
-    // price = (end_price + ((ac - ab) / bc)) * 1000ul
-    uint64_t price = checked_multiply(checked_add(end_price, ((ac - ab) / bc), &overflow),
-                                      1000ul,
-                                      &overflow);
+    // price = end_price + ((ac - ab) / bc).  The added term is at most delta, so the sum is at most start_price.
+    uint64_t price = checked_add(end_price, (ac - ab) / bc, &overflow);
 
-    // With the intermediate products avoided above, overflow cannot occur for any input that reaches this point;
-    // this is a defensive fallback only.  Use the original (undivided) end price, not the divided one.
+    // Defensive fallback only; no price accepted by admin_create_block can overflow
     if (overflow) {
-        price = original_end_price;
+        price = end_price;
     }
 
     return price;
@@ -227,7 +231,12 @@ static uint64_t compute_commission(uint64_t current_stake, uint64_t baseline, ui
         return 0;
     }
 
-    return ((current_stake - baseline) * commission) / 0xFFFFul;
+    // Commission is the earned lamports times commission / 0xFFFF, rounded down.  The product of the earned lamports
+    // and the commission can overflow (for earnings above about 281,000 SOL at the maximum commission), so it is never
+    // formed: multiply_fraction() computes the same floor without it.  It requires the numerator to be no more than
+    // the denominator, which holds since commission is a uint16_t and so at most 0xFFFF.  The result is at most the
+    // earned lamports.
+    return multiply_fraction(current_stake - baseline, commission, 0xFFFFul);
 }
 
 // Returns the level credit window to use for a contribution made at unix_timestamp, given the window most recently
