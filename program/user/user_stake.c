@@ -82,23 +82,19 @@ static uint64_t user_stake(const SolParameters *params)
     }
 
     // Use stake account program to set all authorities to the authority
-    if (set_stake_authorities(stake_account->key, withdraw_authority_account->key,
-                              &(Constants.authority_pubkey), params->ka, params->ka_num)) {
-        return Error_SetStakeAuthoritiesFailed;
-    }
+    set_stake_authorities(stake_account->key, withdraw_authority_account->key, &(Constants.authority_pubkey),
+                          params->ka, params->ka_num);
 
     // If the stake account is in an initialized state, or it's staked with a deactivation epoch (meaning it was
     // deactivated already), delegate it to Shinobi Systems.  If the deactivation is partially complete (which would
     // occur if Solana has had such high levels of stake movement that total stake movement is being spread across
     // multiple epochs - something that has never happened in the history of Solana), then this will fail; but it can
-    // be tried again later when the deactivation is complete.
+    // be tried again later when the deactivation is complete.  Delegating a stake account that is still cooling down
+    // also fails, with the stake program's TooSoonToRedelegate error.  Any such failure aborts the transaction.
     if ((stake.state == StakeState_Initialized) ||
         ((stake.state == StakeState_Stake) &&
          (stake.stake.delegation.deactivation_epoch != UINT64_MAX))) {
-        if (delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
-                                  params->ka, params->ka_num)) {
-            return Error_FailedToDelegate;
-        }
+        delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey), params->ka, params->ka_num);
 
         // Re-decode the stake account, to get the new delegation information
         if (!decode_stake_account(stake_account, &stake)) {
@@ -109,9 +105,7 @@ static uint64_t user_stake(const SolParameters *params)
     // to the switch done already above), and if it's not delegated to Shinobi Systems, deactivate it, so that in the
     // next epoch it can be re-delegated to Shinobi Systems via the redelegate crank.
     else if (!is_shinobi_systems_vote_account(&(stake.stake.delegation.voter_pubkey))) {
-        if (deactivate_stake_signed(stake_account->key, params->ka, params->ka_num)) {
-            return Error_FailedToDeactivate;
-        }
+        deactivate_stake_signed(stake_account->key, params->ka, params->ka_num);
 
         // The delegated stake will be updated when anyone_take_commission_or_delegate next happens and successfully
         // delegates to Shinobi Systems

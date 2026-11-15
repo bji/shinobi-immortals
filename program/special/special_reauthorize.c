@@ -79,11 +79,8 @@ static uint64_t special_reauthorize(const SolParameters *params)
     }
 
     // Set the metaplex metadata authority of the entry to the new authority
-    uint64_t ret = set_metaplex_metadata_authority(&(entry->metaplex_metadata_pubkey), &(data->new_authority),
-                                                   params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    set_metaplex_metadata_authority(&(entry->metaplex_metadata_pubkey), &(data->new_authority),
+                                    params->ka, params->ka_num);
 
     // If the entry is staked, then set new authorities on it too
     if (is_staked) {
@@ -99,11 +96,8 @@ static uint64_t special_reauthorize(const SolParameters *params)
             return Error_InvalidAccountPermissions_First + 6;
         }
 
-        uint64_t ret = set_stake_authorities_signed(&(entry->owned.stake_account), &(data->new_authority),
-                                                    params->ka, params->ka_num);
-        if (ret) {
-            return ret;
-        }
+        set_stake_authorities_signed(&(entry->owned.stake_account), &(data->new_authority),
+                                     params->ka, params->ka_num);
 
         // No longer staked, all fields in owned should be zeroed out
         sol_memset(&(entry->owned), 0, sizeof(entry->owned));

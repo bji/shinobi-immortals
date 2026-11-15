@@ -9,9 +9,12 @@ typedef struct __attribute__((packed))
 } util_SystemTransferData;
 
 
-static uint64_t util_transfer(const SolPubkey *source_account, const SolPubkey *destination_account,
-                              uint64_t lamports, const SolSignerSeed *seeds, int seeds_count,
-                              const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+// A cross-program invocation either succeeds or aborts the entire transaction with the invoked program's error;
+// control never returns to this program on failure.  So functions here that do nothing but cross-program invocations
+// return void, and functions that also do their own checks return only the errors of those checks.
+static void util_transfer(const SolPubkey *source_account, const SolPubkey *destination_account,
+                          uint64_t lamports, const SolSignerSeed *seeds, int seeds_count,
+                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -33,25 +36,28 @@ static uint64_t util_transfer(const SolPubkey *source_account, const SolPubkey *
 
     SolSignerSeeds signer_seeds = { seeds, seeds_count };
 
-    return seeds ?
-        sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) :
+    if (seeds) {
+        sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    }
+    else {
         sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    }
 }
 
 
-static uint64_t util_transfer_lamports(const SolPubkey *source_account, const SolPubkey *destination_account,
-                                       uint64_t lamports, const SolAccountInfo *transaction_accounts,
-                                       int transaction_accounts_len)
+static void util_transfer_lamports(const SolPubkey *source_account, const SolPubkey *destination_account,
+                                   uint64_t lamports, const SolAccountInfo *transaction_accounts,
+                                   int transaction_accounts_len)
 {
-    return util_transfer(source_account, destination_account, lamports, 0, 0, transaction_accounts,
-                         transaction_accounts_len);
+    util_transfer(source_account, destination_account, lamports, 0, 0, transaction_accounts,
+                  transaction_accounts_len);
 }
 
 
-static uint64_t util_transfer_lamports_signed(const SolPubkey *source_account, const SolPubkey *destination_account,
-                                              uint64_t lamports, const SolSignerSeed *seeds, int seeds_count,
-                                              const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void util_transfer_lamports_signed(const SolPubkey *source_account, const SolPubkey *destination_account,
+                                          uint64_t lamports, const SolSignerSeed *seeds, int seeds_count,
+                                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    return util_transfer(source_account, destination_account, lamports, seeds, seeds_count, transaction_accounts,
-                         transaction_accounts_len);
+    util_transfer(source_account, destination_account, lamports, seeds, seeds_count, transaction_accounts,
+                  transaction_accounts_len);
 }

@@ -20,7 +20,7 @@ typedef enum
     // An admin function was invoked by a transaction that was not signed by the admin user
     Error_PermissionDenied                             = 1004,
 
-    // Failed to create an account
+    // The address of an account to be created is not the expected program derived address
     Error_CreateAccountFailed                          = 1005,
 
     // Failed to fetch the clock sysvar
@@ -83,20 +83,8 @@ typedef enum
     // Can't reclaim bid marker otken
     Error_FailedToReclaimBidMarkerToken                = 1033,
 
-    // Failed to move stake from master stake account out to entry stake account for commission collection purposes
-    Error_FailedToMoveStakeOut                         = 1034,
-
-    // Failed to move stake from entry stake account to master stake account for commission collection purposes
-    Error_FailedToMoveStake                            = 1035,
-
     // Attempt to stake when an entry is not in a stakeable state
     Error_NotStakeable                                 = 1036,
-
-    // Attempt to set stake account authorities to the authority failed during a stake operation
-    Error_SetStakeAuthoritiesFailed                    = 1037,
-
-    // Delegate stake failed
-    Error_FailedToDelegate                             = 1038,
 
     // Attempted to harvest Ki from an entry that is not staked
     Error_NotStaked                                    = 1039,
@@ -107,9 +95,6 @@ typedef enum
     // Attempt to level up an entry that is already at max level
     Error_AlreadyAtMaxLevel                            = 1041,
 
-    // Deactivate stake failed
-    Error_FailedToDeactivate                           = 1042,
-
     // Commission already set this epoch and can't be set again
     Error_CommissionAlreadySetThisEpoch                = 1043,
 
@@ -118,9 +103,6 @@ typedef enum
 
     // Invalid metaplex metadata in metadata account
     Error_InvalidMetadataValues                        = 1045,
-
-    // Failed to get minimum stake delegation
-    Error_FailedToGetMinimumStakeDelegation            = 1046,
 
     // User requested a buy but privided a maximum allowed price that is lower than the actual price
     Error_PriceTooHigh                                 = 1047,

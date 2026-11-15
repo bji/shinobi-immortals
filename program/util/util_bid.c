@@ -39,8 +39,10 @@ static uint64_t mint_bid_marker_token_idempotent(SolAccountInfo *bid_marker_toke
 
     // Mint a token into it, to prevent the user from cleaning it up because "it's empty".  Must mint 10 because the
     // tokens are stored on-chain as "decitokens", to comply with the metaplex fungible token metadata standard.
-    return mint_tokens(&(Constants.bid_marker_mint_pubkey), bid_marker_token_account->key, 10,
-                       transaction_accounts, transaction_accounts_len);
+    mint_tokens(&(Constants.bid_marker_mint_pubkey), bid_marker_token_account->key, 10,
+                transaction_accounts, transaction_accounts_len);
+
+    return 0;
 }
 
 
@@ -136,16 +138,15 @@ static uint64_t reclaim_bid_marker_token(const SolPubkey *entry_token_mint_pubke
 
     // If there are tokens in there, burn them
     if (token_amount > 0) {
-        uint64_t ret = burn_tokens(bid_marker_token_account->key, bidding_account->key,
-                                   &(Constants.bid_marker_mint_pubkey), token_amount,
-                                   transaction_accounts, transaction_accounts_len);
-        if (ret) {
-            return ret;
-        }
+        burn_tokens(bid_marker_token_account->key, bidding_account->key,
+                    &(Constants.bid_marker_mint_pubkey), token_amount,
+                    transaction_accounts, transaction_accounts_len);
     }
 
-    return close_token_account(bid_marker_token_account->key, bidding_account->key, bidding_account->key,
-                               transaction_accounts, transaction_accounts_len);
+    close_token_account(bid_marker_token_account->key, bidding_account->key, bidding_account->key,
+                        transaction_accounts, transaction_accounts_len);
+
+    return 0;
 }
 
 

@@ -59,6 +59,8 @@ static uint64_t user_harvest(const SolParameters *params)
     }
 
     // Harvest Ki
-    return harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-                      funding_account->key, clock.epoch, params->ka, params->ka_num);
+    harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
+               funding_account->key, clock.epoch, params->ka, params->ka_num);
+
+    return 0;
 }

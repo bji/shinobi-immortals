@@ -153,11 +153,8 @@ static uint64_t user_level_up(const SolParameters *params)
     }
 
     // Burn the Ki
-    uint64_t ret = burn_tokens(ki_source_account->key, ki_source_owner_account->key,
-                               &(Constants.ki_mint_pubkey), ki_to_burn, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    burn_tokens(ki_source_account->key, ki_source_owner_account->key,
+                &(Constants.ki_mint_pubkey), ki_to_burn, params->ka, params->ka_num);
 
     entry->most_recent_ki_applied_window = window;
     entry->ki_applied_this_window = new_ki;

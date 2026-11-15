@@ -3,6 +3,12 @@
 #include "inc/types.h"
 #include "util/util_borsh.c"
 
+
+// A cross-program invocation either succeeds or aborts the entire transaction with the invoked program's error;
+// control never returns to this program on failure.  So functions here that do nothing but cross-program invocations
+// return void, and functions that also do their own checks return only the errors of those checks.
+
+
 // These are the possible stake states
 typedef enum
 {
@@ -257,7 +263,9 @@ static uint64_t create_stake_account(SolAccountInfo *stake_account, const SolSig
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+
+    return 0;
 }
 
 
@@ -272,9 +280,9 @@ typedef struct __attribute__((__packed__))
 } util_StakeInstructionData;
 
 
-static uint64_t set_stake_authorities(const SolPubkey *stake_account, const SolPubkey *prior_withdraw_authority,
-                                      const SolPubkey *new_authority, const SolAccountInfo *transaction_accounts,
-                                      int transaction_accounts_len)
+static void set_stake_authorities(const SolPubkey *stake_account, const SolPubkey *prior_withdraw_authority,
+                                  const SolPubkey *new_authority, const SolAccountInfo *transaction_accounts,
+                                  int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -300,19 +308,16 @@ static uint64_t set_stake_authorities(const SolPubkey *stake_account, const SolP
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    uint64_t ret = sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
-    if (ret) {
-        return ret;
-    }
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 
     data.stake_authorize = 1;
 
-    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
 
 
-static uint64_t set_stake_authorities_signed(const SolPubkey *stake_account, const SolPubkey *new_authority,
-                                             const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void set_stake_authorities_signed(const SolPubkey *stake_account, const SolPubkey *new_authority,
+                                         const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -343,14 +348,11 @@ static uint64_t set_stake_authorities_signed(const SolPubkey *stake_account, con
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
-    if (ret) {
-        return ret;
-    }
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 
     data.stake_authorize = 1;
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
@@ -372,9 +374,9 @@ typedef struct __attribute__((__packed__))
 } util_MoveStakeInstructionData;
 
 
-static uint64_t move_stake_signed(const SolPubkey *from_account_key, const SolPubkey *to_account_key,
-                                  uint64_t lamports, const SolAccountInfo *transaction_accounts,
-                                  int transaction_accounts_len)
+static void move_stake_signed(const SolPubkey *from_account_key, const SolPubkey *to_account_key,
+                              uint64_t lamports, const SolAccountInfo *transaction_accounts,
+                              int transaction_accounts_len)
 {
     SolInstruction instruction;
     instruction.program_id = &(Constants.stake_program_pubkey);
@@ -403,7 +405,7 @@ static uint64_t move_stake_signed(const SolPubkey *from_account_key, const SolPu
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
@@ -425,11 +427,8 @@ static uint64_t split_master_stake_signed(const SolPubkey *admin_account_key, So
 
     if (pre_merge_account && !is_empty_pubkey(pre_merge_account->key)) {
         // First it must be authorized the same as the master stake account in order to be mergeable
-        uint64_t ret = set_stake_authorities(pre_merge_account->key, admin_account_key, &(Constants.authority_pubkey),
-                                             transaction_accounts, transaction_accounts_len);
-        if (ret) {
-            return ret;
-        }
+        set_stake_authorities(pre_merge_account->key, admin_account_key, &(Constants.authority_pubkey),
+                              transaction_accounts, transaction_accounts_len);
 
         // Now merge
         SolAccountMeta account_metas[] =
@@ -452,10 +451,7 @@ static uint64_t split_master_stake_signed(const SolPubkey *admin_account_key, So
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
 
-        ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
-        if (ret) {
-            return ret;
-        }
+        sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
     }
 
     uint64_t rent_exempt_minimum = get_rent_exempt_minimum(STAKE_ACCOUNT_DATA_LEN);
@@ -490,22 +486,21 @@ static uint64_t split_master_stake_signed(const SolPubkey *admin_account_key, So
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
-    if (ret) {
-        return ret;
-    }
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 
     // The merge in has added undelegated SOL into the master stake account; but it does not seem possible to
     // withdraw that, so it will accumulate
 
     // Now re-assign authorities of the new account to the admin account
-    return set_stake_authorities_signed(split_into_account->key, admin_account_key, transaction_accounts,
-                                        transaction_accounts_len);
+    set_stake_authorities_signed(split_into_account->key, admin_account_key, transaction_accounts,
+                                 transaction_accounts_len);
+
+    return 0;
 }
 
 
-static uint64_t delegate_stake_signed(const SolPubkey *stake_account_key, const SolPubkey *vote_account_key,
-                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void delegate_stake_signed(const SolPubkey *stake_account_key, const SolPubkey *vote_account_key,
+                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -538,12 +533,12 @@ static uint64_t delegate_stake_signed(const SolPubkey *stake_account_key, const 
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
-static uint64_t deactivate_stake_signed(const SolPubkey *stake_account_key, const SolAccountInfo *transaction_accounts,
-                                        int transaction_accounts_len)
+static void deactivate_stake_signed(const SolPubkey *stake_account_key, const SolAccountInfo *transaction_accounts,
+                                    int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -570,5 +565,5 @@ static uint64_t deactivate_stake_signed(const SolPubkey *stake_account_key, cons
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }

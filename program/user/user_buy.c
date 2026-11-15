@@ -192,37 +192,27 @@ static uint64_t user_buy(const SolParameters *params)
     }
 
     // Transfer the purchase price from the funds source to the funds destination account
-    uint64_t ret = util_transfer_lamports(funding_account->key, funds_destination_account->key, purchase_price_lamports,
-                                          params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    util_transfer_lamports(funding_account->key, funds_destination_account->key, purchase_price_lamports,
+                           params->ka, params->ka_num);
 
     // Ensure that the token destination account exists
-    ret = create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey),
-                                                     token_destination_owner_account->key, funding_account->key,
-                                                     params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey),
+                                               token_destination_owner_account->key, funding_account->key,
+                                               params->ka, params->ka_num);
 
     // Transfer the token to the token destination account
-    ret = transfer_entry_token(entry, token_destination_account, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    transfer_entry_token(entry, token_destination_account, params->ka, params->ka_num);
 
     // Set the purchase price in the Entry now that it's been purchased
     entry->purchase_price_lamports = purchase_price_lamports;
 
     // And set the primary_sale_happened flag on the metaplex metadata, which isn't strictly necessary but just
     // in case there are UI presentations that care
-    ret = set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
 
     // Finally, close the entry's token account since it will never be used again.  The lamports go to the admin
     // account.
-    return close_entry_token(entry, admin_account->key, params->ka, params->ka_num);
+    close_entry_token(entry, admin_account->key, params->ka, params->ka_num);
+
+    return 0;
 }

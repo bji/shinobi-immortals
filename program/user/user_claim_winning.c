@@ -94,18 +94,12 @@ static uint64_t user_claim_winning(const SolParameters *params)
     }
 
     // Ensure that the token destination account exists
-    uint64_t ret = create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey),
-                                                              token_destination_owner_account->key,
-                                                              bidding_account->key, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey),
+                                               token_destination_owner_account->key,
+                                               bidding_account->key, params->ka, params->ka_num);
 
     // Transfer the entry token to the destination account
-    ret = transfer_entry_token(entry, token_destination_account, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    transfer_entry_token(entry, token_destination_account, params->ka, params->ka_num);
 
     // If the accounts were provided that would allow the bid marker token account to be reclaimed, do so
     if (reclaim_bid_marker) {
@@ -128,17 +122,11 @@ static uint64_t user_claim_winning(const SolParameters *params)
 
     // Set the primary_sale_happened flag on the metaplex metadata, as user_buy does, which isn't strictly necessary
     // but just in case there are UI presentations that care
-    ret = set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
 
     // Close the entry's token account, as user_buy does, since it is now empty and will never be used again.  Its
     // lamports go to the admin account.
-    ret = close_entry_token(entry, admin_account->key, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    close_entry_token(entry, admin_account->key, params->ka, params->ka_num);
 
     // Finally, delete the bid account, moving its lamports to the admin.  This is done last, after all cross-program
     // invocations, so that none of them sees the bid account in its deleted state.

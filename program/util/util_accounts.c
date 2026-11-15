@@ -171,6 +171,9 @@ typedef struct __attribute__((__packed__))
 } util_CreateAccountData;
 
 
+// Funds, allocates, and assigns [new_account].  Returns 0 on success, or Error_InvalidResize if the account is owned by
+// a program other than the system program or this program and is not already [space] bytes in size.  Any failure of
+// the system program aborts the transaction with the system program's error.
 static uint64_t create_account(SolAccountInfo *new_account, const SolPubkey *funding_account_key,
                                const SolPubkey *owner_account_key, const uint64_t funding_lamports,
                                uint64_t space, const SolSignerSeed *seeds, const int seeds_count,
@@ -184,13 +187,11 @@ static uint64_t create_account(SolAccountInfo *new_account, const SolPubkey *fun
 
     // Fund ------------------------------------------------------------------------------------------------------------
 
+    // A failed cross-program invocation aborts the transaction with the invoked program's error, so none of the
+    // invocations in this function have a result to check; the only errors this function returns are its own.
     if (*(new_account->lamports) < funding_lamports) {
-        uint64_t ret = util_transfer_lamports(funding_account_key, new_account->key,
-                                              funding_lamports - *(new_account->lamports),
-                                              transaction_accounts, transaction_accounts_len);
-        if (ret) {
-            return ret;
-        }
+        util_transfer_lamports(funding_account_key, new_account->key, funding_lamports - *(new_account->lamports),
+                               transaction_accounts, transaction_accounts_len);
     }
 
     // Alloc -----------------------------------------------------------------------------------------------------------
@@ -210,11 +211,11 @@ static uint64_t create_account(SolAccountInfo *new_account, const SolPubkey *fun
             instruction.data = (uint8_t *) &data;
             instruction.data_len = sizeof(data);
 
-            uint64_t ret = seeds ?
-                sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) :
+            if (seeds) {
+                sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+            }
+            else {
                 sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
-            if (ret) {
-                return ret;
             }
         }
         // Else if the account is owned by this program, then realloc the data segment so that the newly sized data
@@ -245,13 +246,15 @@ static uint64_t create_account(SolAccountInfo *new_account, const SolPubkey *fun
         instruction.data = (uint8_t *) &data;
         instruction.data_len = sizeof(data);
 
-        return seeds ?
-            sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1) :
+        if (seeds) {
+            sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+        }
+        else {
             sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+        }
     }
 
     return 0;
-
 }
 
 

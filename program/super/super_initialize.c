@@ -66,10 +66,11 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.state_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.state_seed_bytes) };
 
-        if (create_pda(state_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
-                       get_rent_exempt_minimum(sizeof(ProgramState)), sizeof(ProgramState), params->ka,
-                       params->ka_num)) {
-            return Error_CreateAccountFailed;
+        uint64_t ret = create_pda(state_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
+                                  get_rent_exempt_minimum(sizeof(ProgramState)), sizeof(ProgramState), params->ka,
+                                  params->ka_num);
+        if (ret) {
+            return ret;
         }
 
         // Set the initial contents of the program_state account.
@@ -83,9 +84,10 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
 
-        if (create_pda(authority_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
-                       get_rent_exempt_minimum(0), 0, params->ka, params->ka_num)) {
-            return Error_CreateAccountFailed;
+        uint64_t ret = create_pda(authority_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
+                                  get_rent_exempt_minimum(0), 0, params->ka, params->ka_num);
+        if (ret) {
+            return ret;
         }
     }
 
@@ -94,58 +96,54 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.master_stake_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.master_stake_seed_bytes) };
 
-        if (create_stake_account(master_stake_account, &seed, 1, superuser_account->key,
-                                 MASTER_STAKE_ACCOUNT_MIN_LAMPORTS, &(Constants.authority_pubkey),
-                                 &(Constants.authority_pubkey), params->ka, params->ka_num)) {
-            return Error_CreateAccountFailed;
+        uint64_t ret = create_stake_account(master_stake_account, &seed, 1, superuser_account->key,
+                                            MASTER_STAKE_ACCOUNT_MIN_LAMPORTS, &(Constants.authority_pubkey),
+                                            &(Constants.authority_pubkey), params->ka, params->ka_num);
+        if (ret) {
+            return ret;
         }
     }
 
     // Delegate master stake account to Shinobi Systems
-    if (delegate_stake_signed(master_stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
-                              params->ka, params->ka_num)) {
-        return Error_FailedToDelegate;
-    }
+    delegate_stake_signed(master_stake_account->key, &(Constants.shinobi_systems_vote_pubkey), params->ka,
+                          params->ka_num);
 
     // Create the Ki mint
     {
         const uint8_t *seed_bytes = (uint8_t *) Constants.ki_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.ki_mint_seed_bytes) };
 
-        if (create_token_mint(ki_mint_account, &seed, 1, &(Constants.authority_pubkey), superuser_account->key,
-                              1, params->ka, params->ka_num)) {
-            return Error_CreateAccountFailed;
+        uint64_t ret = create_token_mint(ki_mint_account, &seed, 1, &(Constants.authority_pubkey),
+                                         superuser_account->key, 1, params->ka, params->ka_num);
+        if (ret) {
+            return ret;
         }
     }
 
     // Create the metadata for the Ki mint
-    if (create_metaplex_metadata(&(Constants.ki_metadata_pubkey), &(Constants.ki_mint_pubkey),
-                                 superuser_account->key, (const uint8_t *) KI_TOKEN_NAME,
-                                 (const uint8_t *) KI_TOKEN_SYMBOL, (const uint8_t *) KI_TOKEN_METADATA_URI,
-                                 &(Constants.system_program_pubkey), &(Constants.system_program_pubkey),
-                                 params->ka, params->ka_num)) {
-        return Error_CreateAccountFailed;
-    }
+    create_metaplex_metadata(&(Constants.ki_metadata_pubkey), &(Constants.ki_mint_pubkey), superuser_account->key,
+                             (const uint8_t *) KI_TOKEN_NAME, (const uint8_t *) KI_TOKEN_SYMBOL,
+                             (const uint8_t *) KI_TOKEN_METADATA_URI, &(Constants.system_program_pubkey),
+                             &(Constants.system_program_pubkey), params->ka, params->ka_num);
 
     // Create the Shinobi Bid mint
     {
         const uint8_t *seed_bytes = (uint8_t *) Constants.bid_marker_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.bid_marker_mint_seed_bytes) };
 
-        if (create_token_mint(bid_marker_mint_account, &seed, 1, &(Constants.authority_pubkey),
-                              superuser_account->key, 1, params->ka, params->ka_num)) {
-            return Error_CreateAccountFailed;
+        uint64_t ret = create_token_mint(bid_marker_mint_account, &seed, 1, &(Constants.authority_pubkey),
+                                         superuser_account->key, 1, params->ka, params->ka_num);
+        if (ret) {
+            return ret;
         }
     }
 
     // Create the metadata for the Bid Marker mint
-    if (create_metaplex_metadata(&(Constants.bid_marker_metadata_pubkey), &(Constants.bid_marker_mint_pubkey),
-                                 superuser_account->key, (const uint8_t *) BID_MARKER_TOKEN_NAME,
-                                 (const uint8_t *) BID_MARKER_TOKEN_SYMBOL,
-                                 (const uint8_t *) BID_MARKER_TOKEN_METADATA_URI, &(Constants.system_program_pubkey),
-                                 &(Constants.system_program_pubkey), params->ka, params->ka_num)) {
-        return Error_CreateAccountFailed;
-    }
+    create_metaplex_metadata(&(Constants.bid_marker_metadata_pubkey), &(Constants.bid_marker_mint_pubkey),
+                             superuser_account->key, (const uint8_t *) BID_MARKER_TOKEN_NAME,
+                             (const uint8_t *) BID_MARKER_TOKEN_SYMBOL, (const uint8_t *) BID_MARKER_TOKEN_METADATA_URI,
+                             &(Constants.system_program_pubkey), &(Constants.system_program_pubkey), params->ka,
+                             params->ka_num);
 
     return 0;
 }

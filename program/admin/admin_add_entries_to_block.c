@@ -191,29 +191,19 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, const SolPubkey *block
     }
 
     // Mint one instance of the token into the token account
-    ret = mint_tokens(mint_account->key, token_account->key, 1, transaction_accounts, transaction_accounts_len);
-
-    if (ret) {
-        return ret;
-    }
+    mint_tokens(mint_account->key, token_account->key, 1, transaction_accounts, transaction_accounts_len);
 
     // Create the metaplex metadata
-    ret = create_entry_metaplex_metadata(metaplex_metadata_account->key, mint_account->key,
-                                         funding_key, block->config.group_number, block->config.block_number,
-                                         entry_index, data->metaplex_metadata_uri,
-                                         &(Constants.shinobi_systems_vote_pubkey),
-                                         &(data->second_metaplex_metadata_creator),
-                                         transaction_accounts, transaction_accounts_len);
-    if (ret) {
-        return ret;
-    }
+    create_entry_metaplex_metadata(metaplex_metadata_account->key, mint_account->key,
+                                   funding_key, block->config.group_number, block->config.block_number,
+                                   entry_index, data->metaplex_metadata_uri,
+                                   &(Constants.shinobi_systems_vote_pubkey),
+                                   &(data->second_metaplex_metadata_creator),
+                                   transaction_accounts, transaction_accounts_len);
 
     // Revoke the mint authority so that it is not fungible
-    ret = revoke_mint_authority(mint_account->key, &(Constants.authority_pubkey), transaction_accounts,
-                                transaction_accounts_len);
-    if (ret) {
-        return ret;
-    }
+    revoke_mint_authority(mint_account->key, &(Constants.authority_pubkey), transaction_accounts,
+                          transaction_accounts_len);
 
     // Do not create metaplex edition metadata because:
     // 1. It's useless and an extra cost

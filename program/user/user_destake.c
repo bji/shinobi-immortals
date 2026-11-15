@@ -80,23 +80,15 @@ static uint64_t user_destake(const SolParameters *params)
 
     // Harvest Ki.  Must be done before commission is charged since commission charge actually reduces the number of
     // lamports in the stake account, which would affect Ki harvest calculations
-    uint64_t ret = harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-                              funding_account->key, clock.epoch, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
+               funding_account->key, clock.epoch, params->ka, params->ka_num);
 
     // Charge commission
-    ret = charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
-    if (ret) {
-        return ret;
-    }
+    charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
 
     // Use stake account program to set all authorities to the token owner; must do this signed since the
     // program authority is currently the withdraw authority of the stake account
-    if (set_stake_authorities_signed(stake_account->key, token_owner_account->key, params->ka, params->ka_num)) {
-        return Error_SetStakeAuthoritiesFailed;
-    }
+    set_stake_authorities_signed(stake_account->key, token_owner_account->key, params->ka, params->ka_num);
 
     // No longer staked, all fields in owned should be zeroed out
     sol_memset(&(entry->owned), 0, sizeof(entry->owned));

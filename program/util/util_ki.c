@@ -4,25 +4,26 @@
 #include "util/util_stake.c"
 
 
-// Checks to make sure that the destination account is a valid token account for the Ki mint and returns 0 on
-// success and a non-zero Error code on failure.
-static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInfo *destination_account,
-                           const SolPubkey *destination_account_owner_key, const SolPubkey *funding_key,
-                           uint64_t current_epoch, const SolAccountInfo *transaction_accounts,
-                           int transaction_accounts_len)
+// Harvests Ki earned by [stake] into [destination_account], creating it as the associated Ki token account of
+// [destination_account_owner_key] if necessary.  If the destination account is not a valid Ki token account for that
+// owner, the Associated Token Account or SPL Token program's failure aborts the transaction.
+static void harvest_ki(const Stake *stake, Entry *entry, const SolAccountInfo *destination_account,
+                       const SolPubkey *destination_account_owner_key, const SolPubkey *funding_key,
+                       uint64_t current_epoch, const SolAccountInfo *transaction_accounts,
+                       int transaction_accounts_len)
 {
     // If the stake account is currently activating or deactivating, then don't harvest Ki.  Activating or
     // deactivating stake accounts pass into this function in situations in which Ki should not be harvested.
     if ((stake->stake.delegation.activation_epoch >= current_epoch) ||
         (stake->stake.delegation.deactivation_epoch != UINT64_MAX)) {
-        return 0;
+        return;
     }
 
     // A decrease in delegated stake is not earnings. Reset the baseline rather than allowing unsigned subtraction to
     // turn that decrease into a reward.
     if (stake->stake.delegation.stake < entry->owned.last_ki_harvest_stake_account_lamports) {
         entry->owned.last_ki_harvest_stake_account_lamports = stake->stake.delegation.stake;
-        return 0;
+        return;
     }
 
     // Apply the effective-stake curve to earned lamports.  The baseline comparison above guarantees earnings <= the
@@ -38,28 +39,20 @@ static uint64_t harvest_ki(const Stake *stake, Entry *entry, const SolAccountInf
                                                  entry->metadata.level_metadata[entry->level].ki_factor);
     if (!harvest_amount) {
         // Leave the baseline unchanged so a sub-Ki reward can accumulate.
-        return 0;
+        return;
     }
 
-    uint64_t ret = create_associated_token_account_idempotent(destination_account, &(Constants.ki_mint_pubkey),
-                                                              destination_account_owner_key, funding_key,
-                                                              transaction_accounts, transaction_accounts_len);
-    if (ret) {
-        return ret;
-    }
+    create_associated_token_account_idempotent(destination_account, &(Constants.ki_mint_pubkey),
+                                               destination_account_owner_key, funding_key,
+                                               transaction_accounts, transaction_accounts_len);
 
     // Only the SPL Token boundary uses base units: ten base units equal one Ki.
     // Effective earnings < 510 SOL and a uint32_t factor bound whole Ki below
     // 510*UINT32_MAX; multiplying that by ten also fits comfortably in uint64_t.
     uint64_t mint_amount = harvest_amount * 10;
-    ret = mint_tokens(&(Constants.ki_mint_pubkey), destination_account->key, mint_amount,
-                      transaction_accounts, transaction_accounts_len);
-    if (ret) {
-        return ret;
-    }
+    mint_tokens(&(Constants.ki_mint_pubkey), destination_account->key, mint_amount,
+                transaction_accounts, transaction_accounts_len);
 
     // A successful positive harvest consumes the processed rewards
     entry->owned.last_ki_harvest_stake_account_lamports = stake->stake.delegation.stake;
-
-    return 0;
 }

@@ -7,6 +7,11 @@
 #include "util/util_token.c"
 
 
+// A cross-program invocation either succeeds or aborts the entire transaction with the invoked program's error;
+// control never returns to this program on failure.  So functions here that do nothing but cross-program invocations
+// return void, and functions that also do their own checks return only the errors of those checks.
+
+
 // This is the type of data stored in a Solana token program mint account
 typedef struct __attribute__((packed))
 {
@@ -216,23 +221,25 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, const SolSignerS
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+
+    return 0;
 }
 
 
-// When this returns, the given token account will exist for the given mint with the given owner.  Only returns
-// an error if it can't make that happen.
-static uint64_t create_associated_token_account_idempotent(const SolAccountInfo *token_account,
-                                                           const SolPubkey *mint_key, const SolPubkey *owner_key,
-                                                           const SolPubkey *funding_key,
-                                                           const SolAccountInfo *transaction_accounts,
-                                                           int transaction_accounts_len)
+// When this returns, the given token account will exist for the given mint with the given owner.  If that can't be
+// made to happen, the Associated Token Account program's failure aborts the transaction.
+static void create_associated_token_account_idempotent(const SolAccountInfo *token_account,
+                                                       const SolPubkey *mint_key, const SolPubkey *owner_key,
+                                                       const SolPubkey *funding_key,
+                                                       const SolAccountInfo *transaction_accounts,
+                                                       int transaction_accounts_len)
 {
     // If it's already a token account for this user, then there's nothing more to do
     if ((*(token_account->lamports) > 0) &&
         !is_system_program(token_account->owner) &&
         is_token_owner(token_account, owner_key, mint_key, 0)) {
-        return 0;
+        return;
     }
     // Else, proceed to either creating it as a new account, or re-appropriating it from the system program
 
@@ -264,7 +271,7 @@ static uint64_t create_associated_token_account_idempotent(const SolAccountInfo 
     instruction.data = &one;
     instruction.data_len = sizeof(one);
 
-    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }
 
 
@@ -312,12 +319,14 @@ static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_accoun
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+
+    return 0;
 }
 
 
-static uint64_t mint_tokens(const SolPubkey *mint_key, const SolPubkey *token_key, uint64_t amount,
-                            const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void mint_tokens(const SolPubkey *mint_key, const SolPubkey *token_key, uint64_t amount,
+                        const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -347,12 +356,12 @@ static uint64_t mint_tokens(const SolPubkey *mint_key, const SolPubkey *token_ke
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
-static uint64_t revoke_mint_authority(const SolPubkey *mint_key, const SolPubkey *authority_key,
-                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void revoke_mint_authority(const SolPubkey *mint_key, const SolPubkey *authority_key,
+                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
 
     SolInstruction instruction;
@@ -382,13 +391,13 @@ static uint64_t revoke_mint_authority(const SolPubkey *mint_key, const SolPubkey
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
 // Transfers entry token account to a destination
-static uint64_t transfer_entry_token(const Entry *entry, const SolAccountInfo *token_destination,
-                                     const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void transfer_entry_token(const Entry *entry, const SolAccountInfo *token_destination,
+                                 const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -419,13 +428,13 @@ static uint64_t transfer_entry_token(const Entry *entry, const SolAccountInfo *t
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
-static uint64_t close_token_account(const SolPubkey *token_pubkey, const SolPubkey *owner_pubkey,
-                                    const SolPubkey *lamports_destination_key,
-                                    const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void close_token_account(const SolPubkey *token_pubkey, const SolPubkey *owner_pubkey,
+                                const SolPubkey *lamports_destination_key,
+                                const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -453,23 +462,23 @@ static uint64_t close_token_account(const SolPubkey *token_pubkey, const SolPubk
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
 // Closes an empty token account and transfers the lamports to a destination account
-static uint64_t close_entry_token(const Entry *entry, const SolPubkey *lamports_destination_key,
-                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void close_entry_token(const Entry *entry, const SolPubkey *lamports_destination_key,
+                              const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
-    return close_token_account(&(entry->token_pubkey), &(Constants.authority_pubkey), lamports_destination_key,
-                               transaction_accounts, transaction_accounts_len);
+    close_token_account(&(entry->token_pubkey), &(Constants.authority_pubkey), lamports_destination_key,
+                        transaction_accounts, transaction_accounts_len);
 }
 
 
 // Burns tokens
-static uint64_t burn_tokens(const SolPubkey *token_account_key, const SolPubkey *token_owner_account_key,
-                            const SolPubkey *mint_key, uint64_t to_burn,
-                            const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+static void burn_tokens(const SolPubkey *token_account_key, const SolPubkey *token_owner_account_key,
+                        const SolPubkey *mint_key, uint64_t to_burn,
+                        const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -494,5 +503,5 @@ static uint64_t burn_tokens(const SolPubkey *token_account_key, const SolPubkey 
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
 }

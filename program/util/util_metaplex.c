@@ -5,6 +5,11 @@
 #include "util/util_borsh.c"
 
 
+// A cross-program invocation either succeeds or aborts the entire transaction with the invoked program's error;
+// control never returns to this program on failure.  So functions here that do nothing but cross-program invocations
+// return void, and functions that also do their own checks return only the errors of those checks.
+
+
 // Metaplex Metadata is serialized Borsh format; there are only three possible forms that are supported by this
 // implementation: one with no creators, one with two creators, and one with three creators
 
@@ -194,14 +199,14 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, con
 }
 
 
-// Ensures that the metadata is being created at the correct address, returns an error if not.  Signs the
-// metadata with the authority key.
-static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key, const SolPubkey *mint_key,
-                                         const SolPubkey *funding_key, const uint8_t *name, const uint8_t *symbol,
-                                         const uint8_t *uri, const SolPubkey *creator_1, const SolPubkey *creator_2,
-                                         // All cross-program invocation must pass all account infos through, it's
-                                         // the only sane way to cross-program invoke
-                                         const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+// Creates metaplex metadata for a mint, and signs the metadata with the authority key.  The Metaplex Metadata program
+// fails, aborting the transaction, if the metadata address is not the correct one for the mint.
+static void create_metaplex_metadata(const SolPubkey *metaplex_metadata_key, const SolPubkey *mint_key,
+                                     const SolPubkey *funding_key, const uint8_t *name, const uint8_t *symbol,
+                                     const uint8_t *uri, const SolPubkey *creator_1, const SolPubkey *creator_2,
+                                     // All cross-program invocation must pass all account infos through, it's
+                                     // the only sane way to cross-program invoke
+                                     const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
 
 {
     // It is not necessary to verify that the metaplex_metadata_key is the correct account for the given mint,
@@ -249,11 +254,7 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
         instruction.data = data;
         instruction.data_len = ((uint64_t) d) - ((uint64_t) instruction.data);
 
-        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len,
-                                         &signer_seeds, 1);
-        if (ret) {
-            return ret;
-        }
+        sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
     }
 
     // Now sign the metadata with the program authority
@@ -270,16 +271,16 @@ static uint64_t create_metaplex_metadata(const SolPubkey *metaplex_metadata_key,
     instruction.data = &instruction_code;
     instruction.data_len = 1;
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
 // Change the update authority for metaplex metadata.  Assumes that the authority is the current authority
 // of the metadata.
-static uint64_t set_metaplex_metadata_authority(const SolPubkey *metaplex_metadata_pubkey,
-                                                const SolPubkey *new_authority,
-                                                const SolAccountInfo *transaction_accounts,
-                                                int transaction_accounts_len)
+static void set_metaplex_metadata_authority(const SolPubkey *metaplex_metadata_pubkey,
+                                            const SolPubkey *new_authority,
+                                            const SolAccountInfo *transaction_accounts,
+                                            int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -314,17 +315,17 @@ static uint64_t set_metaplex_metadata_authority(const SolPubkey *metaplex_metada
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
 // Sets the primary_sale_happened metaplex metadata value to true
-static uint64_t set_metaplex_metadata_primary_sale_happened(const Entry *entry,
-                                                            // All cross-program invocation must pass all account
-                                                            // infos through, it's the only sane way to cross-program
-                                                            // invoke
-                                                            const SolAccountInfo *transaction_accounts,
-                                                            int transaction_accounts_len)
+static void set_metaplex_metadata_primary_sale_happened(const Entry *entry,
+                                                        // All cross-program invocation must pass all account
+                                                        // infos through, it's the only sane way to cross-program
+                                                        // invoke
+                                                        const SolAccountInfo *transaction_accounts,
+                                                        int transaction_accounts_len)
 {
     SolInstruction instruction;
 
@@ -357,7 +358,7 @@ static uint64_t set_metaplex_metadata_primary_sale_happened(const Entry *entry,
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 }
 
 
@@ -525,11 +526,7 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
         instruction.data = data;
         instruction.data_len = ((uint64_t) d) - ((uint64_t) data);
 
-        uint64_t ret = sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len,
-                                         &signer_seeds, 1);
-        if (ret) {
-            return ret;
-        }
+        sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
     }
 
     // Now sign the metadata with the program authority
@@ -547,5 +544,7 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
     instruction.data = &instruction_code;
     instruction.data_len = 1;
 
-    return sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+
+    return 0;
 }

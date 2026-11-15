@@ -8,6 +8,11 @@
 #include "util_token.c"
 
 
+// A cross-program invocation either succeeds or aborts the entire transaction with the invoked program's error;
+// control never returns to this program on failure.  So functions here that do nothing but cross-program invocations
+// return void, and functions that also do their own checks return only the errors of those checks.
+
+
 // Returns an error if [mint_account] is not the correct account
 static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, const SolPubkey *block_key,
                                           uint16_t entry_index, const SolPubkey *funding_key,
@@ -129,16 +134,18 @@ static uint64_t create_entry_token_account(SolAccountInfo *token_account, const 
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
 
-    return sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+    sol_invoke(&instruction, transaction_accounts, transaction_accounts_len);
+
+    return 0;
 }
 
 
-static uint64_t create_entry_metaplex_metadata(const SolPubkey *metaplex_metadata_key, const SolPubkey *mint_key,
-                                               const SolPubkey *funding_key, uint32_t group_number,
-                                               uint32_t block_number, uint16_t entry_index, const uint8_t *uri,
-                                               const SolPubkey *creator_1, const SolPubkey *creator_2,
-                                               const SolAccountInfo *transaction_accounts,
-                                               int transaction_accounts_len)
+static void create_entry_metaplex_metadata(const SolPubkey *metaplex_metadata_key, const SolPubkey *mint_key,
+                                           const SolPubkey *funding_key, uint32_t group_number,
+                                           uint32_t block_number, uint16_t entry_index, const uint8_t *uri,
+                                           const SolPubkey *creator_1, const SolPubkey *creator_2,
+                                           const SolAccountInfo *transaction_accounts,
+                                           int transaction_accounts_len)
 {
     // The name of the NFT will be "Shinobi LLL-MMM-NNNN" where LLL is the group number, MMM is the block number,
     // and NNNN is the entry index (+1).
@@ -152,8 +159,8 @@ static uint64_t create_entry_metaplex_metadata(const SolPubkey *metaplex_metadat
     number_string(&(name[16]), entry_index + 1, 4);
     name[sizeof(name) - 1] = 0;
 
-    return create_metaplex_metadata(metaplex_metadata_key, mint_key, funding_key, name, (uint8_t *) "SHIN", uri,
-                                    creator_1, creator_2, transaction_accounts, transaction_accounts_len);
+    create_metaplex_metadata(metaplex_metadata_key, mint_key, funding_key, name, (uint8_t *) "SHIN", uri,
+                             creator_1, creator_2, transaction_accounts, transaction_accounts_len);
 }
 
 

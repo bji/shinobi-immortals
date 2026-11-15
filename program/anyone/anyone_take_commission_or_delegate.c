@@ -74,11 +74,8 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
     if ((stake.state == StakeState_Initialized) ||
         ((stake.state == StakeState_Stake) &&
          (stake.stake.delegation.deactivation_epoch != UINT64_MAX))) {
-        uint64_t ret = delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
-                                             params->ka, params->ka_num);
-        if (ret) {
-            return ret;
-        }
+        delegate_stake_signed(stake_account->key, &(Constants.shinobi_systems_vote_pubkey),
+                              params->ka, params->ka_num);
 
         // Re-decode the stake account, to get the new delegation information
         if (!decode_stake_account(stake_account, &stake)) {
@@ -97,7 +94,9 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
     // leaves a delegated stake account active if it is delegated to Shinobi Systems, and deactivates all others, which
     // are handled above.  So try charging commission.
     else if (stake.state == StakeState_Stake) {
-        return charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
+        charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
+
+        return 0;
     }
     // Else, this is a request using a stake account in an unacceptable state, so return an error
     else {
