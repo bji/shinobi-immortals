@@ -3,6 +3,8 @@
 function usage_exit ()
 {
     echo "Usage: show.sh [-u $RPC_SPECIFIER] state"
+    echo "       show.sh [-u $RPC_SPECIFIER] authority"
+    echo "       show.sh [-u $RPC_SPECIFIER] master_stake"
     echo "       show.sh [-u $RPC_SPECIFIER] block <GROUP_NUMBER> <BLOCK_NUMBER>"
     echo "       show.sh [-u $RPC_SPECIFIER] entry <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>"
     echo "       show.sh [-u $RPC_SPECIFIER] bid <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <BIDDER_PUBKEY>"
@@ -233,6 +235,39 @@ function get_data_string ()
     echo "$3" | base64 -d | dd bs=1 count=$max_length skip=$offset status=none | tr -d '\0'
 }
 
+# Prints the number of lamports held by the account $2, or nothing if the account does not exist
+function get_account_lamports ()
+{
+    local RPC_URL=$1
+    local ACCOUNT_PUBKEY=$2
+
+    # Request a zero length slice of the account's data, since only its lamports are wanted
+    curl -s $RPC_URL -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getAccountInfo\",\"params\":[\"$ACCOUNT_PUBKEY\",{\"dataSlice\":{\"offset\":0,\"length\":0},\"encoding\":\"base64\"}]}" | jq -r ".result.value.lamports // empty"
+}
+
+# Prints the rent exempt minimum, in lamports, of an account with $2 bytes of data
+function get_rent_exempt_minimum ()
+{
+    local RPC_URL=$1
+    local DATA_LEN=$2
+
+    curl -s $RPC_URL -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getMinimumBalanceForRentExemption\",\"params\":[$DATA_LEN]}" | jq -r ".result"
+}
+
+# Prints the excess of an account that holds $1 lamports and is required to hold $2 lamports: the amount that the
+# WithdrawExcess instruction would withdraw from it, which is zero if it holds no more than is required
+function to_excess ()
+{
+    local lamports=$1
+    local required=$2
+
+    if [ "$lamports" -gt "$required" ]; then
+        echo $(($lamports-$required))
+    else
+        echo 0
+    fi
+}
+
 RPC_URL=https://api.mainnet-beta.solana.com
 
 if [ "$1" = "-u" ]; then
@@ -265,11 +300,11 @@ fi
     METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
-              STATE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
-           AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 2 ]`
-        MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 3 ]`
-             KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 ]`
-     BID_MARKER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 ]`
+              STATE_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 1 ]`
+           AUTHORITY_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 2 ]`
+        MASTER_STAKE_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 3 ]`
+             KI_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 4 ]`
+     BID_MARKER_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 11 ]`
          KI_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                             \
                                  [ string metadata                                                                    \
                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                                    \
@@ -311,6 +346,158 @@ case $1 in
             exit 1
         fi
         printf '{"state_account":"%s","admin_pubkey":"%s"}\n' "$STATE_PUBKEY" "$ADMIN_PUBKEY"
+    ;;
+
+    authority)
+
+        shift
+
+        if [ -n "$1" ]; then
+            usage_exit
+        fi
+
+        ACCOUNT_DATA=`get_account_data $RPC_URL $AUTHORITY_PUBKEY`
+
+        if [ -z "$ACCOUNT_DATA" ]; then
+            echo "Authority account does not exist"
+            exit 1
+        fi
+
+        ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
+
+        # Authority is 16 bytes: the data type, 4 bytes of padding, and the total of mystery escrow lamports
+        if [ $ACCOUNT_DATA_LEN -ne 16 ]; then
+            echo "Authority account has invalid size $ACCOUNT_DATA_LEN, expected 16"
+            exit 1
+        fi
+
+        DATA_TYPE=`get_data_u32 0 "$ACCOUNT_DATA"`
+
+        if [ "0$DATA_TYPE" -ne 6 ]; then
+            echo "Invalid data type: $DATA_TYPE"
+            exit 1
+        fi
+
+        # The total purchase price of all mysteries that have been bought and not yet revealed or refunded
+        ESCROW_LAMPORTS=`get_data_u64 8 "$ACCOUNT_DATA"`
+
+        # Everything that the account holds
+        LAMPORTS=`get_account_lamports $RPC_URL $AUTHORITY_PUBKEY`
+
+        # The rent exempt minimum of the account
+        RENT_LAMPORTS=`get_rent_exempt_minimum $RPC_URL $ACCOUNT_DATA_LEN`
+
+        # The account is required to hold its rent exempt minimum plus the escrow; the admin can withdraw the rest
+        # with the WithdrawExcess instruction
+        EXCESS_LAMPORTS=`to_excess $LAMPORTS $(($RENT_LAMPORTS+$ESCROW_LAMPORTS))`
+
+        echo -n '{"authority_pubkey":"'$AUTHORITY_PUBKEY'",'
+
+        echo -n '"balance":'`to_sol $LAMPORTS`','
+
+        echo -n '"rent_exempt_minimum":'`to_sol $RENT_LAMPORTS`','
+
+        echo -n '"mystery_escrow":'`to_sol $ESCROW_LAMPORTS`','
+
+        echo '"withdrawable_excess":'`to_sol $EXCESS_LAMPORTS`'}'
+    ;;
+
+    master_stake)
+
+        shift
+
+        if [ -n "$1" ]; then
+            usage_exit
+        fi
+
+        ACCOUNT_DATA=`get_account_data $RPC_URL $MASTER_STAKE_PUBKEY`
+
+        if [ -z "$ACCOUNT_DATA" ]; then
+            echo "Master stake account does not exist"
+            exit 1
+        fi
+
+        ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
+
+        # All stake accounts have 200 bytes of data
+        if [ $ACCOUNT_DATA_LEN -ne 200 ]; then
+            echo "Master stake account has invalid size $ACCOUNT_DATA_LEN, expected 200"
+            exit 1
+        fi
+
+        # The stake account's state: 1 is Initialized (never delegated), 2 is Stake (has a delegation, which may or
+        # may not have been deactivated).  The master stake account is never in any other state.
+        STAKE_STATE=`get_data_u32 0 "$ACCOUNT_DATA"`
+
+        case "$STAKE_STATE" in
+            1) STAKE_STATE_NAME=Initialized ;;
+            2) STAKE_STATE_NAME=Stake ;;
+            *) echo "Invalid stake state: $STAKE_STATE"; exit 1 ;;
+        esac
+
+        # Everything that the account holds
+        LAMPORTS=`get_account_lamports $RPC_URL $MASTER_STAKE_PUBKEY`
+
+        # The rent exempt reserve that the stake account was created with
+        RESERVE_LAMPORTS=`get_data_u64 4 "$ACCOUNT_DATA"`
+
+        # The program never withdraws the larger of that reserve and the current rent exempt minimum
+        RENT_LAMPORTS=`get_rent_exempt_minimum $RPC_URL $ACCOUNT_DATA_LEN`
+        if [ "$RENT_LAMPORTS" -gt "$RESERVE_LAMPORTS" ]; then
+            RESERVE_LAMPORTS=$RENT_LAMPORTS
+        fi
+
+        # In addition to the reserve, the program always leaves MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (2 SOL) in the
+        # account
+        KEEP_LAMPORTS=2000000000
+
+        echo -n '{"master_stake_pubkey":"'$MASTER_STAKE_PUBKEY'",'
+
+        echo -n '"state":"'$STAKE_STATE_NAME'",'
+
+        echo -n '"balance":'`to_sol $LAMPORTS`','
+
+        echo -n '"rent_exempt_reserve":'`to_sol $RESERVE_LAMPORTS`','
+
+        # The master stake account is actively delegated if it has a delegation that has not been deactivated.  If
+        # it is not, then anyone can delegate it again with the DelegateMasterStake instruction (once any stake that
+        # is still cooling down has finished doing so).
+        ACTIVELY_DELEGATED=false
+
+        if [ "$STAKE_STATE" -eq 2 ]; then
+            STAKE_LAMPORTS=`get_data_u64 156 "$ACCOUNT_DATA"`
+
+            DEACTIVATION_EPOCH=`get_data_u64 172 "$ACCOUNT_DATA"`
+
+            echo -n '"vote_pubkey":"'`get_data_pubkey 124 "$ACCOUNT_DATA"`'",'
+
+            echo -n '"delegated_stake":'`to_sol $STAKE_LAMPORTS`','
+
+            echo -n '"activation_epoch":'`get_data_u64 164 "$ACCOUNT_DATA"`','
+
+            # A deactivation epoch of the maximum u64 value means "never deactivated".  It is compared as a string
+            # because it is too large for shell arithmetic.
+            if [ "$DEACTIVATION_EPOCH" = "18446744073709551615" ]; then
+                ACTIVELY_DELEGATED=true
+
+                # Actively delegated stake cannot be withdrawn; it counts towards the 2 SOL that is always kept,
+                # so what is kept is the larger of the two
+                if [ "$STAKE_LAMPORTS" -gt "$KEEP_LAMPORTS" ]; then
+                    KEEP_LAMPORTS=$STAKE_LAMPORTS
+                fi
+            else
+                echo -n '"deactivation_epoch":'$DEACTIVATION_EPOCH','
+            fi
+        fi
+
+        echo -n '"actively_delegated":'$ACTIVELY_DELEGATED','
+
+        # This is what the WithdrawExcess instruction would try to withdraw to the admin.  Note that if the account
+        # was deactivated and its stake is still cooling down, the stake program will refuse that withdrawal until
+        # the cooldown is complete.
+        EXCESS_LAMPORTS=`to_excess $LAMPORTS $(($RESERVE_LAMPORTS+$KEEP_LAMPORTS))`
+
+        echo '"withdrawable_excess":'`to_sol $EXCESS_LAMPORTS`'}'
     ;;
 
     block)

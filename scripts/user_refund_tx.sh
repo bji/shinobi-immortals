@@ -98,7 +98,8 @@ solxact encode                                                                  
         account $BLOCK_PUBKEY                                                                                         \
         account $ENTRY_PUBKEY w                                                                                       \
         account $AUTHORITY_PUBKEY w                                                                                   \
-        account $ENTRY_TOKEN_PUBKEY                                                                                   \
+        // The token account that holds the entry's token: the user's associated token account //                     \
+        account $TOKEN_DESTINATION_PUBKEY                                                                             \
         account $USER_PUBKEY w                                                                                        \
         // Instruction code 11 = Refund //                                                                            \
         u8 11

@@ -160,8 +160,19 @@ static uint64_t admin_reveal_entries(const SolParameters *params)
     // All entries revealed successfully.  Move the escrow lamports that needed to move.  This must be done at the end
     // to avoid errors with modified accounts used in cross-program invoke elsewhere in the transaction execution.
     if (total_lamports_to_move) {
+        // Get the authority account's data, which records the total held in escrow
+        Authority *authority = (Authority *) authority_account->data;
+
         *(admin_account->lamports) += total_lamports_to_move;
         *(authority_account->lamports) -= total_lamports_to_move;
+
+        // The purchase prices of the revealed entries are no longer held in escrow
+        if (total_lamports_to_move > authority->mystery_escrow_lamports) {
+            authority->mystery_escrow_lamports = 0;
+        }
+        else {
+            authority->mystery_escrow_lamports -= total_lamports_to_move;
+        }
     }
 
     return 0;

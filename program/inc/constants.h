@@ -6,10 +6,27 @@
 // Number of lamports per SOL (1 billion)
 #define LAMPORTS_PER_SOL (1000ul * 1000ul * 1000ul)
 
-// Minimum number of lamports allowed to be retained staked within the master stake account.  This must be a value
-// that is always 2x greater than the minimum stake size (plus one for good measure!).  Because this is hardcoded, it
-// has to anticipate the maximum possible minimum stake account size.
-#define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (((2 * 1) + 1) * LAMPORTS_PER_SOL)
+// Minimum number of lamports that the program always keeps in the master stake account in addition to its rent
+// exempt reserve: the master stake account is created with this much delegated, SplitMasterStake never splits its
+// delegation below this, and WithdrawExcess never withdraws its balance below this.
+//
+// The master stake account must always be an actively delegated stake account whose delegation is at least the
+// stake program's minimum delegation, because:
+//
+// - Commission is charged by using the stake program's MoveStake instruction to move stake from a user's stake account
+//   into the master stake account.  MoveStake accepts any amount into an actively delegated destination whose
+//   delegation, after the move, is at least the minimum delegation.  But if the destination is not delegated, the
+//   amount moved must itself be at least the minimum delegation, which commission charges often are not; those
+//   charges, and any Destake that owes them, would fail.
+// - SplitMasterStake must leave at least the minimum delegation behind, or the stake program refuses the split.
+// - If the master stake account is ever deactivated (see DelegateMasterStake), at least the minimum delegation must
+//   remain in it to be delegated again.
+//
+// The stake program's minimum delegation is currently 1 lamport, but the stake program has a feature, not yet
+// activated, which raises it to 1 SOL.  Because this program is not upgradeable, and because nothing can add to the
+// master stake account's delegation other than commission charges themselves, this value is hardcoded with headroom
+// above that: twice the largest minimum delegation that is anticipated.
+#define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (2 * LAMPORTS_PER_SOL)
 
 // This is the Ki token name
 #define KI_TOKEN_NAME "Ki"
@@ -98,15 +115,14 @@ typedef struct
     // These are the seed bytes used to derive the authority_pubkey address
     uint8_t authority_seed_bytes[2];
 
-    // The master stake account to be used for commission splits.  This is needed to ensure that splits off of small
-    // amounts of commission is possible, because if there is ever a minimum stake account size, then it would not be
-    // possible to split less than that off of a stake account for commission purposes.  So instead, commission is
-    // charged by: merging the stake account into the master stake account, then splitting off that same amount minus
-    // the commission charge back into the original stake account.  The master stake account must have all authorities
-    // set to the authority account, which will allow the program itself to have full control over the stake account.
-    // Commission is taken from the master stake account to the admin account by a separate operation that the admin
-    // can run which requests the program to split off SOL from the master stake account.  ALL authorities for the
-    // stake account must be set to the authority account so that there are no trust issues.
+    // The master stake account, which is where commission accumulates.  Commission is charged by using the stake
+    // program's MoveStake instruction to move the commission amount of stake from a user's stake account directly
+    // into the master stake account.  This works for commission of any size, however small, as long as the master
+    // stake account is actively delegated with at least the stake program's minimum delegation; see
+    // MASTER_STAKE_ACCOUNT_MIN_LAMPORTS.  The admin takes accumulated commission out of the master stake account
+    // with SplitMasterStake, which splits stake off into a stake account that the admin controls.  ALL authorities
+    // of the master stake account are the authority account, so that only the program itself has control over it and
+    // there are no trust issues.
     SolPubkey master_stake_pubkey;
 
     // These are the seed bytes used to derive the master stake account address

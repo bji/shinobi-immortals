@@ -8,10 +8,6 @@
 // Include definition of all errors
 #include "inc/error.h"
 
-
-// xxx need to make an instruction for withdrawing excess SOL from any account that someone might accidentally
-// send SOL to.
-
 // These are all instructions that this program can execute
 typedef enum
 {
@@ -38,7 +34,7 @@ typedef enum
     // commission is more than 2% higher than the old commission.
     Instruction_SetBlockCommission            =  6,
     // Split stake off of the master stake account.  Will never split off stake that would leave the master account
-    // at less than 3 SOL staked.
+    // at less than 2 SOL staked.
     Instruction_SplitMasterStake              =  7,
     // Add entries to a block whitelist
     Instruction_AddWhitelistEntries           =  8,
@@ -86,7 +82,21 @@ typedef enum
     // instruction (but only if both the user and admin agree to do so).  The instruction data includes a flag
     // that says whether or not to reauthorize the metadata; if it is false, the Metaplex Metadata program is not
     // invoked, so that a problem with that program cannot prevent a stake account from being returned.
-    Instruction_ReAuthorize                   = 20
+    Instruction_ReAuthorize                   = 20,
+
+    // Instructions added after ReAuthorize; these are numbered in the order in which they were added, so that the
+    // codes of earlier instructions never change --------------------------------------------------------------------
+    // Anyone function: delegates the master stake account to Shinobi Systems if it is not actively delegated.  The
+    // only way that can come about is that the stake program's DeactivateDelinquent instruction was used to
+    // deactivate it, which anyone may do after Shinobi Systems has not voted for five epochs.
+    Instruction_DelegateMasterStake           = 21,
+    // Admin function: withdraws to the admin the excess lamports of an account that the program controls: the
+    // master stake account, the program state account, the authority account, or a block, entry or whitelist
+    // account.  The excess is whatever the account holds beyond what it is required to hold; for the master stake
+    // account that is its lamports that are not staked, less its minimum of 2 SOL, and for the authority account it
+    // excludes the purchase prices of mysteries that it holds in escrow.  This recovers lamports that someone
+    // transferred to such an account, which no other instruction can take out again.
+    Instruction_WithdrawExcess                = 22
 
 } Instruction;
 
@@ -103,6 +113,7 @@ typedef enum
 #include "admin/admin_split_master_stake.c"
 #include "admin/admin_add_whitelist_entries.c"
 #include "admin/admin_delete_whitelist.c"
+#include "admin/admin_withdraw_excess.c"
 
 #include "user/user_buy.c"
 #include "user/user_refund.c"
@@ -115,6 +126,7 @@ typedef enum
 #include "user/user_level_up.c"
 
 #include "anyone/anyone_take_commission_or_delegate.c"
+#include "anyone/anyone_delegate_master_stake.c"
 
 #include "special/special_reauthorize.c"
 
@@ -204,6 +216,12 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_ReAuthorize:
         return special_reauthorize(&params);
+
+    case Instruction_DelegateMasterStake:
+        return anyone_delegate_master_stake(&params);
+
+    case Instruction_WithdrawExcess:
+        return admin_withdraw_excess(&params);
 
     default:
         return Error_UnknownInstruction;

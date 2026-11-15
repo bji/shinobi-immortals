@@ -1,0 +1,580 @@
+
+# Tests of WithdrawExcess (22): the admin withdraws the excess lamports of an account that the program controls.
+#
+# These tests make their own block group (77) so that they do not depend on what earlier tests left behind, with one
+# deliberate exception: the test of the authority account first checks that after every mystery purchase, reveal and
+# refund of the whole suite, the escrow total that the authority account records still accounts exactly for its
+# balance.
+#
+# Withdrawal from a deactivated master stake account is tested by test/test_master_stake_recovery.sh, which runs on
+# its own validator.
+
+# This must be set so that user_stake_tx.sh will use the correct vote account
+export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+
+WE_BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
+WE_BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
+WE_METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+WE_METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+WE_METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+WE_SHA2560=`compute_metadata_sha256 $WE_METADATA0 0`
+WE_SHA2561=`compute_metadata_sha256 $WE_METADATA1 1`
+WE_SHA2562=`compute_metadata_sha256 $WE_METADATA2 2`
+
+# Addresses of the accounts that these tests withdraw from, or try to
+WE_BLOCK_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 77 u32 0 ]`
+WE_MINT_0_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $WE_BLOCK_0_PUBKEY u16 0 ]`
+WE_ENTRY_0_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $WE_MINT_0_0_PUBKEY ]`
+WE_BLOCK_1_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 77 u32 1 ]`
+WE_MINT_1_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $WE_BLOCK_1_PUBKEY u16 0 ]`
+WE_BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $WE_MINT_1_0_PUBKEY pubkey $RICH_USER2_PUBKEY ]`
+WE_BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $WE_BID_MARKER_TOKEN_PUBKEY ]`
+# The whitelist of block 77 5, a block that is never created
+WE_BLOCK_5_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 77 u32 5 ]`
+WE_WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $WE_BLOCK_5_PUBKEY ]`
+
+# The account type codes of WithdrawExcessAccountType in program/admin/admin_withdraw_excess.c
+WE_TYPE_MASTER_STAKE=0
+WE_TYPE_STATE=1
+WE_TYPE_AUTHORITY=2
+WE_TYPE_BLOCK=3
+WE_TYPE_ENTRY=4
+WE_TYPE_WHITELIST=5
+
+
+# Prints the balance of account $1 in lamports
+function lamports_of ()
+{
+    solana -u l balance --lamports $1 | cut -d ' ' -f 1
+}
+
+
+# Prints a field of the JSON description of the master stake account, or "null" if it is not present
+function master_stake_field ()
+{
+    solana -u l stake-account $MASTER_STAKE_PUBKEY --output json | jq -r ".$1"
+}
+
+
+# Prints the total that the authority account records as held in escrow: the u64 mystery_escrow_lamports at byte
+# offset 8 of its data (program/inc/authority.h)
+function authority_escrow ()
+{
+    get_account_data $AUTHORITY_PUBKEY 8 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'
+}
+
+
+# Prints the rent exempt minimum of the authority account, whose data is 16 bytes long
+function authority_rent_exempt_minimum ()
+{
+    solana -u l rent 16 --lamports | sed -e 's/[^0-9]//g'
+}
+
+
+# Prints, in lamports, the field $1 of what scripts/show.sh reports about the authority account.  show.sh reports
+# amounts in SOL, so the amount is converted back to lamports.
+function show_authority_lamports ()
+{
+    PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l authority | jq -r ".$1 * 1000000000 | round"
+}
+
+
+# Fails test $1 unless the balance of the authority account is exactly its rent exempt minimum plus the escrow total
+# that it records
+function check_authority_holds_exactly_escrow ()
+{
+    local BALANCE=`lamports_of $AUTHORITY_PUBKEY`
+    local EXPECTED=$((`authority_rent_exempt_minimum` + `authority_escrow`))
+
+    if [ "$BALANCE" != "$EXPECTED" ]; then
+        echo "FAIL: $1: authority account has $BALANCE lamports, expected $EXPECTED (rent exempt minimum plus"       \
+             "escrow of `authority_escrow`)"
+        exit 1
+    fi
+}
+
+
+# Submits a WithdrawExcess transaction made by scripts/admin_withdraw_excess_tx.sh, with the key file $1 as the admin
+# and the remaining arguments naming the account to withdraw from; prints the result of submission
+function withdraw_excess ()
+{
+    local KEY_FILE=$1
+    shift
+
+    SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY                                                                         \
+        $SOURCE/scripts/admin_withdraw_excess_tx.sh `solxact pubkey $KEY_FILE` "$@"                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $KEY_FILE                                                                                     \
+        | solxact submit l 2>&1
+}
+
+
+# Submits a WithdrawExcess transaction signed by the admin that names account $1 as being of account type code $2,
+# whether or not it is; prints the result of submission.  Any further arguments are appended to the instruction data.
+function withdraw_excess_raw ()
+{
+    local FROM_PUBKEY=$1
+    shift
+
+    echo "encoding c                                                                                                 \
+          fee_payer $ADMIN_PUBKEY                                                                                    \
+          program $SELF_PROGRAM_PUBKEY                                                                               \
+          account $STATE_PUBKEY                                                                                      \
+          account $ADMIN_PUBKEY ws                                                                                   \
+          account $FROM_PUBKEY w                                                                                     \
+          account $AUTHORITY_PUBKEY                                                                                  \
+          account $CLOCK_SYSVAR_PUBKEY                                                                               \
+          account $STAKE_PROGRAM_PUBKEY                                                                              \
+          account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+          // Instruction code 22 = WithdrawExcess //                                                                 \
+          u8 22                                                                                                      \
+          $@"                                                                                                        \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1
+}
+
+
+# Tests withdrawal from an account that is required to hold only its rent exempt minimum.  $1 is the test name, $2 is
+# the account's address, and the remaining arguments name the account to scripts/admin_withdraw_excess_tx.sh.
+#
+# - 1 SOL is transferred to the account.  It may already hold other excess lamports: the program state account does,
+#   because test_super_initialize transfers lamports to its address before it is created.
+# - The withdrawal leaves the account with exactly the rent exempt minimum for the size of its data, and the admin
+#   receives everything else
+# - And then there is nothing to withdraw
+function test_withdraw_excess_of_program_account ()
+{
+    local TEST_NAME=$1
+    local ACCOUNT_PUBKEY=$2
+    shift
+    shift
+
+    local DATA_ORIGINAL=`get_account_data $ACCOUNT_PUBKEY`
+    # The rent exempt minimum for an account whose data is as long as this account's
+    local DATA_LEN=`echo -n "$DATA_ORIGINAL" | base64 -d | wc -c | tr -d '[:space:]'`
+    local RENT_EXEMPT_MINIMUM=`solana -u l rent $DATA_LEN --lamports | sed -e 's/[^0-9]//g'`
+
+    transfer $LEDGER/rich_user1.json $ACCOUNT_PUBKEY 1
+
+    local ACCOUNT_BEFORE=`lamports_of $ACCOUNT_PUBKEY`
+    local ADMIN_BEFORE=`lamports_of $ADMIN_PUBKEY`
+    assert $TEST_NAME                                                                                                \
+    `withdraw_excess $LEDGER/admin.json "$@"`
+    local ACCOUNT_AFTER=`lamports_of $ACCOUNT_PUBKEY`
+    local ADMIN_AFTER=`lamports_of $ADMIN_PUBKEY`
+
+    # The account holds exactly its rent exempt minimum
+    if [ "$ACCOUNT_AFTER" != "$RENT_EXEMPT_MINIMUM" ]; then
+        echo "FAIL: $TEST_NAME: account has $ACCOUNT_AFTER lamports, expected $RENT_EXEMPT_MINIMUM"
+        exit 1
+    fi
+    # At least the 1 SOL that was transferred in was withdrawn
+    if [ $((ACCOUNT_BEFORE - ACCOUNT_AFTER)) -lt 1000000000 ]; then
+        echo "FAIL: $TEST_NAME: only $((ACCOUNT_BEFORE - ACCOUNT_AFTER)) lamports withdrawn"
+        exit 1
+    fi
+    # Its data is untouched
+    if [ "`get_account_data $ACCOUNT_PUBKEY`" != "$DATA_ORIGINAL" ]; then
+        echo "FAIL: $TEST_NAME: account data changed"
+        exit 1
+    fi
+    # The admin received everything that left the account, and paid the 5000 lamport transaction fee
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) != $((ACCOUNT_BEFORE - ACCOUNT_AFTER - 5000)) ]; then
+        echo "FAIL: $TEST_NAME: admin balance changed by $((ADMIN_AFTER - ADMIN_BEFORE)),"                           \
+             "expected $((ACCOUNT_BEFORE - ACCOUNT_AFTER - 5000))"
+        exit 1
+    fi
+
+    assert_fail ${TEST_NAME}_nothing_after                                                                           \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    `withdraw_excess $LEDGER/admin.json "$@"`
+}
+
+
+# Create the accounts that the tests use
+if [ -z "$TESTS" ]; then
+    # 77 0 -- three entries, two of them mysteries, with a 1 second reveal period
+    assert withdraw_excess_setup_77_0_a                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 77 0 0 3 2 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # add entries 0 and 1
+    assert withdraw_excess_setup_77_0_b                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 77 0 "http://foo.bar.com" none 0 $WE_SHA2560 $WE_SHA2561                                      \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # add entry 2
+    assert withdraw_excess_setup_77_0_c                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 77 0 "http://foo.bar.com" none 2 $WE_SHA2562                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+
+    # 77 1 -- one entry, no mysteries, with an auction that lasts a day
+    assert withdraw_excess_setup_77_1_a                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 77 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # add entry 0
+    assert withdraw_excess_setup_77_1_b                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 77 1 "http://foo.bar.com" none 0 $WE_SHA2560                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # set metadata of 77 1 0
+    assert withdraw_excess_setup_77_1_c                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 77 1 0 0 $WE_BYTE_0                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # reveal 77 1 0, which starts its auction
+    assert withdraw_excess_setup_77_1_d                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 77 1 0 0                                                                                      \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # rich_user2 bids on 77 1 0, which creates a bid account
+    assert withdraw_excess_setup_77_1_e                                                                              \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 77 1 0 \`lamports_from_sol 2\` \`lamports_from_sol 2\`                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # A whitelist, for block 77 5, which is never created
+    assert withdraw_excess_setup_whitelist                                                                           \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
+         $ADMIN_PUBKEY 77 5 $RICH_USER1_PUBKEY                                                                       \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+
+# Make sure that the admin has signed the tx
+if should_run_test admin_withdraw_excess_no_auth; then
+    assert_fail admin_withdraw_excess_no_auth                                                                        \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
+    `withdraw_excess $LEDGER/rich_user1.json block 77 0`
+fi
+
+
+# Bad data size: the account type is missing
+if should_run_test admin_withdraw_excess_bad_data; then
+    assert_fail admin_withdraw_excess_bad_data                                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `withdraw_excess_raw $WE_BLOCK_0_PUBKEY`
+fi
+
+
+# Bad data size: data beyond the account type
+if should_run_test admin_withdraw_excess_bad_data_extra; then
+    assert_fail admin_withdraw_excess_bad_data_extra                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `withdraw_excess_raw $WE_BLOCK_0_PUBKEY u8 $WE_TYPE_BLOCK u64 100`
+fi
+
+
+# An account type that does not exist
+if should_run_test admin_withdraw_excess_bad_type; then
+    assert_fail admin_withdraw_excess_bad_type                                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515'                     \
+    `withdraw_excess_raw $WE_BLOCK_0_PUBKEY u8 6`
+fi
+
+
+# An account that is not of the type that it is said to be is refused, for every type
+if should_run_test admin_withdraw_excess_wrong_type; then
+    # A block is not an entry
+    assert_fail admin_withdraw_excess_wrong_type_block_as_entry                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $WE_BLOCK_0_PUBKEY u8 $WE_TYPE_ENTRY`
+    # An entry is not a block
+    assert_fail admin_withdraw_excess_wrong_type_entry_as_block                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $WE_ENTRY_0_0_PUBKEY u8 $WE_TYPE_BLOCK`
+    # An entry is not a whitelist
+    assert_fail admin_withdraw_excess_wrong_type_entry_as_whitelist                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $WE_ENTRY_0_0_PUBKEY u8 $WE_TYPE_WHITELIST`
+    # A block is not the program state account
+    assert_fail admin_withdraw_excess_wrong_type_block_as_state                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $WE_BLOCK_0_PUBKEY u8 $WE_TYPE_STATE`
+    # The program state account is not the authority account
+    assert_fail admin_withdraw_excess_wrong_type_state_as_authority                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $STATE_PUBKEY u8 $WE_TYPE_AUTHORITY`
+    # The authority account is not the program state account.  This matters: as the program state account it would
+    # be required to hold only its rent exempt minimum, which would expose the mystery escrow.
+    assert_fail admin_withdraw_excess_wrong_type_authority_as_state                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $AUTHORITY_PUBKEY u8 $WE_TYPE_STATE`
+    # The authority account is not the master stake account
+    assert_fail admin_withdraw_excess_wrong_type_authority_as_master_stake                                           \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $AUTHORITY_PUBKEY u8 $WE_TYPE_MASTER_STAKE`
+    # The master stake account is not an entry
+    assert_fail admin_withdraw_excess_wrong_type_master_stake_as_entry                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `withdraw_excess_raw $MASTER_STAKE_PUBKEY u8 $WE_TYPE_ENTRY`
+fi
+
+
+# A bid account is not an account that may be withdrawn from: its lamports are the bid.  It is refused as every type.
+if should_run_test admin_withdraw_excess_bid_account; then
+    # Put lamports beyond the bid into the bid account, so that if it were accepted there would be something to take
+    transfer $LEDGER/rich_user1.json $WE_BID_PUBKEY 1
+    BID_BEFORE=`lamports_of $WE_BID_PUBKEY`
+    for WE_TYPE in 0 1 2 3 4 5; do
+        assert_fail admin_withdraw_excess_bid_account_as_type_$WE_TYPE                                               \
+        'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                 \
+        `withdraw_excess_raw $WE_BID_PUBKEY u8 $WE_TYPE`
+    done
+    if [ "`lamports_of $WE_BID_PUBKEY`" != "$BID_BEFORE" ]; then
+        echo "FAIL: admin_withdraw_excess_bid_account: bid account balance changed"
+        exit 1
+    fi
+fi
+
+
+# The program state account
+if should_run_test admin_withdraw_excess_state; then
+    test_withdraw_excess_of_program_account admin_withdraw_excess_state $STATE_PUBKEY state
+fi
+
+
+# A block account
+if should_run_test admin_withdraw_excess_block; then
+    test_withdraw_excess_of_program_account admin_withdraw_excess_block $WE_BLOCK_0_PUBKEY block 77 0
+fi
+
+
+# An entry account
+if should_run_test admin_withdraw_excess_entry; then
+    test_withdraw_excess_of_program_account admin_withdraw_excess_entry $WE_ENTRY_0_0_PUBKEY entry 77 0 0
+fi
+
+
+# A whitelist account
+if should_run_test admin_withdraw_excess_whitelist; then
+    test_withdraw_excess_of_program_account admin_withdraw_excess_whitelist $WE_WHITELIST_PUBKEY whitelist 77 5
+fi
+
+
+# The authority account, which holds the purchase prices of unrevealed mysteries in escrow.  These steps depend on
+# each other, so they are one test.
+if should_run_test admin_withdraw_excess_authority; then
+    TEST_NAME=admin_withdraw_excess_authority
+
+    # Every mystery purchase, reveal and refund that the earlier tests of the suite did went through the escrow
+    # accounting.  Nothing but purchase prices was ever sent to the authority account, so its balance must now be
+    # exactly its rent exempt minimum plus the escrow total that it records.
+    check_authority_holds_exactly_escrow ${TEST_NAME}_after_suite
+
+    # rich_user1 buys mysteries 77 0 0 and 77 0 1; each purchase price goes into escrow
+    ESCROW_BEFORE=`authority_escrow`
+    assert ${TEST_NAME}_buy_0                                                                                        \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 77 0 0 \`lamports_from_sol 10000\`                                         \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    assert ${TEST_NAME}_buy_1                                                                                        \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 77 0 1 \`lamports_from_sol 10000\`                                         \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    ESCROW_BOUGHT=`authority_escrow`
+    # A mystery of this block costs at least its minimum price of 1 SOL, so the escrow grew by at least 2 SOL
+    if [ $((ESCROW_BOUGHT - ESCROW_BEFORE)) -lt 2000000000 ]; then
+        echo "FAIL: $TEST_NAME: escrow grew by only $((ESCROW_BOUGHT - ESCROW_BEFORE)) on the purchase of mysteries"
+        exit 1
+    fi
+    check_authority_holds_exactly_escrow ${TEST_NAME}_after_buy
+
+    # The authority account now holds a great deal of SOL, all of it escrow; none of it may be withdrawn
+    assert_fail ${TEST_NAME}_only_escrow                                                                             \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    `withdraw_excess $LEDGER/admin.json authority`
+
+    # Someone transfers 1 SOL to the authority account.  Exactly that is withdrawn, and the escrow stays.
+    transfer $LEDGER/rich_user1.json $AUTHORITY_PUBKEY 1
+    # scripts/show.sh reports the escrow that the account records, and that the stray SOL is all that is withdrawable
+    if [ "`show_authority_lamports mystery_escrow`" != "$ESCROW_BOUGHT" ] ||
+       [ "`show_authority_lamports withdrawable_excess`" != "1000000000" ]; then
+        echo "FAIL: $TEST_NAME: show.sh reports escrow `show_authority_lamports mystery_escrow` and excess"          \
+             "`show_authority_lamports withdrawable_excess`, expected $ESCROW_BOUGHT and 1000000000"
+        exit 1
+    fi
+    ADMIN_BEFORE=`lamports_of $ADMIN_PUBKEY`
+    assert ${TEST_NAME}_stray                                                                                        \
+    `withdraw_excess $LEDGER/admin.json authority`
+    ADMIN_AFTER=`lamports_of $ADMIN_PUBKEY`
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) != $((1000000000 - 5000)) ]; then
+        echo "FAIL: $TEST_NAME: admin balance changed by $((ADMIN_AFTER - ADMIN_BEFORE)),"                           \
+             "expected $((1000000000 - 5000))"
+        exit 1
+    fi
+    if [ "`authority_escrow`" != "$ESCROW_BOUGHT" ]; then
+        echo "FAIL: $TEST_NAME: escrow total changed from $ESCROW_BOUGHT to `authority_escrow` on withdrawal"
+        exit 1
+    fi
+    check_authority_holds_exactly_escrow ${TEST_NAME}_after_stray
+    assert_fail ${TEST_NAME}_only_escrow_again                                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    `withdraw_excess $LEDGER/admin.json authority`
+
+    # Entry 77 0 1 is revealed: its purchase price leaves escrow for the admin
+    assert ${TEST_NAME}_set_metadata_1                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 77 0 1 0 $WE_BYTE_1                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    AUTHORITY_BEFORE=`lamports_of $AUTHORITY_PUBKEY`
+    assert ${TEST_NAME}_reveal_1                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 77 0 1 1                                                                                      \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    ESCROW_REVEALED=`authority_escrow`
+    # The escrow total fell by what left the authority account, which was a purchase price of at least 1 SOL
+    PRICE_1=$((AUTHORITY_BEFORE - `lamports_of $AUTHORITY_PUBKEY`))
+    if [ $PRICE_1 -lt 1000000000 ] || [ $((ESCROW_BOUGHT - ESCROW_REVEALED)) != $PRICE_1 ]; then
+        echo "FAIL: $TEST_NAME: on reveal $PRICE_1 lamports left the authority account, and the escrow total fell"   \
+             "by $((ESCROW_BOUGHT - ESCROW_REVEALED))"
+        exit 1
+    fi
+    check_authority_holds_exactly_escrow ${TEST_NAME}_after_reveal
+
+    # The price of 77 0 0, which was not revealed, is still in escrow and still cannot be withdrawn
+    assert_fail ${TEST_NAME}_only_escrow_after_reveal                                                                \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    `withdraw_excess $LEDGER/admin.json authority`
+
+    # Wait to be sure that block 77 0 is past its 1 second reveal period, then rich_user1 gets a refund for 77 0 0.
+    # The refund must succeed after everything that the admin withdrew, and takes its price out of escrow.
+    sleep 2
+    USER_BEFORE=`lamports_of $RICH_USER1_PUBKEY`
+    AUTHORITY_BEFORE=`lamports_of $AUTHORITY_PUBKEY`
+    assert ${TEST_NAME}_refund_0                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_refund_tx.sh                                      \
+         $RICH_USER1_PUBKEY 77 0 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    PRICE_0=$((AUTHORITY_BEFORE - `lamports_of $AUTHORITY_PUBKEY`))
+    # The user received the purchase price, and paid the 5000 lamport transaction fee
+    USER_AFTER=`lamports_of $RICH_USER1_PUBKEY`
+    if [ $PRICE_0 -lt 1000000000 ] || [ $((USER_AFTER - USER_BEFORE)) != $((PRICE_0 - 5000)) ]; then
+        echo "FAIL: $TEST_NAME: refund of $PRICE_0 lamports did not reach the user"
+        exit 1
+    fi
+    if [ $((ESCROW_REVEALED - `authority_escrow`)) != $PRICE_0 ]; then
+        echo "FAIL: $TEST_NAME: on refund the escrow total fell by $((ESCROW_REVEALED - `authority_escrow`)),"       \
+             "expected $PRICE_0"
+        exit 1
+    fi
+    # Both mysteries of this test are out of escrow again, so the escrow total is what it was before them
+    if [ "`authority_escrow`" != "$ESCROW_BEFORE" ]; then
+        echo "FAIL: $TEST_NAME: escrow total is `authority_escrow`, expected $ESCROW_BEFORE"
+        exit 1
+    fi
+    check_authority_holds_exactly_escrow ${TEST_NAME}_after_refund
+fi
+
+
+# A stake account that a user has staked to an entry belongs to that user, and is never an account that may be
+# withdrawn from.  This uses entry 77 0 1, which the authority test left revealed and owned by rich_user1.
+if should_run_test admin_withdraw_excess_user_stake_account; then
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/withdraw_excess_stake.json 10
+    WE_STAKE_PUBKEY=`solxact pubkey $LEDGER/withdraw_excess_stake.json`
+    assert admin_withdraw_excess_user_stake_account_stake                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 77 0 1 $WE_STAKE_PUBKEY                                                                  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # The stake account's authorities are now the program authority, as the master stake account's are; and it holds
+    # lamports beyond what is staked.  It is still refused as every type.
+    transfer $LEDGER/rich_user1.json $WE_STAKE_PUBKEY 1
+    STAKE_BEFORE=`lamports_of $WE_STAKE_PUBKEY`
+    for WE_TYPE in 0 1 2 3 4 5; do
+        assert_fail admin_withdraw_excess_user_stake_account_as_type_$WE_TYPE                                        \
+        'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                 \
+        `withdraw_excess_raw $WE_STAKE_PUBKEY u8 $WE_TYPE`
+    done
+    if [ "`lamports_of $WE_STAKE_PUBKEY`" != "$STAKE_BEFORE" ]; then
+        echo "FAIL: admin_withdraw_excess_user_stake_account: stake account balance changed"
+        exit 1
+    fi
+fi
+
+
+# The master stake account, while it is actively delegated: lamports that are in it but not staked are withdrawn, and
+# nothing else is
+if should_run_test admin_withdraw_excess_master_stake; then
+    TEST_NAME=admin_withdraw_excess_master_stake
+
+    # Put a known amount of lamports that are not staked into the master stake account.  There may be more there
+    # already, left by earlier tests (SplitMasterStake with a pre-merge account leaves that account's rent exempt
+    # reserve behind); whatever is there must all be withdrawn.
+    transfer $LEDGER/rich_user1.json $MASTER_STAKE_PUBKEY 1
+
+    MASTER_BEFORE=`master_stake_field accountBalance`
+    ADMIN_BEFORE=`lamports_of $ADMIN_PUBKEY`
+    assert $TEST_NAME                                                                                                \
+    `withdraw_excess $LEDGER/admin.json master_stake`
+    MASTER_AFTER=`master_stake_field accountBalance`
+    ADMIN_AFTER=`lamports_of $ADMIN_PUBKEY`
+
+    # What must remain in the master stake account: its rent exempt reserve, plus the larger of its delegated stake
+    # and its 2 SOL minimum
+    MASTER_KEEP=`master_stake_field delegatedStake`
+    if [ $MASTER_KEEP -lt 2000000000 ]; then
+        MASTER_KEEP=2000000000
+    fi
+    MASTER_EXPECTED=$((`master_stake_field rentExemptReserve` + MASTER_KEEP))
+    if [ "$MASTER_AFTER" != "$MASTER_EXPECTED" ]; then
+        echo "FAIL: $TEST_NAME: master stake account has $MASTER_AFTER lamports, expected $MASTER_EXPECTED"
+        exit 1
+    fi
+    # At least the lamports that were just transferred in must have been withdrawn
+    if [ $((MASTER_BEFORE - MASTER_AFTER)) -lt 1000000000 ]; then
+        echo "FAIL: $TEST_NAME: only $((MASTER_BEFORE - MASTER_AFTER)) lamports withdrawn"
+        exit 1
+    fi
+    # The admin received everything that left the master stake account, and paid the 5000 lamport transaction fee
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) != $((MASTER_BEFORE - MASTER_AFTER - 5000)) ]; then
+        echo "FAIL: $TEST_NAME: admin balance changed by $((ADMIN_AFTER - ADMIN_BEFORE)),"                           \
+             "expected $((MASTER_BEFORE - MASTER_AFTER - 5000))"
+        exit 1
+    fi
+    # The master stake account is still actively delegated
+    if [ "`master_stake_field deactivationEpoch`" != "null" ]; then
+        echo "FAIL: $TEST_NAME: master stake account was deactivated"
+        exit 1
+    fi
+
+    # With everything withdrawable now withdrawn, there is nothing left to withdraw
+    assert_fail ${TEST_NAME}_nothing                                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    `withdraw_excess $LEDGER/admin.json master_stake`
+fi

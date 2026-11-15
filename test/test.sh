@@ -61,3 +61,7 @@ source $SOURCE/test/test_user_level_up
 source $SOURCE/test/test_anyone_take_commission_or_delegate
 
 source $SOURCE/test/test_special_reauthorize
+
+source $SOURCE/test/test_anyone_delegate_master_stake
+
+source $SOURCE/test/test_admin_withdraw_excess

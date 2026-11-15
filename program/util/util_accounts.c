@@ -3,6 +3,7 @@
 #include "solana_sdk.h"
 
 #include "inc/constants.h"
+#include "inc/authority.h"
 #include "inc/program_state.h"
 #include "util/util_rent.c"
 #include "util/util_transfer_lamports.c"
@@ -59,8 +60,8 @@ static bool is_state_account(const SolPubkey *pubkey)
 
 static bool get_admin_account_address(const SolAccountInfo *state_account, SolPubkey *fill_in)
 {
-    // The identity of the admin is loaded from the program_state account; ensure that this is the actual one true program_state
-    // account
+    // The identity of the admin is loaded from the program_state account; ensure that this is the actual one true
+    // program_state account
     if (!is_state_account(state_account->key)) {
         return false;
     }

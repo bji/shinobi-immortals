@@ -79,16 +79,23 @@ static uint64_t super_initialize(const SolParameters *params)
         program_state->admin_pubkey = data->admin_pubkey;
     }
 
-    // Create the authority account.  The authority account is derived from a fixed seed and doesn't hold any data.
+    // Create the authority account.  The authority account is derived from a fixed seed.  Its data records the
+    // total of the mystery purchase prices that it holds in escrow, which starts at zero.
     {
         const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
 
         uint64_t ret = create_pda(authority_account, &seed, 1, superuser_account->key, &(Constants.self_program_pubkey),
-                                  get_rent_exempt_minimum(0), 0, params->ka, params->ka_num);
+                                  get_rent_exempt_minimum(sizeof(Authority)), sizeof(Authority), params->ka,
+                                  params->ka_num);
         if (ret) {
             return ret;
         }
+
+        // Set the initial contents of the authority account.  A newly created account is all zeroes, so the escrow
+        // total is already zero.
+        Authority *authority = (Authority *) (authority_account->data);
+        authority->data_type = DataType_Authority;
     }
 
     // Create the master stake account

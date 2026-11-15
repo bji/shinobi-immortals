@@ -73,6 +73,47 @@ const g_ki_metadata_pubkey = make_pubkey(g_ki_metadata_address);
 const g_bid_marker_mint_pubkey = find_pda([ [ 11 ] ], g_self_program_pubkey)[0];
 const g_bid_marker_mint_address = g_bid_marker_mint_pubkey.toBase58();
 
+const g_clock_sysvar_address = "SysvarC1ock11111111111111111111111111111111";
+const g_clock_sysvar_pubkey = make_pubkey(g_clock_sysvar_address);
+
+const g_stake_history_sysvar_address = "SysvarStakeHistory1111111111111111111111111";
+const g_stake_history_sysvar_pubkey = make_pubkey(g_stake_history_sysvar_address);
+
+const g_stake_config_address = "StakeConfig11111111111111111111111111111111";
+const g_stake_config_pubkey = make_pubkey(g_stake_config_address);
+
+// Instruction codes of the instructions whose transactions are built in this file (see program/entrypoint.c)
+const INSTRUCTION_DELEGATE_MASTER_STAKE = 21;
+const INSTRUCTION_WITHDRAW_EXCESS = 22;
+
+// Data type code of the authority account's data (DataType_Authority in program/inc/data_type.h)
+const DATA_TYPE_AUTHORITY = 6;
+
+// The number of lamports that the program always leaves in the master stake account in addition to its rent exempt
+// reserve (MASTER_STAKE_ACCOUNT_MIN_LAMPORTS in program/inc/constants.h)
+const MASTER_STAKE_ACCOUNT_MIN_LAMPORTS = 2n * BigInt(LAMPORTS_PER_SOL);
+
+// The types of account that the admin may withdraw excess lamports from with Wallet.withdraw_excess().  The "code"
+// of each is the value that the program knows the type by (WithdrawExcessAccountType in
+// program/admin/admin_withdraw_excess.c).
+const WithdrawExcessAccountType = Object.freeze(
+{
+    // The master stake account.  Its lamports that are not staked are withdrawn, except that 2 SOL is always left
+    // in addition to its rent exempt reserve.
+    MasterStake   : Object.freeze({ code : 0, name : "MasterStake" }),
+    // The program state account
+    ProgramState  : Object.freeze({ code : 1, name : "ProgramState" }),
+    // The authority account.  The purchase prices of mysteries that have not yet been revealed or refunded are held
+    // there in escrow, and are never withdrawn.
+    Authority     : Object.freeze({ code : 2, name : "Authority" }),
+    // A block account
+    Block         : Object.freeze({ code : 3, name : "Block" }),
+    // An entry account
+    Entry         : Object.freeze({ code : 4, name : "Entry" }),
+    // The whitelist account of a block
+    Whitelist     : Object.freeze({ code : 5, name : "Whitelist" })
+});
+
 
 function delay(delay_ms)
 {
@@ -701,6 +742,139 @@ class Cluster
         }
 
         return stake;
+    }
+
+    /**
+     * Fetches the program's authority account, which is where the purchase prices of mysteries are held in escrow
+     * until their entries are revealed or refunded.  Returns null if the account does not exist or is not valid;
+     * otherwise returns:
+     *
+     * {
+     *     address : string address of the authority account,
+     *     lamports : BigInt, everything that the account holds,
+     *     rent_exempt_minimum_lamports : BigInt, the rent exempt minimum of the account,
+     *     mystery_escrow_lamports : BigInt, the total purchase price of all mysteries that have been bought and not
+     *         yet revealed or refunded,
+     *     excess_lamports : BigInt, what the account holds beyond its rent exempt minimum and the escrow; this is
+     *         what the admin could withdraw with Wallet.withdraw_excess()
+     * }
+     **/
+    async get_authority()
+    {
+        let account = await this.rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getAccountInfo(g_program_authority_pubkey);
+        }, "get authority");
+
+        // The authority account's data is an Authority (program/inc/authority.h): a 4 byte data type, 4 bytes of
+        // padding, and the 8 byte escrow total
+        if ((account == null) || (account.data == null) || (account.data.length != 16) ||
+            (buffer_le_u32(account.data, 0) != DATA_TYPE_AUTHORITY)) {
+            return null;
+        }
+
+        let rent_exempt_minimum_lamports = await this.get_rent_exempt_minimum(account.data.length);
+
+        let authority = { address : g_program_authority_address,
+                          lamports : BigInt(account.lamports),
+                          rent_exempt_minimum_lamports : rent_exempt_minimum_lamports,
+                          mystery_escrow_lamports : buffer_le_u64(account.data, 8) };
+
+        // The account is required to hold its rent exempt minimum plus the escrow; anything beyond that is excess
+        authority.excess_lamports = excess_of(authority.lamports,
+                                              rent_exempt_minimum_lamports + authority.mystery_escrow_lamports);
+
+        return authority;
+    }
+
+    /**
+     * Fetches the program's master stake account.  Returns null if the account does not exist or is not valid;
+     * otherwise returns:
+     *
+     * {
+     *     address : string address of the master stake account,
+     *     lamports : BigInt, everything that the account holds,
+     *     rent_exempt_reserve_lamports : BigInt, the rent exempt reserve that is never withdrawn,
+     *     // delegation is only present if the account has ever been delegated
+     *     delegation : {
+     *         vote_account : string address of the vote account delegated to,
+     *         lamports : BigInt, the delegated stake,
+     *         activation_epoch : BigInt,
+     *         deactivation_epoch : BigInt, or null if the delegation has not been deactivated
+     *     },
+     *     is_actively_delegated : true if the account has a delegation that has not been deactivated.  If false,
+     *         then anyone can delegate the account again with Wallet.delegate_master_stake() (once any stake that
+     *         is still cooling down has finished doing so),
+     *     excess_lamports : BigInt, what the admin could withdraw with Wallet.withdraw_excess().  Note that if the
+     *         account was deactivated and its stake is still cooling down, the stake program will refuse that
+     *         withdrawal until the cooldown is complete.
+     * }
+     **/
+    async get_master_stake()
+    {
+        let account = await this.rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getAccountInfo(g_master_stake_pubkey);
+        }, "get master stake");
+
+        // All stake accounts have 200 bytes of data
+        if ((account == null) || (account.data == null) || (account.data.length != 200)) {
+            return null;
+        }
+
+        // The stake account's state: 1 is Initialized (never delegated), 2 is Stake (has a delegation, which may
+        // or may not have been deactivated).  The master stake account is never in any other state.
+        let state = account.data[0];
+        if ((state != 1) && (state != 2)) {
+            return null;
+        }
+
+        // The program never withdraws the larger of the reserve that the stake account was created with and the
+        // current rent exempt minimum
+        let rent_exempt_reserve_lamports = buffer_le_u64(account.data, 4);
+        let rent_exempt_minimum_lamports = await this.get_rent_exempt_minimum(account.data.length);
+        if (rent_exempt_minimum_lamports > rent_exempt_reserve_lamports) {
+            rent_exempt_reserve_lamports = rent_exempt_minimum_lamports;
+        }
+
+        let master_stake = { address : g_master_stake_address,
+                             lamports : BigInt(account.lamports),
+                             rent_exempt_reserve_lamports : rent_exempt_reserve_lamports,
+                             is_actively_delegated : false };
+
+        // In addition to the reserve, the program always leaves this many lamports in the account
+        let keep_lamports = MASTER_STAKE_ACCOUNT_MIN_LAMPORTS;
+
+        if (state == 2) {
+            let deactivation_epoch = buffer_le_u64(account.data, 172);
+
+            // A deactivation epoch of the maximum u64 value means "never deactivated"
+            if (deactivation_epoch == 0xFFFFFFFFFFFFFFFFn) {
+                deactivation_epoch = null;
+                master_stake.is_actively_delegated = true;
+            }
+
+            master_stake.delegation = { vote_account : buffer_address(account.data, 124),
+                                        lamports : buffer_le_u64(account.data, 156),
+                                        activation_epoch : buffer_le_u64(account.data, 164),
+                                        deactivation_epoch : deactivation_epoch };
+
+            // Actively delegated stake cannot be withdrawn; it counts towards the minimum that is always kept, so
+            // what is kept is the larger of the two
+            if (master_stake.is_actively_delegated && (master_stake.delegation.lamports > keep_lamports)) {
+                keep_lamports = master_stake.delegation.lamports;
+            }
+        }
+
+        master_stake.excess_lamports = excess_of(master_stake.lamports, rent_exempt_reserve_lamports + keep_lamports);
+
+        return master_stake;
+    }
+
+    // Returns as a BigInt the rent exempt minimum, in lamports, of an account with data_length bytes of data
+    async get_rent_exempt_minimum(data_length)
+    {
+        return BigInt(await this.rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getMinimumBalanceForRentExemption(data_length);
+        }, "get rent exempt minimum"));
     }
 
     // Causes an entry to be immediately refreshed.  If this causes the Entry to change, asynchronously a callback
@@ -1927,6 +2101,39 @@ class Wallet
         }, sign_callback);
     }
 
+    // Delegates the master stake account to Shinobi Systems.  This succeeds only if the master stake account is not
+    // actively delegated (see Cluster.get_master_stake()), which can only come about if it was deactivated with the
+    // stake program's DeactivateDelinquent instruction after Shinobi Systems had not voted for five epochs.  Any
+    // wallet may do this; the wallet only pays the transaction fee.
+    async delegate_master_stake(sign_callback)
+    {
+        // The vote account to delegate to is the one that the master stake account was delegated to before
+        let vote_account = await this.cluster.get_shinobi_systems_vote_account();
+
+        if (vote_account == null) {
+            throw new Error("Shinobi Systems vote account could not be determined");
+        }
+
+        return this.complete_tx((wallet_address) => {
+            return this.make_delegate_master_stake_tx(vote_account, wallet_address);
+        }, sign_callback);
+    }
+
+    // Withdraws to the wallet the excess lamports of an account that the program controls: everything that the
+    // account holds beyond what it is required to hold.  The program computes the amount, and fails the transaction
+    // if there is no excess.  This only succeeds if the wallet is the admin.
+    //
+    // account_type is one of the WithdrawExcessAccountType values.  account identifies the account to withdraw from:
+    // - for MasterStake, ProgramState and Authority, it is ignored
+    // - for Block and Whitelist, it is the Block (or the string address of the block account)
+    // - for Entry, it is the Entry (or the string address of the entry account)
+    async withdraw_excess(account_type, account, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_withdraw_excess_tx(account_type, account, wallet_address);
+        }, sign_callback);
+    }
+
     // Private implementation follows ---------------------------------------------------------------------------------
 
     async make_buy_tx(entry, maximum_price_lamports, wallet_address)
@@ -2045,6 +2252,99 @@ class Wallet
                               ki_source_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
                               ki_source_owner_pubkey : wallet_address,
                               ki_to_apply : ki_to_apply });
+    }
+
+    // Accounts and data here must match those of scripts/anyone_delegate_master_stake_tx.sh
+    async make_delegate_master_stake_tx(vote_account_address, wallet_address)
+    {
+        let keys = [
+            // The master stake account
+            { pubkey : g_master_stake_pubkey, isSigner : false, isWritable : true },
+            // The program authority, which is the stake authority of the master stake account
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // Clock sysvar, required by the stake program
+            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
+            // The stake program
+            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
+            // Stake history sysvar, required by the stake program
+            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false },
+            // The Shinobi Systems vote account
+            { pubkey : make_pubkey(vote_account_address), isSigner : false, isWritable : false },
+            // The stake config account, required by the stake program
+            { pubkey : g_stake_config_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_DELEGATE_MASTER_STAKE ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
+    }
+
+    // Accounts and data here must match those of scripts/admin_withdraw_excess_tx.sh
+    async make_withdraw_excess_tx(account_type, account, wallet_address)
+    {
+        // A Block or Entry may be passed in, or just an address
+        let account_address = ((account != null) && (account.address != null)) ? account.address : account;
+
+        // Find the address of the account to withdraw from
+        let from_address;
+        switch (account_type) {
+        case WithdrawExcessAccountType.MasterStake:
+            from_address = g_master_stake_address;
+            break;
+        case WithdrawExcessAccountType.ProgramState:
+            from_address = g_program_state_address;
+            break;
+        case WithdrawExcessAccountType.Authority:
+            from_address = g_program_authority_address;
+            break;
+        case WithdrawExcessAccountType.Block:
+        case WithdrawExcessAccountType.Entry:
+            from_address = account_address;
+            break;
+        case WithdrawExcessAccountType.Whitelist:
+            // The whitelist account is derived from the address of its block
+            from_address = (account_address == null) ? null : get_whitelist_address(account_address);
+            break;
+        default:
+            throw new Error("Invalid account type");
+        }
+
+        if (from_address == null) {
+            throw new Error("No account to withdraw from was provided for account type " + account_type.name);
+        }
+
+        // The authority account, clock sysvar, stake program and stake history sysvar are only used by the program
+        // when withdrawing from the master stake account, but the instruction requires them for every account type
+        let keys = [
+            // The program state account, which identifies the admin
+            { pubkey : g_program_state_pubkey, isSigner : false, isWritable : false },
+            // The admin, who must sign and who receives the lamports
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The account to withdraw from
+            { pubkey : make_pubkey(from_address), isSigner : false, isWritable : true },
+            // The program authority, which is the withdraw authority of the master stake account
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // Clock sysvar, required by the stake program
+            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
+            // The stake program
+            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
+            // Stake history sysvar, required by the stake program
+            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is the instruction code followed by the code of the account type
+        let data = Buffer.Buffer.from([ INSTRUCTION_WITHDRAW_EXCESS, account_type.code ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
     async complete_tx(tx_maker_func, sign_callback)
@@ -2217,6 +2517,15 @@ function get_bid_address(bid_marker_token_address)
 }
 
 
+// Returns the excess of an account that holds lamports and is required to hold required_lamports (both BigInt): the
+// amount that the WithdrawExcess instruction would withdraw from it, which is zero if it holds no more than is
+// required
+function excess_of(lamports, required_lamports)
+{
+    return (lamports > required_lamports) ? (lamports - required_lamports) : 0n;
+}
+
+
 function buffer_le_u64(buffer, offset)
 {
     let ret = BigInt(0);
@@ -2302,3 +2611,4 @@ exports.Block = Block;
 exports.EntryState = EntryState;
 exports.Entry = Entry;
 exports.Wallet = Wallet;
+exports.WithdrawExcessAccountType = WithdrawExcessAccountType;

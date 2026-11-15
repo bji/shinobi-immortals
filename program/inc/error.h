@@ -132,6 +132,12 @@ typedef enum
     // Attempt to level up with an amount of Ki that would not earn even one tenth of a level credit; no Ki is burned
     Error_NoLevelCreditsEarned                         = 1041,
 
+    // Attempt to delegate the master stake account when it is already actively delegated
+    Error_MasterStakeAlreadyDelegated                  = 1042,
+
+    // Attempt to withdraw excess lamports from an account that holds nothing beyond what it is required to hold
+    Error_NothingToWithdraw                            = 1043,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

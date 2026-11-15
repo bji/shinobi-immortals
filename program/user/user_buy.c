@@ -196,6 +196,14 @@ static uint64_t user_buy(const SolParameters *params)
     util_transfer_lamports(funding_account->key, funds_destination_account->key, purchase_price_lamports,
                            params->ka, params->ka_num);
 
+    // Record the purchase price of a mystery as held in escrow, so that it is never mistaken for excess lamports
+    // that the admin may withdraw from the authority account.  It leaves escrow when the entry is revealed or
+    // refunded.
+    if (funds_destination_account == authority_account) {
+        Authority *authority = (Authority *) authority_account->data;
+        authority->mystery_escrow_lamports += purchase_price_lamports;
+    }
+
     // Ensure that the token destination account exists
     create_associated_token_account_idempotent(token_destination_account, &(entry->mint_pubkey),
                                                token_destination_owner_account->key, funding_account->key,

@@ -10,7 +10,7 @@ typedef enum
     DataType_Invalid        = 0,
 
     // Program state
-    DataType_ProgramState  = 1,
+    DataType_ProgramState   = 1,
 
     // Block
     DataType_Block          = 2,
@@ -22,6 +22,9 @@ typedef enum
     DataType_Bid            = 4,
 
     // Whitelist
-    DataType_Whitelist      = 5
+    DataType_Whitelist      = 5,
+
+    // Authority
+    DataType_Authority      = 6
 
 } DataType;

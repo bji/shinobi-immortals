@@ -22,10 +22,10 @@ if [ -z "$TESTS" ]; then
     
     # Delegate the delegated stake accounts
     echo "Delegating $LEDGER/delegated5_stake.json"
-    solana_stake -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated5_stake.json $VOTE_PUBKEY                 \
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/delegated5_stake.json $VOTE_PUBKEY           \
            >/dev/null 2>/dev/null
     echo "Delegating $LEDGER/delegated5_stake2.json"
-    solana_stake -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated5_stake2.json $VOTE_PUBKEY                \
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated5_stake2.json $VOTE_PUBKEY          \
            >/dev/null 2>/dev/null
 
     # Create a second vote account, standing in for a validator other than Shinobi Systems, so that stake accounts
@@ -48,8 +48,10 @@ if [ -z "$TESTS" ]; then
         echo "Delegating $LEDGER/elsewhere5_stake$i.json to other vote account"
         # --force is needed because the other vote account never votes, so it has no root slot, and the solana
         # command line tool otherwise refuses to delegate to it
-        solana_stake -u l delegate-stake --force -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake$i.json                \
-               $OTHER_VOTE_PUBKEY >/dev/null 2>/dev/null
+#        solana_stake -u l delegate-stake --force -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake$i.json          \
+#               $OTHER_VOTE_PUBKEY >/dev/null 2>/dev/null
+       solana_stake -u l delegate-stake --force -k $LEDGER/rich_user1.json $LEDGER/elsewhere5_stake$i.json          \
+              $OTHER_VOTE_PUBKEY
     done
 
     # Wait until end of epoch to ensure that these have delegated

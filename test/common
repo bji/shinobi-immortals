@@ -278,10 +278,13 @@ function solana_stake ()
     local attempt output
 
     for attempt in `seq 1 60`; do
+        set +e
         if output=`solana "$@" 2>&1`; then
+            set -e
             echo "$output"
             return 0
         fi
+        set -e
         # The error is reported as "custom program error: 0x10;" when the transaction fails simulation, and as
         # "custom program error: 0x10" at the end of the output when it passes simulation but fails on chain; in
         # both cases the failed transaction changed nothing, so it is safe to retry.  The hex digit check
@@ -752,6 +755,18 @@ function setup ()
     
     # Give it time to start
     sleep 10
+
+    # Ten seconds is usually enough, but not always.  Wait for up to a further minute for the validator to answer
+    # requests, and stop here with a clear message if it never does, rather than failing obscurely later on.
+    local STARTUP_WAITED=0
+    while ! solana -u l cluster-version >/dev/null 2>&1; do
+        if [ $STARTUP_WAITED -ge 60 ]; then
+            echo "FAIL: the test validator did not start"
+            exit 1
+        fi
+        sleep 1
+        STARTUP_WAITED=$((STARTUP_WAITED + 1))
+    done
     
     # Detect the vote account
     export VALIDATOR_PUBKEY=`solana -u http://localhost:8899 validators | head -2 | tail -1 | awk '{ print $2 }'`
@@ -854,6 +869,16 @@ function teardown ()
     echo "Stopping test validator @ $LEDGER"
 
     killall -9 solana-test-validator
+
+    # Wait for the validator process to be gone, so that its ports are free again.  "make test" runs several test
+    # scripts one after another, each of which starts its own validator; a validator that is started while the
+    # previous one is still exiting cannot bind its ports and fails to start.  killall -0 sends no signal, it only
+    # reports whether such a process still exists.  Give up waiting after 30 seconds.
+    local WAITED=0
+    while killall -0 solana-test-validator 2>/dev/null && [ $WAITED -lt 30 ]; do
+        sleep 1
+        WAITED=$((WAITED + 1))
+    done
 
     rm -rf $LEDGER $LEDGER-fixtures
 }

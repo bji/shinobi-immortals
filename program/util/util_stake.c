@@ -488,8 +488,9 @@ static uint64_t split_master_stake_signed(const SolPubkey *admin_account_key, So
 
     sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
 
-    // The merge in has added undelegated SOL into the master stake account; but it does not seem possible to
-    // withdraw that, so it will accumulate
+    // The merge in has added undelegated SOL into the master stake account (the rent exempt reserve of the merged
+    // account).  The split cannot take it, since it is not stake; the admin can withdraw it with the
+    // WithdrawExcess instruction.
 
     // Now re-assign authorities of the new account to the admin account
     set_stake_authorities_signed(split_into_account->key, admin_account_key, transaction_accounts,
@@ -561,6 +562,59 @@ static void deactivate_stake_signed(const SolPubkey *stake_account_key, const So
     instruction.data_len = sizeof(data);
 
     // Now seed needs to be that of the authority
+    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+}
+
+
+typedef struct __attribute__((__packed__))
+{
+    uint32_t instruction; // Withdraw = 4
+
+    uint64_t lamports;
+
+} util_WithdrawStakeInstructionData;
+
+
+// Withdraws lamports that are not staked from a stake account whose withdraw authority is the program authority, into
+// the account [to_account_key].  The stake program refuses to withdraw lamports that are staked (including stake that
+// is still cooling down after a deactivation), or that are part of the stake account's rent exempt reserve; in those
+// cases the transaction is aborted.
+static void withdraw_stake_signed(const SolPubkey *stake_account_key, const SolPubkey *to_account_key,
+                                  uint64_t lamports, const SolAccountInfo *transaction_accounts,
+                                  int transaction_accounts_len)
+{
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.stake_program_pubkey);
+
+    SolAccountMeta account_metas[] =
+          // `[WRITE]` Stake account from which to withdraw
+        { { /* pubkey */ (SolPubkey *) stake_account_key, /* is_writable */ true, /* is_signer */ false },
+          // `[WRITE]` Recipient account
+          { /* pubkey */ (SolPubkey *) to_account_key, /* is_writable */ true, /* is_signer */ false },
+          // `[]` Clock sysvar
+          { /* pubkey */ &(Constants.clock_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
+          // `[]` Stake history sysvar that carries stake warmup/cooldown history
+          { /* pubkey */ &(Constants.stake_history_sysvar_pubkey), /* is_writable */ false, /* is_signer */ false },
+          // `[SIGNER]` Withdraw authority
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+
+    util_WithdrawStakeInstructionData data = {
+        /* instruction_code */ 4,
+        /* lamports */ lamports
+    };
+
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+
+    // Seed needs to be that of the authority
     const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
     SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
     SolSignerSeeds signer_seeds = { &seed, 1 };

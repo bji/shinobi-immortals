@@ -67,9 +67,20 @@ static uint64_t user_refund(const SolParameters *params)
         return Error_AlreadyRefunded;
     }
 
+    // Get the authority account's data, which records the total held in escrow
+    Authority *authority = (Authority *) authority_account->data;
+
     // OK, issue the refund, by taking lamports from the authority account and putting them in the destination account
     *(authority_account->lamports) -= entry->purchase_price_lamports;
     *(destination_account->lamports) += entry->purchase_price_lamports;
+
+    // The refunded purchase price is no longer held in escrow
+    if (entry->purchase_price_lamports > authority->mystery_escrow_lamports) {
+        authority->mystery_escrow_lamports = 0;
+    }
+    else {
+        authority->mystery_escrow_lamports -= entry->purchase_price_lamports;
+    }
 
     // And mark it as refunded
     entry->refund_awarded = true;
