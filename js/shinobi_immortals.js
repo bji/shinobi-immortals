@@ -1975,6 +1975,7 @@ class Wallet
                                        entry_mint_pubkey : entry.mint_address,
                                        token_destination_pubkey : token_destination_address,
                                        token_destination_owner_pubkey : wallet_address,
+                                       metaplex_metadata_pubkey : entry.metaplex_metadata_address,
                                        bid_marker_token_pubkey : bid_marker_token_address });
         }
         else {

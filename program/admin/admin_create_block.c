@@ -56,10 +56,17 @@ static uint64_t admin_create_block(const SolParameters *params)
     if (config->total_entry_count == 0) {
         return Error_InvalidData_First + 0;
     }
-    // If there are mysteries and a nonzero mystery duration, then mystery values apply
-    if ((config->total_mystery_count > 0) && (config->mystery_phase_duration > 0)) {
-        if (config->total_mystery_count > config->total_entry_count) {
-            return Error_InvalidData_First + 1;
+    // There cannot be more mysteries than entries.  This is checked regardless of the mystery phase duration.
+    if (config->total_mystery_count > config->total_entry_count) {
+        return Error_InvalidData_First + 1;
+    }
+    // If there are mysteries, then mystery values apply
+    if (config->total_mystery_count > 0) {
+        // Mysteries are sold during the mystery phase, so there must be one.  (A zero duration would make the block
+        // revealable one second after it is completed, while leaving mysteries purchasable in that second.)  The
+        // converse, a nonzero duration with no mysteries, is allowed: the duration then has no effect.
+        if (config->mystery_phase_duration == 0) {
+            return Error_InvalidData_First + 8;
         }
         // Ensure that the initial mystery price is no more than 100,000,000 SOL to avoid overflow
         if (config->mystery_start_price_lamports > (100ul * 1000ul * 1000ul * LAMPORTS_PER_SOL)) {

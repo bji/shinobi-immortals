@@ -18,18 +18,20 @@ static uint64_t user_claim_winning(const SolParameters *params)
         DECLARE_ACCOUNT(10,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(11,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(12,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        DECLARE_ACCOUNT(13,  entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(14,  metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
 
-    // If there are more than 13 accounts, then the optional reclaiming of bid marker is requested
-    bool reclaim_bid_marker = (params->ka_num > 13);
+    // If there are more than 15 accounts, then the optional reclaiming of bid marker is requested
+    bool reclaim_bid_marker = (params->ka_num > 15);
 
-    // If reclaiming bid marker, there must be 15 accounts
+    // If reclaiming bid marker, there must be 17 accounts
     if (reclaim_bid_marker) {
-        DECLARE_ACCOUNTS_NUMBER(15);
+        DECLARE_ACCOUNTS_NUMBER(17);
     }
-    // Else there must be 13
+    // Else there must be 15
     else {
-        DECLARE_ACCOUNTS_NUMBER(13);
+        DECLARE_ACCOUNTS_NUMBER(15);
     }
 
     // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
@@ -56,6 +58,11 @@ static uint64_t user_claim_winning(const SolParameters *params)
     // Check to make sure that the entry_mint_account is the correct account for this entry
     if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
         return Error_InvalidAccount_First + 6;
+    }
+
+    // Check to make sure that the entry_metadata_account is the Metaplex metadata account of this entry
+    if (!SolPubkey_same(entry_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
+        return Error_InvalidAccount_First + 13;
     }
 
     // Get the clock sysvar, needed below
@@ -103,8 +110,8 @@ static uint64_t user_claim_winning(const SolParameters *params)
     // If the accounts were provided that would allow the bid marker token account to be reclaimed, do so
     if (reclaim_bid_marker) {
         {
-            DECLARE_ACCOUNT(13,   bid_marker_mint_account,          ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-            DECLARE_ACCOUNT(14,   bid_marker_token_account,         ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+            DECLARE_ACCOUNT(15,   bid_marker_mint_account,          ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+            DECLARE_ACCOUNT(16,   bid_marker_token_account,         ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         }
 
         // Burn the bid marker tokens
@@ -119,7 +126,22 @@ static uint64_t user_claim_winning(const SolParameters *params)
     // state
     entry->purchase_price_lamports = *(bid_account->lamports);
 
-    // OK transferred the token, so delete the bid account, moving its lamports to the admin
+    // Set the primary_sale_happened flag on the metaplex metadata, as user_buy does, which isn't strictly necessary
+    // but just in case there are UI presentations that care
+    ret = set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
+    if (ret) {
+        return ret;
+    }
+
+    // Close the entry's token account, as user_buy does, since it is now empty and will never be used again.  Its
+    // lamports go to the admin account.
+    ret = close_entry_token(entry, admin_account->key, params->ka, params->ka_num);
+    if (ret) {
+        return ret;
+    }
+
+    // Finally, delete the bid account, moving its lamports to the admin.  This is done last, after all cross-program
+    // invocations, so that none of them sees the bid account in its deleted state.
     delete_account(bid_account, admin_account);
 
     return 0;

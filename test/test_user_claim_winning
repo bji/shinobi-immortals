@@ -260,6 +260,9 @@ if should_run_test user_claim_winning_bad_bidding_account; then
     # Test with block 12 2
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    # The entry's Metaplex metadata account, which ClaimWinning requires as account 13
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY        \
+                                                          pubkey $MINT_PUBKEY ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
@@ -283,6 +286,8 @@ if should_run_test user_claim_winning_bad_bidding_account; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            // Instruction code 14 = ClaimWinning //                                                                  \
            u8 14"                                                                                                    \
         | solxact encode                                                                                             \
@@ -297,6 +302,9 @@ if should_run_test user_claim_winning_bad_entry; then
     # Test with block 12 2
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    # The entry's Metaplex metadata account, which ClaimWinning requires as account 13
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY        \
+                                                          pubkey $MINT_PUBKEY ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
@@ -320,6 +328,8 @@ if should_run_test user_claim_winning_bad_entry; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            // Instruction code 14 = ClaimWinning //                                                                  \
            u8 14"                                                                                                    \
         | solxact encode                                                                                             \
@@ -334,6 +344,9 @@ if should_run_test user_claim_winning_bad_admin; then
     # Test with block 12 2
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    # The entry's Metaplex metadata account, which ClaimWinning requires as account 13
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY        \
+                                                          pubkey $MINT_PUBKEY ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
@@ -357,6 +370,8 @@ if should_run_test user_claim_winning_bad_admin; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            // Instruction code 14 = ClaimWinning //                                                                  \
            u8 14"                                                                                                    \
         | solxact encode                                                                                             \
@@ -371,6 +386,9 @@ if should_run_test user_claim_winning_bad_token; then
     # Test with block 12 2
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    # The entry's Metaplex metadata account, which ClaimWinning requires as account 13
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY        \
+                                                          pubkey $MINT_PUBKEY ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
@@ -394,6 +412,8 @@ if should_run_test user_claim_winning_bad_token; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            // Instruction code 14 = ClaimWinning //                                                                  \
            u8 14"                                                                                                    \
         | solxact encode                                                                                             \
@@ -408,6 +428,9 @@ if should_run_test user_claim_winning_bad_mint; then
     # Test with block 12 2
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    # The entry's Metaplex metadata account, which ClaimWinning requires as account 13
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY        \
+                                                          pubkey $MINT_PUBKEY ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
@@ -431,6 +454,8 @@ if should_run_test user_claim_winning_bad_mint; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            // Instruction code 14 = ClaimWinning //                                                                  \
            u8 14"                                                                                                    \
         | solxact encode                                                                                             \
@@ -444,6 +469,9 @@ if should_run_test user_claim_winning_bad_bid; then
     # Test with block 12 2
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    # The entry's Metaplex metadata account, which ClaimWinning requires as account 13
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY        \
+                                                          pubkey $MINT_PUBKEY ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
@@ -467,6 +495,8 @@ if should_run_test user_claim_winning_bad_bid; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            // Instruction code 14 = ClaimWinning //                                                                  \
            u8 14"                                                                                                    \
         | solxact encode                                                                                             \
@@ -481,6 +511,9 @@ if should_run_test user_claim_winning_bad_bid_2; then
     # Test with block 12 2
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    # The entry's Metaplex metadata account, which ClaimWinning requires as account 13
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY        \
+                                                          pubkey $MINT_PUBKEY ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
@@ -509,6 +542,53 @@ if should_run_test user_claim_winning_bad_bid_2; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Instruction code 14 = ClaimWinning //                                                                  \
+           u8 14"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+
+# Metaplex metadata account that is not the entry's (it is the metadata of another entry of the same block)
+if should_run_test user_claim_winning_bad_metadata; then
+    # Test with block 12 2
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
+    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    # The Metaplex metadata account of entry 1 instead of entry 0
+    OTHER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
+    BAD_ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY    \
+                                                              pubkey $OTHER_MINT_PUBKEY ]`
+    # Error_InvalidAccount_First + 13
+    assert_fail user_claim_winning_bad_metadata                                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x459'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $BID_PUBKEY w                                                                                     \
+           account $STATE_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY                                                                                      \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BAD_ENTRY_METADATA_PUBKEY w                                                                      \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            // Instruction code 14 = ClaimWinning //                                                                  \
            u8 14"                                                                                                    \
         | solxact encode                                                                                             \
@@ -652,6 +732,19 @@ if should_run_test user_claim_winning_post_auction_winning_bidder; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY            \
+                                                          pubkey $MINT_PUBKEY ]`
+    # Record what the admin should receive: the winning bid account's lamports, and the rent of the entry's token
+    # account, which must be closed (current_issues.txt issue 16)
+    ADMIN_BEFORE=`solana -u l balance --lamports $ADMIN_PUBKEY | cut -d ' ' -f 1`
+    BID_LAMPORTS=`solana -u l balance --lamports $BID_PUBKEY | cut -d ' ' -f 1`
+    TOKEN_ACCOUNT_LAMPORTS=`solana -u l balance --lamports $TOKEN_PUBKEY | cut -d ' ' -f 1`
+    if [ "0$TOKEN_ACCOUNT_LAMPORTS" -eq 0 ]; then
+        echo "FAIL: user_claim_winning_post_auction_winning_bidder: entry token account does not exist before the claim"
+        exit 1
+    fi
     assert user_claim_winning_post_auction_winning_bidder                                                            \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 2 0 true                                                                \
@@ -664,7 +757,36 @@ if should_run_test user_claim_winning_post_auction_winning_bidder; then
         echo "FAIL: user_claim_winning_post_auction_winning_bidder did not delete bid marker token account"
         exit 1
     fi
-    
+
+    # The entry's (now empty) token account must be closed, as Buy closes it
+    if [ -n "`get_account_data $TOKEN_PUBKEY`" ] ||
+       [ "`solana -u l balance --lamports $TOKEN_PUBKEY | cut -d ' ' -f 1`" != "0" ]; then
+        echo "FAIL: user_claim_winning_post_auction_winning_bidder did not close the entry token account"
+        exit 1
+    fi
+
+    # The admin must have received exactly the winning bid account's lamports plus the token account's rent
+    ADMIN_AFTER=`solana -u l balance --lamports $ADMIN_PUBKEY | cut -d ' ' -f 1`
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) -ne $((BID_LAMPORTS + TOKEN_ACCOUNT_LAMPORTS)) ]; then
+        echo "FAIL: user_claim_winning_post_auction_winning_bidder: admin received $((ADMIN_AFTER - ADMIN_BEFORE))," \
+             "expected bid $BID_LAMPORTS plus token account rent $TOKEN_ACCOUNT_LAMPORTS"
+        exit 1
+    fi
+
+    # Metaplex primary_sale_happened must be set, as Buy sets it.  In the Metaplex metadata account it follows the
+    # key (1 byte), update authority (32), mint (32), name (4 + 32, as this program always writes it), symbol
+    # (4 + 10), uri (4 + 200), seller_fee_basis_points (2), and the creators option: a 1 byte flag at offset 321 and,
+    # when present, a u32 creator count at offset 322 followed by 34 bytes per creator.
+    if [ "`get_account_data $ENTRY_METADATA_PUBKEY 321 1 | base64 -d | od -An -tu1 | tr -d ' '`" = "1" ]; then
+        CREATOR_COUNT=`get_account_data $ENTRY_METADATA_PUBKEY 322 4 | base64 -d | od -An -tu4 | tr -d ' '`
+        PRIMARY_SALE_OFFSET=$((326 + 34 * CREATOR_COUNT))
+    else
+        PRIMARY_SALE_OFFSET=322
+    fi
+    if [ "`get_account_data $ENTRY_METADATA_PUBKEY $PRIMARY_SALE_OFFSET 1 | base64 -d | od -An -tu1 | tr -d ' '`" != "1" ]; then
+        echo "FAIL: user_claim_winning_post_auction_winning_bidder did not set Metaplex primary_sale_happened"
+        exit 1
+    fi
 fi
 
 
