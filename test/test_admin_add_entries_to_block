@@ -673,7 +673,7 @@ if should_run_test admin_add_entries_to_block_already_complete; then
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY3 ]`
     assert_fail admin_add_entries_to_block_too_already_complete                                                      \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41d'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
          $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 3 \`sha256_of 3 again\`                                         \
         | solxact hash l                                                                                             \

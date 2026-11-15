@@ -69,64 +69,64 @@ typedef enum
     Error_AlreadyRefunded                              = 1020,
 
     // Attempt to bid on an entry which is not in auction
-    Error_EntryNotInAuction                            = 1029,
+    Error_EntryNotInAuction                            = 1021,
 
     // User attempted a bid that was too low
-    Error_BidTooLow                                    = 1030,
+    Error_BidTooLow                                    = 1022,
 
     // Can't claim bid
-    Error_CannotClaimBid                               = 1031,
+    Error_CannotClaimBid                               = 1023,
 
     // Attempt to claim a winning bid as a losing bid
-    Error_BidWon                                       = 1032,
+    Error_BidWon                                       = 1024,
 
     // Can't reclaim bid marker otken
-    Error_FailedToReclaimBidMarkerToken                = 1033,
+    Error_FailedToReclaimBidMarkerToken                = 1025,
 
     // Attempt to stake when an entry is not in a stakeable state
-    Error_NotStakeable                                 = 1036,
+    Error_NotStakeable                                 = 1026,
 
     // Attempted to harvest Ki from an entry that is not staked
-    Error_NotStaked                                    = 1039,
+    Error_NotStaked                                    = 1027,
 
     // Attempt to level up an entry that is not owned
-    Error_NotOwned                                     = 1040,
+    Error_NotOwned                                     = 1028,
 
     // Attempt to level up an entry that is already at max level
-    Error_AlreadyAtMaxLevel                            = 1041,
+    Error_AlreadyAtMaxLevel                            = 1029,
 
     // Commission already set this epoch and can't be set again
-    Error_CommissionAlreadySetThisEpoch                = 1043,
+    Error_CommissionAlreadySetThisEpoch                = 1030,
 
     // Attempted to set commission to a value more than 2% higher than current commission
-    Error_CommissionTooHigh                            = 1044,
+    Error_CommissionTooHigh                            = 1031,
 
     // Invalid metaplex metadata in metadata account
-    Error_InvalidMetadataValues                        = 1045,
+    Error_InvalidMetadataValues                        = 1032,
 
     // User requested a buy but privided a maximum allowed price that is lower than the actual price
-    Error_PriceTooHigh                                 = 1047,
+    Error_PriceTooHigh                                 = 1033,
 
     // Not the correct whitelist account
-    Error_NotWhitelistAccount                          = 1048,
+    Error_NotWhitelistAccount                          = 1034,
 
     // Cannot add entries to a whitelist when the block is already created
-    Error_BlockAlreadyExists                           = 1049,
+    Error_BlockAlreadyExists                           = 1035,
 
     // Attempted to add more whitelist entries than are supported by a whitelist
-    Error_TooManyWhitelistEntries                      = 1050,
+    Error_TooManyWhitelistEntries                      = 1036,
 
     // Cannot delete a whitelist for a block in progress
-    Error_WhitelistBlockInProgress                     = 1051,
+    Error_WhitelistBlockInProgress                     = 1037,
 
     // Buy attempt failed because the fee payer was not in the whitelist
-    Error_FailedWhitelistCheck                         = 1052,
+    Error_FailedWhitelistCheck                         = 1038,
 
     // Attempt to add entries to an already complete block
-    Error_BlockAlreadyComplete                         = 1053,
+    Error_BlockAlreadyComplete                         = 1039,
 
     // Invalid attempt to resize an account
-    Error_InvalidResize                                = 1054,
+    Error_InvalidResize                                = 1040,
 
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

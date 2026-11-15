@@ -325,7 +325,7 @@ fi
 # Entry not in owned + staked state
 if should_run_test anyone_take_commission_or_delegate_entry_not_staked; then
     assert_fail anyone_take_commission_or_delegate_entry_not_staked                                                  \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x403'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh               \
          $RICH_USER1_PUBKEY 17 0 2 $DELEGATED_STAKE_PUBKEY                                                           \
         | solxact hash l                                                                                             \

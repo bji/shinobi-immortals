@@ -223,7 +223,7 @@ if should_run_test user_level_up_unowned_entry; then
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_level_up_unowned_entry                                                                          \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x410'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x404'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -626,9 +626,9 @@ if should_run_test user_level_up_past_9; then
     # Record the fixture's contents and the Ki balance so that it can be checked that nothing was changed
     FIXTURE_BEFORE=`get_account_data $MAX_LEVEL_ENTRY_PUBKEY`
     BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    # 0x411 = 1041 = Error_AlreadyAtMaxLevel
+    # 0x405 = 1029 = Error_AlreadyAtMaxLevel
     assert_fail user_level_up_past_9                                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \

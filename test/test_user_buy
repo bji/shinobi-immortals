@@ -784,7 +784,7 @@ fi
 # Price is higher than user specified maximum price
 if should_run_test user_buy_price_too_high; then
     assert_fail user_buy_price_too_high                                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x417'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x409'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 1 100                                                                  \
         | solxact hash l                                                                                             \
@@ -883,7 +883,7 @@ if should_run_test user_buy_with_whitelist; then
 
     # Now admin cannot buy since the admin is not in the whitelist
     assert_fail user_buy_whitelist_fail                                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41c'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40e'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
          $ADMIN_PUBKEY $ADMIN_PUBKEY 8 8 0 \`lamports_from_sol 10000\`                                               \
         | solxact hash l                                                                                             \

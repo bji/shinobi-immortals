@@ -109,6 +109,12 @@ function less_than ()
 }
 
 
+# How many times wait_for_transaction polls for a transaction's execution result, and how many seconds it waits
+# between polls; together these give the longest time that a submitted transaction is waited for.
+TRANSACTION_POLL_ATTEMPTS=50
+TRANSACTION_POLL_INTERVAL_SECONDS=0.2
+
+
 # Print a transaction only once its execution result is available. RPC errors,
 # missing transactions, and missing metadata must never count as confirmation.
 function wait_for_transaction ()
@@ -117,7 +123,7 @@ function wait_for_transaction ()
     local JSON
     local i
 
-    for i in `seq 1 50`; do
+    for i in `seq 1 $TRANSACTION_POLL_ATTEMPTS`; do
         if JSON=`curl -s --connect-timeout 2 --max-time 2 http://localhost:8899 -X POST                              \
                       -H "Content-Type: application/json"                                                            \
                       -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getTransaction\",\"params\":[\"$SIGNATURE\",\"json\"]}"`; then
@@ -129,8 +135,9 @@ function wait_for_transaction ()
                 return 0
             fi
         fi
-        if [ "$i" -lt 10 ]; then
-            sleep 0.2
+        # Wait before polling again, but not after the final attempt
+        if [ "$i" -lt "$TRANSACTION_POLL_ATTEMPTS" ]; then
+            sleep $TRANSACTION_POLL_INTERVAL_SECONDS
         fi
     done
 
@@ -159,7 +166,7 @@ function assert ()
         if [[ "$TEST_OUTPUT" = Transaction\ signature:\ * ]]; then
             SIGNATURE=`echo "$TEST_OUTPUT" | cut -d ' ' -f 3`
             if ! JSON=`wait_for_transaction "$SIGNATURE"`; then
-                echo "FAIL: $TEST_NAME execution result unavailable after 10 attempts ($SIGNATURE)"
+                echo "FAIL: $TEST_NAME execution result unavailable after $TRANSACTION_POLL_ATTEMPTS attempts ($SIGNATURE)"
                 exit 1
             fi
             if ! echo "$JSON" | jq -e '.result.meta.err == null' >/dev/null; then
@@ -197,7 +204,7 @@ function assert_fail ()
         if [[ "$TEST_OUTPUT" = Transaction\ signature:\ * ]]; then
             SIGNATURE=`echo "$TEST_OUTPUT" | cut -d ' ' -f 3`
             if ! TEST_OUTPUT=`wait_for_transaction "$SIGNATURE"`; then
-                echo "FAIL: $TEST_NAME execution result unavailable after 10 attempts ($SIGNATURE)"
+                echo "FAIL: $TEST_NAME execution result unavailable after $TRANSACTION_POLL_ATTEMPTS attempts ($SIGNATURE)"
                 exit 1
             fi
             if echo "$TEST_OUTPUT" | jq -e '.result.meta.err == null' >/dev/null; then
@@ -290,6 +297,189 @@ function solana_stake ()
 
     echo "$output" >&2
     return 1
+}
+
+
+# The log line that the stake program emits when it rejects an instruction with EpochRewardsActive (stake program
+# error 16, 0x10).  Matching the stake program's own failure line, rather than just the error number, ensures that the
+# same number returned by any other program is never mistaken for it.  This program's own errors are all 1000 or
+# higher, so a cross-program invocation of the stake program that fails this way produces exactly this line too.
+STAKE_EPOCH_REWARDS_ACTIVE_LOG='Program Stake11111111111111111111111111111111111111 failed: custom program error: 0x10'
+
+
+# The tests build transactions with pipelines such as "... | solxact hash l | solxact sign KEY | solxact submit l".
+# Any transaction that makes this program invoke the stake program can be rejected with EpochRewardsActive for the
+# same reason that solana_stake retries (see above).  Retrying such a transaction requires a fresh recent blockhash, and
+# a new blockhash invalidates every signature, so it must also be re-signed by every one of its signers.  But by the
+# time a transaction reaches "solxact submit", the keys that signed it are no longer known.
+#
+# So solxact is wrapped by this function.  "solxact sign" records, for each transaction that it outputs, the
+# transaction as it was before any signing and the full list of key files that signed it.  "solxact submit" uses that
+# record to rebuild, re-sign and resubmit a transaction that the stake program rejected with EpochRewardsActive.  All
+# other solxact subcommands pass straight through to the real solxact.
+function solxact ()
+{
+    case "$1" in
+        sign)
+            shift
+            solxact_sign "$@"
+            ;;
+        submit)
+            shift
+            solxact_submit "$@"
+            ;;
+        *)
+            command solxact "$@"
+            ;;
+    esac
+}
+
+
+# The directory holding solxact_sign's records.  Each record is named by the sha256 of the signed transaction that it
+# describes: <sha256>.unsigned holds the transaction before any signing, and <sha256>.keys holds the key files that
+# signed it, one per line.  Key file paths are all under $LEDGER, which never contains whitespace.
+function solxact_signing_dir ()
+{
+    echo $LEDGER/solxact_signing
+}
+
+
+# Signs a transaction exactly as "solxact sign" does, recording how it was signed (see solxact above).
+function solxact_sign ()
+{
+    # Without a ledger directory there is nowhere to keep records, so just sign
+    if [ -z "$LEDGER" ]; then
+        command solxact sign "$@"
+        return
+    fi
+
+    local dir=`solxact_signing_dir`
+    mkdir -p $dir
+
+    local work=`mktemp -d`
+    local status=0
+
+    # Save the transaction to be signed, so that it can be both signed and recorded
+    cat > $work/in
+
+    # If this transaction was itself output by a recorded signing (as when signing is split across several "solxact
+    # sign" commands), carry that record forward, so that the record of this signing names every signer of the
+    # transaction and the transaction from before any of them signed.  Otherwise this is the first signing.
+    local in_hash=`sha256_of < $work/in`
+    if [ -f $dir/$in_hash.unsigned ]; then
+        cp $dir/$in_hash.unsigned $work/unsigned
+        cp $dir/$in_hash.keys $work/keys
+    else
+        cp $work/in $work/unsigned
+        : > $work/keys
+    fi
+
+    # Add this signing's keys to the list of signers
+    local key
+    for key in "$@"; do
+        echo "$key" >> $work/keys
+    done
+
+    # Sign; if signing fails, report it exactly as solxact did and record nothing
+    command solxact sign "$@" < $work/in > $work/out || status=$?
+    if [ $status -eq 0 ]; then
+        # Record how the signed transaction was made, under the sha256 of the signed transaction
+        local out_hash=`sha256_of < $work/out`
+        cp $work/unsigned $dir/$out_hash.unsigned
+        cp $work/keys $dir/$out_hash.keys
+    fi
+
+    cat $work/out
+    rm -rf $work
+    return $status
+}
+
+
+# Succeeds if the stake program rejected the transaction whose "solxact submit" output is in [out] and [err] with
+# EpochRewardsActive.  That is reported in one of two ways: in the simulation logs that solxact prints when the
+# transaction fails simulation, or, when the transaction passed simulation and was sent, in the logs of its on-chain
+# execution, which must then be fetched.
+function solxact_rejected_for_epoch_rewards ()
+{
+    local out=$1
+    local err=$2
+
+    # Rejected in simulation
+    if cat $out $err | grep -Fq "$STAKE_EPOCH_REWARDS_ACTIVE_LOG"; then
+        return 0
+    fi
+
+    # Sent; fetch the execution result and look for the failure in its logs.  If the result can't be fetched, it is
+    # not known to have been rejected, and assert or assert_fail will report the missing result.
+    local output=`cat $out`
+    if [[ "$output" = Transaction\ signature:\ * ]]; then
+        local signature=`echo "$output" | cut -d ' ' -f 3`
+        local json
+        if json=`wait_for_transaction "$signature"`; then
+            echo "$json" | jq -e --arg log "$STAKE_EPOCH_REWARDS_ACTIVE_LOG"                                         \
+                              '.result.meta.err != null and
+                               any(.result.meta.logMessages[]?; . == $log)' >/dev/null
+            return
+        fi
+    fi
+
+    return 1
+}
+
+
+# Submits a transaction exactly as "solxact submit" does, but while the stake program rejects it with
+# EpochRewardsActive, rebuilds it with a fresh recent blockhash, re-signs it with all of its signers, and resubmits it.
+# Every attempt that was rejected changed nothing, so this is safe.  Any other result, success or failure, is reported
+# exactly as solxact reported it.
+function solxact_submit ()
+{
+    local work=`mktemp -d`
+    local attempt status
+    local dir=`solxact_signing_dir`
+
+    # Save the transaction, since it may need to be submitted more than once
+    cat > $work/tx
+
+    # Give up after about a minute, as solana_stake does
+    for attempt in `seq 1 60`; do
+        status=0
+        command solxact submit "$@" < $work/tx > $work/out 2> $work/err || status=$?
+
+        # Anything other than an EpochRewardsActive rejection is the result
+        if ! solxact_rejected_for_epoch_rewards $work/out $work/err; then
+            break
+        fi
+
+        # Rewards are still being distributed; wait before trying again
+        sleep 1
+
+        # Rebuild the transaction from its signing record: apply a fresh blockhash to the transaction from before it
+        # was signed, then sign it again with all of the keys that signed it.  Record the rebuilt transaction too, so
+        # that it can be rebuilt again if it is also rejected.
+        local tx_hash=`sha256_of < $work/tx`
+        if [ -n "$LEDGER" ] && [ -f $dir/$tx_hash.unsigned ]; then
+            command solxact hash "$@" < $dir/$tx_hash.unsigned                                                        \
+                | command solxact sign `cat $dir/$tx_hash.keys` > $work/rebuilt || break
+            # The rebuilt transaction is identical if the blockhash has not changed, and then is already recorded
+            local rebuilt_hash=`sha256_of < $work/rebuilt`
+            if [ "$rebuilt_hash" != "$tx_hash" ]; then
+                cp $dir/$tx_hash.unsigned $dir/$rebuilt_hash.unsigned
+                cp $dir/$tx_hash.keys $dir/$rebuilt_hash.keys
+            fi
+            mv $work/rebuilt $work/tx
+        # Without a record, the transaction can't be re-signed.  If it was only rejected in simulation, it was never
+        # executed, so the same transaction can be submitted again while its blockhash is still valid.  If it was
+        # executed, it can't be submitted again, so report its result.
+        elif cat $work/out | grep -q '^Transaction signature: '; then
+            break
+        fi
+    done
+
+    # Report the final attempt's result exactly as solxact did
+    cat $work/out
+    cat $work/err >&2
+    rm -rf $work
+    return $status
 }
 
 

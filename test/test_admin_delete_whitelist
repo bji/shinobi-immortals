@@ -26,7 +26,7 @@ if should_run_test admin_delete_whitelist_wrong_block; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 7 u32 0 ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_delete_whitelist_wrong_block                                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -48,7 +48,7 @@ if should_run_test admin_delete_whitelist_wrong_whitelist; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 7 u32 0 ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_delete_whitelist_wrong_whitelist                                                               \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -93,7 +93,7 @@ if should_run_test admin_delete_whitelist_in_progress; then
     START_BLOCK_TIME=`current_block_time`
     # Delete the whitelist, fails because the non-empty whitelist is still in use
     assert_fail admin_delete_whitelist_in_progress                                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41b'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40d'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_delete_whitelist_tx.sh                           \
          $ADMIN_PUBKEY 7 0                                                                                           \
         | solxact hash l                                                                                             \

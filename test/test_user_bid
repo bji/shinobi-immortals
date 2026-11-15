@@ -193,7 +193,7 @@ fi
 if should_run_test user_bid_too_small; then
     # Test with block 10 2
     assert_fail user_bid_too_small                                                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x406'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fe'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
          $RICH_USER1_PUBKEY 10 2 0 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                               \
         | solxact hash l                                                                                             \
@@ -252,7 +252,7 @@ fi
 if should_run_test user_bid_not_auction; then
     # Test with block 10 1
     assert_fail user_bid_not_auction                                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fd'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
          $RICH_USER1_PUBKEY 10 1 0 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                               \
         | solxact hash l                                                                                             \
@@ -265,7 +265,7 @@ fi
 if should_run_test user_bid_auction_over; then
     # Test with block 10 3
     assert_fail user_bid_auction_over_not_bidded                                                                     \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fd'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
          $RICH_USER1_PUBKEY 10 3 1 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                               \
         | solxact hash l                                                                                             \
@@ -273,7 +273,7 @@ if should_run_test user_bid_auction_over; then
         | solxact submit l 2>&1`
 
     assert_fail user_bid_auction_over_was_bidded                                                                     \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x405'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fd'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
          $RICH_USER1_PUBKEY 10 3 0 \`lamports_from_sol 0.1\` \`lamports_from_sol 0.1\`                               \
         | solxact hash l                                                                                             \
@@ -369,7 +369,7 @@ fi
 if should_run_test user_bid_overbid_too_small; then
     # Test with block 10 2
     assert_fail user_bid_overbid_too_small                                                                           \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x406'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fe'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
          $RICH_USER1_PUBKEY 10 2 0 \`lamports_from_sol 20.01\` \`lamports_from_sol 20.01\`                           \
         | solxact hash l                                                                                             \

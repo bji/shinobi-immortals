@@ -203,7 +203,7 @@ if should_run_test user_stake_entry_not_owned; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_entry_not_owned_2                                                                         \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x402'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -345,7 +345,7 @@ fi
 # Failure when entry already staked
 if should_run_test user_stake_entry_already_staked; then
     assert_fail user_stake_entry_already_staked                                                                      \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x402'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
          $RICH_USER1_PUBKEY 13 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
         | solxact hash l                                                                                             \

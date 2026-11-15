@@ -130,7 +130,7 @@ fi
 if should_run_test admin_set_block_commission_reset; then
     # Test with block 5 0
     assert_fail admin_set_block_commission_reset                                                                     \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x406'                     \
    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 2000 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -150,7 +150,7 @@ if should_run_test admin_set_block_commission_large_change; then
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
     assert_fail admin_set_block_commission_large_change                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 3311 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \

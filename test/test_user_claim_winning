@@ -602,7 +602,7 @@ fi
 if should_run_test user_claim_winning_no_auction_unowned; then
     # Test with block 12 0
     assert_fail user_claim_winning_no_auction_unowned                                                                \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 0 1                                                                     \
         | solxact hash l                                                                                             \
@@ -615,7 +615,7 @@ fi
 if should_run_test user_claim_winning_no_auction_owned; then
     # Test with block 12 0
     assert_fail user_claim_winning_no_auction_owned                                                                  \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 0 0                                                                     \
         | solxact hash l                                                                                             \
@@ -628,7 +628,7 @@ fi
 if should_run_test user_claim_winning_in_auction_no_bidder; then
     # Test with block 12 1
     assert_fail user_claim_winning_in_auction_no_bidder                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 1 3                                                                     \
         | solxact hash l                                                                                             \
@@ -641,7 +641,7 @@ fi
 if should_run_test user_claim_winning_in_auction_not_bidder; then
     # Test with block 12 1
     assert_fail user_claim_winning_in_auction_not_bidder                                                             \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 1 1                                                                     \
         | solxact hash l                                                                                             \
@@ -654,7 +654,7 @@ fi
 if should_run_test user_claim_winning_in_auction_winning_bidder; then
     # Test with block 12 1
     assert_fail user_claim_winning_in_auction_winning_bidder                                                         \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 1 0                                                                     \
         | solxact hash l                                                                                             \
@@ -671,7 +671,7 @@ if should_run_test user_claim_winning_in_auction_losing_bidder; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
     assert_fail user_claim_winning_in_auction_losing_bidder                                                          \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 1 2                                                                     \
         | solxact hash l                                                                                             \
@@ -690,7 +690,7 @@ fi
 if should_run_test user_claim_winning_post_auction_no_bidder; then
     # Test with block 12 2
     assert_fail user_claim_winning_post_auction_no_bidder                                                            \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 2 3                                                                     \
         | solxact hash l                                                                                             \
@@ -716,7 +716,7 @@ fi
 if should_run_test user_claim_winning_post_auction_losing_bidder; then
     # Test with block 12 2
     assert_fail user_claim_winning_post_auction_losing_bidder                                                        \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 2 2                                                                     \
         | solxact hash l                                                                                             \
@@ -798,7 +798,7 @@ if should_run_test user_claim_winning_post_auction_winning_bidder_again; then
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
     assert_fail user_claim_winning_post_auction_winning_bidder_again                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_winning_tx.sh                               \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 2 0 true                                                                \
         | solxact hash l                                                                                             \

@@ -30,7 +30,7 @@ if should_run_test admin_add_whitelist_entries_bad_block; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_bad_block                                                                \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -57,7 +57,7 @@ if should_run_test admin_add_whitelist_entries_bad_whitelist; then
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
     NONEXISTENT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 255 ]`
     assert_fail admin_add_whitelist_entries_bad_whitelist                                                            \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x418'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -288,7 +288,7 @@ if should_run_test admin_add_whitelist_entries_too_many; then
         | solxact submit l 2>&1`
     # Now try to add two more, which is too many
     assert_fail admin_add_whitelist_entries_too_many                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x41a'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
          $ADMIN_PUBKEY 6 1 $ADMIN_PUBKEY $SUPERUSER_PUBKEY                                                           \
         | solxact hash l                                                                                             \
@@ -314,7 +314,7 @@ if should_run_test admin_add_whitelist_entries_block_exists; then
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     assert_fail admin_add_whitelist_entries_block_exists                                                             \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x419'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40b'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
          $ADMIN_PUBKEY 6 0 $RICH_USER1_PUBKEY                                                                        \
         | solxact hash l                                                                                             \

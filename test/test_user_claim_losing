@@ -360,7 +360,7 @@ fi
 if should_run_test user_claim_losing_no_auction_unowned; then
     # Test with block 11 0
     assert_fail user_claim_losing_no_auction_unowned                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
          $RICH_USER1_PUBKEY 11 0 1                                                                                   \
         | solxact hash l                                                                                             \
@@ -373,7 +373,7 @@ fi
 if should_run_test user_claim_losing_no_auction_owned; then
     # Test with block 11 0
     assert_fail user_claim_losing_no_auction_owned                                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
          $RICH_USER1_PUBKEY 11 0 0                                                                                   \
         | solxact hash l                                                                                             \
@@ -412,7 +412,7 @@ fi
 if should_run_test user_claim_losing_in_auction_winning_bidder; then
     # Test with block 11 1
     assert_fail user_claim_losing_in_auction_winning_bidder                                                          \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x400'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
          $RICH_USER1_PUBKEY 11 1 0                                                                                   \
         | solxact hash l                                                                                             \
@@ -460,7 +460,7 @@ fi
 if should_run_test user_claim_losing_post_auction_no_bidder; then
     # Test with block 11 2
     assert_fail user_claim_losing_post_auction_no_bidder                                                             \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
          $RICH_USER1_PUBKEY 11 2 3                                                                                   \
         | solxact hash l                                                                                             \
@@ -517,7 +517,7 @@ fi
 if should_run_test user_claim_losing_post_auction_winning_bidder; then
     # Test with block 11 2
     assert_fail user_claim_losing_post_auction_winning_bidder                                                        \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x400'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
          $RICH_USER1_PUBKEY 11 2 0                                                                                   \
         | solxact hash l                                                                                             \

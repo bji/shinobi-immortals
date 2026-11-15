@@ -172,7 +172,7 @@ fi
 # Unstaked entry
 if should_run_test user_harvest_unstaked_entry; then
     assert_fail user_harvest_unowned_entry                                                                           \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x403'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                     \
          $RICH_USER1_PUBKEY 15 0 2 $DELEGATED_STAKE_PUBKEY                                                           \
         | solxact hash l                                                                                             \
