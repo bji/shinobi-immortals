@@ -10,7 +10,7 @@ static uint64_t user_stake(const SolParameters *params)
         DECLARE_ACCOUNT(0,  block_account,                 ReadOnly,  NotSigner,   KnownAccount_NotKnown);
         DECLARE_ACCOUNT(1,  entry_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,  token_owner_account,           ReadOnly,   Signer,     KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(3,  token_account,                 ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,  token_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(4,  stake_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,  withdraw_authority_account,    ReadOnly,   Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(6,  shinobi_systems_vote_account,  ReadOnly,   NotSigner,  KnownAccount_ShinobiSystemsVote);
@@ -19,8 +19,10 @@ static uint64_t user_stake(const SolParameters *params)
         DECLARE_ACCOUNT(9,  stake_program_account,         ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
         DECLARE_ACCOUNT(10, stake_config_account,          ReadOnly,   NotSigner,  KnownAccount_StakeConfig);
         DECLARE_ACCOUNT(11, stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
+        DECLARE_ACCOUNT(12, entry_mint_account,            ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(13, spl_token_program_account,     ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
     }
-    DECLARE_ACCOUNTS_NUMBER(12);
+    DECLARE_ACCOUNTS_NUMBER(14);
 
     // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
     if (params->data_len != 1) {
@@ -76,10 +78,24 @@ static uint64_t user_stake(const SolParameters *params)
         return Error_InvalidAccount_First + 4;
     }
 
-    // Check to make sure that the entry token is owned by the token owner account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
+    // Check to make sure that the entry token is owned by the token owner account.  The token account must not be
+    // frozen: it is only ever frozen while the entry is staked, and the entry is not staked.
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1, false)) {
         return Error_InvalidAccount_First + 2;
     }
+
+    // Check to make sure that the correct entry mint account was passed in; it is needed to freeze the token account
+    if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
+        return Error_InvalidAccount_First + 12;
+    }
+
+    // Freeze the token account that holds the entry's token.  From now until the stake account is returned to the
+    // token's owner (by Destake or ReAuthorize), the token cannot be transferred or burned, and its token account
+    // cannot be closed or given a new owner.  So the token cannot be destroyed or lost while this program holds a
+    // stake account for it, and cannot change hands with a stake account attached.  This applies for the whole time
+    // that the program holds the stake account, including while a stake account that was delegated elsewhere is
+    // deactivating and waiting to be re-delegated.
+    freeze_token_account(token_account->key, entry_mint_account->key, params->ka, params->ka_num);
 
     // Use stake account program to set all authorities to the authority
     set_stake_authorities(stake_account->key, withdraw_authority_account->key, &(Constants.authority_pubkey),

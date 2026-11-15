@@ -116,7 +116,9 @@ typedef struct __attribute__((packed))
 {
     uint8_t instruction_code; // 6 for SetAuthority
 
-    uint32_t authority_type; // 0 for MintTokens
+    // 0 for MintTokens, 1 for FreezeAccount.  The SPL Token program encodes this as a single byte, and the optional
+    // new authority that follows it as a single byte tag followed by the pubkey.
+    uint8_t authority_type;
 
     uint8_t has_new_authority;
     SolPubkey new_authority;
@@ -140,7 +142,13 @@ typedef struct __attribute__((packed))
 } util_BurnData;
 
 
-static bool is_token_account(const SolAccountInfo *token_account, const SolPubkey *mint_pubkey, uint64_t minimum_amount)
+// Returns true only if [token_account] is a token account of the mint [mint_pubkey] that has at least [minimum_amount]
+// of tokens.  The token account must be in the Initialized state; if [allow_frozen] is true, then it may also be in
+// the Frozen state.  Only the token account that holds the token of a staked entry is ever frozen (see
+// freeze_token_account), so only checks that are made of an entry's token account while the entry may be staked pass
+// true for [allow_frozen].
+static bool is_token_account(const SolAccountInfo *token_account, const SolPubkey *mint_pubkey, uint64_t minimum_amount,
+                             bool allow_frozen)
 {
     // token_account must be owned by the SPL-Token program
     if (!is_spl_token_program(token_account->owner)) {
@@ -164,18 +172,27 @@ static bool is_token_account(const SolAccountInfo *token_account, const SolPubke
         return false;
     }
 
-    // token_account must be in the Initialized state
-    return (data->account_state == SolanaTokenAccountState_Initialized);
+    // token_account must be in the Initialized state, or the Frozen state if that is allowed
+    return ((data->account_state == SolanaTokenAccountState_Initialized) ||
+            (allow_frozen && (data->account_state == SolanaTokenAccountState_Frozen)));
+}
+
+
+// Returns true if [token_account], which must already have been verified by is_token_account or is_token_owner, is
+// in the Frozen state
+static bool is_token_account_frozen(const SolAccountInfo *token_account)
+{
+    return (((SolanaTokenProgramTokenData *) token_account->data)->account_state == SolanaTokenAccountState_Frozen);
 }
 
 
 // Returns true only if [token_account] is a token account of the mint [mint_pubkey] owned by [token_owner_key] and
-// has at least [minimum_amount] of tokens
+// has at least [minimum_amount] of tokens.  See is_token_account for the meaning of [allow_frozen].
 static bool is_token_owner(const SolAccountInfo *token_account, const SolPubkey *token_owner_key,
-                           const SolPubkey *mint_pubkey, uint64_t minimum_amount)
+                           const SolPubkey *mint_pubkey, uint64_t minimum_amount, bool allow_frozen)
 {
     // token_account must be a token account for the mint
-    if (!is_token_account(token_account, mint_pubkey, minimum_amount)) {
+    if (!is_token_account(token_account, mint_pubkey, minimum_amount, allow_frozen)) {
         return false;
     }
 
@@ -184,10 +201,14 @@ static bool is_token_owner(const SolAccountInfo *token_account, const SolPubkey 
 }
 
 
+// Creates a token mint with [authority_key] as its mint authority.  If [freeze_authority_key] is non-null, then it
+// is the mint's freeze authority; otherwise the mint has no freeze authority, and so token accounts of the mint can
+// never be frozen.
 static uint64_t create_token_mint(SolAccountInfo *mint_account, const SolSignerSeed *mint_account_seeds,
                                   uint8_t mint_account_seed_count, const SolPubkey *authority_key,
-                                  const SolPubkey *funding_key, uint8_t decimals,
-                                  const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+                                  const SolPubkey *freeze_authority_key, const SolPubkey *funding_key,
+                                  uint8_t decimals, const SolAccountInfo *transaction_accounts,
+                                  int transaction_accounts_len)
 {
     // First create the mint account, with owner as SPL-token program
     uint64_t funding_lamports = get_rent_exempt_minimum(sizeof(SolanaMintAccountData));
@@ -217,6 +238,11 @@ static uint64_t create_token_mint(SolAccountInfo *mint_account, const SolSignerS
         /* mint_authority */ *authority_key,
         /* has_freeze_authority */ false
     };
+    // The freeze authority is all zeroes from the initializer above unless one was provided
+    if (freeze_authority_key) {
+        data.has_freeze_authority = true;
+        data.freeze_authority = *freeze_authority_key;
+    }
 
     instruction.data = (uint8_t *) &data;
     instruction.data_len = sizeof(data);
@@ -238,7 +264,7 @@ static void create_associated_token_account_idempotent(const SolAccountInfo *tok
     // If it's already a token account for this user, then there's nothing more to do
     if ((*(token_account->lamports) > 0) &&
         !is_system_program(token_account->owner) &&
-        is_token_owner(token_account, owner_key, mint_key, 0)) {
+        is_token_owner(token_account, owner_key, mint_key, 0, false)) {
         return;
     }
     // Else, proceed to either creating it as a new account, or re-appropriating it from the system program
@@ -284,7 +310,7 @@ static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_accoun
     // If it's already a token account for this user, then there's nothing more to do
     if ((*(token_account->lamports) > 0) &&
         !is_system_program(token_account->owner) &&
-        is_token_owner(token_account, owner_key, mint_key, 0)) {
+        is_token_owner(token_account, owner_key, mint_key, 0, false)) {
         return 0;
     }
     // Else, proceed to either creating it as a new account, or re-appropriating it from the system program
@@ -381,6 +407,103 @@ static void revoke_mint_authority(const SolPubkey *mint_key, const SolPubkey *au
         /* authority_type */ 0, // MintTokens
         /* has_new_authority */ false,
         /* new_authority */ Constants.system_program_pubkey
+    };
+
+    instruction.data = (uint8_t *) &data;
+    instruction.data_len = sizeof(data);
+
+    // Must invoke with signed authority account
+    const uint8_t *seed_bytes = Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+}
+
+
+// Freezes (if [freeze] is true) or thaws (if it is false) the token account [token_key] of the mint [mint_key], using
+// the program authority, which must be the freeze authority of the mint.  The SPL Token program fails, aborting the
+// transaction, if the token account is already in the requested state.
+static void freeze_or_thaw_token_account(const SolPubkey *token_key, const SolPubkey *mint_key, bool freeze,
+                                         const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.spl_token_program_pubkey);
+
+    SolAccountMeta account_metas[] =
+          ///   0. `[writable]` The account to freeze or thaw.
+        { { /* pubkey */ (SolPubkey *) token_key, /* is_writable */ true, /* is_signer */ false },
+          ///   1. `[]` The token mint.
+          { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ false, /* is_signer */ false },
+          ///   2. `[signer]` The mint freeze authority.
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+
+    // FreezeAccount is 10, ThawAccount is 11; neither takes any other data
+    uint8_t data = freeze ? 10 : 11;
+
+    instruction.data = &data;
+    instruction.data_len = sizeof(data);
+
+    // Must invoke with signed authority account
+    const uint8_t *seed_bytes = Constants.authority_seed_bytes;
+    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
+    SolSignerSeeds signer_seeds = { &seed, 1 };
+
+    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
+}
+
+
+// Freezes the token account that holds an entry's token.  This is done for as long as a stake account is staked to
+// the entry (i.e. for as long as this program holds the authorities of a stake account on behalf of the token's
+// owner).  A frozen token account cannot have its tokens transferred or burned, cannot be closed, and cannot have
+// its owner changed, by its owner or by any delegate.  This ensures that:
+// - The token cannot be burned, or sent somewhere that nobody can sign for, while a stake account is held for it,
+//   either of which would leave the stake account locked in this program forever; and
+// - The token cannot be sold or given away with a stake account attached to it.  An entry must be destaked, which
+//   returns the stake account to the token's current owner, before its token can change hands.
+static void freeze_token_account(const SolPubkey *token_key, const SolPubkey *mint_key,
+                                 const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    freeze_or_thaw_token_account(token_key, mint_key, true, transaction_accounts, transaction_accounts_len);
+}
+
+
+// Thaws a token account that was frozen by freeze_token_account, which is done when the entry's stake account is
+// returned to the token's owner
+static void thaw_token_account(const SolPubkey *token_key, const SolPubkey *mint_key,
+                               const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    freeze_or_thaw_token_account(token_key, mint_key, false, transaction_accounts, transaction_accounts_len);
+}
+
+
+// Passes the freeze authority of the mint [mint_key] from the program authority to [new_authority_key].  After this,
+// this program can no longer freeze or thaw token accounts of the mint.
+static void set_mint_freeze_authority(const SolPubkey *mint_key, const SolPubkey *new_authority_key,
+                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
+{
+    SolInstruction instruction;
+
+    instruction.program_id = &(Constants.spl_token_program_pubkey);
+
+    SolAccountMeta account_metas[] =
+          ///   0. `[writable]` The mint or account to change the authority of.
+        { { /* pubkey */ (SolPubkey *) mint_key, /* is_writable */ true, /* is_signer */ false },
+          ///   1. `[signer]` The current authority of the mint or account.
+          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
+
+    instruction.accounts = account_metas;
+    instruction.account_len = ARRAY_LEN(account_metas);
+
+    util_SetAuthorityData data = {
+        /* instruction_code */ 6,
+        /* authority_type */ 1, // FreezeAccount
+        /* has_new_authority */ true,
+        /* new_authority */ *new_authority_key
     };
 
     instruction.data = (uint8_t *) &data;

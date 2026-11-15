@@ -38,7 +38,7 @@ static uint64_t user_refund(const SolParameters *params)
 
     // Check to make sure that the entry token account is the owning token account of the single token of this
     // mint, and that the token_owner_account is the proper owner of that token account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1, false)) {
         return Error_InvalidAccount_First + 4;
     }
 

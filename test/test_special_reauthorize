@@ -168,13 +168,15 @@ if should_run_test special_reauthorize_bad_data; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $METADATA_PUBKEY w                                                                                \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
+           account $MINT_PUBKEY w                                                                                    \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 20 = Reauthorize //                                                                   \
            u8 20"                                                                                                    \
         | solxact encode                                                                                             \
@@ -203,13 +205,15 @@ if should_run_test special_reauthorize_bad_entry; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $STATE_PUBKEY w                                                                                  \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $METADATA_PUBKEY w                                                                                \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
+           account $MINT_PUBKEY w                                                                                    \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 20 = Reauthorize //                                                                   \
            u8 20                                                                                                     \
            bool true                                                                                                 \
@@ -253,13 +257,15 @@ if should_run_test special_reauthorize_bad_metadata; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $STATE_PUBKEY w                                                                                  \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
+           account $MINT_PUBKEY w                                                                                    \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 20 = Reauthorize //                                                                   \
            u8 20                                                                                                     \
            bool true                                                                                                 \
@@ -316,13 +322,15 @@ if should_run_test special_reauthorize_bad_flag; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $METADATA_PUBKEY w                                                                                \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
+           account $MINT_PUBKEY w                                                                                    \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 20 = Reauthorize //                                                                   \
            u8 20                                                                                                     \
            // Reauthorize metadata flag, which must be 0 or 1 //                                                     \
@@ -385,6 +393,16 @@ if should_run_test special_reauthorize_success; then
         echo "$WITHDRAW_AUTHORITY"
         exit 1
     fi
+    # The token account, which was frozen while the entry was staked, must have been thawed (state 1)
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ]; then
+        echo "FAIL: special_reauthorize_success: token account was not thawed"
+        exit 1
+    fi
+    # The freeze authority of the entry mint must have moved with the metadata authority, to the new authority
+    if ! mint_freeze_authority_is $MINT_PUBKEY $RICH_USER2_PUBKEY; then
+        echo "FAIL: special_reauthorize_success: mint freeze authority was not passed to the new authority"
+        exit 1
+    fi
 
     # Success when no stake account is provided
     assert special_reauthorize_success                                                                               \
@@ -402,6 +420,12 @@ if should_run_test special_reauthorize_success; then
         echo "$UPDATE_AUTHORITY"
         exit 1
     fi
+    # The freeze authority of the entry mint moves with the metadata authority for an entry that is not staked too
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
+    if ! mint_freeze_authority_is $MINT_PUBKEY $RICH_USER1_PUBKEY; then
+        echo "FAIL: special_reauthorize_success: mint freeze authority was not passed to the new authority"
+        exit 1
+    fi
 fi
 
 
@@ -412,8 +436,14 @@ if should_run_test special_reauthorize_stake_only_success; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER2_PUBKEY`
+    # The entry is staked, so its token account must be frozen (state 2) beforehand
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER2_PUBKEY`" != "2" ]; then
+        echo "FAIL: special_reauthorize_stake_only_success: token account of a staked entry is not frozen"
+        exit 1
+    fi
     # The state account is passed (read-only) in place of the metadata account, to demonstrate that the metadata
-    # account is neither checked nor used when the metadata is not being reauthorized
+    # account is neither checked nor used when the metadata is not being reauthorized.  The entry mint is passed
+    # read-only, since it is only needed to thaw the token account; its freeze authority is not changed.
     assert special_reauthorize_stake_only_success                                                                    \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER2_PUBKEY                                                                              \
@@ -422,13 +452,15 @@ if should_run_test special_reauthorize_stake_only_success; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER2_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $STATE_PUBKEY                                                                                     \
            account $DELEGATED_STAKE2_PUBKEY w                                                                        \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
+           account $MINT_PUBKEY                                                                                      \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 20 = Reauthorize //                                                                   \
            u8 20                                                                                                     \
            // Do not reauthorize metadata //                                                                         \
@@ -449,6 +481,16 @@ if should_run_test special_reauthorize_stake_only_success; then
         echo "$RICH_USER2_PUBKEY"
         echo "$STAKE_AUTHORITY"
         echo "$WITHDRAW_AUTHORITY"
+        exit 1
+    fi
+    # The token account must have been thawed (state 1), and the freeze authority of the entry mint must still be
+    # the program authority, since the entry stays with this program
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER2_PUBKEY`" != "1" ]; then
+        echo "FAIL: special_reauthorize_stake_only_success: token account was not thawed"
+        exit 1
+    fi
+    if ! mint_freeze_authority_is $MINT_PUBKEY $AUTHORITY_PUBKEY; then
+        echo "FAIL: special_reauthorize_stake_only_success: mint freeze authority was changed"
         exit 1
     fi
     # Check the metadata update authority, which must still be the program authority

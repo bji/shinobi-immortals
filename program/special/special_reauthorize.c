@@ -53,8 +53,10 @@ static uint64_t special_reauthorize(const SolParameters *params)
         DECLARE_ACCOUNT(8,   clock_sysvar_account,          ReadOnly,   NotSigner,   KnownAccount_ClockSysvar);
         DECLARE_ACCOUNT(9,   metaplex_program_account,      ReadOnly,   NotSigner,   KnownAccount_MetaplexProgram);
         DECLARE_ACCOUNT(10,  stake_program_account,         ReadOnly,   NotSigner,   KnownAccount_StakeProgram);
+        DECLARE_ACCOUNT(11,  entry_mint_account,            ReadOnly,   NotSigner,   KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(12,  spl_token_program_account,     ReadOnly,   NotSigner,   KnownAccount_SPLTokenProgram);
     }
-    DECLARE_ACCOUNTS_NUMBER(11);
+    DECLARE_ACCOUNTS_NUMBER(13);
 
     // Ensure that the transaction was authorized by the admin
     if (!is_admin_account(state_account, admin_account->key)) {
@@ -94,10 +96,17 @@ static uint64_t special_reauthorize(const SolParameters *params)
         return Error_InvalidAccount_First + 2;
     }
 
-    // Check to make sure that the entry token is owned by the token owner account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
+    // Check to make sure that the entry token is owned by the token owner account.  If the entry is staked, then its
+    // token account is frozen.
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1, true)) {
         return Error_InvalidAccount_First + 3;
     }
+
+    // The token account that holds the token of a staked entry is frozen (see freeze_token_account), and must be
+    // thawed when the stake account is returned.  This is decided by the actual state of the token account and not by
+    // whether the entry is staked, so that a token account can never be left frozen by an entry which this program
+    // will no longer operate on.
+    bool is_frozen = is_token_account_frozen(token_account);
 
     // The reauthorize_metadata flag must be exactly 0 or 1, so that a malformed transaction cannot be mistaken for
     // a request to skip (or to perform) the metadata reauthorization
@@ -131,6 +140,26 @@ static uint64_t special_reauthorize(const SolParameters *params)
         }
     }
 
+    // The entry mint account is needed to thaw the token account, and to pass on the freeze authority of the mint
+    // when the metadata is reauthorized.  It is ignored otherwise.
+    if (is_frozen || data->reauthorize_metadata) {
+        // Check to make sure that the correct entry mint account was provided
+        if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
+            return Error_InvalidAccount_First + 11;
+        }
+    }
+
+    // The freeze authority of the mint is only changed when the metadata is reauthorized, so the mint only needs to
+    // be read-write in that case
+    if (data->reauthorize_metadata && !entry_mint_account->is_writable) {
+        return Error_InvalidAccountPermissions_First + 11;
+    }
+
+    // The token account is only changed if it is to be thawed, so it only needs to be read-write in that case
+    if (is_frozen && !token_account->is_writable) {
+        return Error_InvalidAccountPermissions_First + 4;
+    }
+
     // If the entry is staked, check the stake account
     if (is_staked) {
         // Make sure that the passed-in stake account is the correct one
@@ -151,6 +180,23 @@ static uint64_t special_reauthorize(const SolParameters *params)
     if (data->reauthorize_metadata) {
         set_metaplex_metadata_authority(&(entry->metaplex_metadata_pubkey), &(data->new_metadata_authority),
                                         params->ka, params->ka_num);
+    }
+
+    // Thaw the token account if it is frozen, since the stake account that it was frozen for is about to be returned.
+    // This must be done before the freeze authority of the mint is passed on below, because this program cannot thaw
+    // anything afterwards.
+    if (is_frozen) {
+        thaw_token_account(token_account->key, entry_mint_account->key, params->ka, params->ka_num);
+    }
+
+    // If the metadata was reauthorized, then the entry is from now on operated by whichever program controls
+    // new_metadata_authority, so pass the freeze authority of the entry's mint to that same authority.  That program
+    // can then protect the token while it holds a stake account for it, exactly as this program did.  This program
+    // has no further use for the freeze authority, since the entry is retired below and can never be staked here
+    // again.  A stake-only reauthorize leaves the freeze authority with this program, along with the metadata.
+    if (data->reauthorize_metadata) {
+        set_mint_freeze_authority(entry_mint_account->key, &(data->new_metadata_authority), params->ka,
+                                  params->ka_num);
     }
 
     // If the entry is staked, then return its stake account to the token owner, by setting both of its authorities

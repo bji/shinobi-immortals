@@ -113,8 +113,10 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.ki_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.ki_mint_seed_bytes) };
 
+        // The Ki mint has no freeze authority: Ki token accounts can never be frozen
         uint64_t ret = create_token_mint(ki_mint_account, &seed, 1, &(Constants.authority_pubkey),
-                                         superuser_account->key, 1, params->ka, params->ka_num);
+                                         /* freeze_authority_key */ 0, superuser_account->key, 1, params->ka,
+                                         params->ka_num);
         if (ret) {
             return ret;
         }
@@ -131,8 +133,10 @@ static uint64_t super_initialize(const SolParameters *params)
         const uint8_t *seed_bytes = (uint8_t *) Constants.bid_marker_mint_seed_bytes;
         SolSignerSeed seed = { seed_bytes, sizeof(Constants.bid_marker_mint_seed_bytes) };
 
+        // The bid marker mint has no freeze authority: bid marker token accounts can never be frozen
         uint64_t ret = create_token_mint(bid_marker_mint_account, &seed, 1, &(Constants.authority_pubkey),
-                                         superuser_account->key, 1, params->ka, params->ka_num);
+                                         /* freeze_authority_key */ 0, superuser_account->key, 1, params->ka,
+                                         params->ka_num);
         if (ret) {
             return ret;
         }

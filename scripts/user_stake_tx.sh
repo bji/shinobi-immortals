@@ -110,7 +110,8 @@ solxact encode                                                                  
         account $BLOCK_PUBKEY                                                                                         \
         account $ENTRY_PUBKEY w                                                                                       \
         account $USER_PUBKEY s                                                                                        \
-        account $TOKEN_PUBKEY                                                                                         \
+        // The token account is writable because it is frozen for as long as the entry is staked //                   \
+        account $TOKEN_PUBKEY w                                                                                       \
         account $STAKE_ACCOUNT_PUBKEY w                                                                               \
         account $USER_PUBKEY s                                                                                        \
         account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                          \
@@ -119,5 +120,8 @@ solxact encode                                                                  
         account $STAKE_PROGRAM_PUBKEY                                                                                 \
         account $STAKE_CONFIG_PUBKEY                                                                                  \
         account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
+        // The entry mint and the SPL Token program are needed to freeze the token account //                         \
+        account $ENTRY_MINT_PUBKEY                                                                                    \
+        account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         // Instruction code 15 = Stake //                                                                             \
         u8 15

@@ -542,6 +542,42 @@ function get_account_data ()
 }
 
 
+# Prints the state of the associated token account of mint $1 for user $2: 1 if it is Initialized (usable), 2 if it
+# is Frozen, 0 if it is uninitialized or does not exist.  The state is the single byte at offset 108 of an SPL Token
+# token account (after the 32 byte mint, 32 byte owner, 8 byte amount, and 36 byte optional delegate).
+function get_token_account_state ()
+{
+    local mint=$1
+    local user=$2
+
+    local account=`get_splata_account $mint $user`
+
+    local DATA=`get_account_data $account 108 1`
+
+    if [ -z "$DATA" ]; then
+        echo 0
+    else
+        echo "$DATA" | base64 -d | od -An -N1 -tu1 -v | tr -d [:space:]
+    fi
+}
+
+
+# Succeeds if the freeze authority of mint $1 is the pubkey $2, and fails otherwise (including if the mint has no
+# freeze authority).  In an SPL Token mint account, the freeze authority is a 4 byte tag at offset 46 (after the 36
+# byte optional mint authority, 8 byte supply, 1 byte decimals, and 1 byte is_initialized), which is 1 if there is a
+# freeze authority, followed by the 32 byte pubkey.  The two are compared as hex strings.
+function mint_freeze_authority_is ()
+{
+    local mint=$1
+    local expected=$2
+
+    local ACTUAL=`get_account_data $mint 46 36 | base64 -d | od -An -tx1 -v | tr -d [:space:]`
+    local EXPECTED=01000000`pubkey_binary $expected | od -An -tx1 -v | tr -d [:space:]`
+
+    [ -n "$ACTUAL" -a "$ACTUAL" = "$EXPECTED" ]
+}
+
+
 function get_token_balance ()
 {
     local mint=$1

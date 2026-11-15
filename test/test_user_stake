@@ -119,7 +119,7 @@ if should_run_test user_stake_bad_block; then
            account $STATE_PUBKEY                                                                                    \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $VOTE_PUBKEY                                                                                      \
@@ -128,6 +128,8 @@ if should_run_test user_stake_bad_block; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_CONFIG_PUBKEY                                                                              \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $MINT_PUBKEY                                                                                      \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 15 = Stake //                                                                         \
            u8 15"                                                                                                    \
         | solxact encode                                                                                             \
@@ -151,7 +153,7 @@ if should_run_test user_stake_bad_entry; then
            account $BLOCK_PUBKEY                                                                                     \
            account $STATE_PUBKEY w                                                                                  \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $VOTE_PUBKEY                                                                                      \
@@ -160,6 +162,8 @@ if should_run_test user_stake_bad_entry; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_CONFIG_PUBKEY                                                                              \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $MINT_PUBKEY                                                                                      \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 15 = Stake //                                                                         \
            u8 15"                                                                                                    \
         | solxact encode                                                                                             \
@@ -183,7 +187,7 @@ if should_run_test user_stake_entry_not_owned; then
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $VOTE_PUBKEY                                                                                      \
@@ -192,6 +196,8 @@ if should_run_test user_stake_entry_not_owned; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_CONFIG_PUBKEY                                                                              \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $MINT_PUBKEY                                                                                      \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 15 = Stake //                                                                         \
            u8 15"                                                                                                    \
         | solxact encode                                                                                             \
@@ -210,7 +216,7 @@ if should_run_test user_stake_entry_not_owned; then
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $VOTE_PUBKEY                                                                                      \
@@ -219,6 +225,8 @@ if should_run_test user_stake_entry_not_owned; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $STAKE_CONFIG_PUBKEY                                                                              \
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $MINT_PUBKEY                                                                                      \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Instruction code 15 = Stake //                                                                         \
            u8 15"                                                                                                    \
         | solxact encode                                                                                             \
@@ -351,4 +359,95 @@ if should_run_test user_stake_entry_already_staked; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
+fi
+
+# While an entry is staked, the token account holding its token is frozen: the token cannot be transferred or burned,
+# no delegate can be approved for it, and the token account cannot be given to a new owner.  Entry 13 0 0 was staked by
+# rich_user1 in user_stake_undelegated_stake_account.  The SPL Token program rejects each of these with its
+# AccountFrozen error, which is 17 (0x11).
+if should_run_test user_stake_token_frozen; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    # The token account must be in the Frozen state (2)
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "2" ]; then
+        echo "FAIL: user_stake_token_frozen: token account of a staked entry is not frozen"
+        exit 1
+    fi
+    # The mint's freeze authority must be the program authority
+    if ! mint_freeze_authority_is $MINT_PUBKEY $AUTHORITY_PUBKEY; then
+        echo "FAIL: user_stake_token_frozen: entry mint freeze authority is not the program authority"
+        exit 1
+    fi
+
+    # Transfer.  The token account is used as both source and destination, which the SPL Token program allows; this
+    # avoids having to create a second token account, and the frozen check is made before anything else.
+    assert_fail user_stake_token_frozen_transfer                                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x11'                      \
+    `echo "encoding rust_borsh                                                                                       \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           // SPL Token instruction 3 = Transfer, of 1 token //                                                      \
+           u8 3 u64 1"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # Burn
+    assert_fail user_stake_token_frozen_burn                                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x11'                      \
+    `echo "encoding rust_borsh                                                                                       \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $MINT_PUBKEY w                                                                                    \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           // SPL Token instruction 8 = Burn, of 1 token //                                                          \
+           u8 8 u64 1"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # Approve a delegate, who could otherwise transfer or burn the token
+    assert_fail user_stake_token_frozen_approve                                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x11'                      \
+    `echo "encoding rust_borsh                                                                                       \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $RICH_USER2_PUBKEY                                                                                \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           // SPL Token instruction 4 = Approve, of 1 token //                                                       \
+           u8 4 u64 1"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # Give the token account itself to a new owner, which would be a transfer by another name
+    assert_fail user_stake_token_frozen_set_owner                                                                    \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x11'                      \
+    `echo "encoding rust_borsh                                                                                       \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           // SPL Token instruction 6 = SetAuthority, type 2 = AccountOwner, new owner present //                    \
+           u8 6 u8 2 u8 1 pubkey $RICH_USER2_PUBKEY"                                                                 \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # None of that may have changed the token account: it still holds the token and is still frozen
+    if [ "`get_token_balance $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ] ||
+       [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "2" ]; then
+        echo "FAIL: user_stake_token_frozen: token account was changed while frozen"
+        exit 1
+    fi
 fi

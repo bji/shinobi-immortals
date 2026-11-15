@@ -132,13 +132,17 @@ solxact encode                                                                  
         account $ADMIN_PUBKEY s                                                                                       \
         account $ENTRY_PUBKEY w                                                                                       \
         account $USER_PUBKEY s                                                                                        \
-        account $TOKEN_PUBKEY                                                                                         \
+        // The token account is writable because it is thawed if the entry is staked //                               \
+        account $TOKEN_PUBKEY w                                                                                       \
         account $ENTRY_METADATA_PUBKEY w                                                                              \
         account $ENTRY_STAKE_ACCOUNT_PUBKEY w                                                                         \
         account $AUTHORITY_PUBKEY                                                                                     \
         account $CLOCK_SYSVAR_PUBKEY                                                                                  \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         account $STAKE_PROGRAM_PUBKEY                                                                                 \
+        // The entry mint is writable because its freeze authority is passed on with the metadata authority //        \
+        account $ENTRY_MINT_PUBKEY w                                                                                  \
+        account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         // Instruction code 20 = Reauthorize //                                                                       \
         u8 20                                                                                                         \
         // Whether or not to reauthorize the Metaplex metadata //                                                     \

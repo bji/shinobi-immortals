@@ -68,8 +68,9 @@ static uint64_t user_level_up(const SolParameters *params)
         return Error_AlreadyAtMaxLevel;
     }
 
-    // Check to make sure that the entry token is owned by the token owner account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
+    // Check to make sure that the entry token is owned by the token owner account.  The entry may be staked, in which
+    // case its token account is frozen.
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1, true)) {
         return Error_InvalidAccount_First + 2;
     }
     // Check to make sure that the correct entry metadata account was passed in
@@ -154,7 +155,8 @@ static uint64_t user_level_up(const SolParameters *params)
 
     // Check to make sure that the ki source account passed in is really a ki account owned by the passed in owner
     // and has the required amount of Ki
-    if (!is_token_owner(ki_source_account, ki_source_owner_account->key, &(Constants.ki_mint_pubkey), ki_to_burn)) {
+    if (!is_token_owner(ki_source_account, ki_source_owner_account->key, &(Constants.ki_mint_pubkey), ki_to_burn,
+                        false)) {
         return Error_InvalidAccount_First + 5;
     }
 

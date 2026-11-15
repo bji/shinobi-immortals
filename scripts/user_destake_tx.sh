@@ -116,7 +116,8 @@ solxact encode                                                                  
         account $BLOCK_PUBKEY                                                                                         \
         account $ENTRY_PUBKEY w                                                                                       \
         account $USER_PUBKEY s                                                                                        \
-        account $TOKEN_PUBKEY                                                                                         \
+        // The token account is writable because it is thawed when the stake account is returned //                   \
+        account $TOKEN_PUBKEY w                                                                                       \
         account $STAKE_ACCOUNT_PUBKEY w                                                                               \
         account $KI_DESTINATION_PUBKEY w                                                                              \
         account $USER_PUBKEY                                                                                          \
@@ -129,5 +130,7 @@ solxact encode                                                                  
         account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
+        // The entry mint is needed to thaw the token account //                                                      \
+        account $ENTRY_MINT_PUBKEY                                                                                    \
         // Instruction code 16 = Destake //                                                                           \
         u8 16

@@ -193,7 +193,7 @@ if should_run_test user_destake_bad_block; then
            account $STATE_PUBKEY                                                                                    \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
@@ -206,6 +206,7 @@ if should_run_test user_destake_bad_block; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
            u8 16"                                                                                                    \
         | solxact encode                                                                                             \
@@ -243,7 +244,7 @@ if should_run_test user_destake_bad_entry; then
            account $BLOCK_PUBKEY                                                                                     \
            account $STATE_PUBKEY w                                                                                  \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
@@ -256,6 +257,7 @@ if should_run_test user_destake_bad_entry; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
            u8 16"                                                                                                    \
         | solxact encode                                                                                             \
@@ -282,7 +284,7 @@ if should_run_test user_destake_entry_wrong_block; then
            account $BAD_BLOCK_PUBKEY                                                                                 \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
@@ -295,6 +297,7 @@ if should_run_test user_destake_entry_wrong_block; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
            u8 16"                                                                                                    \
         | solxact encode                                                                                             \
@@ -321,7 +324,7 @@ if should_run_test user_destake_entry_not_staked; then
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
@@ -334,6 +337,7 @@ if should_run_test user_destake_entry_not_staked; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
            u8 16"                                                                                                    \
         | solxact encode                                                                                             \
@@ -359,7 +363,7 @@ if should_run_test user_destake_entry_not_owned; then
            account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
-           account $TOKEN_PUBKEY                                                                                     \
+           account $TOKEN_PUBKEY w                                                                                   \
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
@@ -372,6 +376,7 @@ if should_run_test user_destake_entry_not_owned; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
            u8 16"                                                                                                    \
         | solxact encode                                                                                             \
@@ -409,6 +414,13 @@ if should_run_test user_destake_success_no_commission; then
     done
     # Save the master stake account account staked
     ADMIN_BALANCE=`lamports_from_sol \`account_balance $ADMIN_PUBKEY\``
+    # The entry is staked, so its token account must be frozen (2) before the destake
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "2" ]; then
+        echo "FAIL: user_destake_success_no_commission: token account of a staked entry is not frozen"
+        exit 1
+    fi
     assert user_destake_success_no_commission                                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_destake_tx.sh                                     \
          $RICH_USER1_PUBKEY 14 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
@@ -421,6 +433,15 @@ if should_run_test user_destake_success_no_commission; then
         echo "FAIL: user_destake_success_no_commission: master stake account increased:"
         echo $STAKED
         echo $NEW_STAKED
+        exit 1
+    fi
+    # Destake must have thawed the token account, which was frozen while the entry was staked: it must be back in the
+    # Initialized state (1), still holding the token
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ] ||
+       [ "`get_token_balance $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ]; then
+        echo "FAIL: user_destake_success_no_commission: token account was not thawed"
         exit 1
     fi
 fi

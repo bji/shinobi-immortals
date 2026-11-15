@@ -58,9 +58,11 @@ typedef enum
     // Claim a winning bid
     Instruction_ClaimWinning                  = 14,
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
-    // progrmam.
+    // program.  The token account holding the entry's token is frozen for as long as the entry is staked, so that
+    // the token cannot be transferred or burned while the program holds a stake account for it.
     Instruction_Stake                         = 15,
-    // Destake the entry, returning the stake account of the entry.
+    // Destake the entry, returning the stake account of the entry, and thawing the token account holding the entry's
+    // token.
     Instruction_Destake                       = 16,
     // Harvest Ki
     Instruction_Harvest                       = 17,

@@ -42,8 +42,9 @@ static uint64_t user_harvest(const SolParameters *params)
         return Error_NotStaked;
     }
 
-    // Check to make sure that the entry token is owned by the token owner account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
+    // Check to make sure that the entry token is owned by the token owner account.  The entry is staked, so its token
+    // account is frozen.
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1, true)) {
         return Error_InvalidAccount_First + 3;
     }
 

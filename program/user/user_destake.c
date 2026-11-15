@@ -13,7 +13,7 @@ static uint64_t user_destake(const SolParameters *params)
         DECLARE_ACCOUNT(1,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(4,   token_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(4,   token_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   stake_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(6,   ki_destination_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   ki_destination_owner_account,     ReadOnly,   NotSigner,  KnownAccount_NotKnown);
@@ -26,8 +26,9 @@ static uint64_t user_destake(const SolParameters *params)
         DECLARE_ACCOUNT(14,  stake_history_sysvar_account,     ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
         DECLARE_ACCOUNT(15,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(16,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        DECLARE_ACCOUNT(17,  entry_mint_account,               ReadOnly,   NotSigner,  KnownAccount_NotKnown);
     }
-    DECLARE_ACCOUNTS_NUMBER(17);
+    DECLARE_ACCOUNTS_NUMBER(18);
 
     // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
     if (params->data_len != 1) {
@@ -62,9 +63,15 @@ static uint64_t user_destake(const SolParameters *params)
         return Error_NotStaked;
     }
 
-    // Check to make sure that the entry token is owned by the token owner account
-    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1)) {
+    // Check to make sure that the entry token is owned by the token owner account.  The entry is staked, so its token
+    // account is frozen.
+    if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1, true)) {
         return Error_InvalidAccount_First + 4;
+    }
+
+    // Check to make sure that the correct entry mint account was passed in; it is needed to thaw the token account
+    if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
+        return Error_InvalidAccount_First + 17;
     }
 
     // Check to make sure that the stake account passed in is actually staked in the entry
@@ -89,6 +96,14 @@ static uint64_t user_destake(const SolParameters *params)
     // Use stake account program to set all authorities to the token owner; must do this signed since the
     // program authority is currently the withdraw authority of the stake account
     set_stake_authorities_signed(stake_account->key, token_owner_account->key, params->ka, params->ka_num);
+
+    // The stake account has been returned, so thaw the token account that was frozen when the entry was staked; the
+    // token can be transferred again.  The token account of a staked entry is always frozen, but this is only done if
+    // it actually is, so that if it were somehow not frozen, the stake account could still be returned (the SPL Token
+    // program fails an attempt to thaw an account that is not frozen).
+    if (is_token_account_frozen(token_account)) {
+        thaw_token_account(token_account->key, entry_mint_account->key, params->ka, params->ka_num);
+    }
 
     // No longer staked, all fields in owned should be zeroed out
     sol_memset(&(entry->owned), 0, sizeof(entry->owned));

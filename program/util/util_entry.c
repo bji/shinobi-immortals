@@ -40,8 +40,12 @@ static uint64_t create_entry_mint_account(SolAccountInfo *mint_account, const So
         return Error_CreateAccountFailed;
     }
 
-    return create_token_mint(mint_account, seeds, ARRAY_LEN(seeds), &(Constants.authority_pubkey), funding_key,
-                             0, transaction_accounts, transaction_accounts_len);
+    // The program authority is made the freeze authority of every entry mint, so that the token account holding an
+    // entry's token can be frozen for as long as a stake account is staked to the entry (see freeze_token_account).
+    // The mint authority is revoked once the entry's single token has been minted, but the freeze authority remains.
+    return create_token_mint(mint_account, seeds, ARRAY_LEN(seeds), &(Constants.authority_pubkey),
+                             &(Constants.authority_pubkey), funding_key, 0, transaction_accounts,
+                             transaction_accounts_len);
 }
 
 
