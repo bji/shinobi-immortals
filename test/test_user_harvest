@@ -242,3 +242,143 @@ if should_run_test user_harvest_success; then
         exit 1
     fi
 fi
+
+
+# Prints a field of the JSON description of the stake account $1, or "null" if it is not present
+function harvest_stake_field ()
+{
+    solana -u l stake-account $1 --output json | jq -r ".$2"
+}
+
+
+# Prints the total supply of Ki, in token base units: the u64 at offset 36 of the Ki mint account
+function ki_supply ()
+{
+    get_account_data $KI_MINT_PUBKEY 36 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'
+}
+
+
+# Destake with the no_ki_harvest flag set.  These tests of Destake are here, and not in test_user_destake, because
+# the entries of this file are the ones that earn Ki: their metadata has a nonzero Ki factor, and their block charges
+# commission.
+#
+# Entry 15 0 1 is staked by rich_user2 with delegated3_stake2, and has never been harvested, so it has Ki to harvest.
+# It is destaked with no_ki_harvest set, and with accounts in the Ki destination, Ki destination owner, Ki mint and
+# Associated Token Account program slots that have nothing to do with Ki, none of them writable.  This must succeed,
+# mint no Ki, still charge commission, and return the stake account.
+if should_run_test user_destake_no_ki_harvest; then
+    TEST_NAME=user_destake_no_ki_harvest
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER2_PUBKEY`
+
+    # The entry must have earnings that a harvest would turn into Ki: its stake account's delegated stake must have
+    # grown beyond the entry's Ki baseline (the u64 last_ki_harvest_stake_account_lamports at offset 312 of the
+    # entry).  If it has not yet, wait for stake rewards to be paid, for up to three epochs.
+    for i in 1 2 3; do
+        KI_BASELINE=`get_account_data $ENTRY_PUBKEY 312 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'`
+        STAKE_BEFORE=`harvest_stake_field $DELEGATED_STAKE2_PUBKEY delegatedStake`
+        if [ "$STAKE_BEFORE" -gt "$KI_BASELINE" ]; then
+            break
+        fi
+        sleep_until_next_epoch
+    done
+    if [ "$STAKE_BEFORE" -le "$KI_BASELINE" ]; then
+        echo "FAIL: $TEST_NAME: stake account earned no rewards, so there is no Ki that a harvest would mint"
+        exit 1
+    fi
+
+    KI_SUPPLY_BEFORE=`ki_supply`
+
+    assert $TEST_NAME                                                                                                \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER2_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $RICH_USER2_PUBKEY ws                                                                             \
+           account $BLOCK_PUBKEY                                                                                     \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER2_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY w                                                                                   \
+           account $DELEGATED_STAKE2_PUBKEY w                                                                        \
+           // Ki destination: not a token account, and not writable //                                               \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           // Ki destination owner //                                                                                \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $MASTER_STAKE_PUBKEY w                                                                            \
+           // Ki mint: not the Ki mint, and not writable //                                                          \
+           account $BID_MARKER_MINT_PUBKEY                                                                           \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           // Associated Token Account program: not that program //                                                  \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $MINT_PUBKEY                                                                                      \
+           // Instruction code 16 = Destake //                                                                       \
+           u8 16                                                                                                     \
+           // no_ki_harvest flag: 1 = do not harvest Ki //                                                           \
+           u8 1"                                                                                                     \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # No Ki was minted to anyone
+    if [ "`ki_supply`" != "$KI_SUPPLY_BEFORE" ]; then
+        echo "FAIL: $TEST_NAME: Ki supply changed from $KI_SUPPLY_BEFORE to `ki_supply`"
+        exit 1
+    fi
+    # Commission was still charged: it was moved out of the stake account.  (Stake rewards can only increase the
+    # delegated stake, so a decrease can only be the commission.)
+    STAKE_AFTER=`harvest_stake_field $DELEGATED_STAKE2_PUBKEY delegatedStake`
+    if [ "$STAKE_AFTER" -ge "$STAKE_BEFORE" ]; then
+        echo "FAIL: $TEST_NAME: no commission was charged: delegated stake went from $STAKE_BEFORE to $STAKE_AFTER"
+        exit 1
+    fi
+    # The stake account was returned to rich_user2
+    if [ "`harvest_stake_field $DELEGATED_STAKE2_PUBKEY staker`" != "$RICH_USER2_PUBKEY" ] ||
+       [ "`harvest_stake_field $DELEGATED_STAKE2_PUBKEY withdrawer`" != "$RICH_USER2_PUBKEY" ]; then
+        echo "FAIL: $TEST_NAME: stake account was not returned to its owner"
+        exit 1
+    fi
+    # The token account was thawed (state 1), still holding the token
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER2_PUBKEY`" != "1" ] ||
+       [ "`get_token_balance $MINT_PUBKEY $RICH_USER2_PUBKEY`" != "1" ]; then
+        echo "FAIL: $TEST_NAME: token account was not thawed"
+        exit 1
+    fi
+fi
+
+
+# The same, as scripts/user_destake_tx.sh does it when given no_ki_harvest: with the real Ki accounts in place.  Entry
+# 15 0 0 is staked by rich_user1 with delegated3_stake.
+if should_run_test user_destake_no_ki_harvest_script; then
+    TEST_NAME=user_destake_no_ki_harvest_script
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    KI_SUPPLY_BEFORE=`ki_supply`
+    assert $TEST_NAME                                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_destake_tx.sh                                     \
+         $RICH_USER1_PUBKEY 15 0 0 $DELEGATED_STAKE_PUBKEY no_ki_harvest                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # No Ki was minted to anyone
+    if [ "`ki_supply`" != "$KI_SUPPLY_BEFORE" ]; then
+        echo "FAIL: $TEST_NAME: Ki supply changed from $KI_SUPPLY_BEFORE to `ki_supply`"
+        exit 1
+    fi
+    # The stake account was returned to rich_user1
+    if [ "`harvest_stake_field $DELEGATED_STAKE_PUBKEY withdrawer`" != "$RICH_USER1_PUBKEY" ]; then
+        echo "FAIL: $TEST_NAME: stake account was not returned to its owner"
+        exit 1
+    fi
+    # The token account was thawed (state 1)
+    if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ]; then
+        echo "FAIL: $TEST_NAME: token account was not thawed"
+        exit 1
+    fi
+fi

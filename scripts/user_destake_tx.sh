@@ -4,6 +4,11 @@ set -e
 
 # Emits an encoded transaction that performs an entry destake.  The stake account withdrawal authority will be set
 # to the user pubkey.
+#
+# Destake normally harvests the Ki that the entry has earned before it returns the stake account.  If no_ki_harvest
+# is supplied as the last argument, then no Ki is harvested, and any Ki that the entry had earned and not yet
+# harvested is forfeited.  This exists so that the stake account can still be recovered if harvesting Ki were ever
+# to fail; there is no other reason to use it.
 
 function require ()
 {
@@ -11,9 +16,10 @@ function require ()
         cat <<EOF
 
 Usage: user_destake_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <STAKE_ACCOUNT_PUBKEY> \\
-                         [<TOKEN_PUBKEY>]
+                         [<TOKEN_PUBKEY>] [no_ki_harvest]
 
 If <TOKEN_PUBKEY> is not provided, it is assumed to be the Associated Token Account.
+If no_ki_harvest is supplied as the last argument, then no Ki is harvested; unharvested Ki is forfeited.
 
 EOF
         exit 1
@@ -26,6 +32,23 @@ BLOCK_NUMBER=$3
 ENTRY_INDEX=$4
 STAKE_ACCOUNT_PUBKEY=$5
 TOKEN_PUBKEY=$6
+NO_KI_HARVEST=$7
+
+# The no_ki_harvest argument may be given without a <TOKEN_PUBKEY> before it
+if [ "$TOKEN_PUBKEY" = "no_ki_harvest" ]; then
+    TOKEN_PUBKEY=
+    NO_KI_HARVEST=no_ki_harvest
+fi
+
+# Turn the no_ki_harvest argument into the value of the no_ki_harvest flag of the instruction data
+if [ -z "$NO_KI_HARVEST" ]; then
+    NO_KI_HARVEST_FLAG=0
+elif [ "$NO_KI_HARVEST" = "no_ki_harvest" ]; then
+    NO_KI_HARVEST_FLAG=1
+else
+    # Force the usage message
+    require ""
+fi
 
 require $USER_PUBKEY
 require $GROUP_NUMBER
@@ -133,4 +156,6 @@ solxact encode                                                                  
         // The entry mint is needed to thaw the token account //                                                      \
         account $ENTRY_MINT_PUBKEY                                                                                    \
         // Instruction code 16 = Destake //                                                                           \
-        u8 16
+        u8 16                                                                                                         \
+        // no_ki_harvest flag: 0 = harvest Ki, 1 = do not //                                                          \
+        u8 $NO_KI_HARVEST_FLAG

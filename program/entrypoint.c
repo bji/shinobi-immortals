@@ -58,7 +58,8 @@ typedef enum
     // the token cannot be transferred or burned while the program holds a stake account for it.
     Instruction_Stake                         = 15,
     // Destake the entry, returning the stake account of the entry, and thawing the token account holding the entry's
-    // token.
+    // token.  Ki that the entry has earned is harvested first, unless the instruction data says not to, which makes
+    // it possible to recover the stake account even if Ki could not be harvested.
     Instruction_Destake                       = 16,
     // Harvest Ki
     Instruction_Harvest                       = 17,

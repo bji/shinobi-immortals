@@ -2079,10 +2079,14 @@ class Wallet
         }, sign_callback);
     }
 
-    async destake_entry(entry, sign_callback)
+    // Destake normally harvests the Ki that the entry has earned before it returns the stake account.  If
+    // no_ki_harvest is true, then no Ki is harvested, and any Ki that the entry had earned and not yet harvested is
+    // forfeited.  This exists so that the stake account can still be recovered if harvesting Ki were ever to fail;
+    // there is no other reason to use it, and it should normally be omitted.
+    async destake_entry(entry, sign_callback, no_ki_harvest)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_destake_tx(entry, wallet_address);
+            return this.make_destake_tx(entry, wallet_address, no_ki_harvest);
         }, sign_callback);
     }
 
@@ -2219,7 +2223,7 @@ class Wallet
                            withdraw_authority : wallet_address });
     }
 
-    async make_destake_tx(entry, wallet_address)
+    async make_destake_tx(entry, wallet_address, no_ki_harvest)
     {
        return _destake_tx({ funding_pubkey : wallet_address,
                             block_pubkey : entry.block.address,
@@ -2229,7 +2233,9 @@ class Wallet
                             stake_pubkey : entry.owned_stake_account,
                             ki_destination_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
                             ki_destination_owner_pubkey : wallet_address,
-                            new_withdraw_authority : wallet_address });
+                            new_withdraw_authority : wallet_address,
+                            // The no_ki_harvest flag of the Destake instruction data: 1 = do not harvest Ki
+                            no_ki_harvest : (no_ki_harvest ? 1 : 0) });
     }
 
     async make_harvest_tx(entry, wallet_address)

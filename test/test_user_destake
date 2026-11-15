@@ -208,7 +208,9 @@ if should_run_test user_destake_bad_block; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16"                                                                                                    \
+           u8 16                                                                                                     \
+           // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
+           u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -259,7 +261,9 @@ if should_run_test user_destake_bad_entry; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16"                                                                                                    \
+           u8 16                                                                                                     \
+           // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
+           u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -299,7 +303,9 @@ if should_run_test user_destake_entry_wrong_block; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16"                                                                                                    \
+           u8 16                                                                                                     \
+           // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
+           u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -339,7 +345,9 @@ if should_run_test user_destake_entry_not_staked; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16"                                                                                                    \
+           u8 16                                                                                                     \
+           // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
+           u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -378,7 +386,9 @@ if should_run_test user_destake_entry_not_owned; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
            // Instruction code 16 = Destake //                                                                       \
-           u8 16"                                                                                                    \
+           u8 16                                                                                                     \
+           // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
+           u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -395,6 +405,102 @@ if should_run_test user_destake_wrong_stake; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
+fi
+
+
+# Submits a Destake of entry 14 0 0, which is staked by rich_user1 with delegated2_stake, with the Ki destination
+# account $1, the Ki mint account $2 (which may include a "w" to make it writable), the Associated Token Account
+# program account $3, and the remaining arguments as the instruction data that follows the instruction code.  Prints
+# the result of submission.
+function destake_14_0_0_raw ()
+{
+    local KI_DESTINATION="$1"
+    local KI_MINT="$2"
+    local ATA_PROGRAM="$3"
+    shift 3
+
+    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
+    local MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    local ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    local TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+
+    echo "encoding c                                                                                                 \
+          fee_payer $RICH_USER1_PUBKEY                                                                               \
+          program $SELF_PROGRAM_PUBKEY                                                                               \
+          account $RICH_USER1_PUBKEY ws                                                                              \
+          account $BLOCK_PUBKEY                                                                                      \
+          account $ENTRY_PUBKEY w                                                                                    \
+          account $RICH_USER1_PUBKEY s                                                                               \
+          account $TOKEN_PUBKEY w                                                                                    \
+          account $DELEGATED_STAKE_PUBKEY w                                                                          \
+          account $KI_DESTINATION                                                                                    \
+          account $RICH_USER1_PUBKEY                                                                                 \
+          account $MASTER_STAKE_PUBKEY w                                                                             \
+          account $KI_MINT                                                                                           \
+          account $AUTHORITY_PUBKEY                                                                                  \
+          account $CLOCK_SYSVAR_PUBKEY                                                                               \
+          account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+          account $STAKE_PROGRAM_PUBKEY                                                                              \
+          account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
+          account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+          account $ATA_PROGRAM                                                                                       \
+          account $MINT_PUBKEY                                                                                       \
+          // Instruction code 16 = Destake //                                                                        \
+          u8 16 $@"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1
+}
+
+
+# The instruction data must be exactly the instruction code followed by the no_ki_harvest flag
+if should_run_test user_destake_bad_data_size; then
+    KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    # No flag at all (Error_InvalidDataSize, 1001)
+    assert_fail user_destake_bad_data_size_short                                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY`
+    # A byte after the flag
+    assert_fail user_destake_bad_data_size_long                                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY u8 0 u8 0`
+fi
+
+
+# The no_ki_harvest flag must be 0 or 1 (Error_InvalidData_First, 1300)
+if should_run_test user_destake_bad_no_ki_harvest_flag; then
+    KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert_fail user_destake_bad_no_ki_harvest_flag_2                                                                \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY u8 2`
+    assert_fail user_destake_bad_no_ki_harvest_flag_255                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY u8 255`
+fi
+
+
+# When Ki is to be harvested (no_ki_harvest is 0), the accounts that are used to harvest it are still required to be
+# the correct accounts with the correct permissions.  (That they are not required when no_ki_harvest is 1 is tested
+# in test_user_harvest, where the entries earn Ki.)
+if should_run_test user_destake_bad_ki_accounts; then
+    KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    # Ki destination account not writable (Error_InvalidAccountPermissions_First + 6, 1206)
+    assert_fail user_destake_bad_ki_accounts_destination_not_writable                                                \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b6'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY" "$KI_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY u8 0`
+    # Not the Ki mint (Error_InvalidAccount_First + 9, 1109)
+    assert_fail user_destake_bad_ki_accounts_wrong_mint                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x455'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$BID_MARKER_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY u8 0`
+    # Ki mint not writable (Error_InvalidAccountPermissions_First + 9, 1209)
+    assert_fail user_destake_bad_ki_accounts_mint_not_writable                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b9'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY" $SPLATA_PROGRAM_PUBKEY u8 0`
+    # Not the Associated Token Account program (Error_InvalidAccount_First + 16, 1116)
+    assert_fail user_destake_bad_ki_accounts_wrong_ata_program                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45c'                     \
+    `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY w" $SPL_TOKEN_PROGRAM_PUBKEY u8 0`
 fi
 
 

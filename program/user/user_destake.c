@@ -5,9 +5,31 @@
 #include "util/util_stake.c"
 
 
+typedef struct
+{
+    // This is the instruction code for Destake
+    uint8_t instruction_code;
+
+    // If this is 0, then the Ki that the entry has earned is harvested before the stake account is returned, as the
+    // Harvest instruction would do.  If this is 1, then no Ki is harvested; whatever Ki the entry had earned and not
+    // yet harvested is forfeited.  No other value is allowed.
+    //
+    // The purpose of this flag is to make sure that a stake account can always be recovered by its owner.  Harvesting
+    // Ki requires the Associated Token Account and SPL Token programs to create the Ki destination account and mint
+    // Ki to it, and if either were ever to fail, a Destake that harvests would fail with it.  With this flag set,
+    // Destake does nothing with Ki at all: the Ki destination, Ki destination owner, Ki mint and Associated Token
+    // Account program accounts are neither checked nor used, and may be any accounts.  Commission is still charged.
+    // Skipping the harvest costs only the token owner, and only their own unharvested Ki.
+    uint8_t no_ki_harvest;
+
+} DestakeData;
+
+
 static uint64_t user_destake(const SolParameters *params)
 {
-    // Declare accounts, which checks the permissions and identity of all accounts
+    // Declare accounts, which checks the permissions and identity of all accounts.  The accounts that are only used
+    // to harvest Ki (6, 7, 9 and 16) are declared here with no requirements, because they must not be able to cause a
+    // failure when no Ki is to be harvested; their requirements are checked below if Ki is to be harvested.
     DECLARE_ACCOUNTS {
         DECLARE_ACCOUNT(0,   funding_account,                  ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(1,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
@@ -15,24 +37,54 @@ static uint64_t user_destake(const SolParameters *params)
         DECLARE_ACCOUNT(3,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(4,   token_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   stake_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(6,   ki_destination_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(6,   ki_destination_account,           ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   ki_destination_owner_account,     ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(8,   master_stake_account,             ReadWrite,  NotSigner,  KnownAccount_MasterStake);
-        DECLARE_ACCOUNT(9,   ki_mint_account,                  ReadWrite,  NotSigner,  KnownAccount_KiMint);
+        DECLARE_ACCOUNT(9,   ki_mint_account,                  ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(10,  authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(11,  clock_sysvar_account,             ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
         DECLARE_ACCOUNT(12,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(13,  stake_program_account,            ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
         DECLARE_ACCOUNT(14,  stake_history_sysvar_account,     ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
         DECLARE_ACCOUNT(15,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
-        DECLARE_ACCOUNT(16,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        DECLARE_ACCOUNT(16,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(17,  entry_mint_account,               ReadOnly,   NotSigner,  KnownAccount_NotKnown);
     }
     DECLARE_ACCOUNTS_NUMBER(18);
 
-    // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
-    if (params->data_len != 1) {
+    // Make sure that the input data is the correct size
+    if (params->data_len != sizeof(DestakeData)) {
         return Error_InvalidDataSize;
+    }
+
+    // Cast to instruction data
+    const DestakeData *data = (DestakeData *) params->data;
+
+    // The no_ki_harvest flag must be exactly 0 or 1, so that a malformed transaction cannot be mistaken for a request
+    // to forfeit Ki
+    if (data->no_ki_harvest > 1) {
+        return Error_InvalidData_First;
+    }
+
+    // If Ki is to be harvested, then the accounts that are used to harvest it must be the correct accounts with the
+    // correct permissions.  These are the checks that the account declarations above would otherwise have made, and
+    // they fail with the same errors.
+    if (!data->no_ki_harvest) {
+        // The Ki destination account must be writable, since Ki is minted into it
+        if (!ki_destination_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 6;
+        }
+        // The Ki mint must be the Ki mint, and writable, since Ki is minted from it
+        if (!check_known_account(ki_mint_account, KnownAccount_KiMint)) {
+            return Error_InvalidAccount_First + 9;
+        }
+        if (!ki_mint_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 9;
+        }
+        // The Associated Token Account program is used to create the Ki destination account if it doesn't exist
+        if (!check_known_account(spl_ata_program_account, KnownAccount_SPLATAProgram)) {
+            return Error_InvalidAccount_First + 16;
+        }
     }
 
     // Get validated block and entry, which checks all validity of those accounts
@@ -85,10 +137,13 @@ static uint64_t user_destake(const SolParameters *params)
         return Error_InvalidAccount_First + 5;
     }
 
-    // Harvest Ki.  Must be done before commission is charged since commission charge actually reduces the number of
-    // lamports in the stake account, which would affect Ki harvest calculations
-    harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-               funding_account->key, clock.epoch, params->ka, params->ka_num);
+    // Harvest Ki, unless the instruction data says not to.  Must be done before commission is charged since
+    // commission charge actually reduces the number of lamports in the stake account, which would affect Ki harvest
+    // calculations.
+    if (!data->no_ki_harvest) {
+        harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
+                   funding_account->key, clock.epoch, params->ka, params->ka_num);
+    }
 
     // Charge commission
     charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
