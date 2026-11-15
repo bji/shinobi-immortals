@@ -27,12 +27,20 @@ METADATA_PIECE1=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none   
 METADATA_PIECE2=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
 METADATA_PIECE3=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=1800 | base64 | tr -d '\n'`
 METADATA_PIECE4=`echo "$METADATA" | base64 -d | dd bs=1           status=none skip=2700 | base64 | tr -d '\n'`
+# Entry 2 gets the same metadata except that its level 1 credits is 1 (0x01000000 in little-endian).  As explained
+# above, with the test program's short window no contribution to such an entry can earn even a tenth of a credit,
+# which is what the user_level_up_no_credits test needs.  Only the first four bytes differ, so only the first piece
+# differs.
+METADATA_NO_CREDITS=`(echo 0x01000000 | xxd -r | tr -d '\n';                                                         \
+                      echo "$METADATA" | base64 -d | dd bs=1 status=none skip=4) | base64 | tr -d '\n'`
+METADATA_NO_CREDITS_PIECE1=`echo "$METADATA_NO_CREDITS" | base64 -d | dd bs=1 count=900 status=none                 \
+                            | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
 SHA2560=`compute_metadata_sha256 $METADATA $SALT0`
 SHA2561=`compute_metadata_sha256 $METADATA $SALT1`
-SHA2562=`compute_metadata_sha256 $METADATA $SALT2`
+SHA2562=`compute_metadata_sha256 $METADATA_NO_CREDITS $SALT2`
 
 # This must be set so that user_stake_tx.sh will use the correct vote account
 export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
@@ -119,7 +127,7 @@ if [ -z "$TESTS" ]; then
         | solxact submit l 2>&1`
     assert user_level_up_setup_16_0_j                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
-         $ADMIN_PUBKEY 16 0 2 0 $METADATA_PIECE1                                                                     \
+         $ADMIN_PUBKEY 16 0 2 0 $METADATA_NO_CREDITS_PIECE1                                                          \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -172,7 +180,7 @@ if [ -z "$TESTS" ]; then
 
     # 16 0 0 is owned and staked by rich_user1
     # 16 0 1 is owned by rich_user2
-    # 16 0 2 is not owned    
+    # 16 0 2 is not owned, and has metadata with which no contribution can earn level credits
 fi
 
 
@@ -566,6 +574,40 @@ for invalid_case in zero overflow; do
         fi
     fi
 done
+
+# A contribution that earns no level credits is rejected, so that no Ki is burned for nothing.  Entry 16 0 2 has a
+# level 1 credits value so small that no amount of Ki earns a tenth of a credit in the test program's short windows.
+# Both a small and a large amount are tried.  rich_user2 holds no Ki at all, so receiving this error, and not the Ki
+# source account error (0x451), also shows that the contribution is rejected before the burn is reached.
+if should_run_test user_level_up_no_credits; then
+    # rich_user2 buys entry 2, which until now was left unowned for user_level_up_unowned_entry
+    assert user_level_up_no_credits_setup                                                                            \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER2_PUBKEY 16 0 2 \`lamports_from_sol 1001\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    BEFORE=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 2)
+    for no_credits_amount in 1 1000000000; do
+        # 0x411 = 1041 = Error_NoLevelCreditsEarned
+        assert_fail user_level_up_no_credits_$no_credits_amount                                                      \
+        'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                 \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                \
+             $RICH_USER2_PUBKEY 16 0 2 $no_credits_amount                                                            \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/rich_user2.json                                                                   \
+            | solxact submit l 2>&1`
+    done
+    AFTER=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 2)
+    # The level, window and credit fields of the entry must be exactly as they were
+    PROGRESSION_FIELDS='[.level,.most_recent_ki_applied_window,.ki_applied_this_window,.total_level_credits]'
+    BEFORE_PROGRESSION=$(echo "$BEFORE" | jq -c "$PROGRESSION_FIELDS")
+    AFTER_PROGRESSION=$(echo "$AFTER" | jq -c "$PROGRESSION_FIELDS")
+    if [ -z "$BEFORE" ] || [ "$BEFORE_PROGRESSION" != "$AFTER_PROGRESSION" ]; then
+        echo "FAIL: user_level_up_no_credits modified the entry"
+        exit 1
+    fi
+fi
 
 # In the next level credit window, the curve starts over but the earned credits remain.
 if should_run_test user_level_up_next_window; then

@@ -131,6 +131,7 @@ if should_run_test special_reauthorize_not_authorized_by_admin; then
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
          $RICH_USER1_PUBKEY $RICH_USER1_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $RICH_USER1_PUBKEY  \
+         true                                                                                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
@@ -142,7 +143,7 @@ if should_run_test special_reauthorize_not_authorized_by_user; then
     assert_fail special_reauthorize_not_authorized_by_user                                                           \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
-         $ADMIN_PUBKEY $ADMIN_PUBKEY $ADMIN_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $ADMIN_PUBKEY                      \
+         $ADMIN_PUBKEY $ADMIN_PUBKEY $ADMIN_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $ADMIN_PUBKEY true                 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -211,6 +212,7 @@ if should_run_test special_reauthorize_bad_entry; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 20 = Reauthorize //                                                                   \
            u8 20                                                                                                     \
+           bool true                                                                                                 \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -225,7 +227,7 @@ if should_run_test special_reauthorize_entry_not_owned; then
     assert_fail special_reauthorize_entry_not_owned                                                                  \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
-         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 1 $DELEGATED_STAKE_PUBKEY $RICH_USER1_PUBKEY       \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 1 $DELEGATED_STAKE_PUBKEY $RICH_USER1_PUBKEY true  \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -260,6 +262,7 @@ if should_run_test special_reauthorize_bad_metadata; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 20 = Reauthorize //                                                                   \
            u8 20                                                                                                     \
+           bool true                                                                                                 \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -274,7 +277,7 @@ if should_run_test special_reauthorize_no_stake; then
     assert_fail special_reauthorize_no_stake                                                                         \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
-         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY        \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY true   \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -287,7 +290,7 @@ if should_run_test special_reauthorize_bad_stake; then
     assert_fail special_reauthorize_entry_bad_stake                                                                  \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
-         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE2_PUBKEY $RICH_USER1_PUBKEY      \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE2_PUBKEY $RICH_USER1_PUBKEY true \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -295,16 +298,69 @@ if should_run_test special_reauthorize_bad_stake; then
 fi
 
 
-# Success - make sure that metadata has new authority and stake account too
-if should_run_test special_reauthorize_success; then
-    assert special_reauthorize_success                                                                               \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
-         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $RICH_USER1_PUBKEY       \
+# Invalid reauthorize metadata flag (must be 0 or 1)
+if should_run_test special_reauthorize_bad_flag; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 18 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
+                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
+                                                    pubkey $MINT_PUBKEY ]`
+    assert_fail special_reauthorize_bad_flag                                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                   \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $METADATA_PUBKEY w                                                                                \
+           account $DELEGATED_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 20 = Reauthorize //                                                                   \
+           u8 20                                                                                                     \
+           // Reauthorize metadata flag, which must be 0 or 1 //                                                     \
+           u8 2                                                                                                      \
+           pubkey $RICH_USER1_PUBKEY"                                                                                \
+        | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
-    # Check metadata update authority
+fi
+
+
+# Not reauthorizing metadata, on an entry that is not staked: there is nothing to do, so this must fail
+if should_run_test special_reauthorize_stake_only_not_staked; then
+    assert_fail special_reauthorize_stake_only_not_staked                                                            \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x403'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 2 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY false  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# Success - make sure that metadata has the new metadata authority, and that the stake account was returned to the
+# token owner.  The new metadata authority is deliberately not the token owner, to demonstrate that the stake account
+# goes to the token owner and not to the new metadata authority.
+if should_run_test special_reauthorize_success; then
+    assert special_reauthorize_success                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $DELEGATED_STAKE_PUBKEY $RICH_USER2_PUBKEY true  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # Check metadata update authority, which must be the new metadata authority
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 18 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
@@ -312,13 +368,13 @@ if should_run_test special_reauthorize_success; then
                                                     pubkey $MINT_PUBKEY ]`
     UPDATE_AUTHORITY=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 18 0 0 |             \
                       jq -r .update_authority_pubkey`
-    if [ "$UPDATE_AUTHORITY" != "$RICH_USER1_PUBKEY" ]; then
+    if [ "$UPDATE_AUTHORITY" != "$RICH_USER2_PUBKEY" ]; then
         echo "FAIL: special_reauthorize_success: Invalid metadata update authority:"
-        echo "$RICH_USER1_PUBKEY"
+        echo "$RICH_USER2_PUBKEY"
         echo "$UPDATE_AUTHORITY"
         exit 1
     fi
-    # Check the stake authorities
+    # Check the stake authorities, which must be the token owner and not the new metadata authority
     RESULT=`solana -u l stake-account $DELEGATED_STAKE_PUBKEY`
     STAKE_AUTHORITY=`echo "$RESULT" | grep "^Stake Authority" | cut -d ' ' -f 3`
     WITHDRAW_AUTHORITY=`echo "$RESULT" | grep "^Withdraw Authority" | cut -d ' ' -f 3`
@@ -333,7 +389,7 @@ if should_run_test special_reauthorize_success; then
     # Success when no stake account is provided
     assert special_reauthorize_success                                                                               \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
-         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 2 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY        \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 2 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY true   \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -346,4 +402,142 @@ if should_run_test special_reauthorize_success; then
         echo "$UPDATE_AUTHORITY"
         exit 1
     fi
+fi
+
+
+# Success without reauthorizing metadata - the stake account must be returned to the token owner, the metadata must
+# keep the program authority as its update authority, and the metadata account passed in must be ignored entirely
+if should_run_test special_reauthorize_stake_only_success; then
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 18 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER2_PUBKEY`
+    # The state account is passed (read-only) in place of the metadata account, to demonstrate that the metadata
+    # account is neither checked nor used when the metadata is not being reauthorized
+    assert special_reauthorize_stake_only_success                                                                    \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER2_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY                                                                                     \
+           account $ADMIN_PUBKEY s                                                                                   \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER2_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $STATE_PUBKEY                                                                                     \
+           account $DELEGATED_STAKE2_PUBKEY w                                                                        \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 20 = Reauthorize //                                                                   \
+           u8 20                                                                                                     \
+           // Do not reauthorize metadata //                                                                         \
+           bool false                                                                                                \
+           // New metadata authority, which is ignored; it must not receive the stake account //                     \
+           pubkey $ADMIN_PUBKEY"                                                                                \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    # Check the stake authorities, which must now be the token owner
+    RESULT=`solana -u l stake-account $DELEGATED_STAKE2_PUBKEY`
+    STAKE_AUTHORITY=`echo "$RESULT" | grep "^Stake Authority" | cut -d ' ' -f 3`
+    WITHDRAW_AUTHORITY=`echo "$RESULT" | grep "^Withdraw Authority" | cut -d ' ' -f 3`
+    if [ "$STAKE_AUTHORITY" != "$RICH_USER2_PUBKEY" -o "$WITHDRAW_AUTHORITY" != "$RICH_USER2_PUBKEY" ]; then
+        echo "FAIL: special_reauthorize_stake_only_success: Invalid stake authorities:"
+        echo "$RICH_USER2_PUBKEY"
+        echo "$STAKE_AUTHORITY"
+        echo "$WITHDRAW_AUTHORITY"
+        exit 1
+    fi
+    # Check the metadata update authority, which must still be the program authority
+    PROGRAM_AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 2 ]`
+    UPDATE_AUTHORITY=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 18 0 1 |             \
+                      jq -r .update_authority_pubkey`
+    if [ "$UPDATE_AUTHORITY" != "$PROGRAM_AUTHORITY_PUBKEY" ]; then
+        echo "FAIL: special_reauthorize_stake_only_success: Metadata update authority was changed:"
+        echo "$PROGRAM_AUTHORITY_PUBKEY"
+        echo "$UPDATE_AUTHORITY"
+        exit 1
+    fi
+
+    # A stake-only reauthorize must not retire the entry, since its metadata is still controlled by this program
+    if [ "`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 18 0 1 | jq -r .reauthorized`"     \
+         != "false" ]; then
+        echo "FAIL: special_reauthorize_stake_only_success: stake-only reauthorize marked the entry reauthorized"
+        exit 1
+    fi
+
+    # The entry is no longer staked, so a second stake-only reauthorize has nothing to do and must fail
+    assert_fail special_reauthorize_stake_only_success                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x403'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
+         $RICH_USER2_PUBKEY $ADMIN_PUBKEY $RICH_USER2_PUBKEY 18 0 1 $SYSTEM_PROGRAM_PUBKEY $RICH_USER2_PUBKEY false  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # The metadata can still be reauthorized afterwards, by a second reauthorize that requests it
+    assert special_reauthorize_stake_only_success                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
+         $RICH_USER2_PUBKEY $ADMIN_PUBKEY $RICH_USER2_PUBKEY 18 0 1 $SYSTEM_PROGRAM_PUBKEY $RICH_USER2_PUBKEY true   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    UPDATE_AUTHORITY=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 18 0 1 |             \
+                      jq -r .update_authority_pubkey`
+    if [ "$UPDATE_AUTHORITY" != "$RICH_USER2_PUBKEY" ]; then
+        echo "FAIL: special_reauthorize_stake_only_success: Invalid metadata update authority:"
+        echo "$RICH_USER2_PUBKEY"
+        echo "$UPDATE_AUTHORITY"
+        exit 1
+    fi
+fi
+
+# Once an entry's metadata has been reauthorized, the entry is retired: this program must refuse every further
+# operation on it.  Entry 18 0 0 had its metadata reauthorized by special_reauthorize_success, which also returned its
+# stake account to rich_user1.
+if should_run_test special_reauthorize_retired; then
+    # The entry must be marked as reauthorized, and must no longer hold a stake account
+    ENTRY_JSON=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 18 0 0`
+    if [ "`echo "$ENTRY_JSON" | jq -r .reauthorized`" != "true" ] ||
+       [ "`echo "$ENTRY_JSON" | jq -r '.owned.stake_account // empty'`" != "" ]; then
+        echo "FAIL: special_reauthorize_retired: entry is not marked reauthorized, or still has a stake account:"
+        echo "$ENTRY_JSON"
+        exit 1
+    fi
+
+    # It cannot be staked again, even though rich_user1 owns both the token and the stake account
+    # 0x402 = 1026 = Error_NotStakeable
+    assert_fail special_reauthorize_retired_stake                                                                    \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x402'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 18 0 0 $LEDGER/delegated6_stake.json                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # It cannot be levelled up.  This is rejected because of the entry's state, before the Ki accounts are examined.
+    # 0x404 = 1028 = Error_NotOwned
+    assert_fail special_reauthorize_retired_level_up                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x404'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                    \
+         $RICH_USER1_PUBKEY 18 0 0 1000                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # It cannot be reauthorized again.  This too is rejected because of the entry's state, not by Metaplex.
+    # 0x44e = 1102 = Error_InvalidAccount_First + 2
+    assert_fail special_reauthorize_retired_reauthorize                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/special_reauthorize_tx.sh                              \
+         $RICH_USER1_PUBKEY $ADMIN_PUBKEY $RICH_USER1_PUBKEY 18 0 0 $SYSTEM_PROGRAM_PUBKEY $RICH_USER1_PUBKEY true   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
 fi

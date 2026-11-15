@@ -1048,7 +1048,10 @@ const EntryState = Object.freeze(
     // Entry is owned and revealed, but not staked
     Owned                      : Symbol("Owned"),
     // Entry is owned, revealed, and staked
-    OwnedAndStaked             : Symbol("OwnedAndStaked")
+    OwnedAndStaked             : Symbol("OwnedAndStaked"),
+    // Entry's metadata has been reauthorized to another program; the entry is retired and the program will not perform
+    // any further operation on it (other than letting losing bidders reclaim their bids)
+    Reauthorized               : Symbol("Reauthorized")
 });
 
 
@@ -1072,6 +1075,8 @@ class Entry
         this.reveal_timestamp = Number(buffer_le_s64(data, 200));
         this.purchase_price_lamports = buffer_le_u64(data, 208);
         this.refund_awarded = data[216];
+        // Nonzero once the entry's metadata has been reauthorized to another program; the entry is then retired
+        this.reauthorized = data[217];
         this.commission = buffer_le_u16(data, 218);
         this.auction_highest_bid_lamports = buffer_le_u64(data, 224);
         this.auction_winning_bid_address = buffer_address(data, 232);
@@ -1141,6 +1146,11 @@ class Entry
 
         if (new_entry.refund_awarded != this.refund_awarded) {
             this.refund_awarded = new_entry.refund_awarded;
+            changed = true;
+        }
+
+        if (new_entry.reauthorized != this.reauthorized) {
+            this.reauthorized = new_entry.reauthorized;
             changed = true;
         }
 
@@ -1271,6 +1281,11 @@ class Entry
     // Cribbed from the program's get_entry_state() function
     get_entry_state(clock)
     {
+        // A reauthorized entry is retired, whatever its other fields say
+        if (this.reauthorized) {
+            return EntryState.Reauthorized;
+        }
+
         if (this.reveal_sha256 == "0000000000000000000000000000000000000000000000000000000000000000") {
             if (this.purchase_price_lamports > 0) {
                 if (this.owned_stake_account == g_system_program_address) {

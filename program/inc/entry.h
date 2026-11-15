@@ -22,7 +22,10 @@ typedef enum EntryState
     // Entry is owned and revealed, but not staked
     EntryState_Owned                      = 8,
     // Entry is owned, revealed, and staked
-    EntryState_OwnedAndStaked             = 9
+    EntryState_OwnedAndStaked             = 9,
+    // Entry's metadata has been reauthorized to another program.  This is a terminal state: the entry is retired, and
+    // this program will not perform any further operation on it, other than letting losing bidders reclaim their bids.
+    EntryState_Reauthorized               = 10
 } EntryState;
 
 
@@ -149,9 +152,17 @@ typedef struct
     // entry again.
     bool refund_awarded;
 
-    // This is the commission to charge for this entry.  It is copied from the entry's block's commission when the
-    // entry is first created, and after every commission charge to the entry.  This allows the block's commission
-    // to be updated, and only take effect after all owed commission has already been charged at the prior commission.
+    // This is set to true by ReAuthorize when it moves the entry's Metaplex metadata update authority away from this
+    // program, and is never cleared.  Once it is set, the entry is in the EntryState_Reauthorized state: it is retired
+    // from this program, which will not stake it, level it up, or operate on it in any other way, since the entry is
+    // from then on managed by whichever program received its metadata.  (This field occupies what was a padding byte
+    // between refund_awarded and commission, so adding it did not move any other field.)
+    bool reauthorized;
+
+    // This is the commission to charge for this entry.  It is copied from the entry's block's commission when a
+    // stake account is staked to the entry, and after every commission charge to the entry.  This allows the block's
+    // commission to be updated, and only take effect after all owed commission has already been charged at the prior
+    // commission.  It is zero until the entry is first staked, and is only meaningful while the entry is staked.
     commission_t commission;
 
     // If has_auction is true, then this struct is used

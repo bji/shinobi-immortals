@@ -108,7 +108,8 @@ static uint64_t user_buy(const SolParameters *params)
     case EntryState_WaitingForRevealOwned:
     case EntryState_Owned:
     case EntryState_OwnedAndStaked:
-        // Already owned, can't be purchased again
+    case EntryState_Reauthorized:
+        // Already owned (a reauthorized entry was necessarily owned when it was reauthorized), can't be purchased again
         return Error_AlreadyOwned;
 
     case EntryState_WaitingForRevealUnowned:

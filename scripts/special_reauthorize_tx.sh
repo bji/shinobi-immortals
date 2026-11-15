@@ -10,8 +10,15 @@ function require ()
         cat <<EOF
 
 Usage: special_reauthorize_tx.sh <FEE_PAYER_PUBKEY> <ADMIN_PUBKEY> <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> \\
-                                 <ENTRY_INDEX> <ENTRY_STAKE_ACCOUNT_PUBKEY> <NEW_AUTHORITY_PUBKEY> [<TOKEN_PUBKEY>]
+                                 <ENTRY_INDEX> <ENTRY_STAKE_ACCOUNT_PUBKEY> <NEW_METADATA_AUTHORITY_PUBKEY> \\
+                                 <REAUTHORIZE_METADATA> [<TOKEN_PUBKEY>]
 
+If the entry is staked, its stake account is returned to <USER_PUBKEY>, without harvesting Ki or charging
+commission.  It cannot be sent anywhere else.
+<REAUTHORIZE_METADATA> is "true" to also set the Metaplex metadata update authority of the entry to
+<NEW_METADATA_AUTHORITY_PUBKEY>, or "false" to only return the entry's stake account without invoking the Metaplex
+Metadata program at all.  "false" is only valid for a staked entry, and <NEW_METADATA_AUTHORITY_PUBKEY> is then
+ignored.
 If <TOKEN_PUBKEY> is not provided, it is assumed to be the Associated Token Account.
 If the entry is not staked, then any key can be passed in for <ENTRY_STAKE_ACCOUNT_PUBKEY>, it will be ignored.
 
@@ -27,8 +34,9 @@ GROUP_NUMBER=$4
 BLOCK_NUMBER=$5
 ENTRY_INDEX=$6
 ENTRY_STAKE_ACCOUNT_PUBKEY=$7
-NEW_AUTHORITY_PUBKEY=$8
-TOKEN_PUBKEY=$9
+NEW_METADATA_AUTHORITY_PUBKEY=$8
+REAUTHORIZE_METADATA=$9
+TOKEN_PUBKEY=${10}
 
 require $FEE_PAYER_PUBKEY
 require $ADMIN_PUBKEY
@@ -37,7 +45,14 @@ require $GROUP_NUMBER
 require $BLOCK_NUMBER
 require $ENTRY_INDEX
 require $ENTRY_STAKE_ACCOUNT_PUBKEY
-require $NEW_AUTHORITY_PUBKEY
+require $NEW_METADATA_AUTHORITY_PUBKEY
+require $REAUTHORIZE_METADATA
+
+# The reauthorize metadata flag must be exactly "true" or "false"; anything else is a usage error
+case "$REAUTHORIZE_METADATA" in
+    true|false) ;;
+    *) require "" ;;
+esac
 
 # Compute program, block, entry, and related pubkeys.  These may not all be valid, depending on input parameters
 # to the script, but any that are invalid won't be used by the solxact encode command that follows.
@@ -126,4 +141,6 @@ solxact encode                                                                  
         account $STAKE_PROGRAM_PUBKEY                                                                                 \
         // Instruction code 20 = Reauthorize //                                                                       \
         u8 20                                                                                                         \
-        pubkey $NEW_AUTHORITY_PUBKEY
+        // Whether or not to reauthorize the Metaplex metadata //                                                     \
+        bool $REAUTHORIZE_METADATA                                                                                    \
+        pubkey $NEW_METADATA_AUTHORITY_PUBKEY

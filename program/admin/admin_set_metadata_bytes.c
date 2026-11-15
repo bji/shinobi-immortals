@@ -73,9 +73,8 @@ static uint64_t admin_set_metadata_bytes(const SolParameters *params)
 
     // Make sure that the block has achieved its reveal criteria
     Clock clock;
-    uint64_t retval = sol_get_clock_sysvar(&clock);
-    if (retval) {
-        return retval;
+    if (sol_get_clock_sysvar(&clock)) {
+        return Error_FailedToGetClock;
     }
     if (!is_complete_block_revealable(block, &clock)) {
         return Error_BlockNotRevealable;

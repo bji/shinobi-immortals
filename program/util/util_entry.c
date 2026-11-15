@@ -205,6 +205,12 @@ static Entry *get_validated_entry_of_block(const SolAccountInfo *entry_account, 
 // otherwise a generic EntryState_PreReveal is returned.
 static EntryState get_entry_state(const Block *block, const Entry *entry, const Clock *clock)
 {
+    // An entry whose metadata has been reauthorized to another program is retired, whatever its other fields say.
+    // This is checked first so that no instruction handler can treat a reauthorized entry as being in any other state.
+    if (entry->reauthorized) {
+        return EntryState_Reauthorized;
+    }
+
     // If the entry has been revealed ...
     if (is_all_zeroes(&(entry->reveal_sha256), sizeof(entry->reveal_sha256))) {
         // If the entry has been purchased ...

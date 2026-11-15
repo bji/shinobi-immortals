@@ -313,7 +313,7 @@ static uint64_t create_pda_token_account_idempotent(SolAccountInfo *token_accoun
     util_InitializeAccount3Data data =
         {
             18, // instruction_code, 18 for InitializeAccount3
-            *funding_key, // owner
+            *owner_key, // owner.  The funding account only pays for the account; it does not own it.
         };
 
     instruction.data = (uint8_t *) &data;

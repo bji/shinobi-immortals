@@ -86,7 +86,8 @@ typedef enum
     // Attempt to stake when an entry is not in a stakeable state
     Error_NotStakeable                                 = 1026,
 
-    // Attempted to harvest Ki from an entry that is not staked
+    // Attempted an operation that requires a staked entry (Destake, Harvest, TakeCommissionOrDelegate, stake-only
+    // ReAuthorize) on an entry that is not staked
     Error_NotStaked                                    = 1027,
 
     // Attempt to level up an entry that is not owned
@@ -127,6 +128,9 @@ typedef enum
 
     // Invalid attempt to resize an account
     Error_InvalidResize                                = 1040,
+
+    // Attempt to level up with an amount of Ki that would not earn even one tenth of a level credit; no Ki is burned
+    Error_NoLevelCreditsEarned                         = 1041,
 
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

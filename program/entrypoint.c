@@ -76,11 +76,14 @@ typedef enum
     // Special functions -----------------------------------------------------------------------------------------------
     // This is a special function that can only be called on an entry that is in the Owned or OwnedAndStaked state.
     // The transaction must be signed by both the admin and the user who owns the entry.  This instruction will reset
-    // the metadata update authority to a new authority, and if the entry is staked, will also set the stake account
-    // stake and withdraw authorities to the new authority.  The goal of this is to allow a safety valve in case of
-    // bugs or problems with this program; or a need to upgrade the program to handle new conditions.  The program
+    // the metadata update authority to a new authority, and if the entry is staked, will also return the stake
+    // account to the user who owns the entry (without harvesting Ki or charging commission), leaving the entry
+    // not staked.  The goal of this is to allow a safety valve in case of bugs or problems with this program; or a
+    // need to upgrade the program to handle new conditions.  The program
     // can't be upgraded but a new program can be made and then given authority over all user owned entries via this
-    // instruction (but only if both the user and admin agree to do so).
+    // instruction (but only if both the user and admin agree to do so).  The instruction data includes a flag
+    // that says whether or not to reauthorize the metadata; if it is false, the Metaplex Metadata program is not
+    // invoked, so that a problem with that program cannot prevent a stake account from being returned.
     Instruction_ReAuthorize                   = 20
 
 } Instruction;

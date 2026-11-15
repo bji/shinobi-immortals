@@ -542,6 +542,9 @@ case $1 in
 
         echo -n '"refund_awarded":'`to_bool \`get_data_u8 216 "$ACCOUNT_DATA"\``','
 
+        # Set once the entry's metadata has been reauthorized to another program; the entry is then retired
+        echo -n '"reauthorized":'`to_bool \`get_data_u8 217 "$ACCOUNT_DATA"\``','
+
         echo -n '"commission":'`get_data_u16 218 "$ACCOUNT_DATA"`','
 
         echo -n '"auction":{'

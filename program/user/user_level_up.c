@@ -133,6 +133,12 @@ static uint64_t user_level_up(const SolParameters *params)
     if (overflow || (new_credits < old_credits)) {
         return Error_InvalidData_First;
     }
+    // Never burn Ki that earns nothing.  The curve is rounded down to whole tenths of a credit, so a contribution that
+    // is too small (or that is made when the window's curve is already nearly flat) can leave the window's credits
+    // unchanged.  Reject it rather than burn the Ki; the user can apply a larger amount, or wait for the next window.
+    if (new_credits == old_credits) {
+        return Error_NoLevelCreditsEarned;
+    }
     uint64_t total_credits = checked_add(entry->total_level_credits, new_credits - old_credits, &overflow);
     if (overflow) {
         return Error_InvalidData_First;

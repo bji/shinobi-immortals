@@ -59,7 +59,7 @@ static uint64_t user_destake(const SolParameters *params)
 
     // Check to make sure that the entry is staked
     if (get_entry_state(block, entry, &clock) != EntryState_OwnedAndStaked) {
-        return Error_NotStakeable;
+        return Error_NotStaked;
     }
 
     // Check to make sure that the entry token is owned by the token owner account

@@ -529,6 +529,7 @@ if [ -z "$TESTS" ]; then
   "reveal_timestamp": 0,
   "purchase_price": 0,
   "refund_awarded": false,
+  "reauthorized": false,
   "commission": 0,
   "auction": {
     "highest_bid": 0

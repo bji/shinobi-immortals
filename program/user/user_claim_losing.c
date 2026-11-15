@@ -57,6 +57,9 @@ static uint64_t user_claim_losing(const SolParameters *params)
     case EntryState_WaitingToBeClaimed:
     case EntryState_Owned:
     case EntryState_OwnedAndStaked:
+        // A reauthorized entry is retired from this program, but a losing bidder's lamports are still held in their
+        // bid account and must always be reclaimable, so it is treated here exactly as an owned entry is
+    case EntryState_Reauthorized:
         // If the entry has no auction, then it's not possible that this bidder bid on it
         if (!entry->has_auction) {
             return Error_CannotClaimBid;
