@@ -131,7 +131,7 @@ uint64_t entrypoint(const uint8_t *input)
             break;
 
         case 16:
-            if ((a > 510000000000ul) || (b > UINT32_MAX)) {
+            if ((a > 60000000000ul) || (b > UINT32_MAX)) {
                 return 4;
             }
             actual_result = compute_ki_harvest(a, b);

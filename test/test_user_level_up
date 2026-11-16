@@ -419,8 +419,8 @@ fi
 # Independently compute P(k) in tenths of a level credit using dc. The metadata
 # contains whole first-upgrade credits, the fixed level-zero Ki factor, and the
 # expected annual reward rate in basis points. The contribution is in whole Ki.
-# P(k) = 6*L*k / (N*(5*B+k)) with B = factor*500*(bps/10000)/N Ki per window,
-# which simplifies to 24*L*k / (factor*bps + 4*N*k).  N is the number of level
+# P(k) = 6*L*k / (N*(5*B+k)) with B = factor*50*(bps/10000)/N Ki per window,
+# which simplifies to 240*L*k / (factor*bps + 40*N*k).  N is the number of level
 # credit windows per year, which for the test build is 31536000 divided by the
 # test's LEVEL_CREDIT_WINDOW_SECONDS.
 function level_credit_reference ()
@@ -431,7 +431,7 @@ function level_credit_reference ()
         total=$(printf '%s\n' "$total $cost + p" | dc)
         cost=$(printf '%s\n' "$cost d 2 / + p" | dc)
     done
-    printf '%s\n' "$total 24 * $contribution * $factor $bps * 4 $windows * $contribution * + / p" | dc
+    printf '%s\n' "$total 240 * $contribution * $factor $bps * 40 $windows * $contribution * + / p" | dc
 }
 
 # Check the full contribution: raw Ki burned, window accounting, lifetime credits,

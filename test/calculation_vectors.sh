@@ -196,28 +196,39 @@ done
 
 # Independently evaluate the total-stake multiplier using dc's arbitrary-size
 # integers. Operand a is earned lamports; b is total delegated stake in lamports.
-# Include sub-SOL rounding boundaries, the old curve's intercept, and UINT64_MAX.
-# The reference keeps K=500 and rounds x to ten SOL above one billion SOL.
-# This is mathematically equivalent to changing units in the production code;
-# dc can safely evaluate the full product and quotient directly.
+# The multiplier is K*(K+x)/(K*K+K*x+x*x) with K = 50 SOL.  The program measures
+# x and K in the finest unit that keeps its arithmetic within uint64_t: units of
+# 100 lamports, made ten times larger for as long as x exceeds 2,000,000,000
+# units.  Since x is rounded down to a whole number of those units, the
+# reference uses the same units; dc then evaluates the full product and
+# quotient directly, without the program's overflow-free division.
 function ki_reference ()
 {
-    local raw=$1 stake=$2 stake_sol
-    stake_sol=$(dc_calc "$stake 1000000000 / p")
-    if [ "$stake_sol" -gt 1000000000 ]; then
-        stake_sol=$(dc_calc "$stake_sol 10 / 10 * p")
-    fi
-    dc_calc "$raw 500 500 $stake_sol + * * 250000 500 $stake_sol * + $stake_sol d * + / p"
+    local raw=$1 stake=$2 x k=500000000
+    # x in units of 100 lamports; this fits bash arithmetic even for UINT64_MAX
+    x=$(dc_calc "$stake 100 / p")
+    while [ "$x" -gt 2000000000 ]; do
+        x=$((x / 10))
+        k=$((k / 10))
+    done
+    dc_calc "$raw $k $k $x + * * $k $k * $k $x * + $x $x * + / p"
 }
 
-for stake in 0 1 999999999 1000000000 10000000000 20000000000 250000000000 500000000000                              \
+# The stakes include the boundaries at which the program's unit grows: 200 SOL (2,000,000,000 units of 100 lamports),
+# 2,000 SOL, and 20,000 SOL, with values just below, at, and above each, and values that differ only below the
+# unit in use.
+for stake in 0 1 99 100 999999999 1000000000 10000000000 20000000000 50000000000 100000000000                        \
+             199999999999 200000000000 200000000099 200000000100 200000001000                                        \
+             1999999999999 2000000000000 2000000000999 2000000001000 2000000010000                                   \
+             20000000000000 20000000009999 20000000010000                                                            \
+             250000000000 500000000000                                                                               \
              1000000000000 1000999999999 2500000000000 5000000000000                                                 \
              10000000000000 25000000000000                                                                           \
              50000000000000 100000000000000 106666000000000 500000000000000                                          \
              999999999999999999 1000000000000000000 1000000000999999999                                              \
              1000000001000000000 1000000009000000000 1000000010000000000 "$MAX"; do
     for raw in 0 1 10 1000 200000 1844674407370955161 "$MAX"; do
-        # Apply K*(K+x)/(K*K+K*x+x*x), K=500.
+        # Apply K*(K+x)/(K*K+K*x+x*x), K=50 SOL.
         expected=$(ki_reference "$raw" "$stake")
         emit "Ki/stake/$stake/earnings/$raw" 4 "$raw" "$stake" 0 0 "$expected"
     done
@@ -280,20 +291,20 @@ for first_cost in 1 100 4294967295; do
         for bps in 1 490 4294967295; do
             # Operand a packs level_1_credits (low 32 bits) with expected_annual_reward_bps (high 32 bits).
             packed=$(dc_calc "$bps 4294967296 * $first_cost + p")
-            # B = factor*500*(bps/10000)/N whole Ki = factor*bps/(20*N), with N the default 73 windows per year
-            # (5 day windows).  Sample around B and 5B, then large contributions, including ones whose 4*N*k cannot
-            # fit uint64_t.
-            normal=$(dc_calc "$factor $bps * 1460 / p")
+            # B = factor*K*(bps/10000)/N whole Ki = factor*bps/(200*N) for K = 50 SOL, with N the default 73
+            # windows per year (5 day windows).  Sample around B and 5B, then large contributions, including the
+            # largest k for which 40*N*k fits uint64_t and the smallest for which it does not.
+            normal=$(dc_calc "$factor $bps * 14600 / p")
             five_normal=$(dc_calc "$normal 5 * p")
-            for contribution in 0 1 "$normal" "$five_normal" 1000000000 63173781074347779; do
-                # P(k) = 24*L*k / (factor*bps + 4*N*k); both terms are non-negative, so the denominator exceeds
+            for contribution in 0 1 "$normal" "$five_normal" 1000000000 6317378107434777 6317378107434778; do
+                # P(k) = 240*L*k / (factor*bps + 40*N*k); both terms are non-negative, so the denominator exceeds
                 # uint64_t exactly when either the product or the sum overflows.
-                denominator=$(dc_calc "$factor $bps * 292 $contribution * + p")
+                denominator=$(dc_calc "$factor $bps * 2920 $contribution * + p")
                 if [ "$(dc_calc "$MAX $denominator - [1 sF] sz 0 sF 0 >z lF p")" = 1 ]; then
                     emit "level/overflow/$first_cost/$factor/$bps/$contribution" 6 "$packed" "$factor"         \
                          "$contribution" 0 0 1
                 else
-                    expected=$(dc_calc "$total 24 * $contribution * $denominator / p")
+                    expected=$(dc_calc "$total 240 * $contribution * $denominator / p")
                     emit "level/credits/$first_cost/$factor/$bps/$contribution" 6 "$packed" "$factor"          \
                          "$contribution" 0 "$expected"
                 fi
@@ -328,12 +339,12 @@ for windows in 1 73 340 365 525600 1000000; do
         cost=$(dc_calc "$cost d 2 / + p")
     done
     # factor=1000, bps=490 (packed with level_1_credits=100 as 2104533975140), and k=1000
-    expected=$(dc_calc "$total 24 * 1000 * 1000 490 * 4 $windows * 1000 * + / p")
+    expected=$(dc_calc "$total 240 * 1000 * 1000 490 * 40 $windows * 1000 * + / p")
     emit "level/windows-per-year/$windows" 6 2104533975140 1000 1000 "$windows" "$expected"
 done
 
 # Ki needed for a window's curve to reach a target number of credits, used to avoid burning more Ki than is needed
-# to reach the maximum level.  With A = 24*L, C = factor*bps and D = 4*N, P(k) = floor(A*k / (C + D*k)), and the
+# to reach the maximum level.  With A = 240*L, C = factor*bps and D = 40*N, P(k) = floor(A*k / (C + D*k)), and the
 # least k with P(k) >= T is ceil(T*C / (A - T*D)), or unreachable (UINT64_MAX) when A <= T*D.  dc evaluates this
 # exactly.  Where the forward calculation fits in 64 bits, also check that P(k) reaches the target and P(k-1) does not,
 # so that the result is confirmed to be the smallest sufficient amount.
@@ -349,8 +360,8 @@ for first_cost in 1 100 4294967295; do
             packed=$(dc_calc "$bps 4294967296 * $first_cost + p")
             c=$(dc_calc "$factor $bps * p")
             for windows in 73 525600; do
-                a=$(dc_calc "$total 24 * p")
-                d=$(dc_calc "$windows 4 * p")
+                a=$(dc_calc "$total 240 * p")
+                d=$(dc_calc "$windows 40 * p")
                 # The largest reachable target is the largest integer below A/D
                 top=$(dc_calc "$a 1 - $d / p")
                 for target in 1 2 $(dc_calc "$top 2 / p") $(dc_calc "$top 1 - p") "$top" $(dc_calc "$top 1 + p") "$MAX"; do
@@ -420,9 +431,9 @@ for length in 432000 60; do
 done
 
 # The second harvest stage applies a uint32_t factor to effective lamports,
-# returning whole Ki. Include the 50-SOL example, fractional SOL boundaries,
+# returning whole Ki. Include the 50-SOL ceiling, fractional SOL boundaries,
 # and the conservative upper bound implied by the rounded effective-stake curve.
-for effective in 0 1 14435 999999999 1000000000 1000000001 50000000000 510000000000; do
+for effective in 0 1 14435 999999999 1000000000 1000000001 50000000000 60000000000; do
     for factor in 0 1 50000 70000 4294967295; do
         expected=$(dc_calc "$effective $factor * 1000000000 / p")
         emit "harvest/convert/$effective/$factor" 16 "$effective" "$factor" 0 0 "$expected"

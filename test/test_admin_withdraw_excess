@@ -538,33 +538,45 @@ if should_run_test admin_withdraw_excess_master_stake; then
     # reserve behind); whatever is there must all be withdrawn.
     transfer $LEDGER/rich_user1.json $MASTER_STAKE_PUBKEY 1
 
-    MASTER_BEFORE=`master_stake_field accountBalance`
+    # The balance and delegated stake of the master stake account are read together, from one description of it, both
+    # before and after the withdrawal.  Stake rewards can be paid into the master stake account at any moment between
+    # the two (the test validator's epochs are short); a reward adds the same amount to both its balance and its
+    # delegated stake, so the growth of its delegated stake is the reward, which is what the checks below allow for.
+    MASTER_BEFORE_JSON=`solana -u l stake-account $MASTER_STAKE_PUBKEY --output json`
     ADMIN_BEFORE=`lamports_of $ADMIN_PUBKEY`
     assert $TEST_NAME                                                                                                \
     `withdraw_excess $LEDGER/admin.json master_stake`
-    MASTER_AFTER=`master_stake_field accountBalance`
+    MASTER_AFTER_JSON=`solana -u l stake-account $MASTER_STAKE_PUBKEY --output json`
     ADMIN_AFTER=`lamports_of $ADMIN_PUBKEY`
+    MASTER_BEFORE=`echo "$MASTER_BEFORE_JSON" | jq -r .accountBalance`
+    MASTER_AFTER=`echo "$MASTER_AFTER_JSON" | jq -r .accountBalance`
+    DELEGATED_BEFORE=`echo "$MASTER_BEFORE_JSON" | jq -r .delegatedStake`
+    DELEGATED_AFTER=`echo "$MASTER_AFTER_JSON" | jq -r .delegatedStake`
+    # Any stake rewards paid into the master stake account between the two readings
+    REWARDS=$((DELEGATED_AFTER - DELEGATED_BEFORE))
 
     # What must remain in the master stake account: its rent exempt reserve, plus the larger of its delegated stake
     # and its 2 SOL minimum
-    MASTER_KEEP=`master_stake_field delegatedStake`
+    MASTER_KEEP=$DELEGATED_AFTER
     if [ $MASTER_KEEP -lt 2000000000 ]; then
         MASTER_KEEP=2000000000
     fi
-    MASTER_EXPECTED=$((`master_stake_field rentExemptReserve` + MASTER_KEEP))
+    MASTER_EXPECTED=$((`echo "$MASTER_AFTER_JSON" | jq -r .rentExemptReserve` + MASTER_KEEP))
     if [ "$MASTER_AFTER" != "$MASTER_EXPECTED" ]; then
         echo "FAIL: $TEST_NAME: master stake account has $MASTER_AFTER lamports, expected $MASTER_EXPECTED"
         exit 1
     fi
+    # What was withdrawn is what left the master stake account, not counting any rewards that arrived meanwhile
+    WITHDRAWN=$((MASTER_BEFORE + REWARDS - MASTER_AFTER))
     # At least the lamports that were just transferred in must have been withdrawn
-    if [ $((MASTER_BEFORE - MASTER_AFTER)) -lt 1000000000 ]; then
-        echo "FAIL: $TEST_NAME: only $((MASTER_BEFORE - MASTER_AFTER)) lamports withdrawn"
+    if [ $WITHDRAWN -lt 1000000000 ]; then
+        echo "FAIL: $TEST_NAME: only $WITHDRAWN lamports withdrawn"
         exit 1
     fi
-    # The admin received everything that left the master stake account, and paid the 5000 lamport transaction fee
-    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) != $((MASTER_BEFORE - MASTER_AFTER - 5000)) ]; then
-        echo "FAIL: $TEST_NAME: admin balance changed by $((ADMIN_AFTER - ADMIN_BEFORE)),"                           \
-             "expected $((MASTER_BEFORE - MASTER_AFTER - 5000))"
+    # The admin received everything that was withdrawn, and paid the 5000 lamport transaction fee
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) != $((WITHDRAWN - 5000)) ]; then
+        echo "FAIL: $TEST_NAME: admin balance changed by $((ADMIN_AFTER - ADMIN_BEFORE)), expected"                  \
+             "$((WITHDRAWN - 5000)) (rewards paid meanwhile: $REWARDS)"
         exit 1
     fi
     # The master stake account is still actively delegated

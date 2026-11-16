@@ -26,10 +26,13 @@ do not fail the suite. XPASS fails the suite so fixed defects must have their
 expected-failure annotations reviewed. There are currently no expected defects;
 price floor rounding and commission overflow were fixed.
 
-Ki calculations scale earnings by effective total stake, using a 500 SOL
-asymptote: effective(x) = 500*x*(500+x)/(250000+500*x+x*x).
-The curve input is delegated stake rounded down to whole SOL. Above one billion
-SOL it rounds down to ten SOL to keep all calculations within uint64_t.
+Ki calculations scale earnings by effective total stake, using a 50 SOL
+asymptote K: effective(x) = K*x*(K+x)/(K*K+K*x+x*x).
+The curve input x and K are measured in units of 100 lamports, made ten times
+larger for as long as x exceeds 2,000,000,000 units, which keeps all
+calculations within uint64_t. K is exact in every unit, and x is rounded down
+by less than 0.0000001 SOL up to 200 SOL and by less than one part in 200
+million above that.
 The ratio is applied to earned lamports first. Effective earnings are then
 converted to whole Ki with ki_factor, preserving fractional SOL until after
 multiplication. Only the final mint uses ten token base units per whole Ki.

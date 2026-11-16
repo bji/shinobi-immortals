@@ -27,7 +27,7 @@ static void harvest_ki(const Stake *stake, Entry *entry, const SolAccountInfo *d
     }
 
     // Apply the effective-stake curve to earned lamports.  The baseline comparison above guarantees earnings <= the
-    // current stake, bounding effective earnings to less than 510 SOL even at uint64_t limits (500 SOL ceiling plus a
+    // current stake, bounding effective earnings to less than 60 SOL even at uint64_t limits (50 SOL ceiling plus a
     // conservative allowance for stake-input rounding).
     uint64_t actual_earnings_lamports =
         stake->stake.delegation.stake - entry->owned.last_ki_harvest_stake_account_lamports;
@@ -46,9 +46,9 @@ static void harvest_ki(const Stake *stake, Entry *entry, const SolAccountInfo *d
                                                destination_account_owner_key, funding_key,
                                                transaction_accounts, transaction_accounts_len);
 
-    // Only the SPL Token boundary uses base units: ten base units equal one Ki.
-    // Effective earnings < 510 SOL and a uint32_t factor bound whole Ki below
-    // 510*UINT32_MAX; multiplying that by ten also fits comfortably in uint64_t.
+    // Only the SPL Token boundary uses base units: ten base units equal one Ki.  Effective earnings < 60 SOL and a
+    // uint32_t factor bound whole Ki below 60 * UINT32_MAX; multiplying that by ten also fits comfortably in
+    // uint64_t.
     uint64_t mint_amount = harvest_amount * 10;
     mint_tokens(&(Constants.ki_mint_pubkey), destination_account->key, mint_amount,
                 transaction_accounts, transaction_accounts_len);

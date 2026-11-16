@@ -289,7 +289,10 @@ function solana_stake ()
         # "custom program error: 0x10" at the end of the output when it passes simulation but fails on chain; in
         # both cases the failed transaction changed nothing, so it is safe to retry.  The hex digit check
         # ensures that other errors such as 0x100 do not match.
-        if printf '%s\n' "$output" | grep -Eq 'custom program error: 0x10($|[^0-9a-fA-F])'; then
+        # The solana command line tool can also refuse the stake action itself, before sending any transaction, with
+        # "stake action is not permitted while the epoch rewards period is active"; that is equally safe to retry.
+        if printf '%s\n' "$output" | grep -Eq 'custom program error: 0x10($|[^0-9a-fA-F])' ||
+           printf '%s\n' "$output" | grep -q 'epoch rewards period is active'; then
             # Rewards are still being distributed; wait and try again
             sleep 1
         else
@@ -714,6 +717,34 @@ function sleep_until_next_level_credit_window ()
     while [ $((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS)) -eq $START_WINDOW ]; do
         sleep 1
     done
+}
+
+
+# Prints the Ki token base units (ten per whole Ki) that a harvest should mint for earned lamports $1, current
+# delegated stake lamports $2, and ki_factor $3.  This independently mirrors harvest_ki() using dc's arbitrary
+# precision integers (see ki_reference in test/calculation_vectors.sh): the earnings are scaled by the effective
+# stake ratio K*(K+x)/(K*K+K*x+x*x), with K = 50 SOL and the stake x, both measured in units of 100 lamports, made ten
+# times larger for as long as x exceeds 2,000,000,000 units, as the program measures them; the effective lamports are
+# converted to whole Ki by multiplying whole SOL and remaining lamports by the factor separately; and the result is
+# multiplied by ten for the token's one decimal place.
+function expected_ki_mint ()
+{
+    local EARNED=$1
+    local STAKE=$2
+    local FACTOR=$3
+
+    # x and K in units of 100 lamports, then in larger units while x is too large
+    local X=$((STAKE / 100))
+    local K=500000000
+    while [ $X -gt 2000000000 ]; do
+        X=$((X / 10))
+        K=$((K / 10))
+    done
+    # Effective earned lamports
+    local EFFECTIVE=`printf '%s\n' "$EARNED $K $K $X + * * $K $K * $K $X * + $X $X * + / p" | dc`
+    # Whole Ki: whole SOL times factor, plus remaining lamports times factor divided by lamports per SOL; then ten
+    # token base units per Ki
+    printf '%s\n' "$EFFECTIVE 1000000000 / $FACTOR * $EFFECTIVE 1000000000 % $FACTOR * 1000000000 / + 10 * p" | dc
 }
 
 

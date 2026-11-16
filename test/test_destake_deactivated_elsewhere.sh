@@ -95,23 +95,7 @@ function test_entry ()
 }
 
 
-# Prints the Ki token base units (ten per whole Ki) that a harvest would mint for earned lamports $1, current
-# delegated stake lamports $2, and ki_factor $3.  This independently mirrors harvest_ki() using dc's arbitrary
-# precision integers; it is the same as expected_ki_mint in test/test_anyone_take_commission_or_delegate, which
-# explains it.
-function expected_ki_mint ()
-{
-    local EARNED=$1
-    local STAKE=$2
-    local FACTOR=$3
-
-    # x, the stake in whole SOL
-    local X=`printf '%s\n' "$STAKE 1000000000 / p" | dc`
-    # Effective earned lamports
-    local EFFECTIVE=`printf '%s\n' "$EARNED 500 500 $X + * * 250000 500 $X * + $X d * + / p" | dc`
-    # Whole Ki, then ten token base units per Ki
-    printf '%s\n' "$EFFECTIVE 1000000000 / $FACTOR * $EFFECTIVE 1000000000 % $FACTOR * 1000000000 / + 10 * p" | dc
-}
+# expected_ki_mint, used below, is in test/common
 
 
 # Prints the commission in lamports that compute_commission() would charge on delegated stake $1 with baseline $2 at

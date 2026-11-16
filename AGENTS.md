@@ -35,6 +35,8 @@ Wherever possible, only use POSIX compatible programs and program options in all
 
 Comment liberally.  A textual explanation line before non-trivial lines of scripts, for example, is preferred.
 
+Do not run the full unit tests ("make test") on every change.  If you want to generate a temporary test script to validate an implementation detail, feel free to do it, but do not run the full 10 to 15 minute run of the test suite (make test) on every change.  I will let you know when to run it.  You can ask to run it if you feel it's important at the moment though.
+
 
 Downstream
 ----------

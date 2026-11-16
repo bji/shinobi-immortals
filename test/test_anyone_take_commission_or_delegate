@@ -536,27 +536,7 @@ if should_run_test anyone_take_commission_or_delegate_commission_lowers_ki_basel
 fi
 
 
-# Prints the Ki token base units (ten per whole Ki) that a harvest should mint for earned lamports $1, current
-# delegated stake lamports $2, and ki_factor $3.  This independently mirrors harvest_ki() using dc's arbitrary
-# precision integers (see ki_reference in test/calculation_vectors.sh): the earnings are scaled by the 500 SOL
-# effective-stake ratio K*(K+x)/(K*K+K*x+x*x), with K=500 and x the stake in whole SOL; the effective lamports are
-# converted to whole Ki by multiplying whole SOL and remaining lamports by the factor separately; and the result is
-# multiplied by ten for the token's one decimal place.  Stakes in these tests are far below the one billion SOL above
-# which the program rounds x to ten SOL, so that rounding is not reproduced here.
-function expected_ki_mint ()
-{
-    local EARNED=$1
-    local STAKE=$2
-    local FACTOR=$3
-
-    # x, the stake in whole SOL
-    local X=`printf '%s\n' "$STAKE 1000000000 / p" | dc`
-    # Effective earned lamports
-    local EFFECTIVE=`printf '%s\n' "$EARNED 500 500 $X + * * 250000 500 $X * + $X d * + / p" | dc`
-    # Whole Ki: whole SOL times factor, plus remaining lamports times factor divided by lamports per SOL; then ten
-    # token base units per Ki
-    printf '%s\n' "$EFFECTIVE 1000000000 / $FACTOR * $EFFECTIVE 1000000000 % $FACTOR * 1000000000 / + 10 * p" | dc
-}
+# expected_ki_mint, used below, is in test/common
 
 
 # Harvest, then charge commission, then harvest again: the second harvest must mint Ki on the full rewards earned

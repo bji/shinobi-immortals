@@ -75,7 +75,7 @@ typedef struct
     // the Shinobi Systems validator, as estimated for the year following this entry's creation.  This is the rate at
     // which the stake account's balance is expected to grow from staking rewards (i.e. after validator commission).
     // It calibrates the level credits curve: combined with the number of level credit windows per year, it gives the
-    // per-window Ki production of a 500 effective SOL stake account, which is the contribution rate that levels an
+    // per-window Ki production of a 50 effective SOL stake account, which is the contribution rate that levels an
     // entry fully in about one year.  It must be non-zero for the entry to be levelled up.
     uint32_t expected_annual_reward_bps;
 
