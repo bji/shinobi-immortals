@@ -1,0 +1,835 @@
+
+BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
+BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
+BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
+BYTE_3=`echo -n 3 | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA3=`(echo -n 3; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+SALT0=0
+SALT1=1
+SALT2=2
+SALT3=3
+SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
+SHA2561=`compute_metadata_sha256 $METADATA1 $SALT1`
+SHA2562=`compute_metadata_sha256 $METADATA2 $SALT2`
+SHA2563=`compute_metadata_sha256 $METADATA3 $SALT3`
+
+# Create auction blocks
+if [ -z "$TESTS" ]; then
+    # 12 0 -- no auction
+    assert user_bid_setup_12_0_a                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 12 0 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # add entries
+    assert user_bid_setup_12_0_b                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 12 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # set metadata of entries
+    assert user_bid_setup_12_0_c                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 0 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_0_d                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 0 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # reveal entries
+    assert user_bid_setup_12_0_e                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 12 0 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # buy entry 0
+    assert user_bid_setup_12_0_f                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 12 0 0 \`lamports_from_sol 1001\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    
+    # 12 1 -- long auction
+    assert user_bid_setup_12_1_a                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 12 1 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # add entries
+    assert user_bid_setup_12_1_b                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 12 1 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_1_c                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 12 1 "http://foo.bar.com" none 2 $SHA2562 $SHA2563                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # set metadata of entries
+    assert user_bid_setup_12_1_d                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 1 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_1_e                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 1 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_1_f                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 1 2 0 $BYTE_2                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_1_g                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 1 3 0 $BYTE_3                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # reveal entries
+    assert user_bid_setup_12_1_h                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 12 1 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_1_i                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 12 1 2 $SALT2 $SALT3                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Bid on entry 0 by rich_user1
+    assert user_bid_setup_12_1_j                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 12 1 0 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # Bid on entry 1 by rich_user2
+    assert user_bid_setup_12_1_k                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 12 1 1 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    # Bid on entry 2 by rich_user1
+    assert user_bid_setup_12_1_l                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 12 1 2 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # Bid on entry 2 by rich_user2 (outbidding rich_user1)
+    assert user_bid_setup_12_1_m                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 12 1 2 \`lamports_from_sol 2000\` \`lamports_from_sol 2000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # 12 2 -- short auction
+    assert user_bid_setup_12_2_a                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 12 2 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # add entries
+    assert user_bid_setup_12_2_b                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 12 2 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_2_c                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 12 2 "http://foo.bar.com" none 2 $SHA2562 $SHA2563                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # set metadata of entries
+    assert user_bid_setup_12_2_d                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 2 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_2_e                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 2 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_2_f                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 2 2 0 $BYTE_2                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_2_g                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 2 3 0 $BYTE_3                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # reveal entries
+    assert user_bid_setup_12_2_h                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 12 2 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_bid_setup_12_2_i                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 12 2 2 $SALT2 $SALT3                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Bid on entry 0 by rich_user1
+    assert user_bid_setup_12_2_j                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 12 2 0 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # Bid on entry 1 by rich_user2
+    assert user_bid_setup_12_2_k                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 12 2 1 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    # Bid on entry 2 by rich_user1
+    assert user_bid_setup_12_2_l                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 12 2 2 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # Bid on entry 2 by rich_user2 (outbidding rich_user1)
+    assert user_bid_setup_12_2_m                                                                                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 12 2 2 \`lamports_from_sol 2000\` \`lamports_from_sol 2000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # Now wait 21 seconds to ensure that short auctions have ended
+    echo "Waiting for auctions to complete"
+    sleep 21
+
+    # The following entries now exist:
+    # 12 0 0 -- complete and revealed, but no auction, owned by rich_user1
+    # 12 0 1 -- complete and revealed, but no auction, unowned
+    # 12 1 0 -- complete, revealed, in long term auction, bid by rich_user1
+    # 12 1 1 -- complete, revealed, in long term auction, bid by rich_user2
+    # 12 1 2 -- complete, revealed, in long term auction, bid by rich_user2 overbidding rich_user1
+    # 12 1 3 -- complete, revealed, in long term auction, not bid on
+    # 12 2 0 -- complete, revealed, auction complete, bid by rich_user1
+    # 12 2 1 -- complete, revealed, auction complete, bid by rich_user2
+    # 12 2 2 -- complete, revealed, auction complete, bid by rich_user2 overbidding rich_user1
+    # 12 2 3 -- complete, revealed, auction complete, not bid on
+fi
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Sets the S_* variables to the correct accounts for a SettleWinningBid of entry $2 of block 12 $1, whose winning
+# bidder is the pubkey $3 and which is funded by the pubkey $4.  A test then changes whichever of them it wants to be
+# wrong before calling settle_submit.
+function settle_accounts ()
+{
+    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 $1 ]`
+
+    S_MINT=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $2 ]`
+    S_ENTRY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $S_MINT ]`
+    S_ENTRY_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $S_MINT ]`
+    S_METADATA=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY pubkey $S_MINT ]`
+    S_BID_MARKER_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $S_MINT pubkey $3 ]`
+    S_BID=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $S_BID_MARKER_TOKEN ]`
+    S_DESTINATION=`get_splata_account $S_MINT $3`
+    # The bidder account, with the permissions that it has in the transaction
+    S_BIDDER="$3 w"
+    S_FUNDING=$4
+    S_ADMIN=$ADMIN_PUBKEY
+    # The optional accounts that reclaim the bid marker; none by default
+    S_EXTRA_ACCOUNTS=
+    # Instruction data that follows the instruction code; there is none
+    S_DATA=
+}
+
+
+# Submits a SettleWinningBid transaction built from the S_* variables and signed by the key file $1, which must be
+# that of the funding account.  Prints the result of submission.
+function settle_submit ()
+{
+    echo "encoding c                                                                                                 \
+          fee_payer $S_FUNDING                                                                                       \
+          program $SELF_PROGRAM_PUBKEY                                                                               \
+          account $S_FUNDING ws                                                                                      \
+          account $S_ENTRY w                                                                                         \
+          account $S_BID w                                                                                           \
+          account $STATE_PUBKEY                                                                                      \
+          account $S_ADMIN w                                                                                         \
+          account $S_ENTRY_TOKEN w                                                                                   \
+          account $S_MINT                                                                                            \
+          account $AUTHORITY_PUBKEY                                                                                  \
+          account $S_DESTINATION w                                                                                   \
+          account $S_BIDDER                                                                                          \
+          account $SYSTEM_PROGRAM_PUBKEY                                                                             \
+          account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
+          account $SPLATA_PROGRAM_PUBKEY                                                                             \
+          account $S_METADATA w                                                                                      \
+          account $METAPLEX_PROGRAM_PUBKEY                                                                           \
+          $S_EXTRA_ACCOUNTS                                                                                          \
+          // Instruction code 18 = SettleWinningBid //                                                               \
+          u8 18 $S_DATA"                                                                                             \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $1                                                                                            \
+        | solxact submit l 2>&1
+}
+
+
+# Submits a SettleWinningBid transaction made by scripts/anyone_settle_winning_bid_tx.sh for entry $3 $4 $5 with the
+# bidder pubkey $2, funded and signed by the key file $1.  $6 may be keep_bid_marker.  Prints the result of
+# submission.
+function settle_script ()
+{
+    SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_settle_winning_bid_tx.sh                         \
+        `solxact pubkey $1` $ADMIN_PUBKEY $2 $3 $4 $5 $6                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $1                                                                                            \
+        | solxact submit l 2>&1
+}
+
+
+# Prints the balance of account $1 in lamports
+function settle_lamports_of ()
+{
+    solana -u l balance --lamports $1 | cut -d ' ' -f 1
+}
+
+
+# Prints the u64 at offset $2 of the data of account $1
+function settle_account_u64 ()
+{
+    get_account_data $1 $2 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'
+}
+
+
+# Offsets within an entry account of the purchase price and of the highest bid of its auction (program/inc/entry.h)
+SETTLE_ENTRY_PURCHASE_PRICE_OFFSET=208
+SETTLE_ENTRY_HIGHEST_BID_OFFSET=224
+
+
+# Waits until anyone, and not only the winning bidder, may settle the winning bid of the entry account $1: until
+# SETTLE_WINNING_BID_DELAY_SECONDS (which test/common builds the test program with) have passed since the end of the
+# entry's auction.  The auction ends at the entry's reveal timestamp (the 8 byte value at offset 200 of the entry)
+# plus its duration (the u32 at offset 156).
+function settle_wait_until_anyone_may_settle ()
+{
+    local REVEAL_TIMESTAMP=`settle_account_u64 $1 200`
+    local DURATION=`get_account_data $1 156 4 | base64 -d | od -An -tu4 -v | tr -d '[:space:]'`
+
+    wait_for_block_time $((REVEAL_TIMESTAMP + DURATION + SETTLE_WINNING_BID_DELAY_SECONDS))
+}
+
+
+# Fails the test named $1 unless Metaplex primary_sale_happened is set in the metadata account $2, as Buy sets it.
+# In the Metaplex metadata account it follows the key (1 byte), update authority (32), mint (32), name (4 + 32, as
+# this program always writes it), symbol (4 + 10), uri (4 + 200), seller_fee_basis_points (2), and the creators
+# option: a 1 byte flag at offset 321 and, when present, a u32 creator count at offset 322 followed by 34 bytes per
+# creator.
+function settle_check_primary_sale_happened ()
+{
+    local OFFSET=322
+    if [ "`get_account_data $2 321 1 | base64 -d | od -An -tu1 | tr -d ' '`" = "1" ]; then
+        local CREATOR_COUNT=`get_account_data $2 322 4 | base64 -d | od -An -tu4 | tr -d ' '`
+        OFFSET=$((326 + 34 * CREATOR_COUNT))
+    fi
+    if [ "`get_account_data $2 $OFFSET 1 | base64 -d | od -An -tu1 | tr -d ' '`" != "1" ]; then
+        echo "FAIL: $1 did not set Metaplex primary_sale_happened"
+        exit 1
+    fi
+}
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Refusals because of the instruction data or the accounts.  These all use entry 12 2 0, whose auction is over and was
+# won by rich_user1, with rich_user2 as the funding account: someone other than the bidder.  They are all refused
+# before the program considers whether it is too soon for someone other than the bidder to settle.
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Data after the instruction code (Error_InvalidDataSize, 1001)
+if should_run_test anyone_settle_winning_bid_bad_data; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_DATA="u8 0"
+    assert_fail anyone_settle_winning_bid_bad_data                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# Not an entry account (Error_InvalidAccount_First + 1)
+if should_run_test anyone_settle_winning_bid_bad_entry; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_ENTRY=$STATE_PUBKEY
+    assert_fail anyone_settle_winning_bid_bad_entry                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# Not the admin account (Error_InvalidAccount_First + 4).  This is what stops the submitter from naming themselves
+# as the recipient of the winning bid.
+if should_run_test anyone_settle_winning_bid_bad_admin; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_ADMIN=$RICH_USER2_PUBKEY
+    assert_fail anyone_settle_winning_bid_bad_admin                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# Not the entry's token account (Error_InvalidAccount_First + 5)
+if should_run_test anyone_settle_winning_bid_bad_token; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_ENTRY_TOKEN=$STATE_PUBKEY
+    assert_fail anyone_settle_winning_bid_bad_token                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# Not the entry's mint (Error_InvalidAccount_First + 6)
+if should_run_test anyone_settle_winning_bid_bad_mint; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_MINT=$STATE_PUBKEY
+    assert_fail anyone_settle_winning_bid_bad_mint                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# Metaplex metadata account that is not the entry's: it is the metadata of entry 1 of the same block
+# (Error_InvalidAccount_First + 13)
+if should_run_test anyone_settle_winning_bid_bad_metadata; then
+    settle_accounts 2 1 $RICH_USER2_PUBKEY $RICH_USER2_PUBKEY
+    OTHER_METADATA=$S_METADATA
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_METADATA=$OTHER_METADATA
+    assert_fail anyone_settle_winning_bid_bad_metadata                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x459'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# Not a bid account (Error_InvalidAccount_First + 2)
+if should_run_test anyone_settle_winning_bid_bad_bid; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_BID=$S_ENTRY
+    assert_fail anyone_settle_winning_bid_bad_bid                                                                    \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# A bid account, but not the winning bid of this entry: it is rich_user1's losing bid on entry 12 2 2
+# (Error_CannotClaimBid, 1023)
+if should_run_test anyone_settle_winning_bid_bid_of_other_entry; then
+    settle_accounts 2 2 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    OTHER_BID=$S_BID
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_BID=$OTHER_BID
+    assert_fail anyone_settle_winning_bid_bid_of_other_entry                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# The submitter names themselves as the bidder, with their own associated token account as the destination, to try
+# to take the token (Error_InvalidAccount_First + 9)
+if should_run_test anyone_settle_winning_bid_wrong_bidder; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_BIDDER="$RICH_USER2_PUBKEY w"
+    S_DESTINATION=`get_splata_account $S_MINT $RICH_USER2_PUBKEY`
+    assert_fail anyone_settle_winning_bid_wrong_bidder                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x455'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# The correct bidder, but a destination that is not the bidder's associated token account: it is the submitter's
+# (Error_InvalidAccount_First + 8)
+if should_run_test anyone_settle_winning_bid_wrong_destination; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_DESTINATION=`get_splata_account $S_MINT $RICH_USER2_PUBKEY`
+    assert_fail anyone_settle_winning_bid_wrong_destination                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x454'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# The bidder account must be writable, since it receives any excess (Error_InvalidAccountPermissions_First + 9)
+if should_run_test anyone_settle_winning_bid_bidder_not_writable; then
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    S_BIDDER="$RICH_USER1_PUBKEY"
+    assert_fail anyone_settle_winning_bid_bidder_not_writable                                                        \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b9'                     \
+    `settle_submit $LEDGER/rich_user2.json`
+fi
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Refusals because of the state of the entry (Error_CannotClaimBid, 1023, unless noted).  rich_user2 submits these.
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Entry never had an auction, is unowned
+if should_run_test anyone_settle_winning_bid_no_auction_unowned; then
+    assert_fail anyone_settle_winning_bid_no_auction_unowned                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 0 1`
+fi
+
+
+# Entry never had an auction, is owned
+if should_run_test anyone_settle_winning_bid_no_auction_owned; then
+    assert_fail anyone_settle_winning_bid_no_auction_owned                                                           \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 0 0`
+fi
+
+
+# Entry in auction, nobody has bid
+if should_run_test anyone_settle_winning_bid_in_auction_no_bidder; then
+    assert_fail anyone_settle_winning_bid_in_auction_no_bidder                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 1 3`
+fi
+
+
+# Entry in auction, with the bid that is currently winning: a bid cannot be settled before the auction has ended.
+# This is tried both by a third party and by the bidder.
+if should_run_test anyone_settle_winning_bid_in_auction_winning_bid; then
+    assert_fail anyone_settle_winning_bid_in_auction_winning_bid                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 1 0`
+    assert_fail anyone_settle_winning_bid_in_auction_winning_bid_by_bidder                                           \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user1.json $RICH_USER1_PUBKEY 12 1 0`
+fi
+
+
+# Entry in auction, with a bid that has been outbid
+if should_run_test anyone_settle_winning_bid_in_auction_losing_bid; then
+    assert_fail anyone_settle_winning_bid_in_auction_losing_bid                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 1 2`
+fi
+
+
+# Auction over, nobody bid
+if should_run_test anyone_settle_winning_bid_post_auction_no_bidder; then
+    assert_fail anyone_settle_winning_bid_post_auction_no_bidder                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 2 3`
+fi
+
+
+# Auction over, naming a bidder who never bid on the entry: there is no such bid account
+# (Error_InvalidAccount_First + 2)
+if should_run_test anyone_settle_winning_bid_post_auction_not_bidder; then
+    assert_fail anyone_settle_winning_bid_post_auction_not_bidder                                                    \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 2 1`
+fi
+
+
+# Auction over, with the bid of the bidder who lost
+if should_run_test anyone_settle_winning_bid_post_auction_losing_bid; then
+    assert_fail anyone_settle_winning_bid_post_auction_losing_bid                                                    \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 2 2`
+fi
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Successful settlement
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Until SETTLE_WINNING_BID_DELAY_SECONDS have passed since the end of the auction, only the winning bidder may settle
+# (Error_OnlyBidderCanSettleYet, 1044).  Entry 12 2 0 was won by rich_user1; rich_user2 and the admin are both
+# refused.  The auctions of block 12 2 ended only moments ago.
+if should_run_test anyone_settle_winning_bid_too_soon; then
+    assert_fail anyone_settle_winning_bid_too_soon                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 2 0`
+    assert_fail anyone_settle_winning_bid_too_soon_admin                                                             \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414'                     \
+    `settle_script $LEDGER/admin.json $RICH_USER1_PUBKEY 12 2 0`
+fi
+
+
+# Entry 12 2 1 was won by rich_user2, who settles it themselves: this is the winner claiming their win, which the
+# winner may do as soon as the auction has ended.  There is no excess, so the admin receives the whole balance of the
+# bid account.
+if should_run_test anyone_settle_winning_bid_by_bidder; then
+    TEST_NAME=anyone_settle_winning_bid_by_bidder
+    settle_accounts 2 1 $RICH_USER2_PUBKEY $RICH_USER2_PUBKEY
+    # The bid marker token account exists before settlement
+    if [ "`settle_lamports_of $S_BID_MARKER_TOKEN`" = "0" ]; then
+        echo "FAIL: $TEST_NAME: bid marker token account does not exist before settlement"
+        exit 1
+    fi
+    WINNING_BID=`settle_account_u64 $S_ENTRY $SETTLE_ENTRY_HIGHEST_BID_OFFSET`
+    TOKEN_ACCOUNT_LAMPORTS=`settle_lamports_of $S_ENTRY_TOKEN`
+    ADMIN_BEFORE=`settle_lamports_of $ADMIN_PUBKEY`
+    assert $TEST_NAME                                                                                                \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER2_PUBKEY 12 2 1`
+    if [ "`get_token_balance $S_MINT $RICH_USER2_PUBKEY`" != "1" ]; then
+        echo "FAIL: $TEST_NAME: the bidder did not receive the token"
+        exit 1
+    fi
+    ADMIN_AFTER=`settle_lamports_of $ADMIN_PUBKEY`
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) -ne $((WINNING_BID + TOKEN_ACCOUNT_LAMPORTS)) ]; then
+        echo "FAIL: $TEST_NAME: admin received $((ADMIN_AFTER - ADMIN_BEFORE)),"                                     \
+             "expected bid $WINNING_BID plus token account rent $TOKEN_ACCOUNT_LAMPORTS"
+        exit 1
+    fi
+    if [ "`settle_account_u64 $S_ENTRY $SETTLE_ENTRY_PURCHASE_PRICE_OFFSET`" != "$WINNING_BID" ]; then
+        echo "FAIL: $TEST_NAME: purchase price is not the winning bid of $WINNING_BID"
+        exit 1
+    fi
+    settle_check_primary_sale_happened $TEST_NAME $S_METADATA
+    # Because the bidder settled, the bidder's bid marker tokens were burned and the bid marker token account closed
+    if [ -n "`get_account_data $S_BID_MARKER_TOKEN`" ] || [ "`settle_lamports_of $S_BID_MARKER_TOKEN`" != "0" ]; then
+        echo "FAIL: $TEST_NAME did not reclaim the bid marker token account"
+        exit 1
+    fi
+fi
+
+
+# Entry 12 2 0 was won by rich_user1.  rich_user2, who has nothing to do with the bid, settles it, once enough time
+# has passed since the end of the auction.  Before that, 1 SOL is transferred to the bid account, so that it holds
+# more than the winning bid.  The token must go to rich_user1, exactly the winning bid must go to the admin, exactly
+# the excess must go back to rich_user1, and the entry's purchase price must be the winning bid.
+if should_run_test anyone_settle_winning_bid_by_third_party; then
+    TEST_NAME=anyone_settle_winning_bid_by_third_party
+    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
+    settle_wait_until_anyone_may_settle $S_ENTRY
+    WINNING_BID=`settle_account_u64 $S_ENTRY $SETTLE_ENTRY_HIGHEST_BID_OFFSET`
+    # A bid account is funded with exactly its bid
+    if [ "`settle_lamports_of $S_BID`" != "$WINNING_BID" ]; then
+        echo "FAIL: $TEST_NAME: bid account holds `settle_lamports_of $S_BID`, expected the bid of $WINNING_BID"
+        exit 1
+    fi
+    # Someone transfers 1 SOL to the bid account.  This does not change the bid.
+    transfer $LEDGER/rich_user2.json $S_BID 1
+    if [ "`settle_account_u64 $S_ENTRY $SETTLE_ENTRY_HIGHEST_BID_OFFSET`" != "$WINNING_BID" ]; then
+        echo "FAIL: $TEST_NAME: a transfer to the bid account changed the entry's highest bid"
+        exit 1
+    fi
+    # The rent of the entry's token account, which is closed with its lamports going to the admin
+    TOKEN_ACCOUNT_LAMPORTS=`settle_lamports_of $S_ENTRY_TOKEN`
+    if [ "0$TOKEN_ACCOUNT_LAMPORTS" -eq 0 ]; then
+        echo "FAIL: $TEST_NAME: entry token account does not exist before settlement"
+        exit 1
+    fi
+    ADMIN_BEFORE=`settle_lamports_of $ADMIN_PUBKEY`
+    BIDDER_BEFORE=`settle_lamports_of $RICH_USER1_PUBKEY`
+
+    assert $TEST_NAME                                                                                                \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 2 0`
+
+    # The token is in rich_user1's associated token account, which rich_user2 paid to create
+    if [ "`get_token_balance $S_MINT $RICH_USER1_PUBKEY`" != "1" ]; then
+        echo "FAIL: $TEST_NAME: the bidder did not receive the token"
+        exit 1
+    fi
+    # The admin received exactly the winning bid, plus the rent of the entry's token account
+    ADMIN_AFTER=`settle_lamports_of $ADMIN_PUBKEY`
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) -ne $((WINNING_BID + TOKEN_ACCOUNT_LAMPORTS)) ]; then
+        echo "FAIL: $TEST_NAME: admin received $((ADMIN_AFTER - ADMIN_BEFORE)),"                                     \
+             "expected bid $WINNING_BID plus token account rent $TOKEN_ACCOUNT_LAMPORTS"
+        exit 1
+    fi
+    # The bidder received exactly the excess, and paid for nothing
+    BIDDER_AFTER=`settle_lamports_of $RICH_USER1_PUBKEY`
+    if [ $((BIDDER_AFTER - BIDDER_BEFORE)) -ne 1000000000 ]; then
+        echo "FAIL: $TEST_NAME: bidder's balance changed by $((BIDDER_AFTER - BIDDER_BEFORE)), expected 1000000000"
+        exit 1
+    fi
+    # The purchase price recorded in the entry is the winning bid, not what the bid account held
+    if [ "`settle_account_u64 $S_ENTRY $SETTLE_ENTRY_PURCHASE_PRICE_OFFSET`" != "$WINNING_BID" ]; then
+        echo "FAIL: $TEST_NAME: purchase price is `settle_account_u64 $S_ENTRY $SETTLE_ENTRY_PURCHASE_PRICE_OFFSET`,"\
+             "expected $WINNING_BID"
+        exit 1
+    fi
+    # The bid account is gone
+    if [ -n "`get_account_data $S_BID`" ] || [ "`settle_lamports_of $S_BID`" != "0" ]; then
+        echo "FAIL: $TEST_NAME did not delete the bid account"
+        exit 1
+    fi
+    # The entry's (now empty) token account must be closed, as Buy closes it
+    if [ -n "`get_account_data $S_ENTRY_TOKEN`" ] || [ "`settle_lamports_of $S_ENTRY_TOKEN`" != "0" ]; then
+        echo "FAIL: $TEST_NAME did not close the entry token account"
+        exit 1
+    fi
+    # The bidder's bid marker token account is left alone; only the bidder can burn it
+    if [ "`settle_lamports_of $S_BID_MARKER_TOKEN`" = "0" ]; then
+        echo "FAIL: $TEST_NAME deleted the bid marker token account"
+        exit 1
+    fi
+    settle_check_primary_sale_happened $TEST_NAME $S_METADATA
+fi
+
+
+# Someone other than the bidder cannot reclaim the bidder's bid marker (Error_FailedToReclaimBidMarkerToken, 1025).
+# Entry 12 2 2 was won by rich_user2; rich_user1 tries to settle it with the accounts that reclaim the bid marker.
+# This is refused whether or not it is too soon for rich_user1 to settle at all, which it is not by now.
+if should_run_test anyone_settle_winning_bid_reclaim_by_third_party; then
+    settle_accounts 2 2 $RICH_USER2_PUBKEY $RICH_USER1_PUBKEY
+    S_EXTRA_ACCOUNTS="account $BID_MARKER_MINT_PUBKEY w account $S_BID_MARKER_TOKEN w"
+    assert_fail anyone_settle_winning_bid_reclaim_by_third_party                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x401'                     \
+    `settle_submit $LEDGER/rich_user1.json`
+fi
+
+
+# The bidder may choose not to reclaim their bid marker.  Entry 12 2 2 was won by rich_user2, who settles it with
+# keep_bid_marker; the bid marker token account must still exist afterwards.
+if should_run_test anyone_settle_winning_bid_by_bidder_keep_bid_marker; then
+    TEST_NAME=anyone_settle_winning_bid_by_bidder_keep_bid_marker
+    settle_accounts 2 2 $RICH_USER2_PUBKEY $RICH_USER2_PUBKEY
+    assert $TEST_NAME                                                                                                \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER2_PUBKEY 12 2 2 keep_bid_marker`
+    if [ "`get_token_balance $S_MINT $RICH_USER2_PUBKEY`" != "1" ]; then
+        echo "FAIL: $TEST_NAME: the bidder did not receive the token"
+        exit 1
+    fi
+    if [ "`settle_lamports_of $S_BID_MARKER_TOKEN`" = "0" ]; then
+        echo "FAIL: $TEST_NAME deleted the bid marker token account"
+        exit 1
+    fi
+fi
+
+
+# A bid cannot be settled twice
+if should_run_test anyone_settle_winning_bid_again; then
+    assert_fail anyone_settle_winning_bid_again                                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ff'                     \
+    `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 2 0`
+fi
+
+
+# A bidder who has emptied their account must not be able to make settlement impossible, and neither must anyone
+# else.  If the bid account holds an excess that is too small to make the bidder's emptied account rent exempt, then
+# returning it would make the transaction fail, so the excess goes to the admin with the bid instead.
+#
+# This makes its own block 12 3 with a single entry in a 20 second auction, which a new bidder wins and then empties
+# their account.  1000 lamports are then transferred to the bid account, and rich_user2 settles the bid once enough
+# time has passed since the end of the auction.
+if should_run_test anyone_settle_winning_bid_emptied_bidder; then
+    TEST_NAME=anyone_settle_winning_bid_emptied_bidder
+    make_funded_keypair $LEDGER/emptied_bidder.json 20 finalized
+    EMPTIED_BIDDER_PUBKEY=`solxact pubkey $LEDGER/emptied_bidder.json`
+    # Create the block, add its entry, set the entry's metadata, and reveal it, which starts its auction
+    assert ${TEST_NAME}_setup_a                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 12 3 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert ${TEST_NAME}_setup_b                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 12 3 "http://foo.bar.com" none 0 $SHA2560                                                     \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert ${TEST_NAME}_setup_c                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 12 3 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert ${TEST_NAME}_setup_d                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 12 3 0 $SALT0                                                                                 \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # The new bidder bids, and is the only bidder
+    assert ${TEST_NAME}_setup_e                                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $EMPTIED_BIDDER_PUBKEY 12 3 0 \`lamports_from_sol 1\` \`lamports_from_sol 10\`                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/emptied_bidder.json                                                                   \
+        | solxact submit l 2>&1`
+    # Wait for the auction to end
+    echo "Waiting for auction to complete"
+    sleep 21
+    # The bidder empties their account
+    solana transfer -u l -k $LEDGER/emptied_bidder.json $RICH_USER1_PUBKEY ALL --commitment finalized >/dev/null
+    if [ "`settle_lamports_of $EMPTIED_BIDDER_PUBKEY`" != "0" ]; then
+        echo "FAIL: $TEST_NAME: could not empty the bidder's account"
+        exit 1
+    fi
+    settle_accounts 3 0 $EMPTIED_BIDDER_PUBKEY $RICH_USER2_PUBKEY
+    # Wait until rich_user2 is allowed to settle this bid
+    settle_wait_until_anyone_may_settle $S_ENTRY
+    WINNING_BID=`settle_account_u64 $S_ENTRY $SETTLE_ENTRY_HIGHEST_BID_OFFSET`
+    # Someone transfers 1000 lamports to the bid account
+    solana transfer -u l -k $LEDGER/rich_user2.json $S_BID 0.000001 --commitment finalized >/dev/null
+    TOKEN_ACCOUNT_LAMPORTS=`settle_lamports_of $S_ENTRY_TOKEN`
+    ADMIN_BEFORE=`settle_lamports_of $ADMIN_PUBKEY`
+    assert $TEST_NAME                                                                                                \
+    `settle_script $LEDGER/rich_user2.json $EMPTIED_BIDDER_PUBKEY 12 3 0`
+    # The bidder received the token
+    if [ "`get_token_balance $S_MINT $EMPTIED_BIDDER_PUBKEY`" != "1" ]; then
+        echo "FAIL: $TEST_NAME: the bidder did not receive the token"
+        exit 1
+    fi
+    # The bidder's account is still empty, and the admin received the excess along with the bid
+    if [ "`settle_lamports_of $EMPTIED_BIDDER_PUBKEY`" != "0" ]; then
+        echo "FAIL: $TEST_NAME: the bidder's emptied account holds `settle_lamports_of $EMPTIED_BIDDER_PUBKEY`"
+        exit 1
+    fi
+    ADMIN_AFTER=`settle_lamports_of $ADMIN_PUBKEY`
+    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) -ne $((WINNING_BID + 1000 + TOKEN_ACCOUNT_LAMPORTS)) ]; then
+        echo "FAIL: $TEST_NAME: admin received $((ADMIN_AFTER - ADMIN_BEFORE)),"                                     \
+             "expected bid $WINNING_BID plus 1000 plus token account rent $TOKEN_ACCOUNT_LAMPORTS"
+        exit 1
+    fi
+    # The purchase price is still the winning bid
+    if [ "`settle_account_u64 $S_ENTRY $SETTLE_ENTRY_PURCHASE_PRICE_OFFSET`" != "$WINNING_BID" ]; then
+        echo "FAIL: $TEST_NAME: purchase price is not the winning bid of $WINNING_BID"
+        exit 1
+    fi
+fi

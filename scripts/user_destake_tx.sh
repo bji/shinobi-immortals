@@ -155,7 +155,7 @@ solxact encode                                                                  
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
         // The entry mint is needed to thaw the token account //                                                      \
         account $ENTRY_MINT_PUBKEY                                                                                    \
-        // Instruction code 16 = Destake //                                                                           \
-        u8 16                                                                                                         \
+        // Instruction code 15 = Destake //                                                                           \
+        u8 15                                                                                                         \
         // no_ki_harvest flag: 0 = harvest Ki, 1 = do not //                                                          \
         u8 $NO_KI_HARVEST_FLAG

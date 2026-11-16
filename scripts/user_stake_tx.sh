@@ -123,5 +123,5 @@ solxact encode                                                                  
         // The entry mint and the SPL Token program are needed to freeze the token account //                         \
         account $ENTRY_MINT_PUBKEY                                                                                    \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
-        // Instruction code 15 = Stake //                                                                             \
-        u8 15
+        // Instruction code 14 = Stake //                                                                             \
+        u8 14

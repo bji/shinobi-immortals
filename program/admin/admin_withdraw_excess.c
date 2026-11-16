@@ -38,7 +38,8 @@
 // The following are deliberately not supported:
 //
 // - Bid accounts.  The lamports of a bid account are the bid, so lamports transferred to one cannot be told apart from
-//   it.  They go to whoever the bid goes to: back to a losing bidder, or to the admin when a winning bid is claimed.
+//   it.  They go back to the bidder: with the bid when a losing bid is claimed, and as the excess beyond the bid
+//   when a winning bid is settled (see SettleWinningBid).
 // - Stake accounts that users have staked to their entries.  These belong to their users, and the admin must never be
 //   able to withdraw from them.
 // - Mint and token accounts.  These are owned by the SPL Token program.

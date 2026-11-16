@@ -130,8 +130,8 @@ if should_run_test user_stake_bad_block; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 15 = Stake //                                                                         \
-           u8 15"                                                                                                    \
+           // Instruction code 14 = Stake //                                                                         \
+           u8 14"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -164,8 +164,8 @@ if should_run_test user_stake_bad_entry; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 15 = Stake //                                                                         \
-           u8 15"                                                                                                    \
+           // Instruction code 14 = Stake //                                                                         \
+           u8 14"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -198,8 +198,8 @@ if should_run_test user_stake_entry_not_owned; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 15 = Stake //                                                                         \
-           u8 15"                                                                                                    \
+           // Instruction code 14 = Stake //                                                                         \
+           u8 14"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -227,8 +227,8 @@ if should_run_test user_stake_entry_not_owned; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 15 = Stake //                                                                         \
-           u8 15"                                                                                                    \
+           // Instruction code 14 = Stake //                                                                         \
+           u8 14"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \

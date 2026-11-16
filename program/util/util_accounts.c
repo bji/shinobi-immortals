@@ -153,6 +153,26 @@ static bool is_metaplex_metadata_program(const SolPubkey *pubkey)
 }
 
 
+// Computes the address of the associated token account of [owner_key] for the mint [mint_key].  Returns false if the
+// address could not be computed.
+static bool compute_associated_token_address(const SolPubkey *owner_key, const SolPubkey *mint_key,
+                                             SolPubkey *fill_in)
+{
+    // The seeds of an associated token account are the owner, the token program, and the mint, and the program that it
+    // is derived from is the Associated Token Account program
+    SolSignerSeed seeds[] = { { (uint8_t *) owner_key, sizeof(*owner_key) },
+                              { (uint8_t *) &(Constants.spl_token_program_pubkey),
+                                sizeof(Constants.spl_token_program_pubkey) },
+                              { (uint8_t *) mint_key, sizeof(*mint_key) } };
+
+    uint8_t bump_seed;
+
+    return (sol_try_find_program_address(seeds, ARRAY_LEN(seeds),
+                                         &(Constants.spl_associated_token_account_program_pubkey),
+                                         fill_in, &bump_seed) == 0);
+}
+
+
 // Updates an account's data size
 static void set_account_size(SolAccountInfo *account, uint64_t size)
 {

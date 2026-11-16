@@ -7,7 +7,6 @@ const { _buy_tx,
         _refund_tx,
         _bid_tx,
         _claim_losing_tx,
-        _claim_winning_tx,
         _stake_with_vote_account_tx,
         _destake_tx,
         _harvest_tx,
@@ -83,6 +82,7 @@ const g_stake_config_address = "StakeConfig11111111111111111111111111111111";
 const g_stake_config_pubkey = make_pubkey(g_stake_config_address);
 
 // Instruction codes of the instructions whose transactions are built in this file (see program/entrypoint.c)
+const INSTRUCTION_SETTLE_WINNING_BID = 18;
 const INSTRUCTION_DELEGATE_MASTER_STAKE = 21;
 const INSTRUCTION_WITHDRAW_EXCESS = 22;
 
@@ -2105,6 +2105,25 @@ class Wallet
         }, sign_callback);
     }
 
+    // Settles the winning bid of an auction that has ended, on behalf of its bidder: the entry's token goes to the
+    // associated token account of bidder_address, the winning bid goes to the admin, and the entry becomes owned.
+    // Any wallet may do this, but only once 30 days have passed since the end of the auction; until then only the
+    // winner may settle, which the winner does with claim_entry(entry, true, sign_callback).  The wallet pays the
+    // transaction fee, and for the creation of the bidder's associated token account if it does not exist yet.
+    // bidder_address must be the address of the bidder who won the auction.
+    async settle_winning_bid(entry, bidder_address, sign_callback)
+    {
+        let admin_address = await this.fetch_admin_address();
+
+        if (admin_address == null) {
+            throw new Error("Admin address could not be determined");
+        }
+
+        return this.complete_tx((wallet_address) => {
+            return this.make_settle_winning_bid_tx(entry, bidder_address, admin_address, wallet_address);
+        }, sign_callback);
+    }
+
     // Delegates the master stake account to Shinobi Systems.  This succeeds only if the master stake account is not
     // actively delegated (see Cluster.get_master_stake()), which can only come about if it was deactivated with the
     // stake program's DeactivateDelinquent instruction after Shinobi Systems had not voted for five epochs.  Any
@@ -2189,20 +2208,8 @@ class Wallet
         if (won) {
             let admin_address = await this.fetch_admin_address();
 
-            let token_destination_address = get_associated_token_address(wallet_address, entry.mint_address);
-            let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
-
-            return _claim_winning_tx({ bidding_pubkey : wallet_address,
-                                       entry_pubkey : entry.address,
-                                       bid_pubkey : bid_address,
-                                       state_pubkey : g_program_state_address,
-                                       admin_pubkey : admin_address,
-                                       entry_token_pubkey : entry.token_address,
-                                       entry_mint_pubkey : entry.mint_address,
-                                       token_destination_pubkey : token_destination_address,
-                                       token_destination_owner_pubkey : wallet_address,
-                                       metaplex_metadata_pubkey : entry.metaplex_metadata_address,
-                                       bid_marker_token_pubkey : bid_marker_token_address });
+            // Claiming a winning bid is settling it, with the wallet as both the funding account and the bidder
+            return this.make_settle_winning_bid_tx(entry, wallet_address, admin_address, wallet_address);
         }
         else {
             return _claim_losing_tx({ bidding_pubkey : wallet_address,
@@ -2258,6 +2265,72 @@ class Wallet
                               ki_source_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
                               ki_source_owner_pubkey : wallet_address,
                               ki_to_apply : ki_to_apply });
+    }
+
+    // Accounts and data here must match those of scripts/anyone_settle_winning_bid_tx.sh.  admin_address may be
+    // anything that SolanaWeb3.PublicKey accepts, including the bytes returned by fetch_admin_address().
+    //
+    // If the wallet is the bidder, the bid marker is reclaimed too, unless keep_bid_marker is true; keep_bid_marker
+    // is needed only if the bidder has already burned or closed their bid marker, which would make reclaiming it fail.
+    async make_settle_winning_bid_tx(entry, bidder_address, admin_address, wallet_address, keep_bid_marker)
+    {
+        // The bid account of the bidder for this entry
+        let bid_address = get_bid_address(get_bid_marker_token_address(entry.mint_address, bidder_address));
+
+        let keys = [
+            // The funding account, which pays for the bidder's associated token account if it does not exist yet
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The winning bid account
+            { pubkey : make_pubkey(bid_address), isSigner : false, isWritable : true },
+            // The program state account, which identifies the admin
+            { pubkey : g_program_state_pubkey, isSigner : false, isWritable : false },
+            // The admin, who receives the winning bid
+            { pubkey : new SolanaWeb3.PublicKey(admin_address), isSigner : false, isWritable : true },
+            // The entry's own token account, which holds the token until now and is closed
+            { pubkey : make_pubkey(entry.token_address), isSigner : false, isWritable : true },
+            // The entry's mint
+            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
+            // The program authority
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // The bidder's associated token account for the entry's mint, which receives the token
+            { pubkey : make_pubkey(get_associated_token_address(bidder_address, entry.mint_address)),
+              isSigner : false, isWritable : true },
+            // The bidder, who receives any lamports that the bid account holds beyond the winning bid
+            { pubkey : make_pubkey(bidder_address), isSigner : false, isWritable : true },
+            // The system program
+            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
+            // The Associated Token Account program
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
+            // The Metaplex metadata account of the entry
+            { pubkey : make_pubkey(entry.metaplex_metadata_address), isSigner : false, isWritable : true },
+            // The Metaplex program
+            { pubkey : g_metaplex_program_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // When the bidder settles their own bid, also reclaim the bid marker, which has no purpose once the bid is
+        // settled: two more accounts make the program burn the bidder's bid marker tokens for the entry and close the
+        // bid marker token account, returning its lamports to the bidder.  Nobody else can do this, since it needs
+        // the bidder's signature.
+        if ((wallet_address == bidder_address) && !keep_bid_marker) {
+            // The bid marker mint
+            keys.push({ pubkey : g_bid_marker_mint_pubkey, isSigner : false, isWritable : true });
+            // The bidder's bid marker token account for the entry
+            keys.push({ pubkey : make_pubkey(get_bid_marker_token_address(entry.mint_address, bidder_address)),
+                        isSigner : false, isWritable : true });
+        }
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_SETTLE_WINNING_BID ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
     // Accounts and data here must match those of scripts/anyone_delegate_master_stake_tx.sh

@@ -2,38 +2,54 @@
 
 set -e
 
-# Emits an encoded transaction that claims a winning bid.  Assumes that the user account is the token destination.
+# Emits an encoded transaction that settles the winning bid of an auction that has ended: the entry's token goes to
+# the winning bidder's associated token account, the winning bid goes to the admin, and anything that the bid account
+# holds beyond the winning bid goes back to the bidder.
+#
+# The only signature that this transaction needs is that of the funding account, which is the fee payer and also
+# pays for the creation of the bidder's associated token account if it does not exist yet.
+#
+# The winning bidder may settle their own bid at any time after the auction has ended, by giving their own pubkey as
+# both the funding account and the bidder.  Anyone else may settle it, with their own pubkey as the funding account,
+# but only once 30 days have passed since the end of the auction.
+#
+# When the bidder settles their own bid, the transaction also burns the bidder's bid marker tokens for the entry and
+# closes the bid marker token account, returning its lamports to the bidder, since the bid marker has no purpose once
+# the bid is settled.  Supply keep_bid_marker as the last argument to leave the bid marker alone, which is necessary
+# if the bidder has already burned or closed it.  When anyone else settles, the bid marker is always left alone,
+# because reclaiming it needs the bidder's signature.
 
 function require ()
 {
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: user_claim_winning_tx.sh <ADMIN_PUBKEY> <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> [true]
-
-If true is supplied as the last argument, then the bid marker will be reclaimed.
+Usage: anyone_settle_winning_bid_tx.sh <FUNDING_PUBKEY> <ADMIN_PUBKEY> <BIDDER_PUBKEY> \\
+                                       <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> [keep_bid_marker]
 
 EOF
         exit 1
     fi
 }
 
-ADMIN_PUBKEY=$1
-USER_PUBKEY=$2
-GROUP_NUMBER=$3
-BLOCK_NUMBER=$4
-ENTRY_INDEX=$5
-if [ "$6" = "true" ]; then
-    RECLAIM_BID_MARKER=true
-else
-    RECLAIM_BID_MARKER=false
-fi
+FUNDING_PUBKEY=$1
+ADMIN_PUBKEY=$2
+BIDDER_PUBKEY=$3
+GROUP_NUMBER=$4
+BLOCK_NUMBER=$5
+ENTRY_INDEX=$6
+KEEP_BID_MARKER=$7
 
+require $FUNDING_PUBKEY
 require $ADMIN_PUBKEY
-require $USER_PUBKEY
+require $BIDDER_PUBKEY
 require $GROUP_NUMBER
 require $BLOCK_NUMBER
 require $ENTRY_INDEX
+
+# The pubkeys computed below that belong to a user (the token destination, the bid marker token account and the bid
+# account) are those of the bidder
+USER_PUBKEY=$BIDDER_PUBKEY
 
 # Compute program, block, entry, and related pubkeys.  These may not all be valid, depending on input parameters
 # to the script, but any that are invalid won't be used by the solxact encode command that follows.
@@ -98,8 +114,10 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
                  BID_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
                                  [ u8 9                                                                               \
                                    $BID_MARKER_TOKEN_PUBKEY ]"
-   
-if [ $RECLAIM_BID_MARKER = true ]; then
+
+# The bid marker is reclaimed only if the bidder is the one settling, and has not asked to keep it.  Reclaiming it
+# takes two more accounts at the end of the account list.
+if [ "$FUNDING_PUBKEY" = "$BIDDER_PUBKEY" -a "$KEEP_BID_MARKER" != "keep_bid_marker" ]; then
     EXTRA_ACCOUNTS="account $BID_MARKER_MINT_PUBKEY w                                                                 \
                     account $BID_MARKER_TOKEN_PUBKEY w"
 else
@@ -108,23 +126,25 @@ fi
 
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
-        fee_payer $USER_PUBKEY                                                                                        \
+        fee_payer $FUNDING_PUBKEY                                                                                     \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
-        account $USER_PUBKEY ws                                                                                       \
+        account $FUNDING_PUBKEY ws                                                                                    \
         account $ENTRY_PUBKEY w                                                                                       \
         account $BID_PUBKEY w                                                                                         \
-        account $STATE_PUBKEY                                                                                        \
+        account $STATE_PUBKEY                                                                                         \
         account $ADMIN_PUBKEY w                                                                                       \
         account $ENTRY_TOKEN_PUBKEY w                                                                                 \
         account $ENTRY_MINT_PUBKEY                                                                                    \
         account $AUTHORITY_PUBKEY                                                                                     \
+        // The bidder's associated token account for the entry's mint, which receives the token //                    \
         account $TOKEN_DESTINATION_PUBKEY w                                                                           \
-        account $USER_PUBKEY                                                                                          \
+        // The bidder is writable because it receives any lamports of the bid account beyond the bid //               \
+        account $BIDDER_PUBKEY w                                                                                      \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
         account $ENTRY_METADATA_PUBKEY w                                                                              \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         $EXTRA_ACCOUNTS                                                                                               \
-        // Instruction code 14 = ClaimWinning //                                                                      \
-        u8 14
+        // Instruction code 18 = SettleWinningBid //                                                                  \
+        u8 18

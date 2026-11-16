@@ -40,6 +40,8 @@ source $SOURCE/test/test_admin_add_whitelist_entries
 
 source $SOURCE/test/test_admin_delete_whitelist
 
+source $SOURCE/test/test_admin_withdraw_excess
+
 source $SOURCE/test/test_user_buy
 
 source $SOURCE/test/test_user_refund
@@ -47,8 +49,6 @@ source $SOURCE/test/test_user_refund
 source $SOURCE/test/test_user_bid
 
 source $SOURCE/test/test_user_claim_losing
-
-source $SOURCE/test/test_user_claim_winning
 
 source $SOURCE/test/test_user_stake
 
@@ -58,10 +58,10 @@ source $SOURCE/test/test_user_harvest
 
 source $SOURCE/test/test_user_level_up
 
-source $SOURCE/test/test_anyone_take_commission_or_delegate
+source $SOURCE/test/test_anyone_settle_winning_bid
 
-source $SOURCE/test/test_special_reauthorize
+source $SOURCE/test/test_anyone_take_commission_or_delegate
 
 source $SOURCE/test/test_anyone_delegate_master_stake
 
-source $SOURCE/test/test_admin_withdraw_excess
+source $SOURCE/test/test_special_reauthorize

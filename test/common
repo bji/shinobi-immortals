@@ -724,6 +724,11 @@ function setup ()
     # same window, and short enough to wait for the next window.
     export LEVEL_CREDIT_WINDOW_SECONDS=60
 
+    # The number of seconds after the end of an auction during which only the winning bidder may settle the winning
+    # bid, that the test program is built with (production uses 30 days).  It is long enough for the tests to try a
+    # settlement by someone else that is too soon, and short enough to wait out.
+    export SETTLE_WINNING_BID_DELAY_SECONDS=30
+
     # Make a temporary directory to hold the validator ledger
     export LEDGER=`mktemp -d`
 
@@ -804,16 +809,23 @@ function setup ()
     echo "Making build script"
     $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $SHINOBI_SYSTEMS_VOTE_PUBKEY               \
         > $LEDGER/build_program.sh.in
-    # The test program differs from a production build in exactly one respect: a short level credit window, so that
-    # window rollover can be tested in real time.  Production builds have no way to set this (the generated build
-    # script has no override hook), so the define is inserted here, into the test's copy of the build script only,
-    # immediately after the program include directory argument.
-    awk -v WINDOW=$LEVEL_CREDIT_WINDOW_SECONDS                                                                       \
-        '{ print } /^ *-I\$SOURCE_ROOT\/program / { print "    -DLEVEL_CREDIT_WINDOW_SECONDS=" WINDOW "ul \\" }'     \
+    # The test program differs from a production build in exactly two respects: a short level credit window, so that
+    # window rollover can be tested in real time, and a short delay before anyone other than the winning bidder may
+    # settle a winning bid, so that the tests can wait it out.  Production builds have no way to set these (the
+    # generated build script has no override hook), so the defines are inserted here, into the test's copy of the
+    # build script only, immediately after the program include directory argument.
+    awk -v WINDOW=$LEVEL_CREDIT_WINDOW_SECONDS -v DELAY=$SETTLE_WINNING_BID_DELAY_SECONDS                            \
+        '{ print } /^ *-I\$SOURCE_ROOT\/program / { print "    -DLEVEL_CREDIT_WINDOW_SECONDS=" WINDOW "ul \\";       \
+                                                    print "    -DSETTLE_WINNING_BID_DELAY_SECONDS=" DELAY "ul \\" }' \
         $LEDGER/build_program.sh.in > $LEDGER/build_program.sh
     # Fail loudly if the build script's format changed and the define could not be inserted
     if ! grep -q -- "-DLEVEL_CREDIT_WINDOW_SECONDS=${LEVEL_CREDIT_WINDOW_SECONDS}ul" $LEDGER/build_program.sh; then
         echo "FAIL: could not insert LEVEL_CREDIT_WINDOW_SECONDS into the test build script"
+        exit 1
+    fi
+    if ! grep -q -- "-DSETTLE_WINNING_BID_DELAY_SECONDS=${SETTLE_WINNING_BID_DELAY_SECONDS}ul" $LEDGER/build_program.sh
+    then
+        echo "FAIL: could not insert SETTLE_WINNING_BID_DELAY_SECONDS into the test build script"
         exit 1
     fi
     chmod +x $LEDGER/build_program.sh

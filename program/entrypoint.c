@@ -51,22 +51,25 @@ typedef enum
     Instruction_Bid                           = 12,
     // Claim a losing bid
     Instruction_ClaimLosing                   = 13,
-    // Claim a winning bid
-    Instruction_ClaimWinning                  = 14,
     // Stake the entry, providing a stake account to stake the entry to.  The stake account becomes owned by the
     // program.  The token account holding the entry's token is frozen for as long as the entry is staked, so that
     // the token cannot be transferred or burned while the program holds a stake account for it.
-    Instruction_Stake                         = 15,
+    Instruction_Stake                         = 14,
     // Destake the entry, returning the stake account of the entry, and thawing the token account holding the entry's
     // token.  Ki that the entry has earned is harvested first, unless the instruction data says not to, which makes
     // it possible to recover the stake account even if Ki could not be harvested.
-    Instruction_Destake                       = 16,
+    Instruction_Destake                       = 15,
     // Harvest Ki
-    Instruction_Harvest                       = 17,
+    Instruction_Harvest                       = 16,
     // Level up an entry.  This requires as input am amount of Ki, which is burned.
-    Instruction_LevelUp                       = 18,
+    Instruction_LevelUp                       = 17,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
+    // Settle the winning bid of an auction that has ended: the entry's token goes to the winning bidder's associated
+    // token account, and the winning bid goes to the admin.  The winning bidder may do this at any time; anyone else
+    // may do it once 30 days have passed since the end of the auction, so that an auction which was won can always
+    // be completed, even if the bidder never returns.
+    Instruction_SettleWinningBid              = 18,
     // If the entry is staked and the stake account is delegated, this pays any commission owed into the master stake
     // account.  If the entry is staked and the stake account is not delegated, this delegates the stake account to
     // Shinobi Systems so that it can start earning Ki.
@@ -120,12 +123,12 @@ typedef enum
 #include "user/user_refund.c"
 #include "user/user_bid.c"
 #include "user/user_claim_losing.c"
-#include "user/user_claim_winning.c"
 #include "user/user_stake.c"
 #include "user/user_destake.c"
 #include "user/user_harvest.c"
 #include "user/user_level_up.c"
 
+#include "anyone/anyone_settle_winning_bid.c"
 #include "anyone/anyone_take_commission_or_delegate.c"
 #include "anyone/anyone_delegate_master_stake.c"
 
@@ -197,9 +200,6 @@ uint64_t entrypoint(const uint8_t *input)
     case Instruction_ClaimLosing:
         return user_claim_losing(&params);
 
-    case Instruction_ClaimWinning:
-        return user_claim_winning(&params);
-
     case Instruction_Stake:
         return user_stake(&params);
 
@@ -211,6 +211,9 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_LevelUp:
         return user_level_up(&params);
+
+    case Instruction_SettleWinningBid:
+        return anyone_settle_winning_bid(&params);
 
     case Instruction_TakeCommissionOrDelegate:
         return anyone_take_commission_or_delegate(&params);

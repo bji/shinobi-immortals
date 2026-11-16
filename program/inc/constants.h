@@ -28,6 +28,15 @@
 // above that: twice the largest minimum delegation that is anticipated.
 #define MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (2 * LAMPORTS_PER_SOL)
 
+// The number of seconds after the end of an entry's auction during which only the winning bidder may settle the
+// winning bid (see SettleWinningBid).  After that, anyone may settle it on the bidder's behalf.  This gives the
+// winner of an auction 30 days in which to claim their win themselves, before the admin or anyone else can complete
+// the auction for them.  It may only be overridden at build time, which is done only to build the program that the
+// tests use, so that the tests do not have to wait 30 days.
+#ifndef SETTLE_WINNING_BID_DELAY_SECONDS
+#define SETTLE_WINNING_BID_DELAY_SECONDS (30ul * 24ul * 60ul * 60ul)
+#endif
+
 // This is the Ki token name
 #define KI_TOKEN_NAME "Ki"
 

@@ -138,6 +138,10 @@ typedef enum
     // Attempt to withdraw excess lamports from an account that holds nothing beyond what it is required to hold
     Error_NothingToWithdraw                            = 1043,
 
+    // Attempt by someone other than the winning bidder to settle a winning bid before
+    // SETTLE_WINNING_BID_DELAY_SECONDS have passed since the end of the auction
+    Error_OnlyBidderCanSettleYet                       = 1044,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,
