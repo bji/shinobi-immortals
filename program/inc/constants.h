@@ -37,6 +37,25 @@
 #define SETTLE_WINNING_BID_DELAY_SECONDS (30ul * 24ul * 60ul * 60ul)
 #endif
 
+// The number of epochs after an entry's last completed commission charge at which Destake stops charging commission.
+// Destake must be able to return a user's stake account even if commission can no longer be charged: a failed
+// MoveStake aborts the whole transaction, so Destake cannot try the charge and carry on if it fails.  Instead, if
+// commission is owed but no commission charge has completed for the entry in this many epochs, Destake does not
+// attempt the charge, and the commission accrued since the last charge is forgone.
+//
+// Commission charges are made by the permissionless TakeCommissionOrDelegate crank, which the admin runs regularly
+// to collect commission, so in normal operation no entry that owes commission ever goes this long without one.  If
+// charging becomes impossible (for example while the master stake account cools down and warms up again after a
+// DeactivateDelinquent, about 2 to 3 epochs, or after some future change to the stake program), or the admin stops
+// running the crank, then after this many epochs users can always destake on their own.  An entry that owes no
+// commission (at 0% commission, or with no rewards since its last charge) never attempts a MoveStake, so this does
+// not apply to it.
+//
+// It may only be overridden at build time, which is done only to build the program that the tests use.
+#ifndef DESTAKE_COMMISSION_WAIVER_EPOCHS
+#define DESTAKE_COMMISSION_WAIVER_EPOCHS 5ul
+#endif
+
 // This is the Ki token name
 #define KI_TOKEN_NAME "Ki"
 

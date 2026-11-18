@@ -212,8 +212,9 @@ static uint64_t special_reauthorize(const SolParameters *params)
         // longer has any authority over the stake account.  If the entry still referred to it, then Harvest would
         // continue to mint Ki for any increase in its delegated stake, which its owner could now produce at will
         // (for example by merging other stake into it); and Destake would fail forever, leaving the entry unable
-        // to ever be staked again.
+        // to ever be staked again.  last_commission_charge_epoch is logically part of owned, so it is cleared too.
         sol_memset(&(entry->owned), 0, sizeof(entry->owned));
+        entry->last_commission_charge_epoch = 0;
     }
 
     // If the metadata was reauthorized, the entry now belongs to whichever program controls new_metadata_authority,

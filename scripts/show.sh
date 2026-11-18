@@ -681,8 +681,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -ne 3200 ]; then
-            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3200"
+        if [ $ACCOUNT_DATA_LEN -ne 3208 ]; then
+            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3208"
             exit 1
         fi
 
@@ -760,7 +760,10 @@ case $1 in
 
         echo -n '"last_harvest_ki_stake":'`to_sol \`get_data_u64 312 "$ACCOUNT_DATA"\``','
 
-        echo -n '"last_commission_charge_stake":'`to_sol \`get_data_u64 320 "$ACCOUNT_DATA"\``
+        echo -n '"last_commission_charge_stake":'`to_sol \`get_data_u64 320 "$ACCOUNT_DATA"\``','
+
+        # This is stored at the end of the entry, but belongs with the other owned fields
+        echo -n '"last_commission_charge_epoch":'`get_data_u64 3200 "$ACCOUNT_DATA"`
 
         echo -n '},'
 

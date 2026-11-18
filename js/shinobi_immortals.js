@@ -1263,6 +1263,8 @@ class Entry
         this.most_recent_ki_applied_window = buffer_le_u64(data, 3176);
         this.ki_applied_this_window = buffer_le_u64(data, 3184);
         this.total_level_credits = buffer_le_u64(data, 3192);
+        // Epoch of the last completed commission charge while staked (logically part of owned; stored at the end)
+        this.owned_last_commission_charge_epoch = Number(buffer_le_u64(data, 3200));
 
         this.metadata_level_1_credits = buffer_le_u32(data, 332);
         this.metadata_random = [ buffer_le_u32(data, 336),
@@ -1368,6 +1370,11 @@ class Entry
             this.owned_last_commission_charge_stake_account_lamports) {
             this.owned_last_commission_charge_stake_account_lamports =
                 new_entry.owned_last_commission_charge_stake_account_lamports;
+            changed = true;
+        }
+
+        if (new_entry.owned_last_commission_charge_epoch != this.owned_last_commission_charge_epoch) {
+            this.owned_last_commission_charge_epoch = new_entry.owned_last_commission_charge_epoch;
             changed = true;
         }
 

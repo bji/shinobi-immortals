@@ -145,8 +145,11 @@ static uint64_t user_destake(const SolParameters *params)
                    funding_account->key, clock.epoch, params->ka, params->ka_num);
     }
 
-    // Charge commission
-    charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
+    // Charge commission, unless no commission charge has been possible for so long that the user must be allowed to
+    // leave without one (see DESTAKE_COMMISSION_WAIVER_EPOCHS in constants.h)
+    if (!is_destake_commission_waived(entry, clock.epoch)) {
+        charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
+    }
 
     // Use stake account program to set all authorities to the token owner; must do this signed since the
     // program authority is currently the withdraw authority of the stake account
@@ -160,8 +163,10 @@ static uint64_t user_destake(const SolParameters *params)
         thaw_token_account(token_account->key, entry_mint_account->key, params->ka, params->ka_num);
     }
 
-    // No longer staked, all fields in owned should be zeroed out
+    // No longer staked, all fields in owned should be zeroed out, as should last_commission_charge_epoch, which is
+    // logically part of owned
     sol_memset(&(entry->owned), 0, sizeof(entry->owned));
+    entry->last_commission_charge_epoch = 0;
 
     return 0;
 }

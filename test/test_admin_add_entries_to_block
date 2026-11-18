@@ -538,7 +538,8 @@ if [ -z "$TESTS" ]; then
     "stake_initial": 0,
     "stake_epoch": 0,
     "last_harvest_ki_stake": 0,
-    "last_commission_charge_stake": 0
+    "last_commission_charge_stake": 0,
+    "last_commission_charge_epoch": 0
   },
   "level": 0,
   "most_recent_ki_applied_window": 0,

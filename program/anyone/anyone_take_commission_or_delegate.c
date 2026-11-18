@@ -88,6 +88,10 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
         // Record current lamports in the stake account to be used for commission purposes
         entry->owned.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
 
+        // No commission is owed on the newly delegated stake, so start counting epochs without a commission charge
+        // from now (see DESTAKE_COMMISSION_WAIVER_EPOCHS)
+        entry->last_commission_charge_epoch = clock.epoch;
+
         return 0;
     }
     // Else, if it's in a staked state, then it is delegated to Shinobi Systems and not deactivated: user_stake only

@@ -678,7 +678,7 @@ function make_max_level_entry_fixture ()
     local PROGRAM_PUBKEY=$1
     local DATA_FILE=$FIXTURES/max_level_entry.bin
     # sizeof(Entry)
-    local SIZE=3200
+    local SIZE=3208
     # Rent exempt minimum: (data size + 128 bytes account overhead) * 3480 lamports/byte-year * 2 years
     local LAMPORTS=$(((SIZE + 128) * 3480 * 2))
 
@@ -760,6 +760,13 @@ function setup ()
     # settlement by someone else that is too soon, and short enough to wait out.
     export SETTLE_WINNING_BID_DELAY_SECONDS=30
 
+    # The number of epochs without a completed commission charge after which Destake stops charging commission, that
+    # the test program is built with (production uses 5).  Most tests stake an entry and destake it many epochs later
+    # without running the commission crank in between, and expect Destake to charge commission, so by default this is
+    # set far beyond any test's length.  test/test_destake_commission_waiver.sh, which tests the waiver itself, sets
+    # a small value before calling setup.
+    export DESTAKE_COMMISSION_WAIVER_EPOCHS=${DESTAKE_COMMISSION_WAIVER_EPOCHS:-1000000}
+
     # Make a temporary directory to hold the validator ledger
     export LEDGER=`mktemp -d`
 
@@ -840,14 +847,17 @@ function setup ()
     echo "Making build script"
     $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $SHINOBI_SYSTEMS_VOTE_PUBKEY               \
         > $LEDGER/build_program.sh.in
-    # The test program differs from a production build in exactly two respects: a short level credit window, so that
-    # window rollover can be tested in real time, and a short delay before anyone other than the winning bidder may
-    # settle a winning bid, so that the tests can wait it out.  Production builds have no way to set these (the
-    # generated build script has no override hook), so the defines are inserted here, into the test's copy of the
-    # build script only, immediately after the program include directory argument.
+    # The test program differs from a production build in exactly three respects: a short level credit window, so
+    # that window rollover can be tested in real time; a short delay before anyone other than the winning bidder may
+    # settle a winning bid, so that the tests can wait it out; and the number of epochs after which Destake stops
+    # charging commission (see DESTAKE_COMMISSION_WAIVER_EPOCHS above).  Production builds have no way to set these
+    # (the generated build script has no override hook), so the defines are inserted here, into the test's copy of
+    # the build script only, immediately after the program include directory argument.
     awk -v WINDOW=$LEVEL_CREDIT_WINDOW_SECONDS -v DELAY=$SETTLE_WINNING_BID_DELAY_SECONDS                            \
+        -v WAIVER=$DESTAKE_COMMISSION_WAIVER_EPOCHS                                                                  \
         '{ print } /^ *-I\$SOURCE_ROOT\/program / { print "    -DLEVEL_CREDIT_WINDOW_SECONDS=" WINDOW "ul \\";       \
-                                                    print "    -DSETTLE_WINNING_BID_DELAY_SECONDS=" DELAY "ul \\" }' \
+                                                    print "    -DSETTLE_WINNING_BID_DELAY_SECONDS=" DELAY "ul \\";   \
+                                                    print "    -DDESTAKE_COMMISSION_WAIVER_EPOCHS=" WAIVER "ul \\" }' \
         $LEDGER/build_program.sh.in > $LEDGER/build_program.sh
     # Fail loudly if the build script's format changed and the define could not be inserted
     if ! grep -q -- "-DLEVEL_CREDIT_WINDOW_SECONDS=${LEVEL_CREDIT_WINDOW_SECONDS}ul" $LEDGER/build_program.sh; then
@@ -857,6 +867,11 @@ function setup ()
     if ! grep -q -- "-DSETTLE_WINNING_BID_DELAY_SECONDS=${SETTLE_WINNING_BID_DELAY_SECONDS}ul" $LEDGER/build_program.sh
     then
         echo "FAIL: could not insert SETTLE_WINNING_BID_DELAY_SECONDS into the test build script"
+        exit 1
+    fi
+    if ! grep -q -- "-DDESTAKE_COMMISSION_WAIVER_EPOCHS=${DESTAKE_COMMISSION_WAIVER_EPOCHS}ul" $LEDGER/build_program.sh
+    then
+        echo "FAIL: could not insert DESTAKE_COMMISSION_WAIVER_EPOCHS into the test build script"
         exit 1
     fi
     chmod +x $LEDGER/build_program.sh
