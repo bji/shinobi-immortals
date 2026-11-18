@@ -74,10 +74,8 @@ uint64_t entrypoint(const uint8_t *input)
             break;
 
         case 3:
-            if (!a) {
-                return 4;
-            }
-            actual_result = compute_minimum_bid(a, b, c, d);
+            // a is the initial minimum bid, b the current highest bid
+            actual_result = compute_minimum_bid(a, b);
             break;
 
         case 4:

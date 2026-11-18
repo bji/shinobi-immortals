@@ -390,14 +390,13 @@ if should_run_test user_bid_outbid_minimum; then
         | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
 
-    # The overbid will have chosen a new minimum that is based on the current timestamp; so it's not exact.  Just
-    # check that the bid amount is > 20 and < 21
+    # The bid placed is the minimum allowed: the previous highest bid of 20 SOL plus 5% (MINIMUM_BID_INCREMENT_BPS),
+    # which is exactly 21 SOL
     BID_AMOUNT=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l bid 10 2 0 $RICH_USER2_PUBKEY       \
                 | jq .bid_amount`
 
-    if less_than 20 $BID_AMOUNT -a less_than $BID_AMOUNT 21; then
-        echo -n
-    else
-        echo "FAIL: user_bid_outbid_minimum: Unexpected bid amount: $BID_AMOUNT"
+    if [ "$BID_AMOUNT" != "21" ]; then
+        echo "FAIL: user_bid_outbid_minimum: Unexpected bid amount: $BID_AMOUNT, expected 21"
+        exit 1
     fi
 fi

@@ -66,9 +66,7 @@ static uint64_t user_bid(const SolParameters *params)
     }
 
     // Compute the minimum auction bid price for the entry
-    uint64_t minimum_bid = compute_minimum_bid(entry->duration, entry->minimum_price_lamports,
-                                               entry->auction.highest_bid_lamports,
-                                               clock.unix_timestamp - entry->reveal_timestamp);
+    uint64_t minimum_bid = compute_minimum_bid(entry->minimum_price_lamports, entry->auction.highest_bid_lamports);
 
     // If the minimum bid is 0, then no bid is possible
     if (minimum_bid == 0) {
@@ -111,6 +109,25 @@ static uint64_t user_bid(const SolParameters *params)
     // Save the pubkey of the winning bid account, so that when bid claims are made after the end of auction, this one
     // will claim the entry.  All others will reclaim the SOL in the bid account.
     entry->auction.winning_bid_pubkey = *(bid_account->key);
+
+    // If this bid was placed with fewer than AUCTION_EXTENSION_SECONDS left in the auction, extend the auction so that
+    // it ends AUCTION_EXTENSION_SECONDS after this bid.  The auction's end is reveal_timestamp + duration everywhere
+    // that it is used, so extending it is only a matter of increasing duration; the auction is never shortened.  The
+    // entry is in auction (checked above), so the current time is before the current end.  The sums are computed in
+    // int64_t from values far below its limits: unix timestamps, a uint32_t duration, and a small constant.
+    int64_t auction_end = entry->reveal_timestamp + ((int64_t) entry->duration);
+    int64_t extended_end = clock.unix_timestamp + ((int64_t) AUCTION_EXTENSION_SECONDS);
+    if (extended_end > auction_end) {
+        int64_t extended_duration = extended_end - entry->reveal_timestamp;
+        // duration is a uint32_t, so an auction can last at most UINT32_MAX seconds (over 136 years).  Rather than
+        // let the duration wrap, which would move the end backwards, extend it only as far as that limit; the auction
+        // then ends at the latest time an entry can record.  Each extension requires a bid at least
+        // MINIMUM_BID_INCREMENT_BPS higher than the last, so this cannot happen in practice.
+        if (extended_duration > ((int64_t) UINT32_MAX)) {
+            extended_duration = (int64_t) UINT32_MAX;
+        }
+        entry->duration = (uint32_t) extended_duration;
+    }
 
     // Not done yet
     return 0;

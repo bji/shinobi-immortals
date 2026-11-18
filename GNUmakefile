@@ -7,9 +7,9 @@ build_program.sh: make_build_program.sh
 	./make_build_program.sh program-key.json super-key.json BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2 > $@
 
 .PHONY: test base-tests test-calculations test-destake-deactivated-elsewhere test-master-stake-recovery \
-        test-destake-commission-waiver
+        test-destake-commission-waiver test-auction-extension
 test: base-tests test-calculations test-destake-deactivated-elsewhere test-master-stake-recovery \
-      test-destake-commission-waiver
+      test-destake-commission-waiver test-auction-extension
 
 base-tests:
 	SOURCE=`pwd` ./test/test.sh
@@ -25,3 +25,6 @@ test-master-stake-recovery:
 
 test-destake-commission-waiver:
 	SOURCE=`pwd` ./test/test_destake_commission_waiver.sh
+
+test-auction-extension:
+	SOURCE=`pwd` ./test/test_auction_extension.sh

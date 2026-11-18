@@ -47,7 +47,9 @@ typedef enum
     // Request a refund of an entry that was purchased before reveal, and was not revealed before the reveal grace
     // period completed
     Instruction_Refund                        = 11,
-    // Bid on an entry that is in normal auction
+    // Bid on an entry that is in normal auction.  Every bid after the first must exceed the current highest bid by at
+    // least MINIMUM_BID_INCREMENT_BPS; a bid placed near the end of the auction extends it by up to
+    // AUCTION_EXTENSION_SECONDS.
     Instruction_Bid                           = 12,
     // Claim a losing bid
     Instruction_ClaimLosing                   = 13,

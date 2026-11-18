@@ -760,6 +760,12 @@ function setup ()
     # settlement by someone else that is too soon, and short enough to wait out.
     export SETTLE_WINNING_BID_DELAY_SECONDS=30
 
+    # The number of seconds by which a bid near the end of an auction extends it, that the test program is built with
+    # (production uses 10 minutes).  The shared tests run auctions only 20 seconds long and wait a fixed time for them
+    # to end, so by default extensions are turned off (0: no bid is ever within 0 seconds of the end).
+    # test/test_auction_extension.sh, which tests extensions, sets a value before calling setup.
+    export AUCTION_EXTENSION_SECONDS=${AUCTION_EXTENSION_SECONDS:-0}
+
     # The number of epochs without a completed commission charge after which Destake stops charging commission, that
     # the test program is built with (production uses 5).  Most tests stake an entry and destake it many epochs later
     # without running the commission crank in between, and expect Destake to charge commission, so by default this is
@@ -847,17 +853,19 @@ function setup ()
     echo "Making build script"
     $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $SHINOBI_SYSTEMS_VOTE_PUBKEY               \
         > $LEDGER/build_program.sh.in
-    # The test program differs from a production build in exactly three respects: a short level credit window, so
+    # The test program differs from a production build in exactly four respects: a short level credit window, so
     # that window rollover can be tested in real time; a short delay before anyone other than the winning bidder may
-    # settle a winning bid, so that the tests can wait it out; and the number of epochs after which Destake stops
-    # charging commission (see DESTAKE_COMMISSION_WAIVER_EPOCHS above).  Production builds have no way to set these
+    # settle a winning bid, so that the tests can wait it out; the number of epochs after which Destake stops
+    # charging commission (see DESTAKE_COMMISSION_WAIVER_EPOCHS above); and the auction extension (see
+    # AUCTION_EXTENSION_SECONDS above).  Production builds have no way to set these
     # (the generated build script has no override hook), so the defines are inserted here, into the test's copy of
     # the build script only, immediately after the program include directory argument.
     awk -v WINDOW=$LEVEL_CREDIT_WINDOW_SECONDS -v DELAY=$SETTLE_WINNING_BID_DELAY_SECONDS                            \
-        -v WAIVER=$DESTAKE_COMMISSION_WAIVER_EPOCHS                                                                  \
+        -v WAIVER=$DESTAKE_COMMISSION_WAIVER_EPOCHS -v EXTENSION=$AUCTION_EXTENSION_SECONDS                          \
         '{ print } /^ *-I\$SOURCE_ROOT\/program / { print "    -DLEVEL_CREDIT_WINDOW_SECONDS=" WINDOW "ul \\";       \
                                                     print "    -DSETTLE_WINNING_BID_DELAY_SECONDS=" DELAY "ul \\";   \
-                                                    print "    -DDESTAKE_COMMISSION_WAIVER_EPOCHS=" WAIVER "ul \\" }' \
+                                                    print "    -DDESTAKE_COMMISSION_WAIVER_EPOCHS=" WAIVER "ul \\";  \
+                                                    print "    -DAUCTION_EXTENSION_SECONDS=" EXTENSION "ul \\" }' \
         $LEDGER/build_program.sh.in > $LEDGER/build_program.sh
     # Fail loudly if the build script's format changed and the define could not be inserted
     if ! grep -q -- "-DLEVEL_CREDIT_WINDOW_SECONDS=${LEVEL_CREDIT_WINDOW_SECONDS}ul" $LEDGER/build_program.sh; then
@@ -872,6 +880,10 @@ function setup ()
     if ! grep -q -- "-DDESTAKE_COMMISSION_WAIVER_EPOCHS=${DESTAKE_COMMISSION_WAIVER_EPOCHS}ul" $LEDGER/build_program.sh
     then
         echo "FAIL: could not insert DESTAKE_COMMISSION_WAIVER_EPOCHS into the test build script"
+        exit 1
+    fi
+    if ! grep -q -- "-DAUCTION_EXTENSION_SECONDS=${AUCTION_EXTENSION_SECONDS}ul" $LEDGER/build_program.sh; then
+        echo "FAIL: could not insert AUCTION_EXTENSION_SECONDS into the test build script"
         exit 1
     fi
     chmod +x $LEDGER/build_program.sh

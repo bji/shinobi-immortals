@@ -1526,13 +1526,11 @@ class Entry
     // This only returns a valid value if the entry state is InAuction
     get_auction_minimum_bid_lamports(clock)
     {
-        return Entry.compute_minimum_bid(BigInt(this.duration),
-                                         this.minimum_price_lamports,
-                                         this.auction_highest_bid_lamports,
-                                         BigInt(clock.unix_timestamp - this.reveal_timestamp));
+        return Entry.compute_minimum_bid(this.minimum_price_lamports, this.auction_highest_bid_lamports);
     }
 
-    // This only returns a valid value if the entry state is InAuction
+    // This only returns a valid value if the entry state is InAuction.  A bid placed near the end of an auction extends
+    // it by increasing duration, so this can move later after each such bid.
     get_auction_end_unix_timestamp(clock)
     {
         return this.reveal_timestamp + this.duration;
@@ -1597,35 +1595,31 @@ class Entry
         return (end_price + ((ac - ab) / bc)) * 1000n;
     }
 
-    // Cribbed from user_bid.c
-    static compute_minimum_bid(auction_duration, initial_minimum_bid, current_max_bid, seconds_elapsed)
+    // Mirrors compute_minimum_bid in program/util/util_calculations.c: the first bid must be at least the initial
+    // minimum; every later bid must exceed the current highest bid by at least MINIMUM_BID_INCREMENT_BPS of it,
+    // rounded up and at least 1 lamport, saturating at the largest u64 value.  Returns 0 if no bid is possible.
+    static compute_minimum_bid(initial_minimum_bid, current_max_bid)
     {
+        const U64_MAX = 18446744073709551615n;
+        // MINIMUM_BID_INCREMENT_BPS: 500 basis points, which is 5%
+        const MINIMUM_BID_INCREMENT_BPS = 500n;
+
+        if (current_max_bid == U64_MAX) {
+            return 0n;
+        }
+
         if (current_max_bid < initial_minimum_bid) {
-            current_max_bid = initial_minimum_bid;
+            return initial_minimum_bid;
         }
 
-        if (seconds_elapsed > auction_duration) {
-            seconds_elapsed = auction_duration;
+        let increment = ((current_max_bid * MINIMUM_BID_INCREMENT_BPS) + 9999n) / 10000n;
+        if (increment == 0n) {
+            increment = 1n;
         }
 
-        let a = seconds_elapsed;
-        let b = auction_duration;
-        let p = current_max_bid;
+        let result = current_max_bid + increment;
 
-        let result = (p * (((1000n * b) / ((b + (b / 100n)) - a)) + 101000n)) / 100000n;
-
-        let min_result = current_max_bid + (current_max_bid / 50n);
-        let max_result = (2n * current_max_bid) + (current_max_bid / 100n);
-
-        if (result < min_result) {
-            return min_result;
-        }
-        else if (result > max_result) {
-            return max_result;
-        }
-        else {
-            return result;
-        }
+        return (result > U64_MAX) ? U64_MAX : result;
     }
 }
 

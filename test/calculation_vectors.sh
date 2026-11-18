@@ -177,21 +177,57 @@ for case in "$PRICE_LONG_DURATION 1 1000000000" "$PRICE_LONG_DURATION 2 10000000
          "$elapsed" "$expected"
 done
 
-# Bid boundaries exercise the first bid, the maximum-bid sentinel, time clamping,
-# and both overflow fallbacks: adding one eighth and saturating at UINT64_MAX.
-emit bid/first 3 100 1000000 0 0 1000000
-emit bid/max 3 100 1000000 "$MAX" 0 0
-emit bid/start 3 100 1000000 1000000 0 1019900
-emit bid/last-second 3 100 1000000 1000000 99 1510000
-emit bid/end 3 100 1000000 1000000 100 1510000
-emit bid/saturating-overflow 3 100 1 18446744073709551614 0 "$MAX"
-expected=$(dc_calc '9223372036854775807 d 8 / + p')
-emit bid/overflow-fallback 3 100 1 9223372036854775807 0 "$expected"
-# At duration 1000, evaluate all valid elapsed seconds of the published fixed-point
-# bid curve: floor(1,000,000 * (floor(1,000,000/(1010-t)) + 101000) / 100000).
-for ((elapsed=0; elapsed<1000; ++elapsed)); do
-    expected=$(dc_calc "1000000 1000000 1010 $elapsed - / 101000 + * 100000 / p")
-    emit "bid/curve/$elapsed" 3 1000 1000000 1000000 "$elapsed" "$expected"
+# Minimum bids.  Operand a is the initial minimum bid and b the current highest bid (0 before any bid).  Before any
+# bid at or above the initial minimum, the initial minimum applies.  After that the minimum is the current highest
+# bid plus 5% of it (MINIMUM_BID_INCREMENT_BPS = 500), rounded up and at least 1 lamport, saturating at UINT64_MAX;
+# when the current highest bid is already UINT64_MAX, no bid is possible and the result is 0.
+# Prints 1 if $1 < $2 and 0 otherwise, comparing with dc's arbitrary precision.  dc's >r runs macro r when the value
+# pushed last ($2) is greater than the one pushed before it ($1).
+function dc_less ()
+{
+    dc_calc "0sr [1sr]sa $1 $2 >a lrp"
+}
+function bid_reference ()
+{
+    local initial=$1 current=$2 increment sum
+    # The highest bid is already the largest possible: no bid can exceed it
+    if [ "$current" = "$MAX" ]; then
+        echo 0
+        return
+    fi
+    # No bid at or above the initial minimum yet
+    if [ "`dc_less $current $initial`" = "1" ]; then
+        echo "$initial"
+        return
+    fi
+    # Round up: (current * 500 + 9999) / 10000, and at least 1
+    increment=$(dc_calc "$current 500 * 9999 + 10000 / p")
+    if [ "$increment" = "0" ]; then
+        increment=1
+    fi
+    # Saturate at UINT64_MAX
+    sum=$(dc_calc "$current $increment + p")
+    if [ "`dc_less $MAX $sum`" = "1" ]; then
+        echo "$MAX"
+    else
+        echo "$sum"
+    fi
+}
+# 17568327689247192014 is the largest bid whose minimum next bid (exactly UINT64_MAX) does not saturate
+for case in "1000000 0" "1000000 999999" "1000000 1000000" "1000000 1000001" "100 100" "0 0" "0 1" "1 1"             \
+            "1 19" "1 20" "1 21" "1000000000 1000000000" "20000000000 20000000000" "1 9999" "1 10000" "1 10001"       \
+            "1 18446744073709551614" "1 17568327689247192013" "1 17568327689247192014" "1 17568327689247192015"       \
+            "1 $MAX" "$MAX 0" "$MAX $MAX" "1 9223372036854775807"; do
+    read -r initial current <<< "$case"
+    emit "bid/$initial/$current" 3 "$initial" "$current" 0 0 "$(bid_reference "$initial" "$current")"
+done
+for ((i=0; i<64; ++i)); do
+    # Random current bids across the whole range, with a random initial minimum below 10^12
+    current=${random_values[random_index]}
+    random_index=$((random_index + 1))
+    initial=$(dc_calc "${random_values[random_index]} 1000000000000 % p")
+    random_index=$((random_index + 1))
+    emit "bid/random/$i" 3 "$initial" "$current" 0 0 "$(bid_reference "$initial" "$current")"
 done
 
 # Independently evaluate the total-stake multiplier using dc's arbitrary-size

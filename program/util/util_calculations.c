@@ -160,8 +160,17 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
     return price;
 }
 
-static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_minimum_bid, uint64_t current_max_bid,
-                                    uint64_t seconds_elapsed)
+// The smallest amount, in basis points of the current highest bid, by which a new auction bid must exceed it: 500 is
+// 5%.  Every bid after the first must be at least the current highest bid plus this fraction of it (rounded up, and
+// never less than 1 lamport).  Late bids are not made more expensive; instead a bid near the end of an auction
+// extends it (see AUCTION_EXTENSION_SECONDS in constants.h), so that there is no advantage in bidding at the last
+// moment.
+#define MINIMUM_BID_INCREMENT_BPS 500ul
+
+// Returns the smallest bid that may be placed on an auction whose current highest bid is current_max_bid (0 if there
+// have been no bids), and whose first bid must be at least initial_minimum_bid.  Returns 0 if no bid is possible
+// because the highest bid is already the largest possible.
+static uint64_t compute_minimum_bid(uint64_t initial_minimum_bid, uint64_t current_max_bid)
 {
     // If the maximum possible bid has been achieved, return 0
     if (current_max_bid == UINT64_MAX) {
@@ -174,40 +183,24 @@ static uint64_t compute_minimum_bid(uint64_t auction_duration, uint64_t initial_
         return initial_minimum_bid;
     }
 
-    // Sanitize the seconds elapsed
-    if (seconds_elapsed >= auction_duration) {
-        seconds_elapsed = (auction_duration - 1);
+    // The increment is current_max_bid * MINIMUM_BID_INCREMENT_BPS / 10000, rounded up.  The product can overflow,
+    // so it is never formed: with current_max_bid = 10000q + r, the increment is q * BPS plus r * BPS / 10000 rounded
+    // up.  q * BPS cannot overflow since q <= UINT64_MAX / 10000 and BPS <= 10000, and r * BPS is below 10^8.
+    uint64_t q = current_max_bid / 10000ul;
+    uint64_t r = current_max_bid % 10000ul;
+    uint64_t increment = (q * MINIMUM_BID_INCREMENT_BPS) + (((r * MINIMUM_BID_INCREMENT_BPS) + 9999ul) / 10000ul);
+
+    // A bid must always be strictly higher than the current highest bid, even if the increment rounds to nothing
+    if (increment == 0) {
+        increment = 1;
     }
 
-    // This is a curve based on the formula:
-    //   y = p * ((1 / (101 - (100 * (a / b)))) + 1.01)
-    // Where a is seconds_elapsed, b is auction_duration, and p is current_max_bid.  This is a curve that goes
-    // from a multiple of 1.02 of the current_max_bid at time 0, up to 2.01x the current_max_bid at the end
-    // of the time range.
-    uint64_t a = seconds_elapsed;
-    uint64_t b = auction_duration;
-    uint64_t p = current_max_bid;
-
-    // Keep track of whether any of the math for computing the minimum bid overflows
+    // The sum can overflow only for bids within a few percent of UINT64_MAX lamports; in that case the only bid that
+    // can still exceed the current one is the largest possible
     bool overflow = false;
-
-    //   result = (p * (((1000 * b) / ((b + (b / 100)) - a)) + 101000)) / 100000
-    // The term involving b and a cannot overflow since b was originally a uint32_t value; and a is less than b.
-    uint64_t result = checked_multiply(p, ((1000 * b) / ((b + (b / 100)) - a)) + 101000, &overflow) / 100000;
-
-    // Check for overflow
+    uint64_t result = checked_add(current_max_bid, increment, &overflow);
     if (overflow) {
-        // Overflow has occurred.  This means that the formula can't be used to compute the maximum next bid because
-        // the numbers are too large.  This would only happen with extremely large bids, millions of dollars' worth.
-        // But to be safe, in this case, instead of computing an invalid minimum next bid, just use 1/8 more than the
-        // previous bid.
-        overflow = false;
-        result = checked_add(current_max_bid, (current_max_bid >> 3), &overflow);
-
-        // If this also overflowed, then use the maximum possible bid.
-        if (overflow) {
-            result = UINT64_MAX;
-        }
+        result = UINT64_MAX;
     }
 
     return result;

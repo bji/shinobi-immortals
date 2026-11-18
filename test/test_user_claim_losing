@@ -492,9 +492,10 @@ if should_run_test user_claim_losing_closed_bid_marker; then
     fi
 
     # rich_user1 burns the bid marker tokens (SPL Token Burn, 8) and closes the token account (SPL Token
-    # CloseAccount, 9), returning its lamports to rich_user1
+    # CloseAccount, 9), returning its lamports to rich_user1.  SPL Token instruction data is packed, without the
+    # alignment padding that "encoding c" would put before the u64 amount, so rust_borsh encoding is used.
     assert ${TEST_NAME}_close_marker                                                                                 \
-    `echo "encoding c                                                                                                \
+    `echo "encoding rust_borsh                                                                                       \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $BID_MARKER_TOKEN_PUBKEY w                                                                        \

@@ -122,7 +122,9 @@ typedef struct
     bool has_auction;
 
     // If [has_auction] is true, this is a number of seconds to add to entry reveal time to get the end of auction
-    // time, which must be > 0.
+    // time, which must be > 0.  It starts as the block's auction duration, and Bid increases it whenever a bid is
+    // placed near the end of the auction (see AUCTION_EXTENSION_SECONDS in constants.h), so it is the length of the
+    // auction so far.
     // If [has_auction] is false, this is the number of seconds it takes for the entry price to decay from
     // non_auction_start_price_lamports to minimum_price_lamports
     uint32_t duration;
@@ -169,9 +171,8 @@ typedef struct
     // If has_auction is true, then this struct is used
     struct {
         // If this entry is in an auction, then this is the current highest auction bid for this entry, or 0
-        // if no bids have been received.  The next highest bid must be at least the minimum bid for all entries
-        // of this block (block.minimum_bid_lamports), and the "bid increment factor" (which is a function of the
-        // time left in the auction) higher than the previous bid
+        // if no bids have been received.  The first bid must be at least the entry's minimum price, and every later
+        // bid must be at least MINIMUM_BID_INCREMENT_BPS (see util_calculations.c) higher than the previous bid
         uint64_t highest_bid_lamports;
 
         // Bid account address of the highest bid.  It is necessary to store this here to track what the winning

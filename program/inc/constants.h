@@ -37,6 +37,16 @@
 #define SETTLE_WINNING_BID_DELAY_SECONDS (30ul * 24ul * 60ul * 60ul)
 #endif
 
+// The number of seconds by which a bid near the end of an auction extends it.  A bid placed with fewer than this many
+// seconds left in the auction moves the auction's end to this many seconds after the bid, so that every bid leaves
+// other bidders time to respond, and nothing is gained by bidding at the last moment.  There is no limit to the number
+// of extensions: an auction continues for as long as bidders keep outbidding each other, each time by at least
+// MINIMUM_BID_INCREMENT_BPS (see util_calculations.c).  It may only be overridden at build time, which is done only to
+// build the program that the tests use.
+#ifndef AUCTION_EXTENSION_SECONDS
+#define AUCTION_EXTENSION_SECONDS (10ul * 60ul)
+#endif
+
 // The number of epochs after an entry's last completed commission charge at which Destake stops charging commission.
 // Destake must be able to return a user's stake account even if commission can no longer be charged: a failed
 // MoveStake aborts the whole transaction, so Destake cannot try the charge and carry on if it fails.  Instead, if
