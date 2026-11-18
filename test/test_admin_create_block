@@ -728,6 +728,38 @@ EOF`
 fi
 
 
+# The block account holds the fixed 120 byte part of the Block, followed by a bitmap of one bit per entry rounded up to
+# whole bytes, and nothing more.  Blocks 90 0 through 90 3 are created with 1, 7, 8 and 9 entries, the counts on either
+# side of a byte boundary, and each account's size is checked.
+if should_run_test admin_create_block_sizes; then
+    BLOCK_NUMBER=0
+    for ENTRY_COUNT in 1 7 8 9; do
+        assert admin_create_block_sizes_$ENTRY_COUNT                                                                 \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                           \
+             $ADMIN_PUBKEY 90 $BLOCK_NUMBER 0 $ENTRY_COUNT 0 0 0 0                                                   \
+             \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/admin.json                                                                        \
+            | solxact submit l 2>&1`
+
+        # The expected size: 120 bytes, plus the entry count divided by 8, rounded up
+        EXPECTED_SIZE=$((120 + ((ENTRY_COUNT + 7) / 8)))
+
+        # The actual size, which is the number of bytes of account data
+        BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 90 u32 $BLOCK_NUMBER ]`
+        ACTUAL_SIZE=`get_account_data $BLOCK_PUBKEY | base64 -d | wc -c | tr -d [:space:]`
+
+        if [ "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]; then
+            echo "FAIL: admin_create_block_sizes: block of $ENTRY_COUNT entries has size $ACTUAL_SIZE,"              \
+                 "expected $EXPECTED_SIZE"
+            exit 1
+        fi
+
+        BLOCK_NUMBER=$((BLOCK_NUMBER + 1))
+    done
+fi
+
+
 if should_run_test admin_create_block_again; then
     # Test with block 0 0
     assert_fail admin_create_block_again                                                                             \

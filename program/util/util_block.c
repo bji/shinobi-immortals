@@ -4,11 +4,13 @@
 #include "util/util_accounts.c"
 
 
+// Returns the size of a Block account for a block of [entry_count] entries: the fixed part of the Block, followed by
+// entries_added_bitmap, which needs one bit per entry, rounded up to a whole number of bytes.
 static uint64_t compute_block_size(uint16_t entry_count)
 {
     Block *b = 0;
 
-    return (uint64_t) &(b->entries_added_bitmap[(((uint32_t) entry_count + 1) / 8) + 1]);
+    return (uint64_t) &(b->entries_added_bitmap[(((uint64_t) entry_count) + 7) / 8]);
 }
 
 
