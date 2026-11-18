@@ -131,9 +131,13 @@ static uint64_t user_destake(const SolParameters *params)
         return Error_InvalidAccount_First + 5;
     }
 
-    // Decode the stake account
+    // Decode the stake account, but only do so if the decoded value will be used.  This allows a destake if there is
+    // no ki harvest to do and commission is waived, even if decoding the stake account would fail (which could occur
+    // if there were a change to the format of stake accounts)
+    bool commission_waived = is_destake_commission_waived(entry, clock.epoch);
+
     Stake stake;
-    if (!decode_stake_account(stake_account, &stake)) {
+    if ((!data->no_ki_harvest || !commission_waived) && !decode_stake_account(stake_account, &stake)) {
         return Error_InvalidAccount_First + 5;
     }
 
@@ -147,7 +151,7 @@ static uint64_t user_destake(const SolParameters *params)
 
     // Charge commission, unless no commission charge has been possible for so long that the user must be allowed to
     // leave without one (see DESTAKE_COMMISSION_WAIVER_EPOCHS in constants.h)
-    if (!is_destake_commission_waived(entry, clock.epoch)) {
+    if (!commission_waived) {
         charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
     }
 
