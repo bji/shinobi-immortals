@@ -8,7 +8,6 @@ const { _buy_tx,
         _bid_tx,
         _claim_losing_tx,
         _stake_with_vote_account_tx,
-        _destake_tx,
         _harvest_tx,
         _level_up_tx
       } = require("./tx.js");
@@ -82,9 +81,11 @@ const g_stake_config_address = "StakeConfig11111111111111111111111111111111";
 const g_stake_config_pubkey = make_pubkey(g_stake_config_address);
 
 // Instruction codes of the instructions whose transactions are built in this file (see program/entrypoint.c)
-const INSTRUCTION_SETTLE_WINNING_BID = 18;
-const INSTRUCTION_DELEGATE_MASTER_STAKE = 21;
-const INSTRUCTION_WITHDRAW_EXCESS = 22;
+const INSTRUCTION_DESTAKE = 15;
+const INSTRUCTION_THAW = 16;
+const INSTRUCTION_SETTLE_WINNING_BID = 19;
+const INSTRUCTION_DELEGATE_MASTER_STAKE = 22;
+const INSTRUCTION_WITHDRAW_EXCESS = 23;
 
 // Data type code of the authority account's data (DataType_Authority in program/inc/data_type.h)
 const DATA_TYPE_AUTHORITY = 6;
@@ -2071,10 +2072,25 @@ class Wallet
     // no_ki_harvest is true, then no Ki is harvested, and any Ki that the entry had earned and not yet harvested is
     // forfeited.  This exists so that the stake account can still be recovered if harvesting Ki were ever to fail;
     // there is no other reason to use it, and it should normally be omitted.
-    async destake_entry(entry, sign_callback, no_ki_harvest)
+    //
+    // Destake also normally thaws the entry's token account, which was frozen when the entry was staked.  If no_thaw
+    // is true, then the token account is left frozen, and must be thawed with thaw_entry() before the token can be
+    // transferred or the entry staked again.  This exists so that the stake account can still be recovered if
+    // thawing the token account were ever to fail; there is no other reason to use it, and it should normally be
+    // omitted.
+    async destake_entry(entry, sign_callback, no_ki_harvest, no_thaw)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_destake_tx(entry, wallet_address, no_ki_harvest);
+            return this.make_destake_tx(entry, wallet_address, no_ki_harvest, no_thaw);
+        }, sign_callback);
+    }
+
+    // Thaws the entry's token account, held by the wallet, when it was left frozen by a destake with no_thaw.  This
+    // only succeeds if the entry is not staked and its token account is frozen.
+    async thaw_entry(entry, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_thaw_tx(entry, wallet_address);
         }, sign_callback);
     }
 
@@ -2218,19 +2234,90 @@ class Wallet
                            withdraw_authority : wallet_address });
     }
 
-    async make_destake_tx(entry, wallet_address, no_ki_harvest)
+    // Accounts and data here must match those of scripts/user_destake_tx.sh
+    async make_destake_tx(entry, wallet_address, no_ki_harvest, no_thaw)
     {
-       return _destake_tx({ funding_pubkey : wallet_address,
-                            block_pubkey : entry.block.address,
-                            entry_pubkey : entry.address,
-                            token_owner_pubkey : wallet_address,
-                            token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
-                            stake_pubkey : entry.owned_stake_account,
-                            ki_destination_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
-                            ki_destination_owner_pubkey : wallet_address,
-                            new_withdraw_authority : wallet_address,
-                            // The no_ki_harvest flag of the Destake instruction data: 1 = do not harvest Ki
-                            no_ki_harvest : (no_ki_harvest ? 1 : 0) });
+        let keys = [
+            // The funding account, which pays for the Ki destination account if it does not exist yet
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The block
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The token owner, who receives the stake account
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
+            // The token account holding the entry's token, which is thawed unless no_thaw
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
+              isSigner : false, isWritable : true },
+            // The entry's stake account
+            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : true },
+            // The Ki destination account, which receives harvested Ki
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, g_ki_mint_address)),
+              isSigner : false, isWritable : true },
+            // The owner of the Ki destination account
+            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : false },
+            // The master stake account, which receives commission
+            { pubkey : g_master_stake_pubkey, isSigner : false, isWritable : true },
+            // The Ki mint
+            { pubkey : g_ki_mint_pubkey, isSigner : false, isWritable : true },
+            // The program authority
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // Clock sysvar
+            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
+            // The system program
+            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
+            // The stake program
+            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
+            // Stake history sysvar
+            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
+            // The Associated Token Account program
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
+            // The entry's mint, which is needed to thaw the token account unless no_thaw
+            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is the instruction code, then the no_ki_harvest flag (1 = do not harvest Ki), then the
+        // no_thaw flag (1 = leave the token account frozen)
+        let data = Buffer.Buffer.from([ INSTRUCTION_DESTAKE, (no_ki_harvest ? 1 : 0), (no_thaw ? 1 : 0) ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
+    }
+
+    // Accounts and data here must match those of scripts/user_thaw_tx.sh
+    async make_thaw_tx(entry, wallet_address)
+    {
+        let keys = [
+            // The block
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : false },
+            // The token owner
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
+            // The token account holding the entry's token, which is thawed
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
+              isSigner : false, isWritable : true },
+            // The entry's mint
+            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
+            // The program authority, which is the freeze authority of the entry's mint
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_THAW ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
     async make_harvest_tx(entry, wallet_address)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Tests of the recovery of the master stake account after it has been deactivated: DelegateMasterStake (21) and
-# WithdrawExcess (22) of the master stake account.
+# Tests of the recovery of the master stake account after it has been deactivated: DelegateMasterStake (22) and
+# WithdrawExcess (23) of the master stake account.
 #
 # Usage: SOURCE=<root of the Shinobi Immortals source> test/test_master_stake_recovery.sh
 #

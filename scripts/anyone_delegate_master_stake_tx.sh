@@ -97,5 +97,5 @@ solxact encode                                                                  
         account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
         account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                          \
         account $STAKE_CONFIG_PUBKEY                                                                                  \
-        // Instruction code 21 = DelegateMasterStake //                                                               \
-        u8 21
+        // Instruction code 22 = DelegateMasterStake //                                                               \
+        u8 22

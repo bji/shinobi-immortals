@@ -54,6 +54,8 @@ source $SOURCE/test/test_user_stake
 
 source $SOURCE/test/test_user_destake
 
+source $SOURCE/test/test_user_thaw
+
 source $SOURCE/test/test_user_harvest
 
 source $SOURCE/test/test_user_level_up

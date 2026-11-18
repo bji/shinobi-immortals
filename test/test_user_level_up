@@ -212,8 +212,8 @@ if should_run_test user_level_up_bad_entry; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 17 = LevelUp //                                                                       \
-           u8 17 u64 1000"                                                                                           \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -247,8 +247,8 @@ if should_run_test user_level_up_unowned_entry; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 17 = LevelUp //                                                                       \
-           u8 17 u64 1000"                                                                                           \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -282,8 +282,8 @@ if should_run_test user_level_up_unowned_token; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 17 = LevelUp //                                                                       \
-           u8 17 u64 1000"                                                                                           \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -322,8 +322,8 @@ if should_run_test user_level_up_incorrect_metadata; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 17 = LevelUp //                                                                       \
-           u8 17 u64 1000"                                                                                           \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -357,8 +357,8 @@ if should_run_test user_level_up_incorrect_ki; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 17 = LevelUp //                                                                       \
-           u8 17 u64 1000"                                                                                           \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -381,8 +381,8 @@ if should_run_test user_level_up_incorrect_ki; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 17 = LevelUp //                                                                       \
-           u8 17 u64 1000"                                                                                           \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -771,8 +771,8 @@ if should_run_test user_level_up_past_9; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 17 = LevelUp //                                                                       \
-           u8 17 u64 1"                                                                                              \
+           // Instruction code 18 = LevelUp //                                                                       \
+           u8 18 u64 1"                                                                                              \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \

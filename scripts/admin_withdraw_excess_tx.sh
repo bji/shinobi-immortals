@@ -173,6 +173,6 @@ solxact encode                                                                  
         account $CLOCK_SYSVAR_PUBKEY                                                                                  \
         account $STAKE_PROGRAM_PUBKEY                                                                                 \
         account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
-        // Instruction code 22 = WithdrawExcess //                                                                    \
-        u8 22                                                                                                         \
+        // Instruction code 23 = WithdrawExcess //                                                                    \
+        u8 23                                                                                                         \
         u8 $ACCOUNT_TYPE_CODE

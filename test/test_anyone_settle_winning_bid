@@ -307,8 +307,8 @@ function settle_submit ()
           account $S_METADATA w                                                                                      \
           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
           $S_EXTRA_ACCOUNTS                                                                                          \
-          // Instruction code 18 = SettleWinningBid //                                                               \
-          u8 18 $S_DATA"                                                                                             \
+          // Instruction code 19 = SettleWinningBid //                                                               \
+          u8 19 $S_DATA"                                                                                             \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $1                                                                                            \

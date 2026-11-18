@@ -122,5 +122,5 @@ solxact encode                                                                  
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
-        // Instruction code 16 = Harvest //                                                                           \
-        u8 16
+        // Instruction code 17 = Harvest //                                                                           \
+        u8 17

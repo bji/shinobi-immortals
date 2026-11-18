@@ -59,24 +59,29 @@ typedef enum
     Instruction_Stake                         = 14,
     // Destake the entry, returning the stake account of the entry, and thawing the token account holding the entry's
     // token.  Ki that the entry has earned is harvested first, unless the instruction data says not to, which makes
-    // it possible to recover the stake account even if Ki could not be harvested.
+    // it possible to recover the stake account even if Ki could not be harvested.  The thaw can be skipped in the same
+    // way, which makes it possible to recover the stake account even if the token account could not be thawed; the
+    // token account is then left frozen until Thaw thaws it.
     Instruction_Destake                       = 15,
+    // Thaw the token account holding the entry's token, if it was left frozen by a Destake that skipped the thaw.
+    // Only the token's owner may do this, and only while the entry is not staked.
+    Instruction_Thaw                          = 16,
     // Harvest Ki
-    Instruction_Harvest                       = 16,
+    Instruction_Harvest                       = 17,
     // Level up an entry.  This requires as input an amount of Ki, which is burned.  If the entry is staked, the Ki
     // that it has earned is harvested first, so that it is paid at the ki_factor of the level at which it was earned.
-    Instruction_LevelUp                       = 17,
+    Instruction_LevelUp                       = 18,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------
     // Settle the winning bid of an auction that has ended: the entry's token goes to the winning bidder's associated
     // token account, and the winning bid goes to the admin.  The winning bidder may do this at any time; anyone else
     // may do it once 30 days have passed since the end of the auction, so that an auction which was won can always
     // be completed, even if the bidder never returns.
-    Instruction_SettleWinningBid              = 18,
+    Instruction_SettleWinningBid              = 19,
     // If the entry is staked and the stake account is delegated, this pays any commission owed into the master stake
     // account.  If the entry is staked and the stake account is not delegated, this delegates the stake account to
     // Shinobi Systems so that it can start earning Ki.
-    Instruction_TakeCommissionOrDelegate      = 19,
+    Instruction_TakeCommissionOrDelegate      = 20,
 
     // Special functions -----------------------------------------------------------------------------------------------
     // This is a special function that can only be called on an entry that is in the Owned or OwnedAndStaked state.
@@ -89,21 +94,20 @@ typedef enum
     // instruction (but only if both the user and admin agree to do so).  The instruction data includes a flag
     // that says whether or not to reauthorize the metadata; if it is false, the Metaplex Metadata program is not
     // invoked, so that a problem with that program cannot prevent a stake account from being returned.
-    Instruction_ReAuthorize                   = 20,
+    Instruction_ReAuthorize                   = 21,
 
-    // Instructions added after ReAuthorize; these are numbered in the order in which they were added, so that the
-    // codes of earlier instructions never change --------------------------------------------------------------------
+    // Instructions added after ReAuthorize ----------------------------------------------------------------------------
     // Anyone function: delegates the master stake account to Shinobi Systems if it is not actively delegated.  The
     // only way that can come about is that the stake program's DeactivateDelinquent instruction was used to
     // deactivate it, which anyone may do after Shinobi Systems has not voted for five epochs.
-    Instruction_DelegateMasterStake           = 21,
+    Instruction_DelegateMasterStake           = 22,
     // Admin function: withdraws to the admin the excess lamports of an account that the program controls: the
     // master stake account, the program state account, the authority account, or a block, entry or whitelist
     // account.  The excess is whatever the account holds beyond what it is required to hold; for the master stake
     // account that is its lamports that are not staked, less its minimum of 2 SOL, and for the authority account it
     // excludes the purchase prices of mysteries that it holds in escrow.  This recovers lamports that someone
     // transferred to such an account, which no other instruction can take out again.
-    Instruction_WithdrawExcess                = 22
+    Instruction_WithdrawExcess                = 23
 
 } Instruction;
 
@@ -128,6 +132,7 @@ typedef enum
 #include "user/user_claim_losing.c"
 #include "user/user_stake.c"
 #include "user/user_destake.c"
+#include "user/user_thaw.c"
 #include "user/user_harvest.c"
 #include "user/user_level_up.c"
 
@@ -208,6 +213,9 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_Destake:
         return user_destake(&params);
+
+    case Instruction_Thaw:
+        return user_thaw(&params);
 
     case Instruction_Harvest:
         return user_harvest(&params);

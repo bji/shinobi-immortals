@@ -1,0 +1,238 @@
+# Tests of Thaw (16), and of Destake with the no_thaw flag set, which leaves the token account that holds the entry's
+# token frozen until Thaw thaws it.
+#
+# Uses block 19 0, which has two entries: 19 0 0, which rich_user1 buys and stakes, and 19 0 1, which is not owned.
+# The tests below run in order, each starting from the state that the one before it left:
+# - 19 0 0 is staked; Thaw is refused
+# - Destake with no_thaw returns the stake account and leaves the token account frozen
+# - Thaw is refused for anyone but the token owner, and Stake is refused while the token account is frozen
+# - Thaw thaws the token account; a second Thaw is refused, and Stake succeeds again
+
+BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
+BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+SALT0=0
+SALT1=1
+SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
+SHA2561=`compute_metadata_sha256 $METADATA1 $SALT1`
+
+# This must be set so that user_stake_tx.sh will use the correct vote account
+export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+
+
+# Create the stake account, block and entries
+if [ -z "$TESTS" ]; then
+    # Fund rich_user1 for what these tests spend (an entry purchase and a 1000 SOL stake account), so that they take
+    # nothing from the funds that later tests rely on
+    solana -u l airdrop -k $LEDGER/rich_user1.json 3000 --commitment=finalized >/dev/null 2>/dev/null
+
+    # An undelegated stake account of rich_user1, which Stake delegates to Shinobi Systems
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/thaw_stake.json 1000 --commitment=finalized
+
+    # 19 0, with two entries and no commission
+    assert user_thaw_setup_19_0_a                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 19 0 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_thaw_setup_19_0_b                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 19 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # set metadata
+    assert user_thaw_setup_19_0_c                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 19 0 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_thaw_setup_19_0_d                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 19 0 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # reveal entries
+    assert user_thaw_setup_19_0_e                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 19 0 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # rich_user1 buy entry 0
+    assert user_thaw_setup_19_0_f                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 19 0 0 \`lamports_from_sol 1001\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # rich_user1 stake entry 0
+    assert user_thaw_setup_19_0_g                                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 19 0 0 $LEDGER/thaw_stake.json                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # 19 0 0 is owned and staked by rich_user1
+    # 19 0 1 is not owned
+fi
+
+
+export THAW_STAKE_PUBKEY=`solxact pubkey $LEDGER/thaw_stake.json`
+THAW_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 19 u32 0 ]`
+THAW_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $THAW_BLOCK_PUBKEY u16 0 ]`
+THAW_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $THAW_MINT_PUBKEY ]`
+# rich_user1's token account for entry 19 0 0
+THAW_TOKEN_PUBKEY=`get_splata_account $THAW_MINT_PUBKEY $RICH_USER1_PUBKEY`
+
+
+# Fails test $1 with message $2 unless the token account of rich_user1 for entry 19 0 0 is in state $3 (1 =
+# Initialized, 2 = Frozen) and holds the token
+function check_thaw_token_state ()
+{
+    local TEST_NAME=$1
+    local MESSAGE=$2
+    local STATE=$3
+
+    if [ "`get_token_account_state $THAW_MINT_PUBKEY $RICH_USER1_PUBKEY`" != "$STATE" ] ||
+       [ "`get_token_balance $THAW_MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ]; then
+        echo "FAIL: $TEST_NAME: $MESSAGE"
+        exit 1
+    fi
+}
+
+
+# Thaw of an entry that is not owned (Error_NotOwned, 1028)
+if should_run_test user_thaw_not_owned; then
+    assert_fail user_thaw_not_owned                                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x404'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_thaw_tx.sh                                        \
+         $RICH_USER1_PUBKEY 19 0 1                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# Thaw of an entry that is staked: its token account must stay frozen (Error_EntryStaked, 1045)
+if should_run_test user_thaw_staked; then
+    check_thaw_token_state user_thaw_staked "token account of a staked entry is not frozen" 2
+    assert_fail user_thaw_staked                                                                                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x415'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_thaw_tx.sh                                        \
+         $RICH_USER1_PUBKEY 19 0 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    check_thaw_token_state user_thaw_staked "token account of a staked entry was thawed" 2
+fi
+
+
+# Thaw takes no data beyond the instruction code (Error_InvalidDataSize, 1001)
+if should_run_test user_thaw_bad_data_size; then
+    assert_fail user_thaw_bad_data_size                                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $THAW_BLOCK_PUBKEY                                                                                \
+           account $THAW_ENTRY_PUBKEY                                                                                \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $THAW_TOKEN_PUBKEY w                                                                              \
+           account $THAW_MINT_PUBKEY                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           // Instruction code 16 = Thaw //                                                                          \
+           u8 16                                                                                                     \
+           u8 0"                                                                                                     \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# Destake with no_thaw: the stake account is returned to rich_user1, but the token account is left frozen
+if should_run_test user_thaw_destake_no_thaw; then
+    assert user_thaw_destake_no_thaw                                                                                 \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_destake_tx.sh                                     \
+         $RICH_USER1_PUBKEY 19 0 0 $THAW_STAKE_PUBKEY no_thaw                                                        \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # The stake account belongs to rich_user1 again
+    if [ "`solana -u l stake-account $THAW_STAKE_PUBKEY --output json | jq -r .withdrawer`" != "$RICH_USER1_PUBKEY" ]
+    then
+        echo "FAIL: user_thaw_destake_no_thaw: stake account was not returned to rich_user1"
+        exit 1
+    fi
+    check_thaw_token_state user_thaw_destake_no_thaw "token account was not left frozen" 2
+fi
+
+
+# Thaw signed by someone other than the owner of the token account (Error_InvalidAccount_First + 3, 1103)
+if should_run_test user_thaw_not_token_owner; then
+    assert_fail user_thaw_not_token_owner                                                                            \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_thaw_tx.sh                                        \
+         $RICH_USER2_PUBKEY 19 0 0 $THAW_TOKEN_PUBKEY                                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    check_thaw_token_state user_thaw_not_token_owner "token account was thawed by someone else" 2
+fi
+
+
+# Stake is refused while the token account is left frozen, since Stake requires a token account that is not frozen
+# (Error_InvalidAccount_First + 2, 1102)
+if should_run_test user_thaw_stake_while_frozen; then
+    assert_fail user_thaw_stake_while_frozen                                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 19 0 0 $LEDGER/thaw_stake.json                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# Thaw by the token owner of an entry that is not staked thaws the token account
+if should_run_test user_thaw_success; then
+    assert user_thaw_success                                                                                         \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_thaw_tx.sh                                        \
+         $RICH_USER1_PUBKEY 19 0 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    check_thaw_token_state user_thaw_success "token account was not thawed" 1
+fi
+
+
+# Thaw of a token account that is not frozen (Error_TokenAccountNotFrozen, 1046)
+if should_run_test user_thaw_not_frozen; then
+    assert_fail user_thaw_not_frozen                                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x416'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_thaw_tx.sh                                        \
+         $RICH_USER1_PUBKEY 19 0 0                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# Once thawed, the entry can be staked again, which freezes the token account again
+if should_run_test user_thaw_stake_after_thaw; then
+    assert user_thaw_stake_after_thaw                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 19 0 0 $LEDGER/thaw_stake.json                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    check_thaw_token_state user_thaw_stake_after_thaw "token account was not frozen by Stake" 2
+fi

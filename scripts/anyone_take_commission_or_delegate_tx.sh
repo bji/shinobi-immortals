@@ -107,5 +107,5 @@ solxact encode                                                                  
         account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
         account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                          \
         account $STAKE_CONFIG_PUBKEY                                                                                  \
-        // Instruction code 19 = TakeCommissionOrDelegate //                                                          \
-        u8 19
+        // Instruction code 20 = TakeCommissionOrDelegate //                                                          \
+        u8 20

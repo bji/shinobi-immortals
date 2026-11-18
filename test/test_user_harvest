@@ -148,8 +148,8 @@ if should_run_test user_harvest_bad_entry; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 16 = Harvest //                                                                       \
-           u8 16"                                                                                                    \
+           // Instruction code 17 = Harvest //                                                                       \
+           u8 17"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -320,7 +320,9 @@ if should_run_test user_destake_no_ki_harvest; then
            // Instruction code 15 = Destake //                                                                       \
            u8 15                                                                                                     \
            // no_ki_harvest flag: 1 = do not harvest Ki //                                                           \
-           u8 1"                                                                                                     \
+           u8 1                                                                                                      \
+           // no_thaw flag: 0 = thaw the token account //                                                            \
+           u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user2.json                                                                       \

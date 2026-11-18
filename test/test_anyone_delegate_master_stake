@@ -1,5 +1,5 @@
 
-# Tests of DelegateMasterStake (21).  In this suite the master stake account is always actively delegated, since
+# Tests of DelegateMasterStake (22).  In this suite the master stake account is always actively delegated, since
 # Shinobi Systems here is the test validator, which never stops voting; so only the refusals can be tested here.  The
 # successful delegation of a deactivated master stake account is tested by test/test_master_stake_recovery.sh, which
 # runs on its own validator.
@@ -19,8 +19,8 @@ if should_run_test anyone_delegate_master_stake_bad_data; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                      \
            account $STAKE_CONFIG_PUBKEY                                                                              \
-           // Instruction code 21 = DelegateMasterStake //                                                           \
-           u8 21                                                                                                     \
+           // Instruction code 22 = DelegateMasterStake //                                                           \
+           u8 22                                                                                                     \
            u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -43,8 +43,8 @@ if should_run_test anyone_delegate_master_stake_wrong_account; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                      \
            account $STAKE_CONFIG_PUBKEY                                                                              \
-           // Instruction code 21 = DelegateMasterStake //                                                           \
-           u8 21"                                                                                                    \
+           // Instruction code 22 = DelegateMasterStake //                                                           \
+           u8 22"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -66,8 +66,8 @@ if should_run_test anyone_delegate_master_stake_wrong_vote_account; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $RICH_USER2_PUBKEY                                                                                \
            account $STAKE_CONFIG_PUBKEY                                                                              \
-           // Instruction code 21 = DelegateMasterStake //                                                           \
-           u8 21"                                                                                                    \
+           // Instruction code 22 = DelegateMasterStake //                                                           \
+           u8 22"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \

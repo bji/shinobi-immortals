@@ -90,7 +90,7 @@ typedef enum
     // ReAuthorize) on an entry that is not staked
     Error_NotStaked                                    = 1027,
 
-    // Attempt to level up an entry that is not owned
+    // Attempt to level up, or thaw the token account of, an entry that is not owned
     Error_NotOwned                                     = 1028,
 
     // Attempt to level up an entry that is already at max level
@@ -141,6 +141,12 @@ typedef enum
     // Attempt by someone other than the winning bidder to settle a winning bid before
     // SETTLE_WINNING_BID_DELAY_SECONDS have passed since the end of the auction
     Error_OnlyBidderCanSettleYet                       = 1044,
+
+    // Attempt to thaw the token account of an entry that is staked; it stays frozen for as long as the entry is staked
+    Error_EntryStaked                                  = 1045,
+
+    // Attempt to thaw a token account that is not frozen
+    Error_TokenAccountNotFrozen                        = 1046,
 
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

@@ -22,6 +22,19 @@ typedef struct
     // Skipping the harvest costs only the token owner, and only their own unharvested Ki.
     uint8_t no_ki_harvest;
 
+    // If this is 0, then the token account that holds the entry's token, which was frozen by Stake, is thawed once the
+    // stake account has been returned.  If this is 1, then the token account is not thawed, and is left frozen; the
+    // token owner can thaw it afterwards with the Thaw instruction (see user_thaw.c), and must do so before the entry
+    // can be staked again.  No other value is allowed.
+    //
+    // The purpose of this flag is, like no_ki_harvest, to make sure that a stake account can always be recovered by its
+    // owner.  Thawing requires the SPL Token program, and if its thaw were ever to fail, a Destake that thaws would
+    // fail with it.  With this flag set, the token account is not modified at all: it need not be writable, and the
+    // entry mint account is neither checked nor used, and may be any account.  The stake account is still returned
+    // and the entry is still no longer staked.  Leaving the token account frozen costs only the token owner, who
+    // cannot transfer or burn the token until it is thawed.
+    uint8_t no_thaw;
+
 } DestakeData;
 
 
@@ -29,13 +42,15 @@ static uint64_t user_destake(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts.  The accounts that are only used
     // to harvest Ki (6, 7, 9 and 16) are declared here with no requirements, because they must not be able to cause a
-    // failure when no Ki is to be harvested; their requirements are checked below if Ki is to be harvested.
+    // failure when no Ki is to be harvested; their requirements are checked below if Ki is to be harvested.  In the
+    // same way, the token account (4) is declared read-only and the entry mint account (17) with no requirements,
+    // because they only need more than that if the token account is to be thawed; that is checked below.
     DECLARE_ACCOUNTS {
         DECLARE_ACCOUNT(0,   funding_account,                  ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(1,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(4,   token_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(4,   token_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(5,   stake_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(6,   ki_destination_account,           ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(7,   ki_destination_owner_account,     ReadOnly,   NotSigner,  KnownAccount_NotKnown);
@@ -66,10 +81,20 @@ static uint64_t user_destake(const SolParameters *params)
         return Error_InvalidData_First;
     }
 
+    // The no_thaw flag must be exactly 0 or 1, so that a malformed transaction cannot be mistaken for a request to
+    // leave the token account frozen
+    if (data->no_thaw > 1) {
+        return Error_InvalidData_First + 1;
+    }
+
+    // To make the remaining code a little more readable ...
+    bool should_harvest_ki = !data->no_ki_harvest;
+    bool should_thaw_token = !data->no_thaw;
+
     // If Ki is to be harvested, then the accounts that are used to harvest it must be the correct accounts with the
     // correct permissions.  These are the checks that the account declarations above would otherwise have made, and
     // they fail with the same errors.
-    if (!data->no_ki_harvest) {
+    if (should_harvest_ki) {
         // The Ki destination account must be writable, since Ki is minted into it
         if (!ki_destination_account->is_writable) {
             return Error_InvalidAccountPermissions_First + 6;
@@ -121,9 +146,16 @@ static uint64_t user_destake(const SolParameters *params)
         return Error_InvalidAccount_First + 4;
     }
 
-    // Check to make sure that the correct entry mint account was passed in; it is needed to thaw the token account
-    if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
-        return Error_InvalidAccount_First + 17;
+    // If the token account is to be thawed, then it must be writable, and the correct entry mint account must have
+    // been passed in, since it is needed to thaw the token account.  These are the checks that the account
+    // declarations above would otherwise have made, and they fail with the same errors.
+    if (should_thaw_token) {
+        if (!token_account->is_writable) {
+            return Error_InvalidAccountPermissions_First + 4;
+        }
+        if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
+            return Error_InvalidAccount_First + 17;
+        }
     }
 
     // Check to make sure that the stake account passed in is actually staked in the entry
@@ -131,27 +163,28 @@ static uint64_t user_destake(const SolParameters *params)
         return Error_InvalidAccount_First + 5;
     }
 
+    // Note whether or not commission should be charged
+    bool should_charge_commission = !is_destake_commission_waived(entry, clock.epoch);
+
     // Decode the stake account, but only do so if the decoded value will be used.  This allows a destake if there is
     // no ki harvest to do and commission is waived, even if decoding the stake account would fail (which could occur
     // if there were a change to the format of stake accounts)
-    bool commission_waived = is_destake_commission_waived(entry, clock.epoch);
-
     Stake stake;
-    if ((!data->no_ki_harvest || !commission_waived) && !decode_stake_account(stake_account, &stake)) {
+    if ((should_harvest_ki || should_charge_commission) && !decode_stake_account(stake_account, &stake)) {
         return Error_InvalidAccount_First + 5;
     }
 
     // Harvest Ki, unless the instruction data says not to.  Must be done before commission is charged since
     // commission charge actually reduces the number of lamports in the stake account, which would affect Ki harvest
     // calculations.
-    if (!data->no_ki_harvest) {
-        harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-                   funding_account->key, clock.epoch, params->ka, params->ka_num);
+    if (should_harvest_ki) {
+        harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key, funding_account->key,
+                   clock.epoch, params->ka, params->ka_num);
     }
 
     // Charge commission, unless no commission charge has been possible for so long that the user must be allowed to
     // leave without one (see DESTAKE_COMMISSION_WAIVER_EPOCHS in constants.h)
-    if (!commission_waived) {
+    if (should_charge_commission) {
         charge_commission(&stake, block, entry, stake_account->key, clock.epoch, params->ka, params->ka_num);
     }
 
@@ -160,10 +193,11 @@ static uint64_t user_destake(const SolParameters *params)
     set_stake_authorities_signed(stake_account->key, token_owner_account->key, params->ka, params->ka_num);
 
     // The stake account has been returned, so thaw the token account that was frozen when the entry was staked; the
-    // token can be transferred again.  The token account of a staked entry is always frozen, but this is only done if
-    // it actually is, so that if it were somehow not frozen, the stake account could still be returned (the SPL Token
-    // program fails an attempt to thaw an account that is not frozen).
-    if (is_token_account_frozen(token_account)) {
+    // token can be transferred again.  This is skipped if the instruction data says not to, leaving the token account
+    // frozen until the token owner runs Thaw.  The token account of a staked entry is always frozen, but this is only
+    // done if it actually is, so that if it were somehow not frozen, the stake account could still be returned (the
+    // SPL Token program fails an attempt to thaw an account that is not frozen).
+    if (should_thaw_token && is_token_account_frozen(token_account)) {
         thaw_token_account(token_account->key, entry_mint_account->key, params->ka, params->ka_num);
     }
 
