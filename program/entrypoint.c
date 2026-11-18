@@ -31,7 +31,7 @@ typedef enum
     Instruction_RevealEntries                 =  5,
     // Update the commission charged per epoch per stake account.  This is in addition to the validator commission.
     // This command fails if the commission has already been updated in the current epoch, and also if the new
-    // commission is more than 2% higher than the old commission.
+    // commission is more than 1 percentage point higher than the old commission.  No commission can exceed 5%.
     Instruction_SetBlockCommission            =  6,
     // Split stake off of the master stake account.  Will never split off stake that would leave the master account
     // at less than 2 SOL staked.

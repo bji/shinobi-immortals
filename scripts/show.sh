@@ -101,11 +101,13 @@ function to_timestamp ()
     echo -n ")"
 }
 
+# Prints commission $1 as the fraction of staking rewards that it takes.  A commission is a u16 in which 65535 means
+# 5%, so the fraction is the commission divided by 65535 * 20 = 1310700 (which would mean 100%).
 function to_commission ()
 {
     local commission=$1
 
-    normalize_float `echo "20 k $commission 65536 / p" | dc`
+    normalize_float `echo "20 k $commission 1310700 / p" | dc`
 }
 
 function bit_bool ()

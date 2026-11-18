@@ -99,7 +99,7 @@ typedef enum
     // Commission already set this epoch and can't be set again
     Error_CommissionAlreadySetThisEpoch                = 1030,
 
-    // Attempted to set commission to a value more than 2% higher than current commission
+    // Attempted to set commission to a value more than 1 percentage point higher than current commission
     Error_CommissionTooHigh                            = 1031,
 
     // Invalid metaplex metadata in metadata account

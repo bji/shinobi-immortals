@@ -64,7 +64,7 @@ if [ -z "$TESTS" ]; then
     # 17 0
     assert anyone_take_commission_or_delegate_setup_17_0_a                                                           \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 17 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 17 0 65535 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -150,7 +150,7 @@ if [ -z "$TESTS" ]; then
     # 17 1
     assert anyone_take_commission_or_delegate_setup_17_1                                                             \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 17 1 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 17 1 65535 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -162,7 +162,7 @@ if [ -z "$TESTS" ]; then
     # tests of staking stake accounts that are delegated to a validator other than Shinobi Systems.
     assert anyone_take_commission_or_delegate_setup_17_2_a                                                           \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 17 2 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 17 2 65535 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -566,8 +566,8 @@ if should_run_test anyone_take_commission_or_delegate_harvest_commission_harvest
     # Let rewards accumulate until the commission on them is large enough to change the Ki minted, so that the test
     # can tell Ki earned on rewards before commission from Ki earned on rewards after commission.  At about 1000 SOL
     # of stake the effective-stake ratio is about 0.43, so with a factor of 10000 one whole Ki needs about 0.00023
-    # SOL of commission; at the block's 10% commission (6553/65535), 0.005 SOL of rewards gives about 2 Ki of
-    # difference.  Give up after 20 epochs.
+    # SOL of commission; at the block's 5% commission (65535, the maximum), 0.01 SOL of rewards gives about 2 Ki of
+    # difference.  Give up after 40 epochs.
     EPOCHS_WAITED=0
     while true; do
         sleep_until_next_epoch
@@ -575,11 +575,11 @@ if should_run_test anyone_take_commission_or_delegate_harvest_commission_harvest
         # The epoch in which the rest of the test must complete, so that no further rewards arrive part way through
         TEST_EPOCH=`current_epoch`
         STAKE_BEFORE_COMMISSION=`stake_field $DELEGATED_STAKE_PUBKEY delegatedStake`
-        if [ $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) -ge 5000000 ]; then
+        if [ $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) -ge 10000000 ]; then
             break
         fi
-        if [ $EPOCHS_WAITED -ge 20 ]; then
-            fail_test $TEST_NAME "only $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) lamports of rewards after 20 epochs"
+        if [ $EPOCHS_WAITED -ge 40 ]; then
+            fail_test $TEST_NAME "only $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) lamports of rewards after 40 epochs"
         fi
     done
     REWARDS=$((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1))

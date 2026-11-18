@@ -59,7 +59,7 @@ if [ -z "$TESTS" ]; then
     # 16 0
     assert user_level_up_setup_16_0_a                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 16 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 16 0 65535 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \

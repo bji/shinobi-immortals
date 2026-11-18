@@ -3,8 +3,9 @@
 // This is a unix timestamp
 typedef int64_t timestamp_t;
 
-// This is a commission.  It is a binary fractional value, with 0xFFFF representing 100% commission and 0x0000
-// representing 0% commission.
+// This is a commission: a fraction of staking rewards, with 0 representing 0% commission and 65535 (0xFFFF), the
+// largest value that can be stored, representing 5% commission.  So no commission can ever be more than 5%.  A value
+// of c is the fraction c / COMMISSION_FULL_SCALE (65535 * 20) of rewards; 1% is 13107.  See util_calculations.c.
 typedef uint16_t commission_t;
 
 // 32 bytes of a SHA-256 value

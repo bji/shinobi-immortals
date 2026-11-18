@@ -124,10 +124,10 @@ if [ -z "$TESTS" ]; then
 
     # 14 1 is an incomplete block
 
-    # 14 2 0 is owned by rich_user1 and is in a block with 10% commission
+    # 14 2 0 is owned by rich_user1 and is in a block with 5% commission (65535, the maximum)
     assert user_stake_setup_14_2_a                                                                                   \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 14 2 6553 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 14 2 65535 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -167,7 +167,7 @@ if [ -z "$TESTS" ]; then
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 
-    # 14 2 0 is owned and staked by rich_user1 and is in a block with 10% commission
+    # 14 2 0 is owned and staked by rich_user1 and is in a block with 5% commission (65535, the maximum)
 fi
 
 

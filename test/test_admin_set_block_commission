@@ -104,14 +104,15 @@ if should_run_test admin_set_block_commission_success; then
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
     assert admin_set_block_commission_success                                                                        \
-   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 1000 \
+   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 13107 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Check to make sure commission is as expected
     BLOCK_JSON=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l block 5 0`
     COMMISSION=`echo "$BLOCK_JSON" | jq .commission`
-    if [ "$COMMISSION" != "0.0152587890625" ]; then
+    # 13107 is 1% (65535 is 5%), the largest increase allowed from the initial commission of 0
+    if [ "$COMMISSION" != "0.01" ]; then
         echo "FAIL: admin_set_block_commission_success failed to set commission:"
         echo $COMMISSION
         exit 1
@@ -149,9 +150,21 @@ if should_run_test admin_set_block_commission_large_change; then
         | solxact submit l 2>&1`
     # Must wait for at least 1 epoch to pass
     sleep_until_next_epoch
+    # 15108 is 1 more than 2000 + 13107, i.e. just over 1 percentage point higher (65535 is 5%)
     assert_fail admin_set_block_commission_large_change                                                              \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
-   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 3311 \
+   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 15108 \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+
+# Change commission by exactly the most allowed: 1 percentage point, 13107, above the 2000 set by
+# admin_set_block_commission_large_change in the same epoch, whose change was refused
+if should_run_test admin_set_block_commission_largest_change; then
+    assert admin_set_block_commission_largest_change                                                                 \
+   `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_block_commission_tx.sh $ADMIN_PUBKEY 5 0 15107 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
