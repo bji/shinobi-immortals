@@ -456,6 +456,85 @@ if should_run_test user_claim_losing_in_auction_losing_bidder_again; then
 fi
 
 
+# Entry in auction, is a losing bidder whose bid marker token account has already been closed (failure).  Asking to
+# reclaim a bid marker that no longer exists fails with Error_FailedToReclaimBidMarkerToken (1025), rather than reading
+# token data from an account that has none.  Leaving out the bid marker accounts then succeeds.
+#
+# Uses entry 11 1 3, which has no bids until this test (user_claim_losing_in_auction_no_bidder relies on that, and
+# runs before this): rich_user1 bids, rich_user2 outbids, and rich_user1 burns their bid marker token and closes its
+# token account with ordinary SPL Token instructions.
+if should_run_test user_claim_losing_closed_bid_marker; then
+    TEST_NAME=user_claim_losing_closed_bid_marker
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 11 u32 1 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 3 ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+
+    # rich_user1 bids on entry 3
+    assert ${TEST_NAME}_bid_1                                                                                        \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER1_PUBKEY 11 1 3 \`lamports_from_sol 1000\` \`lamports_from_sol 1000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    # rich_user2 outbids rich_user1
+    assert ${TEST_NAME}_bid_2                                                                                        \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
+         $RICH_USER2_PUBKEY 11 1 3 \`lamports_from_sol 2000\` \`lamports_from_sol 2000\`                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # Read the number of bid marker tokens that rich_user1 holds; the amount is at offset 64 of the token account
+    MARKER_AMOUNT=`get_account_data $BID_MARKER_TOKEN_PUBKEY 64 8 | base64 -d | od -An -N8 -tu8 -v | tr -d [:space:]`
+    if [ -z "$MARKER_AMOUNT" ] || [ "$MARKER_AMOUNT" = "0" ]; then
+        echo "FAIL: $TEST_NAME: rich_user1 holds no bid marker tokens for entry 11 1 3"
+        exit 1
+    fi
+
+    # rich_user1 burns the bid marker tokens (SPL Token Burn, 8) and closes the token account (SPL Token
+    # CloseAccount, 9), returning its lamports to rich_user1
+    assert ${TEST_NAME}_close_marker                                                                                 \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $BID_MARKER_TOKEN_PUBKEY w                                                                        \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           u8 8                                                                                                      \
+           u64 $MARKER_AMOUNT                                                                                        \
+           program $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $BID_MARKER_TOKEN_PUBKEY w                                                                        \
+           account $RICH_USER1_PUBKEY w                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
+           u8 9"                                                                                                     \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    if [ -n "`get_account_data $BID_MARKER_TOKEN_PUBKEY`" ]; then
+        echo "FAIL: $TEST_NAME: the bid marker token account was not closed"
+        exit 1
+    fi
+
+    # Claiming the losing bid while asking to reclaim the closed bid marker fails
+    assert_fail $TEST_NAME                                                                                           \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x401'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 1 3 true                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # Claiming it without the bid marker accounts succeeds
+    assert ${TEST_NAME}_without_marker                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_claim_losing_tx.sh                                \
+         $RICH_USER1_PUBKEY 11 1 3                                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
 # Entry post-auction, no bidder (failure)
 if should_run_test user_claim_losing_post_auction_no_bidder; then
     # Test with block 11 2

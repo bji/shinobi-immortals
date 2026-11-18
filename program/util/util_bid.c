@@ -133,6 +133,17 @@ static uint64_t reclaim_bid_marker_token(const SolPubkey *entry_token_mint_pubke
         return Error_FailedToReclaimBidMarkerToken;
     }
 
+    // Make sure that the bid marker token account is still an SPL Token token account before reading its data.  The
+    // bidder may have closed it already (it is their own token account), in which case it has no data, and reading the
+    // token amount from it would read past the end of its data.  This fails rather than succeeding without reclaiming
+    // anything, so that a client which asked to reclaim a bid marker that no longer exists learns so from the
+    // transaction simulation, before submitting a transaction and paying its fee.  The client can simply leave out
+    // the optional bid marker accounts in that case.
+    if (!is_spl_token_program(bid_marker_token_account->owner) ||
+        (bid_marker_token_account->data_len != sizeof(SolanaTokenProgramTokenData))) {
+        return Error_FailedToReclaimBidMarkerToken;
+    }
+
     // Figure out how many tokens are in it
     uint64_t token_amount = ((SolanaTokenProgramTokenData *) bid_marker_token_account->data)->amount;
 
