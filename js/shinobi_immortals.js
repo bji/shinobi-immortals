@@ -1255,18 +1255,20 @@ class Entry
         this.auction_highest_bid_lamports = buffer_le_u64(data, 224);
         this.auction_winning_bid_address = buffer_address(data, 232);
         this.owned_stake_account = buffer_address(data, 264);
-        this.owned_stake_initial_lamports = buffer_le_u64(data, 296);
-        this.owned_stake_epoch = Number(buffer_le_u64(data, 304));
-        this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 312);
-        this.owned_last_commission_charge_stake_account_lamports = buffer_le_u64(data, 320);
-        this.owned_last_commission_charge_epoch = Number(buffer_le_u64(data, 328));
-        this.level = data[336];
-        this.most_recent_ki_applied_window = buffer_le_u64(data, 3184);
-        this.ki_applied_this_window = buffer_le_u64(data, 3192);
-        this.total_level_credits = buffer_le_u64(data, 3200);
+        this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 296);
+        this.owned_last_commission_charge_stake_account_lamports = buffer_le_u64(data, 304);
+        this.owned_last_commission_charge_epoch = Number(buffer_le_u64(data, 312));
+        this.level = data[320];
+        this.most_recent_ki_applied_window = buffer_le_u64(data, 3168);
+        this.ki_applied_this_window = buffer_le_u64(data, 3176);
+        this.total_level_credits = buffer_le_u64(data, 3184);
 
-        this.metadata_level_1_credits = buffer_le_u32(data, 340);
-        this.metadata_random = [ buffer_le_u32(data, 344),
+        this.metadata_level_1_credits = buffer_le_u32(data, 324);
+        this.metadata_random = [ buffer_le_u32(data, 328),
+                                 buffer_le_u32(data, 332),
+                                 buffer_le_u32(data, 336),
+                                 buffer_le_u32(data, 340),
+                                 buffer_le_u32(data, 344),
                                  buffer_le_u32(data, 348),
                                  buffer_le_u32(data, 352),
                                  buffer_le_u32(data, 356),
@@ -1277,27 +1279,23 @@ class Entry
                                  buffer_le_u32(data, 376),
                                  buffer_le_u32(data, 380),
                                  buffer_le_u32(data, 384),
-                                 buffer_le_u32(data, 388),
-                                 buffer_le_u32(data, 392),
-                                 buffer_le_u32(data, 396),
-                                 buffer_le_u32(data, 400),
-                                 buffer_le_u32(data, 404) ];
+                                 buffer_le_u32(data, 388) ];
         this.level_metadata = [ ];
 
         for (let i = 0; i < 9; i += 1) {
             this.level_metadata[i] = {
-                form : data[408 + (i * 308)],
-                skill : data[412 + (i * 308)],
-                ki_factor : buffer_le_u32(data, 416 + (i * 308)),
-                name : buffer_string(data, 420 + (i * 308), 32),
-                title : buffer_string(data, 452 + (i * 308), 32),
-                uri : buffer_string(data, 484 + (i * 308), 200),
-                uri_contents_sha256 : buffer_sha256(data, 684 + (i * 308))
+                form : data[392 + (i * 308)],
+                skill : data[396 + (i * 308)],
+                ki_factor : buffer_le_u32(data, 400 + (i * 308)),
+                name : buffer_string(data, 404 + (i * 308), 32),
+                title : buffer_string(data, 436 + (i * 308), 32),
+                uri : buffer_string(data, 468 + (i * 308), 200),
+                uri_contents_sha256 : buffer_sha256(data, 668 + (i * 308))
             };
         }
 
         // Expected annual stake reward rate in basis points, which calibrates the level credits curve
-        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3180);
+        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3164);
     }
 
     update(data)
@@ -1349,16 +1347,6 @@ class Entry
             changed = true;
         }
 
-        if (new_entry.owned_stake_initial_lamports != this.owned_stake_initial_lamports) {
-            this.owned_stake_initial_lamports = new_entry.owned_stake_initial_lamports;
-            changed = true;
-        }
-
-        if (new_entry.owned_stake_epoch != this.owned_stake_epoch) {
-            this.owned_stake_epoch = new_entry.owned_stake_epoch;
-            changed = true;
-        }
-
         if (new_entry.owned_last_ki_harvest_stake_account_lamports !=
             this.owned_last_ki_harvest_stake_account_lamports) {
             this.owned_last_ki_harvest_stake_account_lamports = new_entry.owned_last_ki_harvest_stake_account_lamports;
@@ -1396,13 +1384,13 @@ class Entry
 
         for (let i = 0; i < 9; i += 1) {
             new_level_metadata[i] = {
-                form : data[408 + (i * 308)],
-                skill : data[412 + (i * 308)],
-                ki_factor : buffer_le_u32(data, 416 + (i * 308)),
-                name : buffer_string(data, 420 + (i * 308), 32),
-                title : buffer_string(data, 452 + (i * 308), 32),
-                uri : buffer_string(data, 484 + (i * 308), 200),
-                uri_contents_sha256 : buffer_sha256(data, 684 + (i * 308))
+                form : data[392 + (i * 308)],
+                skill : data[396 + (i * 308)],
+                ki_factor : buffer_le_u32(data, 400 + (i * 308)),
+                name : buffer_string(data, 404 + (i * 308), 32),
+                title : buffer_string(data, 436 + (i * 308), 32),
+                uri : buffer_string(data, 468 + (i * 308), 200),
+                uri_contents_sha256 : buffer_sha256(data, 668 + (i * 308))
             };
             if ((new_level_metadata[i].form != this.level_metadata[i].form) ||
                 (new_level_metadata[i].skill != this.level_metadata[i].skill) ||

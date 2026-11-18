@@ -274,10 +274,10 @@ if should_run_test user_destake_no_ki_harvest; then
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER2_PUBKEY`
 
     # The entry must have earnings that a harvest would turn into Ki: its stake account's delegated stake must have
-    # grown beyond the entry's Ki baseline (the u64 last_ki_harvest_stake_account_lamports at offset 312 of the
+    # grown beyond the entry's Ki baseline (the u64 last_ki_harvest_stake_account_lamports at offset 296 of the
     # entry).  If it has not yet, wait for stake rewards to be paid, for up to three epochs.
     for i in 1 2 3; do
-        KI_BASELINE=`get_account_data $ENTRY_PUBKEY 312 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'`
+        KI_BASELINE=`get_account_data $ENTRY_PUBKEY 296 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'`
         STAKE_BEFORE=`harvest_stake_field $DELEGATED_STAKE2_PUBKEY delegatedStake`
         if [ "$STAKE_BEFORE" -gt "$KI_BASELINE" ]; then
             break

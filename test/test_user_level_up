@@ -441,13 +441,13 @@ function level_credit_reference ()
 }
 
 # Prints entry 16 0 0's owned.last_ki_harvest_stake_account_lamports, the delegated stake at which Ki was last
-# harvested, which is at byte offset 312 of the Entry
+# harvested, which is at byte offset 296 of the Entry
 function entry_ki_baseline ()
 {
     local block=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
     local mint=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $block u16 0 ]`
     local entry=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $mint ]`
-    get_account_data $entry 312 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'
+    get_account_data $entry 296 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'
 }
 
 # Check the full contribution: raw Ki burned, window accounting, lifetime credits,

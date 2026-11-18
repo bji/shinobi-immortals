@@ -70,8 +70,8 @@ function account_u64 ()
 
 # Byte offsets within Entry (program/inc/entry.h) of owned.last_commission_charge_stake_account_lamports and
 # owned.last_commission_charge_epoch
-ENTRY_COMMISSION_BASELINE_OFFSET=320
-ENTRY_LAST_COMMISSION_CHARGE_EPOCH_OFFSET=328
+ENTRY_COMMISSION_BASELINE_OFFSET=304
+ENTRY_LAST_COMMISSION_CHARGE_EPOCH_OFFSET=312
 
 
 # Prints the entry account address of entry $1 of block 1 0, the block that these tests use
@@ -83,8 +83,9 @@ function test_entry ()
 }
 
 
-# The commission value that means 100%: the denominator that compute_commission() divides by
-COMMISSION_FULL_SCALE=65535
+# The commission value that would mean 100%: the denominator that compute_commission() divides by.  It is 20 times
+# 65535, because the largest commission, 65535, is 5% (see COMMISSION_FULL_SCALE in program/util/util_calculations.c)
+COMMISSION_FULL_SCALE=$((65535 * 20))
 
 # Prints the commission in lamports that compute_commission() would charge on delegated stake $1 with baseline $2 at
 # commission $3 (out of COMMISSION_FULL_SCALE)
@@ -208,7 +209,7 @@ function destake_and_check ()
 # Setup
 # ---------------------------------------------------------------------------------------------------------------------
 
-# The block's commission: 6553 / 65535, about 10%
+# The block's commission: 6553 / COMMISSION_FULL_SCALE (1310700), about 0.5%
 BLOCK_COMMISSION=6553
 
 # Entry metadata: all zeroes except for the first byte, which differs between entries so that their hashes differ

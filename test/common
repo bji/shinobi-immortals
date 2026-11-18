@@ -671,14 +671,14 @@ function poke_byte ()
 #   0   data_type (u32): 3 = DataType_Entry
 #   168 reveal_sha256: all zero, meaning revealed
 #   208 purchase_price_lamports (u64): non-zero, meaning owned
-#   336 level (u8): 8
-#   340 metadata.level_1_credits (u32): 100
+#   320 level (u8): 8
+#   324 metadata.level_1_credits (u32): 100
 function make_max_level_entry_fixture ()
 {
     local PROGRAM_PUBKEY=$1
     local DATA_FILE=$FIXTURES/max_level_entry.bin
     # sizeof(Entry)
-    local SIZE=3208
+    local SIZE=3192
     # Rent exempt minimum: (data size + 128 bytes account overhead) * 3480 lamports/byte-year * 2 years
     local LAMPORTS=$(((SIZE + 128) * 3480 * 2))
 
@@ -690,8 +690,8 @@ function make_max_level_entry_fixture ()
     dd if=/dev/zero of=$DATA_FILE bs=$SIZE count=1 status=none
     poke_byte $DATA_FILE 0 3
     poke_byte $DATA_FILE 208 1
-    poke_byte $DATA_FILE 336 8
-    poke_byte $DATA_FILE 340 100
+    poke_byte $DATA_FILE 320 8
+    poke_byte $DATA_FILE 324 100
 
     # Write the account in the JSON format that solana-test-validator --account loads
     cat > $FIXTURES/max_level_entry.json <<EOF

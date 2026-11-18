@@ -181,9 +181,9 @@ if should_run_test admin_set_metadata_bytes_success; then
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
-    # Check to ensure that the data is correct.  Entry metadata is 340 bytes offset from beginning of the
+    # Check to ensure that the data is correct.  Entry metadata is 324 bytes offset from beginning of the
     # Entry.
-    ACCOUNT_DATA=`get_account_data $ENTRY_PUBKEY $((340 + 120)) 8`
+    ACCOUNT_DATA=`get_account_data $ENTRY_PUBKEY $((324 + 120)) 8`
     BYTES=`echo "$ACCOUNT_DATA" | base64 -d | od -An -tu1 | tr -d '[:space:]'`
     EXPECTED_BYTES=`echo -n "12345678" | od -An -tu1 | tr -d '[:space:]'`
     if [ "$BYTES" != "$EXPECTED_BYTES" ]; then

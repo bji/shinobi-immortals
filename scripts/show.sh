@@ -681,8 +681,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -ne 3208 ]; then
-            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3208"
+        if [ $ACCOUNT_DATA_LEN -ne 3192 ]; then
+            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3192"
             exit 1
         fi
 
@@ -754,41 +754,37 @@ case $1 in
             echo -n '"stake_account":"'`get_data_pubkey 264 "$ACCOUNT_DATA"`'",'
         fi
 
-        echo -n '"stake_initial":'`to_sol \`get_data_u64 296 "$ACCOUNT_DATA"\``','
+        echo -n '"last_harvest_ki_stake":'`to_sol \`get_data_u64 296 "$ACCOUNT_DATA"\``','
 
-        echo -n '"stake_epoch":'`get_data_u64 304 "$ACCOUNT_DATA"`','
+        echo -n '"last_commission_charge_stake":'`to_sol \`get_data_u64 304 "$ACCOUNT_DATA"\``','
 
-        echo -n '"last_harvest_ki_stake":'`to_sol \`get_data_u64 312 "$ACCOUNT_DATA"\``','
-
-        echo -n '"last_commission_charge_stake":'`to_sol \`get_data_u64 320 "$ACCOUNT_DATA"\``','
-
-        echo -n '"last_commission_charge_epoch":'`get_data_u64 328 "$ACCOUNT_DATA"`
+        echo -n '"last_commission_charge_epoch":'`get_data_u64 312 "$ACCOUNT_DATA"`
 
         echo -n '},'
 
-        echo -n '"level":'`get_data_u8 336 "$ACCOUNT_DATA"`','
+        echo -n '"level":'`get_data_u8 320 "$ACCOUNT_DATA"`','
 
         # Progression uses token-base-unit precision (tenths); these counters
         # persist across stake changes and are appended after the old metadata.
-        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
-        echo -n '"ki_applied_this_window":'`get_data_u64 3192 "$ACCOUNT_DATA"`','
-        echo -n '"total_level_credits":'`get_data_u64 3200 "$ACCOUNT_DATA"`','
+        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3168 "$ACCOUNT_DATA"`','
+        echo -n '"ki_applied_this_window":'`get_data_u64 3176 "$ACCOUNT_DATA"`','
+        echo -n '"total_level_credits":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
 
         echo -n '"metadata":{'
 
-        echo -n '"level_1_credits":'`get_data_u32 340 "$ACCOUNT_DATA"`','
+        echo -n '"level_1_credits":'`get_data_u32 324 "$ACCOUNT_DATA"`','
 
         echo -n '"random":['
 
         # The 16 random values: the first 15 followed by commas, then the last
         for i in `seq 0 14`; do
-            echo -n `get_data_u32 $(($i*4+344)) "$ACCOUNT_DATA"`','
+            echo -n `get_data_u32 $(($i*4+328)) "$ACCOUNT_DATA"`','
         done
 
-        echo -n `get_data_u32 404 "$ACCOUNT_DATA"`'],"level_metadata":['
+        echo -n `get_data_u32 388 "$ACCOUNT_DATA"`'],"level_metadata":['
 
         for i in `seq 0 8`; do
-            OFFSET=$(($i*308+408))
+            OFFSET=$(($i*308+392))
             echo -n '{"form":'`get_data_u32 $(($OFFSET+0)) "$ACCOUNT_DATA"`','
 
             echo -n '"skill":'`get_data_u8 $(($OFFSET+4)) "$ACCOUNT_DATA"`','
@@ -810,7 +806,7 @@ case $1 in
             fi
         done            
 
-        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3180 "$ACCOUNT_DATA"`
+        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3164 "$ACCOUNT_DATA"`
 
         echo '}}'
 

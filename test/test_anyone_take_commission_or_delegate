@@ -1,6 +1,9 @@
-METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2764 status=none) | base64 | tr -d '\n'`
+# The level 0 ki_factor of these entries is 1,000,000,000 (00ca9a3b, little endian): one whole Ki per effective lamport,
+# large enough that the 5% commission on a single epoch of rewards changes the Ki that a harvest mints (see
+# anyone_take_commission_or_delegate_harvest_commission_harvest below)
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 00ca9a3b | xxd -r -p; dd if=/dev/zero bs=1 count=2764 status=none) | base64 | tr -d '\n'`
 # Metadata to set into entries, only needs to include up to the ki_factor
-METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
+METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 00ca9a3b | xxd -r -p) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -426,8 +429,8 @@ function account_u64 ()
 
 # Byte offsets within Entry of owned.last_ki_harvest_stake_account_lamports and
 # owned.last_commission_charge_stake_account_lamports
-ENTRY_KI_BASELINE_OFFSET=312
-ENTRY_COMMISSION_BASELINE_OFFSET=320
+ENTRY_KI_BASELINE_OFFSET=296
+ENTRY_COMMISSION_BASELINE_OFFSET=304
 
 
 # Prints the entry account address of entry $1 of block 17 2
@@ -542,10 +545,10 @@ fi
 # Harvest, then charge commission, then harvest again: the second harvest must mint Ki on the full rewards earned
 # since the first harvest, including the part that the commission charge moved out of the stake account, because Ki
 # is earned on rewards before commission (current_issues.txt issue 4).  Uses entry 0 of block 17 0, owned by
-# rich_user1 and staked with DELEGATED_STAKE_PUBKEY, whose level 0 ki_factor is 10000 (see METADATA above).
+# rich_user1 and staked with DELEGATED_STAKE_PUBKEY, whose level 0 ki_factor is 1000000000 (see METADATA above).
 if should_run_test anyone_take_commission_or_delegate_harvest_commission_harvest; then
     TEST_NAME=anyone_take_commission_or_delegate_harvest_commission_harvest
-    KI_FACTOR=10000
+    KI_FACTOR=1000000000
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 17 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
@@ -565,9 +568,10 @@ if should_run_test anyone_take_commission_or_delegate_harvest_commission_harvest
 
     # Let rewards accumulate until the commission on them is large enough to change the Ki minted, so that the test
     # can tell Ki earned on rewards before commission from Ki earned on rewards after commission.  At about 1000 SOL
-    # of stake the effective-stake ratio is about 0.43, so with a factor of 10000 one whole Ki needs about 0.00023
-    # SOL of commission; at the block's 5% commission (65535, the maximum), 0.01 SOL of rewards gives about 2 Ki of
-    # difference.  Give up after 40 epochs.
+    # of stake the effective-stake ratio is only about 0.05, but with a factor of 1000000000 (one whole Ki per
+    # effective lamport) the block's 5% commission (65535, the maximum) on even one epoch of rewards changes the Ki
+    # minted by thousands of Ki, so this normally stops after the first epoch that pays rewards.  Rather than assume
+    # that, each epoch checks whether gross and net Ki would differ.  Give up after 40 epochs.
     EPOCHS_WAITED=0
     while true; do
         sleep_until_next_epoch
@@ -575,14 +579,23 @@ if should_run_test anyone_take_commission_or_delegate_harvest_commission_harvest
         # The epoch in which the rest of the test must complete, so that no further rewards arrive part way through
         TEST_EPOCH=`current_epoch`
         STAKE_BEFORE_COMMISSION=`stake_field $DELEGATED_STAKE_PUBKEY delegatedStake`
-        if [ $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) -ge 10000000 ]; then
+        REWARDS=$((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1))
+        # Report progress, so that the reward rate of the test validator can be seen in the test output
+        echo "$TEST_NAME: $REWARDS lamports of rewards after $EPOCHS_WAITED epochs (epoch $TEST_EPOCH)"
+        # Estimate the commission at 4%, below the block's actual 5%.  If gross and net Ki differ with this smaller
+        # commission they also differ with the actual one, since a larger commission only lowers net Ki further.
+        # The check after the second harvest below confirms this using the commission actually charged.
+        ESTIMATED_COMMISSION=$((REWARDS / 25))
+        ESTIMATED_STAKE=$((STAKE_BEFORE_COMMISSION - ESTIMATED_COMMISSION))
+        ESTIMATED_GROSS=`expected_ki_mint $REWARDS $ESTIMATED_STAKE $KI_FACTOR`
+        ESTIMATED_NET=`expected_ki_mint $((REWARDS - ESTIMATED_COMMISSION)) $ESTIMATED_STAKE $KI_FACTOR`
+        if [ $REWARDS -gt 0 ] && [ "$ESTIMATED_GROSS" != "$ESTIMATED_NET" ]; then
             break
         fi
         if [ $EPOCHS_WAITED -ge 40 ]; then
-            fail_test $TEST_NAME "only $((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1)) lamports of rewards after 40 epochs"
+            fail_test $TEST_NAME "only $REWARDS lamports of rewards after 40 epochs, too few to distinguish gross from net Ki"
         fi
     done
-    REWARDS=$((STAKE_BEFORE_COMMISSION - STAKE_AT_HARVEST_1))
 
     # Charge commission, which moves part of the rewards out of the stake account
     assert ${TEST_NAME}_commission                                                                                   \

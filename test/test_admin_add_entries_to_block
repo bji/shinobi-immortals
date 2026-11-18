@@ -535,8 +535,6 @@ if [ -z "$TESTS" ]; then
     "highest_bid": 0
   },
   "owned": {
-    "stake_initial": 0,
-    "stake_epoch": 0,
     "last_harvest_ki_stake": 0,
     "last_commission_charge_stake": 0,
     "last_commission_charge_epoch": 0
