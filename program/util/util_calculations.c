@@ -48,6 +48,16 @@ static_assert((EFFECTIVE_STAKE_CEILING_SOL > 0) && ((EFFECTIVE_STAKE_CEILING_SOL
 // 40 for K = 50 SOL.
 #define LEVEL_CREDIT_SCALE (2000ul / EFFECTIVE_STAKE_CEILING_SOL)
 
+// A commission (commission_t, a uint16_t) is a fraction of staking rewards in which 0 means 0% and the largest value
+// that can be stored, 65535, means 5%.  So no commission that can be stored is ever more than 5%: the cap is enforced
+// by the type itself, and needs no check anywhere.  COMMISSION_FULL_SCALE is the value that would mean 100%, which is
+// 20 times 65535 (100% / 5% = 20).  A commission of c is the fraction c / COMMISSION_FULL_SCALE of rewards.
+#define COMMISSION_FULL_SCALE (65535ul * 20ul)
+
+// The largest amount by which SetBlockCommission may raise a block's commission in one epoch: 1 percentage point.
+// Since 65535 is 5%, 1% is 65535 / 5 = 13107 exactly.
+#define COMMISSION_MAX_INCREASE_PER_EPOCH (65535ul / 5ul)
+
 //   floor((value * numerator) / denominator),
 // with
 //   (numerator <= denominator)
@@ -287,12 +297,13 @@ static uint64_t compute_commission(uint64_t current_stake, uint64_t baseline, ui
         return 0;
     }
 
-    // Commission is the earned lamports times commission / 0xFFFF, rounded down.  The product of the earned lamports
-    // and the commission can overflow (for earnings above about 281,000 SOL at the maximum commission), so it is
-    // never formed: multiply_fraction() computes the same floor without it.  It requires the numerator to be no more
-    // than the denominator, which holds since commission is a uint16_t and so at most 0xFFFF.  The result is at most
-    // the earned lamports.
-    return multiply_fraction(current_stake - baseline, commission, 0xFFFFul);
+    // Commission is the earned lamports times commission / COMMISSION_FULL_SCALE, rounded down (see
+    // COMMISSION_FULL_SCALE: 65535 is 5%).  The product of the earned lamports and the commission can overflow (for
+    // earnings above about 281,000 SOL at the maximum commission), so it is never formed: multiply_fraction()
+    // computes the same floor without it.  It requires the numerator to be no more than the denominator, which holds
+    // since commission is a uint16_t and so at most 65535, well below COMMISSION_FULL_SCALE.  The result is at most
+    // 5% of the earned lamports.
+    return multiply_fraction(current_stake - baseline, commission, COMMISSION_FULL_SCALE);
 }
 
 // Returns the level credit window to use for a contribution made at unix_timestamp, given the window most recently

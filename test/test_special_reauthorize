@@ -33,7 +33,7 @@ if [ -z "$TESTS" ]; then
     # 18 0
     assert special_reauthorize_setup_18_0_a                                                                          \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 18 0 6553 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 18 0 65535 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \

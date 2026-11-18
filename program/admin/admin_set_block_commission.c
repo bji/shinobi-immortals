@@ -1,14 +1,17 @@
 #pragma once
 
+#include "util/util_calculations.c"
+
 typedef struct
 {
     // This is the instruction code for SetBlockCommission
     uint8_t instruction_code;
 
-    // The new commission for this block.  If it's higher than the previous block commission, then it must be no more
-    // than 2% higher.  Also cannot be changed more than once per epoch.  And finally, only takes effect *after* the
-    // next commission charge for any already-staked stake accounts.
-    uint16_t commission;
+    // The new commission for this block, where 65535 is 5% (see commission_t), so it can never be more than 5%.  If
+    // it's higher than the previous block commission, then it must be no more than 1 percentage point
+    // (COMMISSION_MAX_INCREASE_PER_EPOCH, 13107) higher.  Also cannot be changed more than once per epoch.  And
+    // finally, only takes effect *after* the next commission charge for any already-staked stake accounts.
+    commission_t commission;
 
 } SetBlockCommissionData;
 
@@ -58,8 +61,9 @@ static uint64_t admin_set_block_commission(const SolParameters *params)
         return Error_CommissionAlreadySetThisEpoch;
     }
 
-    // Ensure that the new commission is no more than 2% higher than the previous commission
-    if (data->commission > (block->commission + 1310)) {
+    // Ensure that the new commission is no more than 1 percentage point higher than the previous commission.  The sum
+    // is computed in uint64_t, so it cannot overflow; a lower commission always passes this check.
+    if (((uint64_t) data->commission) > (((uint64_t) block->commission) + COMMISSION_MAX_INCREASE_PER_EPOCH)) {
         return Error_CommissionTooHigh;
     }
 

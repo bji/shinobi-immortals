@@ -9,7 +9,7 @@ function require ()
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: admin_set_block_commission_tx.sh <ADMIN_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <COMMISSION (0-65535)>
+Usage: admin_set_block_commission_tx.sh <ADMIN_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <COMMISSION (0-65535, where 65535 is 5%)>
 
 EOF
         exit 1

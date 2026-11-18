@@ -163,6 +163,7 @@ typedef struct
     // stake account is staked to the entry, and after every commission charge to the entry.  This allows the block's
     // commission to be updated, and only take effect after all owed commission has already been charged at the prior
     // commission.  It is zero until the entry is first staked, and is only meaningful while the entry is staked.
+    // 65535 is 5% (see commission_t).
     commission_t commission;
 
     // If has_auction is true, then this struct is used

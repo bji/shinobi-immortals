@@ -99,7 +99,7 @@ function test_entry ()
 
 
 # Prints the commission in lamports that compute_commission() would charge on delegated stake $1 with baseline $2 at
-# commission $3 (out of 65535)
+# commission $3 (where 65535 is 5%, so 100% would be 65535 * 20 = 1310700)
 function expected_commission ()
 {
     local STAKE=$1
@@ -109,7 +109,7 @@ function expected_commission ()
     if [ $STAKE -le $BASELINE ]; then
         echo 0
     else
-        echo $(((STAKE - BASELINE) * COMMISSION / 65535))
+        echo $(((STAKE - BASELINE) * COMMISSION / 1310700))
     fi
 }
 
@@ -251,8 +251,8 @@ function destake_and_check ()
 # Setup
 # ---------------------------------------------------------------------------------------------------------------------
 
-# The block's commission: 6553 / 65535, about 10%
-BLOCK_COMMISSION=6553
+# The block's commission: 65535, the maximum, which is 5%
+BLOCK_COMMISSION=65535
 
 # The entries' level 0 ki_factor.  The rewards paid to a 1000 SOL stake account in one epoch of the local cluster are
 # small, so a large factor is used to ensure that, without the fix, harvesting them would mint a nonzero amount of Ki.
