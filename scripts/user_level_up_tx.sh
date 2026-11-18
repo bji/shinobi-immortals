@@ -9,10 +9,15 @@ function require ()
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: user_level_up_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <KI_AMOUNT> [<TOKEN_PUBKEY>]
+Usage: user_level_up_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <KI_AMOUNT> \\
+                           [<STAKE_ACCOUNT_PUBKEY>|none] [<TOKEN_PUBKEY>]
 
 KI_AMOUNT is the contribution in whole Ki: 10 means ten Ki.
 The contribution earns level credits even if no level threshold is crossed.
+
+If the entry is staked, <STAKE_ACCOUNT_PUBKEY> must be its stake account: the Ki that it has earned is harvested
+into the user's Ki account before the contribution is applied.  If the entry is not staked, it may be omitted or
+given as "none".
 
 If <TOKEN_PUBKEY> is not provided, it is assumed to be the Associated Token Account.
 
@@ -26,7 +31,8 @@ GROUP_NUMBER=$2
 BLOCK_NUMBER=$3
 ENTRY_INDEX=$4
 KI_AMOUNT=$5
-TOKEN_PUBKEY=$6
+STAKE_ACCOUNT_PUBKEY=$6
+TOKEN_PUBKEY=$7
 
 require $USER_PUBKEY
 require $GROUP_NUMBER
@@ -101,6 +107,10 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
                                  [ pubkey $USER_PUBKEY                                                                \
                                    pubkey $SPL_TOKEN_PROGRAM_PUBKEY                                                   \
                                    $KI_MINT_PUBKEY ]"
+# The stake account is not used if the entry is not staked; the system program serves as a placeholder
+if [ -z "$STAKE_ACCOUNT_PUBKEY" ] || [ "$STAKE_ACCOUNT_PUBKEY" = "none" ]; then
+       STAKE_ACCOUNT_PUBKEY=$SYSTEM_PROGRAM_PUBKEY
+fi
 if [ -z "$TOKEN_PUBKEY" ]; then 
                TOKEN_PUBKEY="pda $SPLATA_PROGRAM_PUBKEY                                                               \
                                  [ pubkey $USER_PUBKEY                                                                \
@@ -122,6 +132,7 @@ solxact encode                                                                  
         account $AUTHORITY_PUBKEY                                                                                     \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
+        account $STAKE_ACCOUNT_PUBKEY                                                                                 \
         // Instruction code 17 = LevelUp //                                                                           \
         u8 17                                                                                                        \
         u64 $KI_AMOUNT

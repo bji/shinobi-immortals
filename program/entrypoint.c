@@ -61,7 +61,8 @@ typedef enum
     Instruction_Destake                       = 15,
     // Harvest Ki
     Instruction_Harvest                       = 16,
-    // Level up an entry.  This requires as input am amount of Ki, which is burned.
+    // Level up an entry.  This requires as input an amount of Ki, which is burned.  If the entry is staked, the Ki
+    // that it has earned is harvested first, so that it is paid at the ki_factor of the level at which it was earned.
     Instruction_LevelUp                       = 17,
 
     // Anyone functions: anyone may perform these actions --------------------------------------------------------------

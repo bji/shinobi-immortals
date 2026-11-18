@@ -1,6 +1,8 @@
 #pragma once
 
 #include "util/util_calculations.c"
+#include "util/util_ki.c"
+#include "util/util_stake.c"
 
 typedef struct
 {
@@ -24,8 +26,10 @@ static uint64_t user_level_up(const SolParameters *params)
         DECLARE_ACCOUNT(7,   authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
         DECLARE_ACCOUNT(8,   spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(9,   metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
+        // The entry's stake account if the entry is staked; any account otherwise, since it is then not used
+        DECLARE_ACCOUNT(10,  stake_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
     }
-    DECLARE_ACCOUNTS_NUMBER(10);
+    DECLARE_ACCOUNTS_NUMBER(11);
 
     // Ensure that the instruction data is the correct size
     if (params->data_len != sizeof(LevelUpData)) {
@@ -55,7 +59,8 @@ static uint64_t user_level_up(const SolParameters *params)
                                                   entry->most_recent_ki_applied_window, LEVEL_CREDIT_WINDOW_SECONDS);
 
     // Check to make sure that the entry is Owned or OwnedAndStaked
-    switch (get_entry_state(0, entry, &clock)) {
+    EntryState entry_state = get_entry_state(0, entry, &clock);
+    switch (entry_state) {
     case EntryState_Owned:
     case EntryState_OwnedAndStaked:
         break;
@@ -76,6 +81,40 @@ static uint64_t user_level_up(const SolParameters *params)
     // Check to make sure that the correct entry metadata account was passed in
     if (!SolPubkey_same(&(entry->metaplex_metadata_pubkey), entry_metadata_account->key)) {
         return Error_InvalidAccount_First + 3;
+    }
+
+    // If the entry is staked, harvest the Ki that its stake account has earned since the last harvest, before this
+    // instruction can change the entry's level.  harvest_ki pays all unharvested rewards at the ki_factor of the
+    // entry's current level, so if the level changed first, rewards earned at the old level would be paid at the new
+    // level's ki_factor.  Harvesting here means rewards are always paid at the level at which they were earned.
+    //
+    // The harvested Ki goes to the Ki source account, which must already be a Ki token account of the Ki source
+    // owner (who has signed); the token owner, who has also signed, thereby chooses where the Ki goes, just as with
+    // Harvest.  Since it is minted before the Ki to apply is burned, freshly harvested Ki can be applied by this same
+    // instruction.  If no level change results, nothing is lost: the Ki is harvested as Harvest would have.
+    if (entry_state == EntryState_OwnedAndStaked) {
+        // Check to make sure that the stake account passed in is actually staked in the entry
+        if (!SolPubkey_same(&(entry->owned.stake_account), stake_account->key)) {
+            return Error_InvalidAccount_First + 10;
+        }
+
+        // Decode the stake account
+        Stake stake;
+        if (!decode_stake_account(stake_account, &stake)) {
+            return Error_InvalidAccount_First + 10;
+        }
+
+        // Check that the Ki source account is a Ki token account of the Ki source owner.  This is checked again,
+        // with the amount needed, before the burn below; it is checked here too so that harvest_ki never attempts
+        // to create the account as an associated token account, which this instruction does not supply the
+        // accounts for.
+        if (!is_token_owner(ki_source_account, ki_source_owner_account->key, &(Constants.ki_mint_pubkey), 0,
+                            false)) {
+            return Error_InvalidAccount_First + 5;
+        }
+
+        harvest_ki(&stake, entry, ki_source_account, ki_source_owner_account->key, ki_source_owner_account->key,
+                   clock.epoch, params->ka, params->ka_num);
     }
 
     // Contributions must be positive and use a fixed level-zero ki_factor.
