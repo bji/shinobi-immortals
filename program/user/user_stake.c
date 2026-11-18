@@ -146,7 +146,7 @@ static uint64_t user_stake(const SolParameters *params)
     entry->commission = block->commission;
 
     // Start counting epochs without a commission charge from now (see DESTAKE_COMMISSION_WAIVER_EPOCHS)
-    entry->last_commission_charge_epoch = clock.epoch;
+    entry->owned.last_commission_charge_epoch = clock.epoch;
 
     return 0;
 }

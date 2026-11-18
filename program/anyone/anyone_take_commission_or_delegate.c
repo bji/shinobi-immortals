@@ -90,7 +90,7 @@ static uint64_t anyone_take_commission_or_delegate(const SolParameters *params)
 
         // No commission is owed on the newly delegated stake, so start counting epochs without a commission charge
         // from now (see DESTAKE_COMMISSION_WAIVER_EPOCHS)
-        entry->last_commission_charge_epoch = clock.epoch;
+        entry->owned.last_commission_charge_epoch = clock.epoch;
 
         return 0;
     }

@@ -78,10 +78,10 @@ function account_u64 ()
 }
 
 
-# Byte offsets within Entry (program/inc/entry.h) of the owned struct, which is 64 bytes long, and of its
+# Byte offsets within Entry (program/inc/entry.h) of the owned struct, which is 72 bytes long, and of its
 # last_ki_harvest_stake_account_lamports and last_commission_charge_stake_account_lamports fields
 ENTRY_OWNED_OFFSET=264
-ENTRY_OWNED_SIZE=64
+ENTRY_OWNED_SIZE=72
 ENTRY_KI_BASELINE_OFFSET=312
 ENTRY_COMMISSION_BASELINE_OFFSET=320
 

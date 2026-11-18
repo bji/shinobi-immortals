@@ -163,10 +163,8 @@ static uint64_t user_destake(const SolParameters *params)
         thaw_token_account(token_account->key, entry_mint_account->key, params->ka, params->ka_num);
     }
 
-    // No longer staked, all fields in owned should be zeroed out, as should last_commission_charge_epoch, which is
-    // logically part of owned
+    // No longer staked, all fields in owned should be zeroed out
     sol_memset(&(entry->owned), 0, sizeof(entry->owned));
-    entry->last_commission_charge_epoch = 0;
 
     return 0;
 }

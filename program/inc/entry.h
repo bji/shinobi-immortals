@@ -199,6 +199,12 @@ typedef struct
         // Number of lamports in the stake account at the time of its last commission collection
         uint64_t last_commission_charge_stake_account_lamports;
 
+        // The epoch of the entry's most recent completed commission charge, or, if there has been none, the epoch in
+        // which its stake account was staked or (by TakeCommissionOrDelegate) re-delegated to Shinobi Systems.  A
+        // charge counts as completed even if no commission was owed.  Destake does not charge commission once
+        // DESTAKE_COMMISSION_WAIVER_EPOCHS have passed since this epoch (see constants.h).
+        uint64_t last_commission_charge_epoch;
+
     } owned;
 
     // Current level of the entry
@@ -217,13 +223,5 @@ typedef struct
 
     // Lifetime level credits in tenths of a credit. Never deducted or reset on level-up or transfer.
     uint64_t total_level_credits;
-
-    // While the entry is staked: the epoch of the entry's most recent completed commission charge, or, if there has
-    // been none, the epoch in which its stake account was staked or (by TakeCommissionOrDelegate) re-delegated to
-    // Shinobi Systems.  A charge counts as completed even if no commission was owed.  Destake does not charge
-    // commission once DESTAKE_COMMISSION_WAIVER_EPOCHS have passed since this epoch (see constants.h).  This belongs
-    // with the fields in [owned], but is placed at the end of the Entry so that no other field moves; it is cleared
-    // wherever [owned] is cleared.
-    uint64_t last_commission_charge_epoch;
 
 } Entry;

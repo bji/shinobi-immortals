@@ -13,17 +13,17 @@
 static bool is_destake_commission_waived(const Entry *entry, uint64_t current_epoch)
 {
     // An epoch earlier than the recorded one cannot occur; if it somehow did, do not waive commission
-    if (current_epoch < entry->last_commission_charge_epoch) {
+    if (current_epoch < entry->owned.last_commission_charge_epoch) {
         return false;
     }
 
-    return ((current_epoch - entry->last_commission_charge_epoch) >= DESTAKE_COMMISSION_WAIVER_EPOCHS);
+    return ((current_epoch - entry->owned.last_commission_charge_epoch) >= DESTAKE_COMMISSION_WAIVER_EPOCHS);
 }
 
 
 // Charges commission on [stake] if it is fully active.  A failure to move the commission out of the stake account
 // aborts the transaction with the stake program's error.  Every charge that completes, even one of no commission,
-// records the current epoch in the entry's last_commission_charge_epoch.
+// records the current epoch in the entry's owned.last_commission_charge_epoch.
 static void charge_commission(const Stake *stake, const Block *block, Entry *entry,
                               const SolPubkey *stake_account_key, uint64_t current_epoch,
                               const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
@@ -73,7 +73,7 @@ static void charge_commission(const Stake *stake, const Block *block, Entry *ent
     // Record that a commission charge has completed in this epoch, even if no commission was owed.  If the MoveStake
     // below fails, the whole transaction aborts, and this is not recorded.  Destake uses this to stop charging
     // commission once charges have not been possible for DESTAKE_COMMISSION_WAIVER_EPOCHS (see constants.h).
-    entry->last_commission_charge_epoch = current_epoch;
+    entry->owned.last_commission_charge_epoch = current_epoch;
 
     // If there is commission to take, do so, by moving that number of lamports out of the stake account and into
     // the master stake account.

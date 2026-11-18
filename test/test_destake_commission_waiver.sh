@@ -68,10 +68,10 @@ function account_u64 ()
 }
 
 
-# Byte offsets within Entry (program/inc/entry.h) of owned.last_commission_charge_stake_account_lamports, and of
-# last_commission_charge_epoch, which is stored at the end of the Entry
+# Byte offsets within Entry (program/inc/entry.h) of owned.last_commission_charge_stake_account_lamports and
+# owned.last_commission_charge_epoch
 ENTRY_COMMISSION_BASELINE_OFFSET=320
-ENTRY_LAST_COMMISSION_CHARGE_EPOCH_OFFSET=3200
+ENTRY_LAST_COMMISSION_CHARGE_EPOCH_OFFSET=328
 
 
 # Prints the entry account address of entry $1 of block 1 0, the block that these tests use

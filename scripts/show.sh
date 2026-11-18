@@ -762,33 +762,33 @@ case $1 in
 
         echo -n '"last_commission_charge_stake":'`to_sol \`get_data_u64 320 "$ACCOUNT_DATA"\``','
 
-        # This is stored at the end of the entry, but belongs with the other owned fields
-        echo -n '"last_commission_charge_epoch":'`get_data_u64 3200 "$ACCOUNT_DATA"`
+        echo -n '"last_commission_charge_epoch":'`get_data_u64 328 "$ACCOUNT_DATA"`
 
         echo -n '},'
 
-        echo -n '"level":'`get_data_u8 328 "$ACCOUNT_DATA"`','
+        echo -n '"level":'`get_data_u8 336 "$ACCOUNT_DATA"`','
 
         # Progression uses token-base-unit precision (tenths); these counters
         # persist across stake changes and are appended after the old metadata.
-        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3176 "$ACCOUNT_DATA"`','
-        echo -n '"ki_applied_this_window":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
-        echo -n '"total_level_credits":'`get_data_u64 3192 "$ACCOUNT_DATA"`','
+        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
+        echo -n '"ki_applied_this_window":'`get_data_u64 3192 "$ACCOUNT_DATA"`','
+        echo -n '"total_level_credits":'`get_data_u64 3200 "$ACCOUNT_DATA"`','
 
         echo -n '"metadata":{'
 
-        echo -n '"level_1_credits":'`get_data_u32 332 "$ACCOUNT_DATA"`','
+        echo -n '"level_1_credits":'`get_data_u32 340 "$ACCOUNT_DATA"`','
 
         echo -n '"random":['
 
-        for i in `seq 1 15`; do
-            echo -n `get_data_u32 $(($i*4+336)) "$ACCOUNT_DATA"`','
+        # The 16 random values: the first 15 followed by commas, then the last
+        for i in `seq 0 14`; do
+            echo -n `get_data_u32 $(($i*4+344)) "$ACCOUNT_DATA"`','
         done
 
-        echo -n `get_data_u32 396 "$ACCOUNT_DATA"`'],"level_metadata":['
+        echo -n `get_data_u32 404 "$ACCOUNT_DATA"`'],"level_metadata":['
 
         for i in `seq 0 8`; do
-            OFFSET=$(($i*308+400))
+            OFFSET=$(($i*308+408))
             echo -n '{"form":'`get_data_u32 $(($OFFSET+0)) "$ACCOUNT_DATA"`','
 
             echo -n '"skill":'`get_data_u8 $(($OFFSET+4)) "$ACCOUNT_DATA"`','
@@ -810,7 +810,7 @@ case $1 in
             fi
         done            
 
-        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3172 "$ACCOUNT_DATA"`
+        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3180 "$ACCOUNT_DATA"`
 
         echo '}}'
 
