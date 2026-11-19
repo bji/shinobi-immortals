@@ -1563,25 +1563,28 @@ class Entry
 
     // Private implementation follows ---------------------------------------------------------------------------------
 
-    // Cribbed from user_buy.c
+    // Mirrors compute_price in program/util/util_calculations.c, in BigInt lamports.  With T = total_seconds,
+    // t = seconds_elapsed and k = PRICE_CURVE_STEEPNESS (1069), before the end of the sale the price is
+    //   end_price + floor(floor((start_price - end_price) * T / (kt + T)) * k(T - t) / ((k + 1)T)),
+    // which is the curve 1/(kx + 1) - 1/(k + 1), x = t/T, scaled between the start and end prices: it falls to 1/10
+    // of the way from end_price to start_price after 1/120 of the sale (2 hours of a 10 day sale), then keeps falling
+    // more and more slowly to end_price at the end.  BigInt division of non-negative values rounds down, as the
+    // program's does.
     static compute_price(total_seconds, start_price, end_price, seconds_elapsed)
     {
+        const PRICE_CURVE_STEEPNESS = 1069n;
+
         if (seconds_elapsed >= total_seconds) {
             return end_price;
         }
 
-        let delta = start_price - end_price;
+        let added = ((start_price - end_price) * total_seconds) /
+            ((PRICE_CURVE_STEEPNESS * seconds_elapsed) + total_seconds);
 
-        delta /= 1000n;
-        end_price /= 1000n;
+        added = (added * PRICE_CURVE_STEEPNESS * (total_seconds - seconds_elapsed)) /
+            ((PRICE_CURVE_STEEPNESS + 1n) * total_seconds);
 
-        let ac = delta * 101n;
-
-        let ab = ((100n * delta * seconds_elapsed) / total_seconds) + delta;
-
-        let bc = ((100n * 101n * seconds_elapsed) / total_seconds) + 101n;
-
-        return (end_price + ((ac - ab) / bc)) * 1000n;
+        return end_price + added;
     }
 
     // Mirrors compute_minimum_bid in program/util/util_calculations.c: the first bid must be at least the initial

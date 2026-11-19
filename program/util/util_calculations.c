@@ -92,20 +92,31 @@ static uint64_t multiply_fraction(uint64_t value, uint64_t numerator, uint64_t d
     return result;
 }
 
+// The steepness k of the sale price curve (see compute_price), whose shape is
+//   y = 1/(kx + 1) - 1/(k + 1),
+// x being the fraction of the sale elapsed.  1069 makes the price fall to 1/10 of the way from the minimum to the
+// start price after 1/120 of the sale: 2 hours of a 10 day sale, or 1 hour of a 5 day sale.  (k is the larger root of
+// k^2 - 1069k + 120 = 0, which is 1068.9.)  After that the price keeps falling, more and more slowly, through the
+// rest of the sale, down to the minimum at its end.  An earlier version of this program used k = 100.
+#define PRICE_CURVE_STEEPNESS 1069ul
+
 // Returns the price at seconds_elapsed into a price curve that falls from start_price to end_price over
 // total_seconds, which requires
 //   start_price >= end_price.
-// The curve is
-//   y = (1 / (100x + 1)) - (1 / 101),
-// where
-//   x = seconds_elapsed / total_seconds;
-// it runs from (100 / 101) at x = 0 down to 0 at x = 1.  The price is
-//   end_price + ((start_price - end_price) * y),
-// rounded down, computed in whole lamports.  So the price starts just below start_price (about 99% of the way from
-// end_price to it) and falls to end_price; since the term added to end_price is never negative, the price is never
-// below end_price.  Callers' prices are limited to 100,000,000 SOL (see admin_create_block), far below the roughly
-// 182 million SOL at which the intermediate values below would overflow; if they ever did overflow, end_price is
-// returned.
+// With
+//   T = total_seconds,
+//   t = seconds_elapsed,
+//   x = t / T, and
+//   k = PRICE_CURVE_STEEPNESS,
+// the curve is
+//   y = 1/(kx + 1) - 1/(k + 1) = k(T - t) / ((kt + T)(k + 1)),
+// which runs from k / (k + 1), just below 1, at t = 0, down to 0 at t = T, always falling.  The price is
+//   end_price + (start_price - end_price) * y,
+// computed in whole lamports as
+//   end_price + floor(floor((start_price - end_price) * T / (kt + T)) * k(T - t) / ((k + 1)T)).
+// Since each of the two factors is at most 1, the price is never below end_price and never above start_price.  Each
+// step is computed with multiply_fraction(), and kt + T, k(T - t) and (k + 1)T are all far below 2^64 for any
+// duration that a block can have (durations are uint32_t), so no intermediate value can overflow.
 static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint64_t end_price,
                               uint64_t seconds_elapsed)
 {
@@ -114,50 +125,37 @@ static uint64_t compute_price(uint64_t total_seconds, uint64_t start_price, uint
         return end_price;
     }
 
-    // The amount by which the price falls over the whole curve
-    uint64_t delta = start_price - end_price;
-
     // Keep track of overflow, and if it occurs, use the end price
     bool overflow = false;
 
-    // With
-    //   x = (seconds_elapsed / total_seconds),
-    // the amount added to end_price is
-    //   delta * ((1 / (100x + 1)) - (1 / 101)) = (101 * delta - (100 * delta * x + delta)) / (101 * (100x + 1))
-    // which is computed as
-    //   (ac - ab) / bc,
-    // with each time term rounded down:
-    //   ac = 101 * delta
-    uint64_t ac = checked_multiply(delta, 101ul, &overflow);
+    // The amount by which the price falls over the whole curve
+    uint64_t delta = start_price - end_price;
 
-    //   ab = ((100 * delta * seconds_elapsed) / total_seconds) + delta.
-    // The product
-    //   100 * delta * seconds_elapsed
-    // can overflow for large prices and long durations (for example, a 100,000 SOL start price after about 31
-    // minutes), so it is never formed: multiply_fraction() computes the same floor without it.  It requires
-    //   seconds_elapsed <= total_seconds
-    // and
-    //   total_seconds > 0,
-    // both guaranteed by the early return above.  The result is at most
-    //   100 * delta,
-    // so ab is at most ac, and ac - ab cannot underflow.
-    uint64_t ab = checked_add(multiply_fraction(checked_multiply(delta, 100ul, &overflow), seconds_elapsed,
-                                                total_seconds),
-                              delta, &overflow);
+    // The numerators and denominators of the two factors of the curve.  T - t cannot underflow because of the early
+    // return above.
+    //   kt + T
+    uint64_t first_denominator = checked_add(checked_multiply(PRICE_CURVE_STEEPNESS, seconds_elapsed, &overflow),
+                                             total_seconds, &overflow);
+    //   k(T - t)
+    uint64_t second_numerator = checked_multiply(PRICE_CURVE_STEEPNESS, total_seconds - seconds_elapsed, &overflow);
+    //   (k + 1)T
+    uint64_t second_denominator = checked_multiply(PRICE_CURVE_STEEPNESS + 1, total_seconds, &overflow);
 
-    // bc = ((100 * 101 * seconds_elapsed) / total_seconds) + 101, computed the same way
-    uint64_t bc = checked_add(multiply_fraction(100ul * 101ul, seconds_elapsed, total_seconds), 101ul, &overflow);
-
-    //   price = end_price + ((ac - ab) / bc).
-    // The added term is at most delta, so the sum is at most start_price.
-    uint64_t price = checked_add(end_price, (ac - ab) / bc, &overflow);
-
-    // Defensive fallback only; no price accepted by admin_create_block can overflow
+    // Defensive fallback only; no duration that a block can have can overflow
     if (overflow) {
-        price = end_price;
+        return end_price;
     }
 
-    return price;
+    // First factor: delta * T / (kt + T).  multiply_fraction() requires T <= kt + T, which is always true, and
+    // kt + T > 0, which is true since T > 0 (T > t >= 0, from the early return above).
+    uint64_t added = multiply_fraction(delta, total_seconds, first_denominator);
+
+    // Second factor: * k(T - t) / ((k + 1)T).  multiply_fraction() requires k(T - t) <= (k + 1)T, which is always
+    // true since T - t <= T.
+    added = multiply_fraction(added, second_numerator, second_denominator);
+
+    // The added term is at most delta, so the sum is at most start_price and cannot overflow
+    return end_price + added;
 }
 
 // The smallest amount, in basis points of the current highest bid, by which a new auction bid must exceed it: 500 is

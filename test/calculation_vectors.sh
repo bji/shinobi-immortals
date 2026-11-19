@@ -108,71 +108,72 @@ emit price/zero-duration 2 0 1000000 100000 0 100000
 emit price/end 2 100 1000000 100000 100 100000
 emit price/after-end 2 100 1000000 100000 "$MAX" 100000
 emit price/constant 2 100 1000000 1000000 50 1000000
-# Duration 100 makes the intermediate time divisions exact. Independently
-# evaluate the documented rational curve, in whole lamports.
-# For start S, end E and elapsed t, the reference is
-# E + (S-E)*(100-t)/(101*(1+t)); dc's integer division supplies the floor.
-for ((elapsed=0; elapsed<=100; ++elapsed)); do
-    expected=$(dc_calc "100000000000000 1000000000 - 100 $elapsed - * 101 1 $elapsed + * / 1000000000 + p")
-    emit "price/curve/$elapsed" 2 100 100000000000000 1000000000 "$elapsed" "$expected"
-done
-# Long durations with the maximum start price (current_issues.txt issue 12).  For a 100,000 SOL start and a 1 SOL
-# floor, the product 100*delta*elapsed exceeds 2^64 from elapsed second 1845 on (from second 1844693 on in the
-# earlier thousand-lamport arithmetic); compute_price used to overflow there and fall back to the floor (once at
-# 1/1000 of it).  It must instead follow the curve for the whole duration.
-# Over a 365 day duration, elapsed times that are multiples of 1/100 of the duration make the time divisions exact,
-# so the same rational reference as above applies, with t = 100*elapsed/duration.  Points across the curve, from
-# well past the overflow thresholds to near the end, are checked.
-PRICE_LONG_DURATION=$((365*24*60*60))
-for t in 1 5 6 10 25 50 75 90 99; do
-    elapsed=$((PRICE_LONG_DURATION / 100 * t))
-    expected=$(dc_calc "100000000000000 1000000000 - 100 $t - * 101 1 $t + * / 1000000000 + p")
-    emit "price/long-duration/t$t" 2 "$PRICE_LONG_DURATION" 100000000000000 1000000000 "$elapsed" "$expected"
-done
-# Elapsed times around the overflow thresholds, durations up to the uint32_t maximum, and prices that are not whole
-# multiples of anything do not divide evenly.  For these the reference applies each of the curve's floors
-# explicitly, in dc's arbitrary precision (so no intermediate value can overflow), in whole lamports, with d = S-E:
-#   E + floor((101*d - floor(100*d*t/T) - d) / (floor(10100*t/T) + 101))
-function price_floor_reference ()
+# The sale price curve (compute_price in program/util/util_calculations.c), with steepness k = 1069
+# (PRICE_CURVE_STEEPNESS), for duration T, start price S, floor E and elapsed seconds t, before the end:
+#   E + floor(floor((S - E) * T / (kt + T)) * k(T - t) / ((k + 1)T))
+# evaluated independently in dc's arbitrary precision, so no intermediate value can overflow; dc's integer division
+# of non-negative values supplies each floor.
+PRICE_STEEPNESS=1069
+function price_reference ()
 {
-    local T=$1 S=$2 E=$3 t=$4
-    dc_calc "$S $E - sd 101 ld * 100 ld * $t * $T / - ld - 10100 $t * $T / 101 + / $E + p"
+    local T=$1 S=$2 E=$3 t=$4 k=$PRICE_STEEPNESS
+    dc_calc "$S $E - $T * $k $t * $T + / $k $T $t - * * $k 1 + $T * / $E + p"
 }
-for case in "$PRICE_LONG_DURATION 1844" "$PRICE_LONG_DURATION 1845" "$PRICE_LONG_DURATION 1844692"                             "$PRICE_LONG_DURATION 1844693" "$PRICE_LONG_DURATION 1844694"                                                        "$PRICE_LONG_DURATION $((PRICE_LONG_DURATION - 1))" "4294967295 1844693" "4294967295 2147483647"                      "4294967295 4294967294"; do
-    read -r duration elapsed <<< "$case"
-    expected=$(price_floor_reference "$duration" 100000000000000 1000000000 "$elapsed")
-    emit "price/long-duration/T$duration-elapsed$elapsed" 2 "$duration" 100000000000000 1000000000 "$elapsed" "$expected"
+# A 7 day sale from 1000 SOL down to 0.1 SOL: the start (just below 1000 SOL), the first seconds and minutes, the
+# first hours in which most of the drop happens, and through the days in which the price settles onto the floor, up
+# to one second before the end.
+PRICE_WEEK=$((7*24*60*60))
+for elapsed in 0 1 60 600 3600 5040 7200 21600 86400 $((PRICE_WEEK / 2)) $((PRICE_WEEK - 3600)) \
+               $((PRICE_WEEK - 1)); do
+    expected=$(price_reference "$PRICE_WEEK" 1000000000000 100000000 "$elapsed")
+    emit "price/week/$elapsed" 2 "$PRICE_WEEK" 1000000000000 100000000 "$elapsed" "$expected"
 done
-# Prices that are not multiples of 1000 lamports are computed to the lamport, and never fall below the floor.  (The
-# earlier thousand-lamport arithmetic rounded the floor down, so that an Immortal could sell for up to 999 lamports
-# below its minimum price.)  An equal start and end price must return exactly that price at any time, and a falling
-# curve between two non-aligned prices must follow the reference, ending one second before the end at or above the
-# floor.
+# The curve is designed so that the price falls to 1/10 of the way from the floor to the start price after 1/120 of
+# the sale: 2 hours of a 10 day sale, and 1 hour of a 5 day sale.  Check that the reference meets that to within
+# 0.01% of the drop, and that the program agrees with the reference there.
+for case in "$((10*24*60*60)) 7200" "$((5*24*60*60)) 3600"; do
+    read -r duration elapsed <<< "$case"
+    expected=$(price_reference "$duration" 1000000000000 100000000 "$elapsed")
+    tenth=$(dc_calc "1000000000000 100000000 - 10 / 100000000 + p")
+    tolerance=$(dc_calc "1000000000000 100000000 - 10000 / p")
+    # These values are far below 2^63, so the shell's own arithmetic can compare them
+    difference=$((expected - tenth))
+    if [ $difference -lt 0 ]; then
+        difference=$((-difference))
+    fi
+    if [ $difference -gt $tolerance ]; then
+        echo "price/tenth/T$duration: price $expected after $elapsed seconds is not within $tolerance of $tenth" >&2
+        exit 1
+    fi
+    emit "price/tenth/T$duration" 2 "$duration" 1000000000000 100000000 "$elapsed" "$expected"
+done
+# A short sale still runs from just below the start price to the floor
+for elapsed in 0 1 50 99; do
+    expected=$(price_reference 100 1000000000000 100000000 "$elapsed")
+    emit "price/short/$elapsed" 2 100 1000000000000 100000000 "$elapsed" "$expected"
+done
+# Prices that are not multiples of anything are computed to the lamport, and never fall below the floor.  An equal
+# start and end price must return exactly that price at any time.
 emit price/minimum-rounding 2 100 1001999 1001999 50 1001999
 for elapsed in 0 1 50 99; do
-    expected=$(price_floor_reference 100 99999123456789 1000000999 "$elapsed")
+    expected=$(price_reference 100 99999123456789 1000000999 "$elapsed")
     emit "price/unaligned/$elapsed" 2 100 99999123456789 1000000999 "$elapsed" "$expected"
 done
+PRICE_LONG_DURATION=$((365*24*60*60))
 for elapsed in 1 1844 1845 31535999; do
-    expected=$(price_floor_reference "$PRICE_LONG_DURATION" 99999123456789 1000000999 "$elapsed")
+    expected=$(price_reference "$PRICE_LONG_DURATION" 99999123456789 1000000999 "$elapsed")
     emit "price/unaligned/long-$elapsed" 2 "$PRICE_LONG_DURATION" 99999123456789 1000000999 "$elapsed" "$expected"
 done
-# The largest start price that admin_create_block accepts, 100,000,000 SOL, must not overflow at any point on the
-# curve.  (101 times the price drop, the largest intermediate value, would overflow above about 182,000,000 SOL.)
-# Points on a 365 day curve at exact 1/100 steps use the rational reference; points that do not divide evenly,
-# including on the longest possible (uint32_t maximum) duration and with a floor that is not a multiple of 1000
-# lamports, use the explicit floor reference.
+# The largest start price that admin_create_block accepts, 100,000,000 SOL, on the longest possible (uint32_t
+# maximum) duration, must follow the curve at every point without overflowing, including with a floor that is not a
+# multiple of 1000 lamports.
 PRICE_MAX_START=100000000000000000
-for t in 0 1 6 50 99; do
-    elapsed=$((PRICE_LONG_DURATION / 100 * t))
-    expected=$(dc_calc "$PRICE_MAX_START 1000000000 - 100 $t - * 101 1 $t + * / 1000000000 + p")
-    emit "price/max-start/t$t" 2 "$PRICE_LONG_DURATION" "$PRICE_MAX_START" 1000000000 "$elapsed" "$expected"
-done
-for case in "$PRICE_LONG_DURATION 1 1000000000" "$PRICE_LONG_DURATION 2 1000000000"                               \
+for case in "$PRICE_LONG_DURATION 0 1000000000" "$PRICE_LONG_DURATION 1 1000000000"                                 \
             "$PRICE_LONG_DURATION 1844693 1000000999" "$PRICE_LONG_DURATION $((PRICE_LONG_DURATION - 1)) 1000000999"  \
-            "4294967295 1 1000000000" "4294967295 2147483647 1000000999" "4294967295 4294967294 1000000999"; do
+            "4294967295 0 1000000000" "4294967295 1 1000000000" "4294967295 2147483647 1000000999"                    \
+            "4294967295 4294967294 1000000999"; do
     read -r duration elapsed floor <<< "$case"
-    expected=$(price_floor_reference "$duration" "$PRICE_MAX_START" "$floor" "$elapsed")
+    expected=$(price_reference "$duration" "$PRICE_MAX_START" "$floor" "$elapsed")
     emit "price/max-start/T$duration-elapsed$elapsed-floor$floor" 2 "$duration" "$PRICE_MAX_START" "$floor"           \
          "$elapsed" "$expected"
 done
