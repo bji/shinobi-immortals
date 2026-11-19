@@ -114,6 +114,6 @@ solxact encode                                                                  
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
-        // Instruction code 8 = Buy //                                                                                \
-        u8 8                                                                                                          \
+        // Instruction code 9 = Buy //                                                                                \
+        u8 9                                                                                                          \
         u64 $MAX_LAMPORTS

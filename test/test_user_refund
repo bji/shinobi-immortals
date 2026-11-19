@@ -18,8 +18,8 @@ if should_run_test user_refund_bad_block; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -59,8 +59,8 @@ if should_run_test user_refund_incomplete_block; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -183,8 +183,8 @@ if should_run_test user_refund_bad_entry; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -212,8 +212,8 @@ if should_run_test user_refund_unowned_entry; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -241,8 +241,8 @@ if should_run_test user_refund_mismatched_block_entry; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $BAD_TOKEN_DESTINATION_PUBKEY                                                                     \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -268,8 +268,8 @@ if should_run_test user_refund_still_revealable; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -295,8 +295,8 @@ if should_run_test user_refund_not_revealable; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -321,8 +321,8 @@ if should_run_test user_refund_not_revealable; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -347,8 +347,8 @@ if should_run_test user_refund_unowned; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -374,8 +374,8 @@ if should_run_test user_refund_wrong_owner; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER2_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user2.json                                                                       \
@@ -401,8 +401,8 @@ if should_run_test user_refund_nonexistent_token_account; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -446,8 +446,8 @@ if should_run_test user_refund_empty_token_account; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER2_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user2.json                                                                       \
@@ -473,8 +473,8 @@ if should_run_test user_refund_success; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -501,8 +501,8 @@ if should_run_test user_refund_already_refunded; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER1_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -587,8 +587,8 @@ if should_run_test user_refund_mystery_timeout; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER2_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user2.json                                                                       \
@@ -618,8 +618,8 @@ if should_run_test user_refund_mystery_timeout; then
            account $AUTHORITY_PUBKEY w                                                                               \
            account $TOKEN_DESTINATION_PUBKEY                                                                         \
            account $RICH_USER2_PUBKEY w                                                                              \
-           // Instruction code 9 = Refund //                                                                         \
-           u8 9"                                                                                                     \
+           // Instruction code 10 = Refund //                                                                        \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user2.json                                                                       \

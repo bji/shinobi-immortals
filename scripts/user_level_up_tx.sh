@@ -132,6 +132,6 @@ solxact encode                                                                  
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         account $STAKE_ACCOUNT_PUBKEY                                                                                 \
-        // Instruction code 16 = LevelUp //                                                                           \
-        u8 16                                                                                                        \
+        // Instruction code 17 = LevelUp //                                                                           \
+        u8 17                                                                                                        \
         u64 $KI_AMOUNT

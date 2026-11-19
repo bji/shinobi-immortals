@@ -205,8 +205,8 @@ if should_run_test user_destake_bad_block; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 13 = Destake //                                                                       \
-           u8 13                                                                                                     \
+           // Instruction code 14 = Destake //                                                                       \
+           u8 14                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -258,8 +258,8 @@ if should_run_test user_destake_bad_entry; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 13 = Destake //                                                                       \
-           u8 13                                                                                                     \
+           // Instruction code 14 = Destake //                                                                       \
+           u8 14                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -300,8 +300,8 @@ if should_run_test user_destake_entry_wrong_block; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 13 = Destake //                                                                       \
-           u8 13                                                                                                     \
+           // Instruction code 14 = Destake //                                                                       \
+           u8 14                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -342,8 +342,8 @@ if should_run_test user_destake_entry_not_staked; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 13 = Destake //                                                                       \
-           u8 13                                                                                                     \
+           // Instruction code 14 = Destake //                                                                       \
+           u8 14                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -383,8 +383,8 @@ if should_run_test user_destake_entry_not_owned; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 13 = Destake //                                                                       \
-           u8 13                                                                                                     \
+           // Instruction code 14 = Destake //                                                                       \
+           u8 14                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -443,8 +443,8 @@ function destake_14_0_0_raw ()
           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
           account $ATA_PROGRAM                                                                                       \
           account $MINT_PUBKEY                                                                                       \
-          // Instruction code 13 = Destake //                                                                        \
-          u8 13 $@"                                                                                                  \
+          // Instruction code 14 = Destake //                                                                        \
+          u8 14 $@"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \

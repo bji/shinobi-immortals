@@ -75,5 +75,5 @@ solxact encode                                                                  
         // The program authority, which is the freeze authority of the entry mint //                                  \
         account $AUTHORITY_PUBKEY                                                                                     \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
-        // Instruction code 14 = Thaw //                                                                              \
-        u8 14
+        // Instruction code 15 = Thaw //                                                                              \
+        u8 15

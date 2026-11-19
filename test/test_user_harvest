@@ -148,8 +148,8 @@ if should_run_test user_harvest_bad_entry; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 15 = Harvest //                                                                       \
-           u8 15"                                                                                                    \
+           // Instruction code 16 = Harvest //                                                                       \
+           u8 16"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -314,8 +314,8 @@ if should_run_test user_destake_no_ki_harvest; then
            // Associated Token Account program: not that program //                                                  \
            account $RENT_SYSVAR_PUBKEY                                                                               \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 13 = Destake //                                                                       \
-           u8 13                                                                                                     \
+           // Instruction code 14 = Destake //                                                                       \
+           u8 14                                                                                                     \
            // no_ki_harvest flag: 1 = do not harvest Ki //                                                           \
            u8 1                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \

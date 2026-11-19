@@ -100,5 +100,5 @@ solxact encode                                                                  
         // The token account that holds the entry's token: the user's associated token account //                     \
         account $TOKEN_DESTINATION_PUBKEY                                                                             \
         account $USER_PUBKEY w                                                                                        \
-        // Instruction code 9 = Refund //                                                                             \
-        u8 9
+        // Instruction code 10 = Refund //                                                                            \
+        u8 10

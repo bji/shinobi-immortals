@@ -82,11 +82,11 @@ const g_stake_config_address = "StakeConfig11111111111111111111111111111111";
 const g_stake_config_pubkey = make_pubkey(g_stake_config_address);
 
 // Instruction codes of the instructions whose transactions are built in this file (see program/entrypoint.c)
-const INSTRUCTION_DESTAKE = 13;
-const INSTRUCTION_THAW = 14;
-const INSTRUCTION_SETTLE_WINNING_BID = 17;
-const INSTRUCTION_DELEGATE = 18;
-const INSTRUCTION_WITHDRAW_EXCESS = 20;
+const INSTRUCTION_WITHDRAW_EXCESS = 8;
+const INSTRUCTION_DESTAKE = 14;
+const INSTRUCTION_THAW = 15;
+const INSTRUCTION_SETTLE_WINNING_BID = 18;
+const INSTRUCTION_DELEGATE = 19;
 
 // Data type code of the authority account's data (DataType_Authority in program/inc/data_type.h)
 const DATA_TYPE_AUTHORITY = 6;

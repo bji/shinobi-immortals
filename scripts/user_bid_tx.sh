@@ -107,7 +107,7 @@ solxact encode                                                                  
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SELF_PROGRAM_PUBKEY                                                                                  \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
-        // Instruction code 10 = Bid //                                                                               \
-        u8 10                                                                                                         \
+        // Instruction code 11 = Bid //                                                                               \
+        u8 11                                                                                                         \
         u64 $MINIMUM_BID_LAMPORTS                                                                                     \
         u64 $MAXIMUM_BID_LAMPORTS

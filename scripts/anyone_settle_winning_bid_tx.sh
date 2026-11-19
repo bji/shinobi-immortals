@@ -145,5 +145,5 @@ solxact encode                                                                  
         account $ENTRY_METADATA_PUBKEY w                                                                              \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         $EXTRA_ACCOUNTS                                                                                               \
-        // Instruction code 17 = SettleWinningBid //                                                                  \
-        u8 17
+        // Instruction code 18 = SettleWinningBid //                                                                  \
+        u8 18

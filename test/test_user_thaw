@@ -1,4 +1,4 @@
-# Tests of Thaw (14), and of Destake with the no_thaw flag set, which leaves the token account that holds the entry's
+# Tests of Thaw (15), and of Destake with the no_thaw flag set, which leaves the token account that holds the entry's
 # token frozen until Thaw thaws it.
 #
 # Uses block 19 0, which has two entries: 19 0 0, which rich_user1 buys and stakes, and 19 0 1, which is not owned.
@@ -148,8 +148,8 @@ if should_run_test user_thaw_bad_data_size; then
            account $THAW_MINT_PUBKEY                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 14 = Thaw //                                                                          \
-           u8 14                                                                                                     \
+           // Instruction code 15 = Thaw //                                                                          \
+           u8 15                                                                                                     \
            u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \

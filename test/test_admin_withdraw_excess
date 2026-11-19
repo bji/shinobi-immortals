@@ -1,5 +1,5 @@
 
-# Tests of WithdrawExcess (20): the admin withdraws the excess lamports of an account that the program controls.
+# Tests of WithdrawExcess (8): the admin withdraws the excess lamports of an account that the program controls.
 #
 # These tests make their own block group (77) so that they do not depend on what earlier tests left behind, with one
 # deliberate exception: the test of the authority account first checks that after every mystery purchase, reveal and
@@ -111,8 +111,8 @@ function withdraw_excess_raw ()
           account $STATE_PUBKEY                                                                                      \
           account $ADMIN_PUBKEY ws                                                                                   \
           account $FROM_PUBKEY w                                                                                     \
-          // Instruction code 20 = WithdrawExcess //                                                                 \
-          u8 20                                                                                                      \
+          // Instruction code 8 = WithdrawExcess //                                                                  \
+          u8 8                                                                                                       \
           $@"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \

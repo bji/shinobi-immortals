@@ -115,5 +115,5 @@ solxact encode                                                                  
         account $ENTRY_PUBKEY                                                                                         \
         account $BID_PUBKEY w                                                                                         \
         $EXTRA_ACCOUNTS                                                                                               \
-        // Instruction code 11 = ClaimLosing //                                                                       \
-        u8 11
+        // Instruction code 12 = ClaimLosing //                                                                       \
+        u8 12

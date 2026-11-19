@@ -34,8 +34,8 @@ if should_run_test user_buy_wrong_admin; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -78,8 +78,8 @@ if should_run_test user_buy_short_data; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8"                                                                                                     \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -121,8 +121,8 @@ if should_run_test user_buy_bad_block; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -431,8 +431,8 @@ if should_run_test user_buy_wrong_entry; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -477,8 +477,8 @@ if should_run_test user_buy_wrong_entry_2; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -524,8 +524,8 @@ if should_run_test user_buy_wrong_token; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -571,8 +571,8 @@ if should_run_test user_buy_wrong_mint; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -621,8 +621,8 @@ if should_run_test user_buy_wrong_metadata; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = Buy //                                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 9 = Buy //                                                                            \
+           u8 9                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \

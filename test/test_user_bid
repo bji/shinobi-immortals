@@ -180,8 +180,8 @@ if should_run_test user_bid_bad_data; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 10 = Bid //                                                                           \
-           u8 10"                                                                                                    \
+           // Instruction code 11 = Bid //                                                                           \
+           u8 11"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -224,8 +224,8 @@ if should_run_test user_bid_bad_entry; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 10 = Bid //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 11 = Bid //                                                                           \
+           u8 11                                                                                                     \
            u64 \`lamports_from_sol 0.1\`                                                                             \
            u64 \`lamports_from_sol 0.1\`"                                                                            \
         | solxact encode                                                                                             \

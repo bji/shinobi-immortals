@@ -271,8 +271,8 @@ if should_run_test user_claim_losing_bad_bidding_account; then
            account $RICH_USER2_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY                                                                                     \
            account $BID_PUBKEY w                                                                                     \
-           // Instruction code 11 = ClaimLosing //                                                                   \
-           u8 11"                                                                                                    \
+           // Instruction code 12 = ClaimLosing //                                                                   \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user2.json                                                                       \
@@ -296,8 +296,8 @@ if should_run_test user_claim_losing_bad_entry; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $STATE_PUBKEY                                                                                    \
            account $BID_PUBKEY w                                                                                     \
-           // Instruction code 11 = ClaimLosing //                                                                   \
-           u8 11"                                                                                                    \
+           // Instruction code 12 = ClaimLosing //                                                                   \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -319,8 +319,8 @@ if should_run_test user_claim_losing_bad_bid; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY                                                                                     \
            account $STATE_PUBKEY w                                                                                  \
-           // Instruction code 11 = ClaimLosing //                                                                   \
-           u8 11"                                                                                                    \
+           // Instruction code 12 = ClaimLosing //                                                                   \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -347,8 +347,8 @@ if should_run_test user_claim_losing_bad_bid_2; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $ENTRY_PUBKEY                                                                                     \
            account $BAD_BID_PUBKEY w                                                                                 \
-           // Instruction code 11 = ClaimLosing //                                                                   \
-           u8 11"                                                                                                    \
+           // Instruction code 12 = ClaimLosing //                                                                   \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -586,7 +586,7 @@ if should_run_test user_claim_losing_mismatched_entry_winning_bid; then
          account $RICH_USER1_PUBKEY ws                                                                               \
          account $OTHER_ENTRY_PUBKEY                                                                                 \
          account $WINNING_BID_PUBKEY w                                                                               \
-         u8 11                                                                                                       \
+         u8 12                                                                                                       \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`

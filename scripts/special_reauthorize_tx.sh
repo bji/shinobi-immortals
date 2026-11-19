@@ -142,8 +142,8 @@ solxact encode                                                                  
         // The entry mint is writable because its freeze authority is passed on with the metadata authority //        \
         account $ENTRY_MINT_PUBKEY w                                                                                  \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
-        // Instruction code 19 = Reauthorize //                                                                       \
-        u8 19                                                                                                         \
+        // Instruction code 20 = Reauthorize //                                                                       \
+        u8 20                                                                                                         \
         // Whether or not to reauthorize the Metaplex metadata //                                                     \
         bool $REAUTHORIZE_METADATA                                                                                    \
         pubkey $NEW_METADATA_AUTHORITY_PUBKEY

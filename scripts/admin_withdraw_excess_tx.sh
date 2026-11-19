@@ -159,6 +159,6 @@ solxact encode                                                                  
         account $STATE_PUBKEY                                                                                         \
         account $ADMIN_PUBKEY ws                                                                                      \
         account $FROM_PUBKEY w                                                                                        \
-        // Instruction code 20 = WithdrawExcess //                                                                    \
-        u8 20                                                                                                         \
+        // Instruction code 8 = WithdrawExcess //                                                                     \
+        u8 8                                                                                                          \
         u8 $ACCOUNT_TYPE_CODE
