@@ -89,7 +89,7 @@ solxact encode                                                                  
         encoding c                                                                                                    \
         fee_payer $SUPERUSER_PUBKEY                                                                                   \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
-        account $SUPERUSER_PUBKEY s                                                                                   \
+        account $SUPERUSER_PUBKEY ws                                                                                  \
         account $STATE_PUBKEY w                                                                                      \
         account $AUTHORITY_PUBKEY w                                                                                   \
         account $KI_MINT_PUBKEY w                                                                                     \

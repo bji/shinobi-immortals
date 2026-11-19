@@ -3,14 +3,6 @@
 const SolanaWeb3 = require("@solana/web3.js");
 const Buffer = require("buffer");
 const bs58 = require("bs58");
-const { _buy_tx,
-        _refund_tx,
-        _bid_tx,
-        _claim_losing_tx,
-        _stake_with_vote_account_tx,
-        _harvest_tx,
-        _level_up_tx
-      } = require("./tx.js");
 
 const LAMPORTS_PER_SOL = 1000 * 1000 * 1000;
 
@@ -83,8 +75,15 @@ const g_stake_config_pubkey = make_pubkey(g_stake_config_address);
 
 // Instruction codes of the instructions whose transactions are built in this file (see program/entrypoint.c)
 const INSTRUCTION_WITHDRAW_EXCESS = 8;
+const INSTRUCTION_BUY = 9;
+const INSTRUCTION_REFUND = 10;
+const INSTRUCTION_BID = 11;
+const INSTRUCTION_CLAIM_LOSING = 12;
+const INSTRUCTION_STAKE = 13;
 const INSTRUCTION_DESTAKE = 14;
 const INSTRUCTION_THAW = 15;
+const INSTRUCTION_HARVEST = 16;
+const INSTRUCTION_LEVEL_UP = 17;
 const INSTRUCTION_SETTLE_WINNING_BID = 18;
 const INSTRUCTION_DELEGATE = 19;
 
@@ -127,7 +126,7 @@ class RpcConnection
 {
     static create(rpc_endpoint, max_requests, max_data)
     {
-        return new RpcConnections(rpc_endpoint, max_requests, max_data);
+        return new RpcConnection(rpc_endpoint, max_requests, max_data);
     }
 
     constructor(rpc_endpoint, max_requests, max_data)
@@ -1090,6 +1089,18 @@ class Block
     {
         return this.block_start_timestamp + this.mystery_phase_duration;
     }
+
+    // Mirrors get_mystery_phase_end_timestamp in program/util/util_block.c: if all mysteries were sold, the mystery
+    // phase ended when the last one was sold (mystery_phase_end_timestamp); otherwise it ends (or ended) when
+    // mystery_phase_duration elapses, and mystery_phase_end_timestamp stays 0.  Only meaningful for a complete block.
+    get_mystery_phase_end_timestamp()
+    {
+        if (this.mysteries_sold_count == this.total_mystery_count) {
+            return this.mystery_phase_end_timestamp;
+        }
+
+        return this.get_mystery_deadline();
+    }
 }
 
 
@@ -1172,7 +1183,8 @@ class Entry
 
         for (let i = 0; i < 9; i += 1) {
             this.level_metadata[i] = {
-                form : data[376 + (i * 308)],
+                // form is a uint32_t in LevelMetadata (program/inc/entry.h)
+                form : buffer_le_u32(data, 376 + (i * 308)),
                 skill : data[380 + (i * 308)],
                 ki_factor : buffer_le_u32(data, 384 + (i * 308)),
                 name : buffer_string(data, 388 + (i * 308), 32),
@@ -1202,6 +1214,12 @@ class Entry
 
         if (new_entry.purchase_price_lamports != this.purchase_price_lamports) {
             this.purchase_price_lamports = new_entry.purchase_price_lamports;
+            changed = true;
+        }
+
+        // A bid placed near the end of an auction extends the auction by increasing duration
+        if (new_entry.duration != this.duration) {
+            this.duration = new_entry.duration;
             changed = true;
         }
 
@@ -1249,20 +1267,13 @@ class Entry
             }
         }
 
-        let new_level_metadata = [ ];
+        // Compare against the level metadata that the constructor parsed for new_entry, so that the byte offsets of the
+        // level metadata are only in one place (the constructor)
+        let new_level_metadata = new_entry.level_metadata;
 
         let level_metadata_changed = false;
 
         for (let i = 0; i < 9; i += 1) {
-            new_level_metadata[i] = {
-                form : data[392 + (i * 308)],
-                skill : data[396 + (i * 308)],
-                ki_factor : buffer_le_u32(data, 400 + (i * 308)),
-                name : buffer_string(data, 404 + (i * 308), 32),
-                title : buffer_string(data, 436 + (i * 308), 32),
-                uri : buffer_string(data, 468 + (i * 308), 200),
-                uri_contents_sha256 : buffer_sha256(data, 668 + (i * 308))
-            };
             if ((new_level_metadata[i].form != this.level_metadata[i].form) ||
                 (new_level_metadata[i].skill != this.level_metadata[i].skill) ||
                 (new_level_metadata[i].ki_factor != this.level_metadata[i].ki_factor) ||
@@ -1336,7 +1347,8 @@ class Entry
             }
             else {
                 if (this.has_auction) {
-                    if ((this.reveal_timestamp + this.duration) > ((Date.now() / 1000) | 0)) {
+                    // The auction is over once the cluster clock (not the local clock) reaches its end
+                    if ((this.reveal_timestamp + this.duration) > clock.unix_timestamp) {
                         return EntryState.InAuction;
                     }
                     else if (this.auction_highest_bid_lamports > 0) {
@@ -1365,11 +1377,11 @@ class Entry
     // This only returns a valid value if the entry state is PreRevealUnowned or Unowned
     get_price(clock)
     {
-        if (this.get_entry_state(this.block, clock) == EntryState.PreRevealUnowned) {
+        if (this.get_entry_state(clock) == EntryState.PreRevealUnowned) {
             return Entry.compute_price(BigInt(this.block.mystery_phase_duration),
                                        this.block.mystery_start_price_lamports,
                                        this.block.minimum_price_lamports,
-                                       BigInt(clock.unix_timestamp - this.block.block_start_timestamp));
+                                       Entry.seconds_since(clock, this.block.block_start_timestamp));
         }
         else if (this.has_auction) {
             return this.block.minimum_price_lamports;
@@ -1378,7 +1390,7 @@ class Entry
             return Entry.compute_price(BigInt(this.duration),
                                        this.non_auction_start_price_lamports,
                                        this.minimum_price_lamports,
-                                       BigInt(clock.unix_timestamp - this.reveal_timestamp));
+                                       Entry.seconds_since(clock, this.reveal_timestamp));
         }
     }
 
@@ -1398,10 +1410,11 @@ class Entry
     // This only returns a valid value if the entry state is WaitingForRevealOwned
     get_reveal_deadline()
     {
-        return (this.block.mystery_phase_end_timestamp + this.block.reveal_period_duration);
+        return (this.block.get_mystery_phase_end_timestamp() + this.block.reveal_period_duration);
     }
 
-    // Returns the amount of Ki available for harvest from this entry
+    // Returns, as a BigInt number of whole Ki, the amount of Ki that a Harvest of this entry would mint now.  This
+    // mirrors harvest_ki in program/util/util_ki.c.
     async get_harvestable_ki(rpc_connections)
     {
         // If it's not revealed yet, it couldn't be staked
@@ -1410,28 +1423,86 @@ class Entry
             (this.purchase_price_lamports == 0) ||
             // If it has no stake account, then it's not staked
             (this.owned_stake_account == g_system_program_address)) {
-            return 0;
+            return 0n;
         }
 
+        // Fetch the stake account data up to the end of the delegation's deactivation_epoch.  The stake account
+        // layout is: state (u32) at 0, then Meta (rent_exempt_reserve, authorities, lockup) to 124, then the
+        // delegation: voter_pubkey at 124, stake at 156, activation_epoch at 164, deactivation_epoch at 172.
         let result = await rpc_connections.run((rpc_connection) => {
             return rpc_connection.getAccountInfo(this.owned_stake_account,
                                                  {
-                                                     dataSlice : { offset : 156,
-                                                                   length : 8 }
+                                                     dataSlice : { offset : 0,
+                                                                   length : 180 }
                                                  });
-        });
+        }, "fetch stake account");
 
-        if ((result == null) || (result.data == null)) {
-            return 0;
+        if ((result == null) || (result.data == null) || (result.data.length < 180)) {
+            return 0n;
         }
 
-        let stake = buffer_le_u64(result.data, 0);
+        // Only a stake account in the Stake state (2) and delegated to Shinobi Systems earns Ki; whether it is
+        // deactivating or deactivated does not matter
+        if ((buffer_le_u32(result.data, 0) != 2) ||
+            (buffer_address(result.data, 124) != g_shinobi_systems_vote_address)) {
+            return 0n;
+        }
 
-        return (((Number(stake - this.owned_last_ki_harvest_stake_account_lamports) *
-                  this.level_metadata[this.level].ki_factor) / LAMPORTS_PER_SOL) | 0);
+        let stake = buffer_le_u64(result.data, 156);
+        let activation_epoch = buffer_le_u64(result.data, 164);
+
+        // A stake account that is still activating has not earned anything yet
+        let epoch_info = await rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getEpochInfo();
+        }, "fetch epoch info");
+
+        if ((epoch_info == null) || (activation_epoch >= BigInt(epoch_info.epoch))) {
+            return 0n;
+        }
+
+        // A decrease in delegated stake is not earnings (the program resets its baseline in that case)
+        if (stake < this.owned_last_ki_harvest_stake_account_lamports) {
+            return 0n;
+        }
+
+        // Apply the effective stake curve to what was earned, then convert to whole Ki at the current level's
+        // ki_factor
+        let effective_earnings = Entry.compute_effective_stake_earnings(
+            stake - this.owned_last_ki_harvest_stake_account_lamports, stake);
+
+        return (effective_earnings * BigInt(this.level_metadata[this.level].ki_factor)) / BigInt(LAMPORTS_PER_SOL);
     }
 
     // Private implementation follows ---------------------------------------------------------------------------------
+
+    // Returns as a BigInt the number of seconds from timestamp to the clock's unix_timestamp, or 0 if the clock is
+    // earlier than timestamp (the client's estimate of the cluster clock can lag); a negative elapsed time would
+    // otherwise produce a wrong price from compute_price.
+    static seconds_since(clock, timestamp)
+    {
+        let elapsed = clock.unix_timestamp - timestamp;
+
+        return BigInt((elapsed > 0) ? elapsed : 0);
+    }
+
+    // Mirrors compute_effective_stake_earnings in program/util/util_calculations.c, in BigInt lamports.  With
+    // K = EFFECTIVE_STAKE_CEILING_SOL (50 SOL) and x the stake, earnings are scaled by K(K + x) / (K(K + x) + x^2).
+    // The program computes x and K in units of 100 lamports, made ten times larger for as long as x is more than
+    // 2,000,000,000 units, and computes the floor of the scaled earnings exactly; this does the same.
+    static compute_effective_stake_earnings(earnings_lamports, stake_lamports)
+    {
+        let stake_units = stake_lamports / 100n;
+        let ceiling_units = 50n * (1000000000n / 100n);
+        while (stake_units > 2000000000n) {
+            stake_units /= 10n;
+            ceiling_units /= 10n;
+        }
+
+        let numerator = ceiling_units * (ceiling_units + stake_units);
+        let denominator = numerator + (stake_units * stake_units);
+
+        return (earnings_lamports * numerator) / denominator;
+    }
 
     // Mirrors compute_price in program/util/util_calculations.c, in BigInt lamports.  With T = total_seconds,
     // t = seconds_elapsed and k = PRICE_CURVE_STEEPNESS (1069), before the end of the sale the price is
@@ -1490,7 +1561,7 @@ class Entry
 // All addresss passed into and returned from Wallet are strings.
 class Wallet
 {
-    static create(cluter, wallet_address)
+    static create(cluster, wallet_address, callbacks)
     {
         return new Wallet(cluster, wallet_address, callbacks);
     }
@@ -1685,7 +1756,13 @@ class Wallet
                     continue;
                 }
 
-                if (account.data.parsed.info.state != "initialized") {
+                // A token account holding a staked entry's token is frozen for as long as the entry is staked (and an
+                // entry's token account can also be left frozen by a Destake with no_thaw, until it is thawed with
+                // Thaw), so frozen token accounts are included too; otherwise staked entries, and with them their
+                // stake accounts (see update_stakes), would vanish from the wallet.  Only uninitialized accounts are
+                // skipped.
+                if ((account.data.parsed.info.state != "initialized") &&
+                    (account.data.parsed.info.state != "frozen")) {
                     continue;
                 }
 
@@ -1746,6 +1823,8 @@ class Wallet
 
         let wallet_pubkey = make_pubkey(wallet_address);
 
+        let now = Date.now();
+
         // If never fetched stakes, fetch them
         if ((this.last_stakes_fetch_time == null) ||
             // If haven't fetched stakes in 30 seconds, fetch them
@@ -1770,9 +1849,9 @@ class Wallet
                 return;
             }
 
-            this.stakes_by_address = new Map();
-
-            let now = Date.now();
+            // Build the new set of stake accounts separately, and only replace this.stakes_by_address once it is
+            // complete, so that callers never see a partially built set
+            let new_stakes_by_address = new Map();
 
             for (let idx = 0; idx < results.length; idx++) {
                 let account = results[idx].account;
@@ -1805,7 +1884,7 @@ class Wallet
                 let stake = await this.cluster.get_stake_account(pubkey.toBase58(), account);
 
                 if (stake != null) {
-                    this.stakes_by_address.set(stake.address, stake);
+                    new_stakes_by_address.set(stake.address, stake);
                 }
             }
 
@@ -1819,8 +1898,15 @@ class Wallet
                 let stake = await this.cluster.get_stake_account(entry.owned_stake_account);
                 if (stake != null) {
                     stake.is_immortal_staked = true;
-                    this.stakes_by_address.set(stake.address, stake);
+                    new_stakes_by_address.set(stake.address, stake);
                 }
+            }
+
+            // Only save the results if the wallet address did not change while they were being fetched
+            if (wallet_address_holder == this.wallet_address_holder) {
+                this.stakes_by_address = new_stakes_by_address;
+
+                this.last_stakes_fetch_time = Date.now();
             }
         }
     }
@@ -1928,16 +2014,13 @@ class Wallet
         }, sign_callback);
     }
 
+    // Stakes the entry, which the wallet must own, to stake_account, whose withdraw authority must be the wallet.  The
+    // stake account is delegated to Shinobi Systems (the only vote account that Stake accepts), and the token account
+    // holding the entry's token is frozen until the entry is destaked.
     async stake_entry(entry, stake_account, sign_callback)
     {
-        let vote_account = await this.get_shinobi_systems_vote_account();
-
-        if (vote_account == null) {
-            throw new Error("Shinobi Immortals vote account does not exist");
-        }
-
         return this.complete_tx((wallet_address) => {
-            return this.make_stake_with_vote_account_tx(entry, stake_account, vote_account, wallet_address);
+            return this.make_stake_tx(entry, stake_account, wallet_address);
         }, sign_callback);
     }
 
@@ -2029,74 +2112,233 @@ class Wallet
 
     // Private implementation follows ---------------------------------------------------------------------------------
 
+    // Accounts and data here must match those of scripts/user_buy_tx.sh
     async make_buy_tx(entry, maximum_price_lamports, wallet_address)
     {
         let admin_address = await this.fetch_admin_address();
 
-        let token_destination_address = get_associated_token_address(wallet_address, entry.mint_address);
+        if (admin_address == null) {
+            throw new Error("Admin address could not be determined");
+        }
 
-        return _buy_tx({ funding_pubkey : wallet_address,
-                         state_pubkey : g_program_state_address,
-                         admin_pubkey : admin_address,
-                         block_pubkey : entry.block.address,
-                         whitelist_pubkey : get_whitelist_address(entry.block.address),
-                         entry_pubkey : entry.address,
-                         entry_token_pubkey : entry.token_address,
-                         entry_mint_pubkey : entry.mint_address,
-                         token_destination_pubkey : token_destination_address,
-                         token_destination_owner_pubkey : wallet_address,
-                         maximum_price_lamports : maximum_price_lamports });
+        let keys = [
+            // The funding account, which pays the purchase price
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The program state account, which identifies the admin
+            { pubkey : g_program_state_pubkey, isSigner : false, isWritable : false },
+            // The admin, who receives the purchase price of a non-mystery
+            { pubkey : new SolanaWeb3.PublicKey(admin_address), isSigner : false, isWritable : true },
+            // The program authority, which holds the purchase price of a mystery in escrow
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : true },
+            // The block
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : true },
+            // The block's whitelist, whose entry for the funding account is used up if the block is in its whitelist
+            // period
+            { pubkey : make_pubkey(get_whitelist_address(entry.block.address)), isSigner : false, isWritable : true },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The entry's own token account, which holds the token until now and is closed
+            { pubkey : make_pubkey(entry.token_address), isSigner : false, isWritable : true },
+            // The entry's mint
+            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
+            // The wallet's associated token account for the entry's mint, which receives the token, and is created if
+            // it does not exist yet
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
+              isSigner : false, isWritable : true },
+            // The owner of that token account
+            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : false },
+            // This program
+            { pubkey : g_self_program_pubkey, isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
+            // The Associated Token Account program
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
+            // The system program
+            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is the instruction code, 7 bytes of padding (the program's BuyData struct aligns its
+        // u64 to 8 bytes), and then the maximum price in lamports
+        let data = Buffer.Buffer.from([ INSTRUCTION_BUY, 0, 0, 0, 0, 0, 0, 0,
+                                        ...u64_to_le_bytes(maximum_price_lamports) ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
-    async make_refund_tx(entry, wallet_address)
+    // Accounts and data here must match those of scripts/user_refund_tx.sh.  token_address is the token account that
+    // holds the entry's token; if it is not given, the wallet's associated token account for the entry's mint is used.
+    async make_refund_tx(entry, wallet_address, token_address)
     {
-        return _refund_tx({ token_owner_pubkey : wallet_address,
-                            block_pubkey : entry.block.address,
-                            entry_pubkey : entry.address,
-                            buyer_token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
-                            refund_destination_pubkey : wallet_address });
+        if (token_address == null) {
+            token_address = get_associated_token_address(wallet_address, entry.mint_address);
+        }
+
+        let keys = [
+            // The token owner, who must sign
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
+            // The block
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The program authority, which holds the purchase price in escrow and pays the refund
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : true },
+            // The token account holding the entry's token
+            { pubkey : make_pubkey(token_address), isSigner : false, isWritable : false },
+            // The account that receives the refund
+            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : true }
+        ];
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_REFUND ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
+    // Accounts and data here must match those of scripts/user_bid_tx.sh
     async make_bid_tx(entry, minimum_bid_lamports, maximum_bid_lamports, wallet_address)
     {
         let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
 
-        return _bid_tx({ bidding_pubkey : wallet_address,
-                         entry_pubkey : entry.address,
-                         bid_marker_token_pubkey : bid_marker_token_address,
-                         bid_pubkey : get_bid_address(bid_marker_token_address),
-                         minimum_bid_lamports : minimum_bid_lamports,
-                         maximum_bid_lamports : maximum_bid_lamports });
+        let keys = [
+            // The bidding account, which pays the bid
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The bid marker mint
+            { pubkey : g_bid_marker_mint_pubkey, isSigner : false, isWritable : true },
+            // The bidder's bid marker token account for the entry
+            { pubkey : make_pubkey(bid_marker_token_address), isSigner : false, isWritable : true },
+            // The bid account, which holds the bid
+            { pubkey : make_pubkey(get_bid_address(bid_marker_token_address)), isSigner : false, isWritable : true },
+            // The program authority
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // The system program
+            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
+            // This program
+            { pubkey : g_self_program_pubkey, isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is the instruction code, 7 bytes of padding (the program's BidData struct aligns its
+        // u64s to 8 bytes), and then the minimum and maximum bids in lamports
+        let data = Buffer.Buffer.from([ INSTRUCTION_BID, 0, 0, 0, 0, 0, 0, 0,
+                                        ...u64_to_le_bytes(minimum_bid_lamports),
+                                        ...u64_to_le_bytes(maximum_bid_lamports) ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
     async make_claim_tx(entry, won, wallet_address)
     {
-        let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
-        let bid_address = get_bid_address(bid_marker_token_address);
-
         if (won) {
             let admin_address = await this.fetch_admin_address();
+
+            if (admin_address == null) {
+                throw new Error("Admin address could not be determined");
+            }
 
             // Claiming a winning bid is settling it, with the wallet as both the funding account and the bidder
             return this.make_settle_winning_bid_tx(entry, wallet_address, admin_address, wallet_address);
         }
         else {
-            return _claim_losing_tx({ bidding_pubkey : wallet_address,
-                                      entry_pubkey : entry.address,
-                                      bid_pubkey : bid_address,
-                                      bid_marker_token_pubkey : bid_marker_token_address });
+            return this.make_claim_losing_tx(entry, wallet_address);
         }
     }
 
-    async make_stake_with_vote_account_tx(entry, stake_address, vote_account_address, wallet_address)
+    // Accounts and data here must match those of scripts/user_claim_losing_tx.sh.  The bid marker is reclaimed too
+    // (its tokens are burned and its token account closed), unless keep_bid_marker is true; keep_bid_marker is needed
+    // only if the bidder has already burned or closed their bid marker, which would make reclaiming it fail.
+    async make_claim_losing_tx(entry, wallet_address, keep_bid_marker)
     {
-        return _stake_tx({ block_pubkey : entry.block.address,
-                           entry_pubkey : entry.address,
-                           token_owner_pubkey : wallet_address,
-                           token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
-                           stake_pubkey : stake_address,
-                           vote_account_pubkey : vote_account_address,
-                           withdraw_authority : wallet_address });
+        let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
+
+        let keys = [
+            // The bidding account, which receives the bid back
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : false },
+            // The bid account, which is closed
+            { pubkey : make_pubkey(get_bid_address(bid_marker_token_address)), isSigner : false, isWritable : true }
+        ];
+
+        if (!keep_bid_marker) {
+            // The bid marker mint
+            keys.push({ pubkey : g_bid_marker_mint_pubkey, isSigner : false, isWritable : true });
+            // The bidder's bid marker token account for the entry
+            keys.push({ pubkey : make_pubkey(bid_marker_token_address), isSigner : false, isWritable : true });
+            // The program authority
+            keys.push({ pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false });
+            // The SPL Token program
+            keys.push({ pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false });
+        }
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_CLAIM_LOSING ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
+    }
+
+    // Accounts and data here must match those of scripts/user_stake_tx.sh.  The wallet must be both the owner of the
+    // entry's token (held in its associated token account) and the withdraw authority of the stake account.
+    async make_stake_tx(entry, stake_address, wallet_address)
+    {
+        let keys = [
+            // The block
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The token owner
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
+            // The token account holding the entry's token, which is frozen for as long as the entry is staked
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
+              isSigner : false, isWritable : true },
+            // The stake account
+            { pubkey : make_pubkey(stake_address), isSigner : false, isWritable : true },
+            // The withdraw authority of the stake account
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
+            // The Shinobi Systems vote account
+            { pubkey : make_pubkey(g_shinobi_systems_vote_address), isSigner : false, isWritable : false },
+            // The program authority, which becomes the stake account's authority
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // Clock sysvar
+            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
+            // The stake program
+            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
+            // The stake config account, required by the stake program
+            { pubkey : g_stake_config_pubkey, isSigner : false, isWritable : false },
+            // Stake history sysvar, required by the stake program
+            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false },
+            // The entry's mint, needed to freeze the token account
+            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_STAKE ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
     // Accounts and data here must match those of scripts/user_destake_tx.sh
@@ -2181,29 +2423,94 @@ class Wallet
         return tx;
     }
 
+    // Accounts and data here must match those of scripts/user_harvest_tx.sh
     async make_harvest_tx(entry, wallet_address)
     {
-        return _harvest_tx({ funding_pubkey : wallet_address,
-                             entry_pubkey : entry.address,
-                             token_owner_pubkey : wallet_address,
-                             token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
-                             stake_pubkey : entry.owned_stake_account,
-                             ki_destination_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
-                             ki_destination_owner_pubkey : wallet_address });
+        let keys = [
+            // The funding account, which pays for the Ki destination account if it does not exist yet
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The token owner
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
+            // The token account holding the entry's token
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
+              isSigner : false, isWritable : false },
+            // The entry's stake account
+            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : false },
+            // The Ki destination account, which receives harvested Ki
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, g_ki_mint_address)),
+              isSigner : false, isWritable : true },
+            // The owner of the Ki destination account
+            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : false },
+            // The Ki mint
+            { pubkey : g_ki_mint_pubkey, isSigner : false, isWritable : true },
+            // The program authority
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // The system program
+            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
+            // The Associated Token Account program
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_HARVEST ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
+    // Accounts and data here must match those of scripts/user_level_up_tx.sh.  ki_to_apply is the most whole Ki to
+    // burn; only as much of it as earns level credits is burned.  The Ki comes from the wallet's associated Ki token
+    // account, which LevelUp creates (paid for by the wallet) if it does not exist yet.
     async make_level_up_tx(entry, ki_to_apply, wallet_address)
     {
-        return _level_up_tx({ entry_pubkey : entry.address,
-                              token_owner_pubkey : wallet_address,
-                              token_pubkey : get_associated_token_address(wallet_address, entry.mint_address),
-                              entry_metaplex_metadata_pubkey : entry.metaplex_metadata_address,
-                              ki_source_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
-                              ki_source_owner_pubkey : wallet_address,
-                              // The entry's stake account; for an entry that is not staked this is the system
-                              // program address, which is the placeholder that LevelUp expects
-                              stake_pubkey : entry.owned_stake_account,
-                              ki_to_apply : ki_to_apply });
+        let keys = [
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The token owner
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
+            // The token account holding the entry's token
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
+              isSigner : false, isWritable : false },
+            // The entry's Metaplex metadata, which is updated to the new level
+            { pubkey : make_pubkey(entry.metaplex_metadata_address), isSigner : false, isWritable : true },
+            // The Ki source account, from which Ki is burned
+            { pubkey : make_pubkey(get_associated_token_address(wallet_address, g_ki_mint_address)),
+              isSigner : false, isWritable : true },
+            // The owner of the Ki source account, which pays for that account if it has to be created
+            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
+            // The Ki mint
+            { pubkey : g_ki_mint_pubkey, isSigner : false, isWritable : true },
+            // The program authority
+            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
+            // The SPL Token program
+            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
+            // The Metaplex program
+            { pubkey : g_metaplex_program_pubkey, isSigner : false, isWritable : false },
+            // The entry's stake account; for an entry that is not staked this is the system program address, which is
+            // the placeholder that LevelUp expects
+            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : false },
+            // The system program
+            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
+            // The Associated Token Account program
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is the instruction code, 7 bytes of padding (the program's LevelUpData struct aligns
+        // its u64 to 8 bytes), and then the most Ki to apply
+        let data = Buffer.Buffer.from([ INSTRUCTION_LEVEL_UP, 0, 0, 0, 0, 0, 0, 0, ...u64_to_le_bytes(ki_to_apply) ]);
+
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
     }
 
     // Accounts and data here must match those of scripts/anyone_settle_winning_bid_tx.sh.  admin_address may be
@@ -2550,12 +2857,15 @@ function buffer_le_s64(buffer, offset)
 }
 
 
+// Reads a little-endian u32.  JavaScript bitwise operators work on signed 32-bit values (and take shift counts modulo
+// 32), so the most significant byte is shifted by 24, and the final ">>> 0" turns the signed result into an unsigned
+// one, so that values >= 2^31 are not negative.
 function buffer_le_u32(buffer, offset)
 {
-    return (((buffer[offset + 0] & 0xFF) <<  0) |
-            ((buffer[offset + 1] & 0xFF) <<  8) |
-            ((buffer[offset + 2] & 0xFF) << 16) |
-            ((buffer[offset + 3] & 0xFF) << 32));
+    return ((((buffer[offset + 0] & 0xFF) <<  0) |
+             ((buffer[offset + 1] & 0xFF) <<  8) |
+             ((buffer[offset + 2] & 0xFF) << 16) |
+             ((buffer[offset + 3] & 0xFF) << 24)) >>> 0);
 }
 
 
@@ -2594,12 +2904,35 @@ function buffer_string(buffer, offset, length)
 }
 
 
+// Returns the 4 little-endian bytes of a u32.  ">>>" (unsigned shift) is used so that values >= 2^31 are handled
+// correctly.
 function u32_to_le_bytes(u)
 {
-    return [ (u >>  0) & 0xFF,
-             (u >>  8) & 0xFF,
-             (u >> 16) & 0xFF,
-             (u >> 23) & 0xFF ];
+    return [ (u >>>  0) & 0xFF,
+             (u >>>  8) & 0xFF,
+             (u >>> 16) & 0xFF,
+             (u >>> 24) & 0xFF ];
+}
+
+
+// Returns the 8 little-endian bytes of a u64.  u may be a BigInt, a number, or a decimal string (use a string or a
+// BigInt for values that do not fit in 53 bits).  Throws if u is negative or does not fit in 64 bits.
+function u64_to_le_bytes(u)
+{
+    let value = BigInt(u);
+
+    if ((value < 0n) || (value > 0xFFFFFFFFFFFFFFFFn)) {
+        throw new Error("Value out of u64 range: " + u);
+    }
+
+    let ret = [ ];
+
+    for (let i = 0; i < 8; i += 1) {
+        ret.push(Number(value & 0xFFn));
+        value >>= 8n;
+    }
+
+    return ret;
 }
 
 

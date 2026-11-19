@@ -113,7 +113,7 @@ solxact encode                                                                  
         fee_payer $ADMIN_PUBKEY                                                                                       \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
         account $STATE_PUBKEY                                                                                        \
-        account $ADMIN_PUBKEY s                                                                                       \
+        account $ADMIN_PUBKEY ws                                                                                      \
         account $BLOCK_PUBKEY w                                                                                       \
         account $AUTHORITY_PUBKEY w                                                                                   \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \

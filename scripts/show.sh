@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+# This script uses bash features (function, local -a, [[ =~ ]], ${var:0:1}, +=), so it must be run by bash
 
 function usage_exit ()
 {
@@ -500,11 +502,8 @@ case $1 in
             fi
         fi
 
-        if [ "$HAS_AUCTION" = "true" ]; then
-            TIMESTAMP_SECONDS=$(($BLOCK_START_TIMESTAMP+$DURATION))
-            echo -n '"auction_end_timestamp":'$TIMESTAMP_SECONDS','
-            echo -n '"auction_end_timestamp_display":"'`to_timestamp $TIMESTAMP_SECONDS`'",'
-        fi
+        # There is no block-wide auction end: each entry's auction starts when that entry is revealed, and can be
+        # extended by late bids, so the auction end is shown per entry (see "show.sh entry")
 
         echo -n '"entries_added":['
 
@@ -598,9 +597,14 @@ case $1 in
 
         echo -n '"minimum_price":'`to_sol \`get_data_u64 144 "$ACCOUNT_DATA"\``','
 
-        echo -n '"has_auction":'`to_bool \`get_data_u8 152 "$ACCOUNT_DATA"\``','
+        ENTRY_HAS_AUCTION=`get_data_u8 152 "$ACCOUNT_DATA"`
 
-        echo -n '"duration":'`get_data_u32 156 "$ACCOUNT_DATA"`','
+        echo -n '"has_auction":'`to_bool $ENTRY_HAS_AUCTION`','
+
+        # The entry's own duration, which late bids extend
+        ENTRY_DURATION=`get_data_u32 156 "$ACCOUNT_DATA"`
+
+        echo -n '"duration":'$ENTRY_DURATION','
 
         echo -n '"non_auction_start_price":'`to_sol \`get_data_u64 160 "$ACCOUNT_DATA"\``','
 
@@ -612,6 +616,14 @@ case $1 in
 
         if [ "0$TIMESTAMP" -ne 0 ]; then
             echo -n '"reveal_timestamp_display":"'`to_timestamp $TIMESTAMP`'",'
+
+            # An entry's auction starts when the entry is revealed and lasts for the entry's duration (which includes
+            # any extensions from late bids)
+            if [ "0$ENTRY_HAS_AUCTION" -ne 0 ]; then
+                TIMESTAMP_SECONDS=$(($TIMESTAMP+$ENTRY_DURATION))
+                echo -n '"auction_end_timestamp":'$TIMESTAMP_SECONDS','
+                echo -n '"auction_end_timestamp_display":"'`to_timestamp $TIMESTAMP_SECONDS`'",'
+            fi
         fi
 
         echo -n '"purchase_price":'`to_sol \`get_data_u64 208 "$ACCOUNT_DATA"\``','
@@ -628,7 +640,7 @@ case $1 in
         PUBKEY=`get_data_pubkey 232 "$ACCOUNT_DATA"`
 
         if [ "$PUBKEY" != "11111111111111111111111111111111" ]; then
-            echo -n ',"winning_bid_pubkey":'`get_data_pubkey 232 "$ACCOUNT_DATA"`
+            echo -n ',"winning_bid_pubkey":"'$PUBKEY'"'
         fi
 
         echo -n '},"owned":{'
@@ -781,7 +793,8 @@ case $1 in
 
         LIST_COUNT=`get_data_u16 4 "$ACCOUNT_DATA"`
 
-        if [ "0$LIST_COUNT" -eq 0 -o "0$LIST_COUNT" -gt 300 ]; then
+        # A count of 0 is valid: a whitelist empties out as its entries are used by purchases
+        if [ "0$LIST_COUNT" -gt 300 ]; then
             echo "Invalid list count: $LIST_COUNT"
             exit 1
         fi
@@ -794,11 +807,14 @@ case $1 in
 
         echo -n '"whitelisted_pubkeys":['
 
-        for i in `seq 1 $LIST_COUNT`; do
+        # (A loop rather than seq, so that a count of 0 prints nothing everywhere)
+        i=1
+        while [ $i -le $LIST_COUNT ]; do
             if [ $i -gt 1 ]; then
                 echo -n ","
             fi
             echo -n '"'`get_data_pubkey $((32*$i-26)) "$ACCOUNT_DATA"`'"'
+            i=$(($i+1))
         done
 
         echo -n ']}'

@@ -9,7 +9,9 @@ function require ()
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: user_refund_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>
+Usage: user_refund_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> [<TOKEN_PUBKEY>]
+
+If <TOKEN_PUBKEY> is not provided, it is assumed to be the Associated Token Account.
 
 EOF
         exit 1
@@ -20,6 +22,8 @@ USER_PUBKEY=$1
 GROUP_NUMBER=$2
 BLOCK_NUMBER=$3
 ENTRY_INDEX=$4
+# The token account that holds the entry's token; optional, defaulting to the user's associated token account
+TOKEN_PUBKEY=$5
 
 require $USER_PUBKEY
 require $GROUP_NUMBER
@@ -89,6 +93,11 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
                                  [ u8 6                                                                               \
                                    $BID_MARKER_TOKEN_PUBKEY ]"
 
+# If no token account was given, use the user's associated token account for the entry's mint
+if [ -z "$TOKEN_PUBKEY" ]; then
+    TOKEN_PUBKEY="$TOKEN_DESTINATION_PUBKEY"
+fi
+
 solxact encode                                                                                                        \
         encoding c                                                                                                    \
         fee_payer $USER_PUBKEY                                                                                        \
@@ -97,8 +106,8 @@ solxact encode                                                                  
         account $BLOCK_PUBKEY                                                                                         \
         account $ENTRY_PUBKEY w                                                                                       \
         account $AUTHORITY_PUBKEY w                                                                                   \
-        // The token account that holds the entry's token: the user's associated token account //                     \
-        account $TOKEN_DESTINATION_PUBKEY                                                                             \
+        // The token account that holds the token of the entry //                                                    \
+        account $TOKEN_PUBKEY                                                                                         \
         account $USER_PUBKEY w                                                                                        \
         // Instruction code 10 = Refund //                                                                            \
         u8 10
