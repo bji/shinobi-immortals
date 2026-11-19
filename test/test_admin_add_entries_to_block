@@ -3,7 +3,7 @@
 # Make sure that the admin has signed the tx
 if should_run_test admin_add_entries_to_block_no_auth; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
     assert_fail admin_add_entries_to_block_no_auth                                                                   \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
     `echo "encoding c                                                                                                \
@@ -36,7 +36,7 @@ if [ -z "$TESTS" ]; then
     # Test with block 1 0
     assert admin_create_block_success                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 1 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                             \
+         $ADMIN_PUBKEY 1 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -47,16 +47,16 @@ fi
 # Bad account numbers -- too few entries in block data
 if should_run_test admin_add_entries_to_block_too_few_sha256; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
+    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -100,16 +100,16 @@ fi
 # Bad account numbers -- too few entries in block data
 if should_run_test admin_add_entries_to_block_too_many_sha256; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
+    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -155,16 +155,16 @@ fi
 # Bad block
 if should_run_test admin_add_entries_to_block_bad_block; then
     # Test with block 1 1 which does not exist
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 1 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 1 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
+    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -207,17 +207,17 @@ fi
 # Bad entry account
 if should_run_test admin_add_entries_to_block_bad_entry; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     # Bad entry account, based on invalid PDA
     ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 100 pubkey $MINT_PUBKEY0 ]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY0 ]`
+    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -261,17 +261,17 @@ fi
 # Bad entry mint account
 if should_run_test admin_add_entries_to_block_bad_entry_mint; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
     # Bad mint account, based on invalid PDA
     MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 100 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
+    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -314,17 +314,17 @@ fi
 # Bad entry token account
 if should_run_test admin_add_entries_to_block_bad_entry_token; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
     # Bad entry token account, based on invalid PDA
     TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 100 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -368,17 +368,17 @@ fi
 # Bad entry metaplex metadata account
 if should_run_test admin_add_entries_to_block_bad_entry_metadata; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
-    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
+    TOKEN_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY0 ]`
     # Bad metaplex metadata account, based on invalid mint
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $BLOCK_PUBKEY ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -424,10 +424,10 @@ if [ -z "$TESTS" ]; then
     # Test with block 1 0
     # Before adding entry 0, create all of the accounts, to ensure that it can still succeed if the accounts
     # already exist as system accounts
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY ]`
@@ -502,11 +502,11 @@ if [ -z "$TESTS" ]; then
     fi
     
     # And check that entries are all correct
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
     for i in `seq 0 9`; do
-        MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $i ]`
-        ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-        TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+        MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 $i ]`
+        ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+        TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
         METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                              \
                                                         pubkey $METAPLEX_PROGRAM_PUBKEY                              \
                                                         pubkey $MINT_PUBKEY ]`
@@ -530,14 +530,11 @@ if [ -z "$TESTS" ]; then
   "purchase_price": 0,
   "refund_awarded": false,
   "reauthorized": false,
-  "commission": 0,
   "auction": {
     "highest_bid": 0
   },
   "owned": {
-    "last_harvest_ki_stake": 0,
-    "last_commission_charge_stake": 0,
-    "last_commission_charge_epoch": 0
+    "last_harvest_ki_stake": 0
   },
   "level": 0,
   "most_recent_ki_applied_window": 0,
@@ -665,15 +662,15 @@ fi
 # Block already complete
 if should_run_test admin_add_entries_to_block_already_complete; then
     # Test with block 1 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    MINT_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 3 ]`
-    ENTRY_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY3 ]`
-    TOKEN_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY3 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    MINT_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 3 ]`
+    ENTRY_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY3 ]`
+    TOKEN_PUBKEY3=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY3 ]`
     METADATA_PUBKEY3=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY3 ]`
     assert_fail admin_add_entries_to_block_too_already_complete                                                      \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40d'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
          $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 3 \`sha256_of 3 again\`                                         \
         | solxact hash l                                                                                             \

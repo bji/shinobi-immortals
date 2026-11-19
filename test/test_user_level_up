@@ -59,7 +59,7 @@ if [ -z "$TESTS" ]; then
     # 16 0
     assert user_level_up_setup_16_0_a                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 16 0 65535 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 16 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -188,9 +188,9 @@ export      DELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/delegated4_stake.json
 
 # Invalid entry
 if should_run_test user_level_up_bad_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
                                                           pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
@@ -212,8 +212,8 @@ if should_run_test user_level_up_bad_entry; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                       \
-           u8 18 u64 1000"                                                                                           \
+           // Instruction code 16 = LevelUp //                                                                       \
+           u8 16 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -223,9 +223,9 @@ fi
 
 # Entry not owned
 if should_run_test user_level_up_unowned_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 2 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
                                                           pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
@@ -247,8 +247,8 @@ if should_run_test user_level_up_unowned_entry; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                       \
-           u8 18 u64 1000"                                                                                           \
+           // Instruction code 16 = LevelUp //                                                                       \
+           u8 16 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -258,9 +258,9 @@ fi
 
 # Token not owned by token_owner_account
 if should_run_test user_level_up_unowned_token; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
                                                           pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
@@ -282,8 +282,8 @@ if should_run_test user_level_up_unowned_token; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                       \
-           u8 18 u64 1000"                                                                                           \
+           // Instruction code 16 = LevelUp //                                                                       \
+           u8 16 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -293,16 +293,16 @@ fi
 
 # Incorrect entry metadata account
 if should_run_test user_level_up_incorrect_metadata; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
                                                           pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    BAD_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $BAD_MINT_PUBKEY ]`
+    BAD_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    BAD_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $BAD_MINT_PUBKEY ]`
     BAD_ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                        \
                                                               pubkey $METAPLEX_PROGRAM_PUBKEY                        \
                                                               pubkey $BAD_MINT_PUBKEY ]`
@@ -322,8 +322,8 @@ if should_run_test user_level_up_incorrect_metadata; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                       \
-           u8 18 u64 1000"                                                                                           \
+           // Instruction code 16 = LevelUp //                                                                       \
+           u8 16 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -333,9 +333,9 @@ fi
 
 # Invalid Ki account
 if should_run_test user_level_up_incorrect_ki; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
                                                           pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
@@ -357,8 +357,8 @@ if should_run_test user_level_up_incorrect_ki; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                       \
-           u8 18 u64 1000"                                                                                           \
+           // Instruction code 16 = LevelUp //                                                                       \
+           u8 16 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -381,8 +381,8 @@ if should_run_test user_level_up_incorrect_ki; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                       \
-           u8 18 u64 1000"                                                                                           \
+           // Instruction code 16 = LevelUp //                                                                       \
+           u8 16 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -392,8 +392,8 @@ fi
 
 # Ki account doesn't have required amount of Ki
 if should_run_test user_level_up_insufficient_ki; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER2_PUBKEY`
     # Set up insufficient Ki account
     assert user_level_up_insufficient_ki_setup                                                                       \
@@ -444,9 +444,9 @@ function level_credit_reference ()
 # harvested, which is at byte offset 296 of the Entry
 function entry_ki_baseline ()
 {
-    local block=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    local mint=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $block u16 0 ]`
-    local entry=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $mint ]`
+    local block=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    local mint=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $block u16 0 ]`
+    local entry=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $mint ]`
     get_account_data $entry 296 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'
 }
 
@@ -618,7 +618,7 @@ if should_run_test user_level_up_no_credits; then
     for no_credits_amount in 1 1000000000; do
         # 0x411 = 1041 = Error_NoLevelCreditsEarned
         assert_fail user_level_up_no_credits_$no_credits_amount                                                      \
-        'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                 \
+        'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40f'                 \
         `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                \
              $RICH_USER2_PUBKEY 16 0 2 $no_credits_amount                                                            \
             | solxact hash l                                                                                         \
@@ -744,8 +744,8 @@ fi
 # make_max_level_entry_fixture), which is already at level index 8.  The maximum level check happens before the
 # token, metadata, and Ki accounts are examined, so entry 16 0 0's real accounts are supplied for those.
 if should_run_test user_level_up_past_9; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 16 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
                                                           pubkey $METAPLEX_PROGRAM_PUBKEY                            \
                                                           pubkey $MINT_PUBKEY ]`
@@ -771,8 +771,8 @@ if should_run_test user_level_up_past_9; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
-           // Instruction code 18 = LevelUp //                                                                       \
-           u8 18 u64 1"                                                                                              \
+           // Instruction code 16 = LevelUp //                                                                       \
+           u8 16 u64 1"                                                                                              \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \

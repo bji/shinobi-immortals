@@ -2,9 +2,9 @@
 # Make sure that the admin has signed the tx
 if should_run_test admin_reveal_entries_no_auth; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
@@ -35,9 +35,9 @@ fi
 # Incorrect number of accounts
 if should_run_test admin_reveal_entries_incorrect_number_of_accounts; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
@@ -68,14 +68,14 @@ fi
 # Short data
 if should_run_test admin_reveal_entries_short_data; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -109,14 +109,14 @@ fi
 # Long data
 if should_run_test admin_reveal_entries_long_data; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY1 ]`
@@ -150,14 +150,14 @@ fi
 # Bad block
 if should_run_test admin_reveal_entries_bad_block; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -192,7 +192,7 @@ if [ -z "$TESTS" ]; then
     # Test with block 4 0
     assert admin_reveal_entries_setup                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 4 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         $ADMIN_PUBKEY 4 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -284,14 +284,14 @@ fi
 # Bad entry account
 if should_run_test admin_reveal_entries_bad_entry; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -324,14 +324,14 @@ fi
 # Bad metadata account
 if should_run_test admin_reveal_entries_bad_metadata; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -364,14 +364,14 @@ fi
 # Entry account is not the entry at the index given by the destination_index
 if should_run_test admin_reveal_entries_wrong_entry; then
     # Test with block 4 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 0 ]`
-    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 0 ]`
+    MINT_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY0=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY0 ]`
     METADATA_PUBKEY0=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY0 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -505,7 +505,7 @@ if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
     # 4 1: one entry and no mysteries, so it is revealable as soon as it is complete
     assert ${TEST_NAME}_create_block                                                                                 \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 4 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                          \
+         $ADMIN_PUBKEY 4 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -547,8 +547,8 @@ if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
     # The Metaplex metadata account holds: key (1 byte), update authority (32), mint (32), then the name, symbol and
     # uri, each as a u32 length followed by that many bytes.  The program always writes a 32 byte name, a 10 byte
     # symbol, and a 200 byte uri, zero-padded, so the name is at bytes 69-100 and the uri at bytes 119-318.
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 4 u32 1 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 4 u32 1 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY            \
                                                           pubkey $MINT_PUBKEY ]`
     METAPLEX_NAME=`get_account_data $ENTRY_METADATA_PUBKEY 69 32 | base64 -d | tr -d '\0'`

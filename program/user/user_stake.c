@@ -119,12 +119,12 @@ static uint64_t user_stake(const SolParameters *params)
     }
     // Else the stake account is delegated (because the only other stake state possible is StakeState_Stake according
     // to the switch done already above), and if it's not delegated to Shinobi Systems, deactivate it, so that in the
-    // next epoch it can be re-delegated to Shinobi Systems via the redelegate crank.
+    // next epoch it can be re-delegated to Shinobi Systems with the Delegate instruction.
     else if (!is_shinobi_systems_vote_account(&(stake.stake.delegation.voter_pubkey))) {
         deactivate_stake_signed(stake_account->key, params->ka, params->ka_num);
 
-        // The delegated stake will be updated when anyone_take_commission_or_delegate next happens and successfully
-        // delegates to Shinobi Systems
+        // The Ki baseline will be updated when anyone_delegate next happens and successfully delegates to Shinobi
+        // Systems
     }
 
     // Record the stake account address
@@ -132,15 +132,6 @@ static uint64_t user_stake(const SolParameters *params)
 
     // Record current lamports in the stake account to be used for ki harvesting purposes
     entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
-
-    // Record current lamports in the stake account to be used for commission purposes
-    entry->owned.last_commission_charge_stake_account_lamports = stake.stake.delegation.stake;
-
-    // Update the entry's commission to that of the block
-    entry->commission = block->commission;
-
-    // Start counting epochs without a commission charge from now (see DESTAKE_COMMISSION_WAIVER_EPOCHS)
-    entry->owned.last_commission_charge_epoch = clock.epoch;
 
     return 0;
 }

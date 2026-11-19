@@ -2,9 +2,9 @@
 # Make sure that the admin has signed the tx
 if should_run_test admin_set_metadata_bytes_no_auth; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 3 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_no_auth                                                                     \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
     `echo "encoding c                                                                                                \
@@ -29,9 +29,9 @@ fi
 # Bad block
 if should_run_test admin_set_metadata_bytes_bad_block; then
     # Test with block 3 1 which does not exist
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 1 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 3 u32 1 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_bad_block                                                                   \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SELF_$SOURCE/scripts/admin_set_metadata_bytes_tx.sh                   \
@@ -45,7 +45,7 @@ fi
 # Bad entry account
 if should_run_test admin_set_metadata_bytes_bad_entry; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 3 u32 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 100 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_bad_entry                                                                   \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
@@ -74,7 +74,7 @@ if should_run_test admin_set_metadata_bytes_incomplete_block; then
     # Create the block
     assert admin_set_metadata_bytes_bytes_incomplete_block_setup                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 3 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         $ADMIN_PUBKEY 3 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -130,9 +130,9 @@ fi
 # Short data
 if should_run_test admin_set_metadata_bytes_short_data; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 3 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     assert_fail admin_set_metadata_bytes_short_data                                                                  \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
     `echo "encoding c                                                                                                \
@@ -171,9 +171,9 @@ fi
 # Success
 if should_run_test admin_set_metadata_bytes_success; then
     # Test with block 3 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 3 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 3 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     assert admin_set_metadata_bytes_success                                                                          \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
          $ADMIN_PUBKEY 3 0 0 120 \`echo -n "12345678" | base64\`                                                     \
@@ -181,9 +181,9 @@ if should_run_test admin_set_metadata_bytes_success; then
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
-    # Check to ensure that the data is correct.  Entry metadata is 324 bytes offset from beginning of the
+    # Check to ensure that the data is correct.  Entry metadata is 308 bytes offset from beginning of the
     # Entry.
-    ACCOUNT_DATA=`get_account_data $ENTRY_PUBKEY $((324 + 120)) 8`
+    ACCOUNT_DATA=`get_account_data $ENTRY_PUBKEY $((308 + 120)) 8`
     BYTES=`echo "$ACCOUNT_DATA" | base64 -d | od -An -tu1 | tr -d '[:space:]'`
     EXPECTED_BYTES=`echo -n "12345678" | od -An -tu1 | tr -d '[:space:]'`
     if [ "$BYTES" != "$EXPECTED_BYTES" ]; then

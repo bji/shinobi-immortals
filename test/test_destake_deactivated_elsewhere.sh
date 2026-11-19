@@ -12,15 +12,13 @@
 # Shinobi Systems, and the test validator plays the part of the other validator.
 #
 # The situation under test is the one that issue 6 describes: a user stakes an entry with a stake account that is
-# active at another validator.  Stake deactivates it, and records the entry's Ki and commission baselines from its
-# delegated stake.  The account still earns that validator's rewards for the epoch in which it was deactivated, so at
-# the next epoch its delegated stake is above both baselines.  Before the fix, Destake then tried to charge commission
-# on those rewards, which moves stake out of the account with the Stake program's MoveStake instruction; MoveStake
-# refuses a source that is not fully active, so Destake failed.  Harvest would similarly have minted Ki on those
-# rewards.  After the fix, neither commission nor Ki is taken from a deactivated or activating stake account.
+# active at another validator.  Stake deactivates it, and records the entry's Ki baseline from its delegated stake.
+# The account still earns that validator's rewards for the epoch in which it was deactivated, so at the next epoch its
+# delegated stake is above the baseline.  Harvest must not mint Ki on those rewards, and Destake must return the stake
+# account untouched: no Ki is earned from a deactivated or activating stake account.
 #
 # Each test checks a precondition showing that the account really does hold rewards that the program would have
-# charged commission and minted Ki on without the fix, so that the tests cannot pass vacuously.
+# minted Ki on without the fix, so that the tests cannot pass vacuously.
 #
 # The tests run in order and depend on each other.
 
@@ -78,40 +76,23 @@ function account_u64 ()
 }
 
 
-# Byte offsets within Entry (program/inc/entry.h) of the owned struct, which is 56 bytes long, and of its
-# last_ki_harvest_stake_account_lamports and last_commission_charge_stake_account_lamports fields
+# Byte offsets within Entry (program/inc/entry.h) of the owned struct, which is 40 bytes long, and of its
+# last_ki_harvest_stake_account_lamports field
 ENTRY_OWNED_OFFSET=264
-ENTRY_OWNED_SIZE=56
+ENTRY_OWNED_SIZE=40
 ENTRY_KI_BASELINE_OFFSET=296
-ENTRY_COMMISSION_BASELINE_OFFSET=304
 
 
 # Prints the entry account address of entry $1 of block 1 0, the block that these tests use
 function test_entry ()
 {
-    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-    local MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $1 ]`
-    pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]
+    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+    local MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 $1 ]`
+    pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]
 }
 
 
 # expected_ki_mint, used below, is in test/common
-
-
-# Prints the commission in lamports that compute_commission() would charge on delegated stake $1 with baseline $2 at
-# commission $3 (where 65535 is 5%, so 100% would be 65535 * 20 = 1310700)
-function expected_commission ()
-{
-    local STAKE=$1
-    local BASELINE=$2
-    local COMMISSION=$3
-
-    if [ $STAKE -le $BASELINE ]; then
-        echo 0
-    else
-        echo $(((STAKE - BASELINE) * COMMISSION / 1310700))
-    fi
-}
 
 
 # Waits up to 60 seconds for the delegated stake of stake account $2 to rise above entry $3's Ki baseline, which
@@ -167,14 +148,13 @@ function check_stake ()
 
 
 # Prints a one-line snapshot of everything that a harvest or destake must leave unchanged other than the entry's
-# owned struct and the stake account's authorities: the stake account's delegated stake and lamports, the master stake
-# account's delegated stake and lamports, and rich_user1's Ki balance
+# owned struct and the stake account's authorities: the stake account's delegated stake and lamports, and
+# rich_user1's Ki balance
 function balances_snapshot ()
 {
     local STAKE_PUBKEY=$1
 
     echo "stake `stake_field $STAKE_PUBKEY delegatedStake` `stake_field $STAKE_PUBKEY accountBalance`"                \
-         "master `stake_field $MASTER_STAKE_PUBKEY delegatedStake` `stake_field $MASTER_STAKE_PUBKEY accountBalance`" \
          "ki `get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`"
 }
 
@@ -187,8 +167,8 @@ function entry_owned ()
 
 
 # Checks the preconditions that make a test of stake account $2, staked in entry $3, meaningful: its delegated stake
-# is above both of the entry's baselines by enough that, without the fix, the program would charge a nonzero
-# commission and mint a nonzero amount of Ki.  Fails test $1 if not.
+# is above the entry's Ki baseline by enough that, without the fix, the program would mint a nonzero amount of Ki.
+# Fails test $1 if not.
 function check_rewards_owed ()
 {
     local TEST_NAME=$1
@@ -197,12 +177,7 @@ function check_rewards_owed ()
 
     local DELEGATED=`stake_field $STAKE_PUBKEY delegatedStake`
     local KI_BASELINE=`account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`
-    local COMMISSION_BASELINE=`account_u64 $ENTRY_PUBKEY $ENTRY_COMMISSION_BASELINE_OFFSET`
 
-    local COMMISSION=`expected_commission $DELEGATED $COMMISSION_BASELINE $BLOCK_COMMISSION`
-    if [ $COMMISSION -le 0 ]; then
-        fail_test $TEST_NAME "precondition: no commission would be owed (stake $DELEGATED, baseline $COMMISSION_BASELINE)"
-    fi
     local KI=0
     if [ $DELEGATED -gt $KI_BASELINE ]; then
         KI=`expected_ki_mint $((DELEGATED - KI_BASELINE)) $DELEGATED $KI_FACTOR`
@@ -210,13 +185,12 @@ function check_rewards_owed ()
     if [ $KI -le 0 ]; then
         fail_test $TEST_NAME "precondition: no Ki would be minted (stake $DELEGATED, baseline $KI_BASELINE)"
     fi
-    echo "$TEST_NAME: without the fix, $COMMISSION lamports of commission and $KI Ki base units would be taken"
+    echo "$TEST_NAME: without the fix, $KI Ki base units would be minted"
 }
 
 
 # Destakes entry $2 with stake account $3, and checks that the destake succeeded and did nothing other than return
-# the stake account to rich_user1 and clear the entry's owned struct: no stake moved (so no commission charged), and
-# no Ki minted.  The stake account must still be delegated to vote account $4.  Fails test $1 if not.
+# the stake account to rich_user1 and clear the entry's owned struct: no stake moved, and no Ki minted.  The stake account must still be delegated to vote account $4.  Fails test $1 if not.
 function destake_and_check ()
 {
     local TEST_NAME=$1
@@ -234,7 +208,7 @@ function destake_and_check ()
         | solxact submit l 2>&1`
     local AFTER=`balances_snapshot $STAKE_PUBKEY`
 
-    # Nothing moved: no commission out of the stake account into the master stake account, and no Ki minted
+    # Nothing moved: nothing out of the stake account, and no Ki minted
     if [ "$BEFORE" != "$AFTER" ]; then
         fail_test $TEST_NAME "balances changed: before [$BEFORE] after [$AFTER]"
     fi
@@ -250,9 +224,6 @@ function destake_and_check ()
 # ---------------------------------------------------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------------------------------------------------
-
-# The block's commission: 65535, the maximum, which is 5%
-BLOCK_COMMISSION=65535
 
 # The entries' level 0 ki_factor.  The rewards paid to a 1000 SOL stake account in one epoch of the local cluster are
 # small, so a large factor is used to ensure that, without the fix, harvesting them would mint a nonzero amount of Ki.
@@ -270,7 +241,7 @@ SHA2560=`compute_metadata_sha256 $METADATA $SALT0`
 SHA2561=`compute_metadata_sha256 $METADATA $SALT1`
 SHA2562=`compute_metadata_sha256 $METADATA $SALT2`
 
-# Initialize the program; this delegates the master stake account to the (separate) Shinobi Systems vote account
+# Initialize the program
 assert destake_deactivated_setup_initialize                                                                          \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY SHINOBI_SYSTEMS_VOTE_PUBKEY=$SHINOBI_SYSTEMS_VOTE_PUBKEY                   \
      $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $ADMIN_PUBKEY                                          \
@@ -295,7 +266,7 @@ ELSEWHERE_STAKE_C_PUBKEY=`solxact pubkey $LEDGER/elsewhere_stake_c.json`
 # Create block 1 0: complete and revealed, with three entries
 assert destake_deactivated_setup_create_block                                                                        \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                   \
-     $ADMIN_PUBKEY 1 0 $BLOCK_COMMISSION 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                              \
+     $ADMIN_PUBKEY 1 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                                \
      \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/admin.json                                                                                \
@@ -339,12 +310,12 @@ for i in 0 1 2; do
         | solxact submit l 2>&1`
 done
 
-# Wait until the next epoch, so that the stake accounts are fully active at the other validator (and the master stake
-# account at Shinobi Systems)
+# Wait until the next epoch, so that the stake accounts are fully active at the other validator
 sleep_until_next_epoch
 
 # Stake entries 0 and 1 with elsewhere_stake_a and elsewhere_stake_b.  Both are active at the other validator, so
-# Stake takes over their authorities and deactivates them, and sets the entries' baselines to their delegated stake.
+# Stake takes over their authorities and deactivates them, and sets the entries' Ki baselines to their delegated
+# stake.
 for i in 0 1; do
     if [ $i = 0 ]; then STAKE_PUBKEY=$ELSEWHERE_STAKE_A_PUBKEY; else STAKE_PUBKEY=$ELSEWHERE_STAKE_B_PUBKEY; fi
     assert destake_deactivated_setup_stake_$i                                                                        \
@@ -376,14 +347,14 @@ destake_and_check $TEST_NAME 2 $ELSEWHERE_STAKE_C_PUBKEY $OTHER_VOTE_PUBKEY deac
 
 # Wait for the epoch to end.  elsewhere_stake_a and elsewhere_stake_b are now fully inactive, and have been paid the
 # other validator's rewards for the epoch in which they were deactivated, which raises their delegated stake above the
-# entries' baselines.
+# entries' Ki baselines.
 sleep_until_next_epoch
 wait_for_rewards_above_baseline destake_deactivated_rewards_a $ELSEWHERE_STAKE_A_PUBKEY `test_entry 0`
 wait_for_rewards_above_baseline destake_deactivated_rewards_b $ELSEWHERE_STAKE_B_PUBKEY `test_entry 1`
 
 
-# Harvest from the deactivated stake account: it must succeed, mint no Ki, and leave the entry's baselines unchanged
-# (so that the other validator's rewards are never counted, even after the account is redelegated, which resets them)
+# Harvest from the deactivated stake account: it must succeed, mint no Ki, and leave the entry's Ki baseline unchanged
+# (so that the other validator's rewards are never counted, even after the account is redelegated, which resets it)
 TEST_NAME=harvest_deactivated_elsewhere
 ENTRY_PUBKEY=`test_entry 0`
 check_rewards_owed $TEST_NAME $ELSEWHERE_STAKE_A_PUBKEY $ENTRY_PUBKEY
@@ -400,39 +371,35 @@ if [ "$BEFORE" != "$AFTER" ]; then
     fail_test $TEST_NAME "balances changed: before [$BEFORE] after [$AFTER]"
 fi
 if [ "$OWNED_BEFORE" != "`entry_owned $ENTRY_PUBKEY`" ]; then
-    fail_test $TEST_NAME "entry's owned fields (including baselines) changed"
+    fail_test $TEST_NAME "entry's owned fields (including the Ki baseline) changed"
 fi
 check_stake $TEST_NAME $ELSEWHERE_STAKE_A_PUBKEY $OTHER_VOTE_PUBKEY $AUTHORITY_PUBKEY deactivated
 
 
 # Destake the deactivated stake account before the crank has redelegated it.  This is the case that issue 6 describes:
-# before the fix, Destake tried to charge commission on the other validator's rewards, MoveStake refused the
-# deactivated source account, and the user could not get their stake account back.
+# the user must get their stake account back, untouched, and earn no Ki on the other validator's rewards.
 TEST_NAME=destake_deactivated_before_redelegate
 check_rewards_owed $TEST_NAME $ELSEWHERE_STAKE_A_PUBKEY `test_entry 0`
 destake_and_check $TEST_NAME 0 $ELSEWHERE_STAKE_A_PUBKEY $OTHER_VOTE_PUBKEY deactivated
 
 
-# The crank redelegates the deactivated stake account to Shinobi Systems.  The entry's baselines must be reset to the
-# new delegated stake, which includes the other validator's rewards, so that those rewards never earn Ki or are
-# charged commission.
+# The crank redelegates the deactivated stake account to Shinobi Systems.  The entry's Ki baseline must be reset to
+# the new delegated stake, which includes the other validator's rewards, so that those rewards never earn Ki.
 TEST_NAME=destake_deactivated_redelegate
 ENTRY_PUBKEY=`test_entry 1`
 check_rewards_owed $TEST_NAME $ELSEWHERE_STAKE_B_PUBKEY $ENTRY_PUBKEY
 # rich_user2 runs the crank, to show that anyone can
 assert $TEST_NAME                                                                                                    \
-`SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_take_commission_or_delegate_tx.sh                   \
+`SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_delegate_tx.sh                                      \
      $RICH_USER2_PUBKEY 1 0 1 $ELSEWHERE_STAKE_B_PUBKEY                                                              \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/rich_user2.json                                                                           \
     | solxact submit l 2>&1`
 check_stake $TEST_NAME $ELSEWHERE_STAKE_B_PUBKEY $SHINOBI_SYSTEMS_VOTE_PUBKEY $AUTHORITY_PUBKEY active
 DELEGATED=`stake_field $ELSEWHERE_STAKE_B_PUBKEY delegatedStake`
-for OFFSET in $ENTRY_KI_BASELINE_OFFSET $ENTRY_COMMISSION_BASELINE_OFFSET; do
-    if [ "`account_u64 $ENTRY_PUBKEY $OFFSET`" != "$DELEGATED" ]; then
-        fail_test $TEST_NAME "baseline at offset $OFFSET is `account_u64 $ENTRY_PUBKEY $OFFSET`, expected $DELEGATED"
-    fi
-done
+if [ "`account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`" != "$DELEGATED" ]; then
+    fail_test $TEST_NAME "Ki baseline is `account_u64 $ENTRY_PUBKEY $ENTRY_KI_BASELINE_OFFSET`, expected $DELEGATED"
+fi
 
 
 # Harvest from the redelegated stake account while it is activating: it must succeed and mint nothing
@@ -450,7 +417,7 @@ if [ "$BEFORE" != "$AFTER" ]; then
     fail_test $TEST_NAME "balances changed: before [$BEFORE] after [$AFTER]"
 fi
 if [ "$OWNED_BEFORE" != "`entry_owned $ENTRY_PUBKEY`" ]; then
-    fail_test $TEST_NAME "entry's owned fields (including baselines) changed"
+    fail_test $TEST_NAME "entry's owned fields (including the Ki baseline) changed"
 fi
 
 

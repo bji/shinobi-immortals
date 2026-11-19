@@ -48,9 +48,9 @@ AUCTION_DURATION=60
 
 
 # The entry that these tests use: entry 0 of block 1 0
-BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 1 u32 0 ]`
-MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 1 u32 0 ]`
+MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
 
 
 # Prints the entry's reveal_timestamp, the signed 64 bit value at byte offset 200 of the Entry
@@ -170,7 +170,7 @@ assert auction_extension_setup_initialize                                       
 # 1 SOL
 assert auction_extension_setup_create_block                                                                          \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                   \
-     $ADMIN_PUBKEY 1 0 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                              \
+     $ADMIN_PUBKEY 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                                \
      \`lamports_from_sol 1\` true $AUCTION_DURATION \`lamports_from_sol 1000\` 0                                     \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/admin.json                                                                                \

@@ -23,16 +23,15 @@ typedef struct
     //
     // Note that this is NOT given any authority over the entry's stake account.  If the entry is staked, its stake
     // account is always returned to the token owner (who must sign this transaction), exactly as Destake would
-    // return it, except that Ki is not harvested and commission is not charged.  There is deliberately no way to
+    // return it, except that Ki is not harvested.  There is deliberately no way to
     // send the stake account anywhere else: no mistaken address can lose it, and the program that takes over the
     // entry never holds a stake account that it has no record of.  The owner can stake it to the entry again using
     // that program's own stake instruction, in the same transaction if desired; the stake account remains delegated
     // throughout, so no rewards are missed.
     //
-    // Because Ki is not harvested and commission is not charged here, this instruction succeeds even if either of
-    // those operations cannot be performed.  A transaction can include a Harvest instruction and/or a
-    // TakeCommissionOrDelegate instruction before this one; the user and the admin, who must both sign, can each
-    // decline to sign a transaction that omits the one that they care about.
+    // Because Ki is not harvested here, this instruction succeeds even if Ki cannot be harvested.  A transaction can
+    // include a Harvest instruction before this one; the user, who must sign, can decline to sign a transaction that
+    // omits it.
     SolPubkey new_metadata_authority;
 
 } ReauthorizeData;

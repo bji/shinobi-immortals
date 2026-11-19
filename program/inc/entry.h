@@ -157,16 +157,8 @@ typedef struct
     // This is set to true by ReAuthorize when it moves the entry's Metaplex metadata update authority away from this
     // program, and is never cleared.  Once it is set, the entry is in the EntryState_Reauthorized state: it is retired
     // from this program, which will not stake it, level it up, or operate on it in any other way, since the entry is
-    // from then on managed by whichever program received its metadata.  (This field occupies what was a padding byte
-    // between refund_awarded and commission, so adding it did not move any other field.)
+    // from then on managed by whichever program received its metadata.
     bool reauthorized;
-
-    // This is the commission to charge for this entry.  It is copied from the entry's block's commission when a
-    // stake account is staked to the entry, and after every commission charge to the entry.  This allows the block's
-    // commission to be updated, and only take effect after all owed commission has already been charged at the prior
-    // commission.  It is zero until the entry is first staked, and is only meaningful while the entry is staked.
-    // 65535 is 5% (see commission_t).
-    commission_t commission;
 
     // If has_auction is true, then this struct is used
     struct {
@@ -189,15 +181,6 @@ typedef struct
 
         // Lamports in the stake account at which Ki was most recently harvested
         uint64_t last_ki_harvest_stake_account_lamports;
-
-        // Number of lamports in the stake account at the time of its last commission collection
-        uint64_t last_commission_charge_stake_account_lamports;
-
-        // The epoch of the entry's most recent completed commission charge, or, if there has been none, the epoch in
-        // which its stake account was staked or (by TakeCommissionOrDelegate) re-delegated to Shinobi Systems.  A
-        // charge counts as completed even if no commission was owed.  Destake does not charge commission once
-        // DESTAKE_COMMISSION_WAIVER_EPOCHS have passed since this epoch (see constants.h).
-        uint64_t last_commission_charge_epoch;
 
     } owned;
 

@@ -82,13 +82,6 @@ uint64_t entrypoint(const uint8_t *input)
             actual_result = compute_effective_stake_earnings(a, b);
             break;
 
-        case 5:
-            if (c > 65535) {
-                return 4;
-            }
-            actual_result = compute_commission(a, b, c);
-            break;
-
         case 6:
             // a packs two uint32_t inputs: level_1_credits in the low 32 bits and expected_annual_reward_bps in the
             // high 32 bits, because each case carries only four operands

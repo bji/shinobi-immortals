@@ -21,7 +21,7 @@ if [ -z "$TESTS" ]; then
     # 12 0 -- no auction
     assert user_bid_setup_12_0_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 12 0 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 12 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -64,7 +64,7 @@ if [ -z "$TESTS" ]; then
     # 12 1 -- long auction
     assert user_bid_setup_12_1_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 12 1 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 12 1 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -152,7 +152,7 @@ if [ -z "$TESTS" ]; then
     # 12 2 -- short auction
     assert user_bid_setup_12_2_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 12 2 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 12 2 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -264,14 +264,14 @@ fi
 # wrong before calling settle_submit.
 function settle_accounts ()
 {
-    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 12 u32 $1 ]`
+    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 12 u32 $1 ]`
 
-    S_MINT=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $2 ]`
-    S_ENTRY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $S_MINT ]`
-    S_ENTRY_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $S_MINT ]`
+    S_MINT=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 $2 ]`
+    S_ENTRY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $S_MINT ]`
+    S_ENTRY_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $S_MINT ]`
     S_METADATA=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY pubkey $S_MINT ]`
-    S_BID_MARKER_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $S_MINT pubkey $3 ]`
-    S_BID=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $S_BID_MARKER_TOKEN ]`
+    S_BID_MARKER_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 8 pubkey $S_MINT pubkey $3 ]`
+    S_BID=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $S_BID_MARKER_TOKEN ]`
     S_DESTINATION=`get_splata_account $S_MINT $3`
     # The bidder account, with the permissions that it has in the transaction
     S_BIDDER="$3 w"
@@ -307,8 +307,8 @@ function settle_submit ()
           account $S_METADATA w                                                                                      \
           account $METAPLEX_PROGRAM_PUBKEY                                                                           \
           $S_EXTRA_ACCOUNTS                                                                                          \
-          // Instruction code 19 = SettleWinningBid //                                                               \
-          u8 19 $S_DATA"                                                                                             \
+          // Instruction code 17 = SettleWinningBid //                                                               \
+          u8 17 $S_DATA"                                                                                             \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $1                                                                                            \
@@ -584,14 +584,14 @@ fi
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Until SETTLE_WINNING_BID_DELAY_SECONDS have passed since the end of the auction, only the winning bidder may settle
-# (Error_OnlyBidderCanSettleYet, 1044).  Entry 12 2 0 was won by rich_user1; rich_user2 and the admin are both
+# (Error_OnlyBidderCanSettleYet, 1042).  Entry 12 2 0 was won by rich_user1; rich_user2 and the admin are both
 # refused.  The auctions of block 12 2 ended only moments ago.
 if should_run_test anyone_settle_winning_bid_too_soon; then
     assert_fail anyone_settle_winning_bid_too_soon                                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x412'                     \
     `settle_script $LEDGER/rich_user2.json $RICH_USER1_PUBKEY 12 2 0`
     assert_fail anyone_settle_winning_bid_too_soon_admin                                                             \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x412'                     \
     `settle_script $LEDGER/admin.json $RICH_USER1_PUBKEY 12 2 0`
 fi
 
@@ -762,7 +762,7 @@ if should_run_test anyone_settle_winning_bid_emptied_bidder; then
     # Create the block, add its entry, set the entry's metadata, and reveal it, which starts its auction
     assert ${TEST_NAME}_setup_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 12 3 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 12 3 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \

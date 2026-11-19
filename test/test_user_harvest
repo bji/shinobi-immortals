@@ -34,7 +34,7 @@ if [ -z "$TESTS" ]; then
     # 15 0
     assert user_harvest_setup_15_0_a                                                                                 \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 15 0 65535 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 15 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -126,9 +126,9 @@ export     DELEGATED_STAKE2_PUBKEY=`solxact pubkey $LEDGER/delegated3_stake2.jso
 
 # Invalid entry
 if should_run_test user_harvest_bad_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_harvest_bad_entry                                                                               \
@@ -148,8 +148,8 @@ if should_run_test user_harvest_bad_entry; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 17 = Harvest //                                                                       \
-           u8 17"                                                                                                    \
+           // Instruction code 15 = Harvest //                                                                       \
+           u8 15"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -196,9 +196,9 @@ fi
 # Harvest ki -- ensure that: 1) Last harvest ki amount gets set, 2) ki tokens were harvested into ki destination
 if should_run_test user_harvest_success; then
     # Store the Ki token balance of user's Ki account
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
@@ -259,18 +259,17 @@ function ki_supply ()
 
 
 # Destake with the no_ki_harvest flag set.  These tests of Destake are here, and not in test_user_destake, because
-# the entries of this file are the ones that earn Ki: their metadata has a nonzero Ki factor, and their block charges
-# commission.
+# the entries of this file are the ones that earn Ki: their metadata has a nonzero Ki factor.
 #
 # Entry 15 0 1 is staked by rich_user2 with delegated3_stake2, and has never been harvested, so it has Ki to harvest.
 # It is destaked with no_ki_harvest set, and with accounts in the Ki destination, Ki destination owner, Ki mint and
 # Associated Token Account program slots that have nothing to do with Ki, none of them writable.  This must succeed,
-# mint no Ki, still charge commission, and return the stake account.
+# mint no Ki, take nothing from the stake account, and return it.
 if should_run_test user_destake_no_ki_harvest; then
     TEST_NAME=user_destake_no_ki_harvest
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER2_PUBKEY`
 
     # The entry must have earnings that a harvest would turn into Ki: its stake account's delegated stake must have
@@ -305,20 +304,18 @@ if should_run_test user_destake_no_ki_harvest; then
            account $RENT_SYSVAR_PUBKEY                                                                               \
            // Ki destination owner //                                                                                \
            account $RENT_SYSVAR_PUBKEY                                                                               \
-           account $MASTER_STAKE_PUBKEY w                                                                            \
            // Ki mint: not the Ki mint, and not writable //                                                          \
            account $BID_MARKER_MINT_PUBKEY                                                                           \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
-           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Associated Token Account program: not that program //                                                  \
            account $RENT_SYSVAR_PUBKEY                                                                               \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 15 = Destake //                                                                       \
-           u8 15                                                                                                     \
+           // Instruction code 13 = Destake //                                                                       \
+           u8 13                                                                                                     \
            // no_ki_harvest flag: 1 = do not harvest Ki //                                                           \
            u8 1                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -333,11 +330,10 @@ if should_run_test user_destake_no_ki_harvest; then
         echo "FAIL: $TEST_NAME: Ki supply changed from $KI_SUPPLY_BEFORE to `ki_supply`"
         exit 1
     fi
-    # Commission was still charged: it was moved out of the stake account.  (Stake rewards can only increase the
-    # delegated stake, so a decrease can only be the commission.)
+    # Nothing was taken out of the stake account.  (Stake rewards can only increase the delegated stake.)
     STAKE_AFTER=`harvest_stake_field $DELEGATED_STAKE2_PUBKEY delegatedStake`
-    if [ "$STAKE_AFTER" -ge "$STAKE_BEFORE" ]; then
-        echo "FAIL: $TEST_NAME: no commission was charged: delegated stake went from $STAKE_BEFORE to $STAKE_AFTER"
+    if [ "$STAKE_AFTER" -lt "$STAKE_BEFORE" ]; then
+        echo "FAIL: $TEST_NAME: delegated stake decreased from $STAKE_BEFORE to $STAKE_AFTER"
         exit 1
     fi
     # The stake account was returned to rich_user2
@@ -359,8 +355,8 @@ fi
 # 15 0 0 is staked by rich_user1 with delegated3_stake.
 if should_run_test user_destake_no_ki_harvest_script; then
     TEST_NAME=user_destake_no_ki_harvest_script
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 15 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 15 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     KI_SUPPLY_BEFORE=`ki_supply`
     assert $TEST_NAME                                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_destake_tx.sh                                     \

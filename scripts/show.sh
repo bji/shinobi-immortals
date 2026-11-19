@@ -4,7 +4,6 @@ function usage_exit ()
 {
     echo "Usage: show.sh [-u $RPC_SPECIFIER] state"
     echo "       show.sh [-u $RPC_SPECIFIER] authority"
-    echo "       show.sh [-u $RPC_SPECIFIER] master_stake"
     echo "       show.sh [-u $RPC_SPECIFIER] block <GROUP_NUMBER> <BLOCK_NUMBER>"
     echo "       show.sh [-u $RPC_SPECIFIER] entry <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX>"
     echo "       show.sh [-u $RPC_SPECIFIER] bid <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <BIDDER_PUBKEY>"
@@ -99,15 +98,6 @@ function to_timestamp ()
     fi
 
     echo -n ")"
-}
-
-# Prints commission $1 as the fraction of staking rewards that it takes.  A commission is a u16 in which 65535 means
-# 5%, so the fraction is the commission divided by 65535 * 20 = 1310700 (which would mean 100%).
-function to_commission ()
-{
-    local commission=$1
-
-    normalize_float `echo "20 k $commission 1310700 / p" | dc`
 }
 
 function bit_bool ()
@@ -304,9 +294,8 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
               STATE_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 1 ]`
            AUTHORITY_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 2 ]`
-        MASTER_STAKE_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 3 ]`
-             KI_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 4 ]`
-     BID_MARKER_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 11 ]`
+             KI_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 3 ]`
+     BID_MARKER_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 7 ]`
          KI_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                             \
                                  [ string metadata                                                                    \
                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                                    \
@@ -404,104 +393,6 @@ case $1 in
         echo '"withdrawable_excess":'`to_sol $EXCESS_LAMPORTS`'}'
     ;;
 
-    master_stake)
-
-        shift
-
-        if [ -n "$1" ]; then
-            usage_exit
-        fi
-
-        ACCOUNT_DATA=`get_account_data $RPC_URL $MASTER_STAKE_PUBKEY`
-
-        if [ -z "$ACCOUNT_DATA" ]; then
-            echo "Master stake account does not exist"
-            exit 1
-        fi
-
-        ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
-
-        # All stake accounts have 200 bytes of data
-        if [ $ACCOUNT_DATA_LEN -ne 200 ]; then
-            echo "Master stake account has invalid size $ACCOUNT_DATA_LEN, expected 200"
-            exit 1
-        fi
-
-        # The stake account's state: 1 is Initialized (never delegated), 2 is Stake (has a delegation, which may or
-        # may not have been deactivated).  The master stake account is never in any other state.
-        STAKE_STATE=`get_data_u32 0 "$ACCOUNT_DATA"`
-
-        case "$STAKE_STATE" in
-            1) STAKE_STATE_NAME=Initialized ;;
-            2) STAKE_STATE_NAME=Stake ;;
-            *) echo "Invalid stake state: $STAKE_STATE"; exit 1 ;;
-        esac
-
-        # Everything that the account holds
-        LAMPORTS=`get_account_lamports $RPC_URL $MASTER_STAKE_PUBKEY`
-
-        # The rent exempt reserve that the stake account was created with
-        RESERVE_LAMPORTS=`get_data_u64 4 "$ACCOUNT_DATA"`
-
-        # The program never withdraws the larger of that reserve and the current rent exempt minimum
-        RENT_LAMPORTS=`get_rent_exempt_minimum $RPC_URL $ACCOUNT_DATA_LEN`
-        if [ "$RENT_LAMPORTS" -gt "$RESERVE_LAMPORTS" ]; then
-            RESERVE_LAMPORTS=$RENT_LAMPORTS
-        fi
-
-        # In addition to the reserve, the program always leaves MASTER_STAKE_ACCOUNT_MIN_LAMPORTS (2 SOL) in the
-        # account
-        KEEP_LAMPORTS=2000000000
-
-        echo -n '{"master_stake_pubkey":"'$MASTER_STAKE_PUBKEY'",'
-
-        echo -n '"state":"'$STAKE_STATE_NAME'",'
-
-        echo -n '"balance":'`to_sol $LAMPORTS`','
-
-        echo -n '"rent_exempt_reserve":'`to_sol $RESERVE_LAMPORTS`','
-
-        # The master stake account is actively delegated if it has a delegation that has not been deactivated.  If
-        # it is not, then anyone can delegate it again with the DelegateMasterStake instruction (once any stake that
-        # is still cooling down has finished doing so).
-        ACTIVELY_DELEGATED=false
-
-        if [ "$STAKE_STATE" -eq 2 ]; then
-            STAKE_LAMPORTS=`get_data_u64 156 "$ACCOUNT_DATA"`
-
-            DEACTIVATION_EPOCH=`get_data_u64 172 "$ACCOUNT_DATA"`
-
-            echo -n '"vote_pubkey":"'`get_data_pubkey 124 "$ACCOUNT_DATA"`'",'
-
-            echo -n '"delegated_stake":'`to_sol $STAKE_LAMPORTS`','
-
-            echo -n '"activation_epoch":'`get_data_u64 164 "$ACCOUNT_DATA"`','
-
-            # A deactivation epoch of the maximum u64 value means "never deactivated".  It is compared as a string
-            # because it is too large for shell arithmetic.
-            if [ "$DEACTIVATION_EPOCH" = "18446744073709551615" ]; then
-                ACTIVELY_DELEGATED=true
-
-                # Actively delegated stake cannot be withdrawn; it counts towards the 2 SOL that is always kept,
-                # so what is kept is the larger of the two
-                if [ "$STAKE_LAMPORTS" -gt "$KEEP_LAMPORTS" ]; then
-                    KEEP_LAMPORTS=$STAKE_LAMPORTS
-                fi
-            else
-                echo -n '"deactivation_epoch":'$DEACTIVATION_EPOCH','
-            fi
-        fi
-
-        echo -n '"actively_delegated":'$ACTIVELY_DELEGATED','
-
-        # This is what the WithdrawExcess instruction would try to withdraw to the admin.  Note that if the account
-        # was deactivated and its stake is still cooling down, the stake program will refuse that withdrawal until
-        # the cooldown is complete.
-        EXCESS_LAMPORTS=`to_excess $LAMPORTS $(($RESERVE_LAMPORTS+$KEEP_LAMPORTS))`
-
-        echo '"withdrawable_excess":'`to_sol $EXCESS_LAMPORTS`'}'
-    ;;
-
     block)
 
         shift
@@ -510,7 +401,7 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 10 u32 $1 $2 ]`
 
         ACCOUNT_DATA=`get_account_data $RPC_URL $BLOCK_PUBKEY`
 
@@ -521,8 +412,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -lt 120 ]; then
-            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected at least 120"
+        if [ $ACCOUNT_DATA_LEN -lt 104 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected at least 104"
             exit 1
         fi
 
@@ -615,14 +506,10 @@ case $1 in
             echo -n '"auction_end_timestamp_display":"'`to_timestamp $TIMESTAMP_SECONDS`'",'
         fi
 
-        echo -n '"commission":'`to_commission \`get_data_u16 104 "$ACCOUNT_DATA"\``','
-
-        echo -n '"last_commission_change_epoch":'`get_data_u64 112 "$ACCOUNT_DATA"`','
-
         echo -n '"entries_added":['
 
         # Skip to the entries added bitmap
-        BITMAP_BYTES=`echo "$ACCOUNT_DATA" | base64 -d | dd bs=1 skip=120 status=none | od -An -tu1 -v`
+        BITMAP_BYTES=`echo "$ACCOUNT_DATA" | base64 -d | dd bs=1 skip=104 status=none | od -An -tu1 -v`
 
         N=0
         COMMA=
@@ -666,11 +553,11 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 10 u32 $1 $2 ]`
 
-        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $3 ]`
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 $3 ]`
 
-        ENTRY_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+        ENTRY_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
 
         ACCOUNT_DATA=`get_account_data $RPC_URL $ENTRY_PUBKEY`
 
@@ -681,8 +568,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -ne 3192 ]; then
-            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3192"
+        if [ $ACCOUNT_DATA_LEN -ne 3176 ]; then
+            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3176"
             exit 1
         fi
 
@@ -734,8 +621,6 @@ case $1 in
         # Set once the entry's metadata has been reauthorized to another program; the entry is then retired
         echo -n '"reauthorized":'`to_bool \`get_data_u8 217 "$ACCOUNT_DATA"\``','
 
-        echo -n '"commission":'`get_data_u16 218 "$ACCOUNT_DATA"`','
-
         echo -n '"auction":{'
         
         echo -n '"highest_bid":'`to_sol \`get_data_u64 224 "$ACCOUNT_DATA"\``
@@ -754,37 +639,33 @@ case $1 in
             echo -n '"stake_account":"'`get_data_pubkey 264 "$ACCOUNT_DATA"`'",'
         fi
 
-        echo -n '"last_harvest_ki_stake":'`to_sol \`get_data_u64 296 "$ACCOUNT_DATA"\``','
-
-        echo -n '"last_commission_charge_stake":'`to_sol \`get_data_u64 304 "$ACCOUNT_DATA"\``','
-
-        echo -n '"last_commission_charge_epoch":'`get_data_u64 312 "$ACCOUNT_DATA"`
+        echo -n '"last_harvest_ki_stake":'`to_sol \`get_data_u64 296 "$ACCOUNT_DATA"\``
 
         echo -n '},'
 
-        echo -n '"level":'`get_data_u8 320 "$ACCOUNT_DATA"`','
+        echo -n '"level":'`get_data_u8 304 "$ACCOUNT_DATA"`','
 
         # Progression uses token-base-unit precision (tenths); these counters
         # persist across stake changes and are appended after the old metadata.
-        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3168 "$ACCOUNT_DATA"`','
-        echo -n '"ki_applied_this_window":'`get_data_u64 3176 "$ACCOUNT_DATA"`','
-        echo -n '"total_level_credits":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
+        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3152 "$ACCOUNT_DATA"`','
+        echo -n '"ki_applied_this_window":'`get_data_u64 3160 "$ACCOUNT_DATA"`','
+        echo -n '"total_level_credits":'`get_data_u64 3168 "$ACCOUNT_DATA"`','
 
         echo -n '"metadata":{'
 
-        echo -n '"level_1_credits":'`get_data_u32 324 "$ACCOUNT_DATA"`','
+        echo -n '"level_1_credits":'`get_data_u32 308 "$ACCOUNT_DATA"`','
 
         echo -n '"random":['
 
         # The 16 random values: the first 15 followed by commas, then the last
         for i in `seq 0 14`; do
-            echo -n `get_data_u32 $(($i*4+328)) "$ACCOUNT_DATA"`','
+            echo -n `get_data_u32 $(($i*4+312)) "$ACCOUNT_DATA"`','
         done
 
-        echo -n `get_data_u32 388 "$ACCOUNT_DATA"`'],"level_metadata":['
+        echo -n `get_data_u32 372 "$ACCOUNT_DATA"`'],"level_metadata":['
 
         for i in `seq 0 8`; do
-            OFFSET=$(($i*308+392))
+            OFFSET=$(($i*308+376))
             echo -n '{"form":'`get_data_u32 $(($OFFSET+0)) "$ACCOUNT_DATA"`','
 
             echo -n '"skill":'`get_data_u8 $(($OFFSET+4)) "$ACCOUNT_DATA"`','
@@ -806,7 +687,7 @@ case $1 in
             fi
         done            
 
-        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3164 "$ACCOUNT_DATA"`
+        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3148 "$ACCOUNT_DATA"`
 
         echo '}}'
 
@@ -822,13 +703,13 @@ case $1 in
 
         USER_PUBKEY=`solxact pubkey $4`
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 10 u32 $1 $2 ]`
 
-        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $3 ]`
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 $3 ]`
 
-        BID_MARKER_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $USER_PUBKEY ]`
+        BID_MARKER_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 8 pubkey $MINT_PUBKEY pubkey $USER_PUBKEY ]`
 
-        BID_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_PUBKEY ]`
+        BID_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 6 pubkey $BID_MARKER_PUBKEY ]`
 
         ACCOUNT_DATA=`get_account_data $RPC_URL $BID_PUBKEY`
 
@@ -873,9 +754,9 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 10 u32 $1 $2 ]`
 
-        WHITELIST_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+        WHITELIST_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
         
         ACCOUNT_DATA=`get_account_data $RPC_URL $WHITELIST_PUBKEY`
 
@@ -931,9 +812,9 @@ case $1 in
             usage_exit
         fi
 
-        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 14 u32 $1 $2 ]`
+        BLOCK_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 10 u32 $1 $2 ]`
 
-        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 $3 ]`
+        MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 $3 ]`
 
         METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                               \
                                                         pubkey $METAPLEX_PROGRAM_PUBKEY                               \

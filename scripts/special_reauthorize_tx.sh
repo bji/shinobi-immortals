@@ -13,8 +13,8 @@ Usage: special_reauthorize_tx.sh <FEE_PAYER_PUBKEY> <ADMIN_PUBKEY> <USER_PUBKEY>
                                  <ENTRY_INDEX> <ENTRY_STAKE_ACCOUNT_PUBKEY> <NEW_METADATA_AUTHORITY_PUBKEY> \\
                                  <REAUTHORIZE_METADATA> [<TOKEN_PUBKEY>]
 
-If the entry is staked, its stake account is returned to <USER_PUBKEY>, without harvesting Ki or charging
-commission.  It cannot be sent anywhere else.
+If the entry is staked, its stake account is returned to <USER_PUBKEY>, without harvesting Ki.  It cannot be sent
+anywhere else.
 <REAUTHORIZE_METADATA> is "true" to also set the Metaplex metadata update authority of the entry to
 <NEW_METADATA_AUTHORITY_PUBKEY>, or "false" to only return the entry's stake account without invoking the Metaplex
 Metadata program at all.  "false" is only valid for a staked entry, and <NEW_METADATA_AUTHORITY_PUBKEY> is then
@@ -74,9 +74,8 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
               STATE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 1 ]"
            AUTHORITY_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 2 ]"
-        MASTER_STAKE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 3 ]"
-             KI_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 4 ]"
-     BID_MARKER_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 11 ]"
+             KI_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 3 ]"
+     BID_MARKER_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 7 ]"
          KI_METADATA_PUBKEY="pda $METAPLEX_PROGRAM_PUBKEY                                                             \
                                  [ string metadata                                                                    \
                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                                    \
@@ -86,21 +85,21 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                                    \
                                    $BID_MARKER_MINT_PUBKEY ]"
                BLOCK_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 14                                                                              \
+                                 [ u8 10                                                                              \
                                    u32 $GROUP_NUMBER                                                                  \
                                    u32 $BLOCK_NUMBER ]"
            WHITELIST_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 13                                                                              \
+                                 [ u8 9                                                                               \
                                    $BLOCK_PUBKEY ]"
           ENTRY_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 5                                                                               \
+                                 [ u8 4                                                                               \
                                    $BLOCK_PUBKEY                                                                      \
                                    u16 $ENTRY_INDEX ]"
                ENTRY_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 15                                                                              \
+                                 [ u8 11                                                                              \
                                    $ENTRY_MINT_PUBKEY ]"
          ENTRY_TOKEN_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 6                                                                               \
+                                 [ u8 5                                                                               \
                                    $ENTRY_MINT_PUBKEY ]"
       ENTRY_METADATA_PUBKEY="pda $METAPLEX_PROGRAM_PUBKEY                                                             \
                                  [ string metadata                                                                    \
@@ -111,11 +110,11 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
                                    pubkey $SPL_TOKEN_PROGRAM_PUBKEY                                                   \
                                    $ENTRY_MINT_PUBKEY ]"
     BID_MARKER_TOKEN_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 12                                                                              \
+                                 [ u8 8                                                                               \
                                    $ENTRY_MINT_PUBKEY                                                                 \
                                    pubkey $USER_PUBKEY ]"
                  BID_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 9                                                                               \
+                                 [ u8 6                                                                               \
                                    $BID_MARKER_TOKEN_PUBKEY ]"
 if [ -z "$TOKEN_PUBKEY" ]; then 
                TOKEN_PUBKEY="pda $SPLATA_PROGRAM_PUBKEY                                                               \
@@ -143,8 +142,8 @@ solxact encode                                                                  
         // The entry mint is writable because its freeze authority is passed on with the metadata authority //        \
         account $ENTRY_MINT_PUBKEY w                                                                                  \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
-        // Instruction code 21 = Reauthorize //                                                                       \
-        u8 21                                                                                                         \
+        // Instruction code 19 = Reauthorize //                                                                       \
+        u8 19                                                                                                         \
         // Whether or not to reauthorize the Metaplex metadata //                                                     \
         bool $REAUTHORIZE_METADATA                                                                                    \
         pubkey $NEW_METADATA_AUTHORITY_PUBKEY

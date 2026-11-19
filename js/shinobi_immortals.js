@@ -59,16 +59,17 @@ const g_program_authority_address = g_program_authority_pubkey.toBase58();
 const g_program_state_pubkey = find_pda([ [ 1 ] ], g_self_program_pubkey)[0];
 const g_program_state_address = g_program_state_pubkey.toBase58();
 
-const g_master_stake_pubkey = find_pda([ [ 3 ] ], g_self_program_pubkey)[0];
-const g_master_stake_address = g_master_stake_pubkey.toBase58();
+// The Shinobi Systems vote account, which is compiled into the program (see GNUmakefile).  It is the only validator
+// that the program delegates stake accounts to.
+const g_shinobi_systems_vote_address = "BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2";
 
-const g_ki_mint_pubkey = find_pda([ [ 4 ] ], g_self_program_pubkey)[0];
+const g_ki_mint_pubkey = find_pda([ [ 3 ] ], g_self_program_pubkey)[0];
 const g_ki_mint_address = g_ki_mint_pubkey.toBase58();
 
 const g_ki_metadata_address = get_metaplex_metadata_address(g_ki_mint_address);
 const g_ki_metadata_pubkey = make_pubkey(g_ki_metadata_address);
 
-const g_bid_marker_mint_pubkey = find_pda([ [ 11 ] ], g_self_program_pubkey)[0];
+const g_bid_marker_mint_pubkey = find_pda([ [ 7 ] ], g_self_program_pubkey)[0];
 const g_bid_marker_mint_address = g_bid_marker_mint_pubkey.toBase58();
 
 const g_clock_sysvar_address = "SysvarC1ock11111111111111111111111111111111";
@@ -81,38 +82,31 @@ const g_stake_config_address = "StakeConfig11111111111111111111111111111111";
 const g_stake_config_pubkey = make_pubkey(g_stake_config_address);
 
 // Instruction codes of the instructions whose transactions are built in this file (see program/entrypoint.c)
-const INSTRUCTION_DESTAKE = 15;
-const INSTRUCTION_THAW = 16;
-const INSTRUCTION_SETTLE_WINNING_BID = 19;
-const INSTRUCTION_DELEGATE_MASTER_STAKE = 22;
-const INSTRUCTION_WITHDRAW_EXCESS = 23;
+const INSTRUCTION_DESTAKE = 13;
+const INSTRUCTION_THAW = 14;
+const INSTRUCTION_SETTLE_WINNING_BID = 17;
+const INSTRUCTION_DELEGATE = 18;
+const INSTRUCTION_WITHDRAW_EXCESS = 20;
 
 // Data type code of the authority account's data (DataType_Authority in program/inc/data_type.h)
 const DATA_TYPE_AUTHORITY = 6;
-
-// The number of lamports that the program always leaves in the master stake account in addition to its rent exempt
-// reserve (MASTER_STAKE_ACCOUNT_MIN_LAMPORTS in program/inc/constants.h)
-const MASTER_STAKE_ACCOUNT_MIN_LAMPORTS = 2n * BigInt(LAMPORTS_PER_SOL);
 
 // The types of account that the admin may withdraw excess lamports from with Wallet.withdraw_excess().  The "code"
 // of each is the value that the program knows the type by (WithdrawExcessAccountType in
 // program/admin/admin_withdraw_excess.c).
 const WithdrawExcessAccountType = Object.freeze(
 {
-    // The master stake account.  Its lamports that are not staked are withdrawn, except that 2 SOL is always left
-    // in addition to its rent exempt reserve.
-    MasterStake   : Object.freeze({ code : 0, name : "MasterStake" }),
     // The program state account
-    ProgramState  : Object.freeze({ code : 1, name : "ProgramState" }),
+    ProgramState  : Object.freeze({ code : 0, name : "ProgramState" }),
     // The authority account.  The purchase prices of mysteries that have not yet been revealed or refunded are held
     // there in escrow, and are never withdrawn.
-    Authority     : Object.freeze({ code : 2, name : "Authority" }),
+    Authority     : Object.freeze({ code : 1, name : "Authority" }),
     // A block account
-    Block         : Object.freeze({ code : 3, name : "Block" }),
+    Block         : Object.freeze({ code : 2, name : "Block" }),
     // An entry account
-    Entry         : Object.freeze({ code : 4, name : "Entry" }),
+    Entry         : Object.freeze({ code : 3, name : "Entry" }),
     // The whitelist account of a block
-    Whitelist     : Object.freeze({ code : 5, name : "Whitelist" })
+    Whitelist     : Object.freeze({ code : 4, name : "Whitelist" })
 });
 
 
@@ -697,14 +691,7 @@ class Cluster
      **/
     async get_shinobi_systems_vote_account()
     {
-        if (this.shinobi_immortals_vote_account == null) {
-            let result = await this.get_stake_account(g_master_stake_address, null);
-            if (result != null) {
-                this.shinobi_immortals_vote_account = result.delegation.vote_account;
-            }
-        }
-
-        return this.shinobi_immortals_vote_account;
+        return g_shinobi_systems_vote_address;
     }
 
     // Returns the stake details of a stake account.  If account is null, the stake account is looked up; else
@@ -785,89 +772,6 @@ class Cluster
                                               rent_exempt_minimum_lamports + authority.mystery_escrow_lamports);
 
         return authority;
-    }
-
-    /**
-     * Fetches the program's master stake account.  Returns null if the account does not exist or is not valid;
-     * otherwise returns:
-     *
-     * {
-     *     address : string address of the master stake account,
-     *     lamports : BigInt, everything that the account holds,
-     *     rent_exempt_reserve_lamports : BigInt, the rent exempt reserve that is never withdrawn,
-     *     // delegation is only present if the account has ever been delegated
-     *     delegation : {
-     *         vote_account : string address of the vote account delegated to,
-     *         lamports : BigInt, the delegated stake,
-     *         activation_epoch : BigInt,
-     *         deactivation_epoch : BigInt, or null if the delegation has not been deactivated
-     *     },
-     *     is_actively_delegated : true if the account has a delegation that has not been deactivated.  If false,
-     *         then anyone can delegate the account again with Wallet.delegate_master_stake() (once any stake that
-     *         is still cooling down has finished doing so),
-     *     excess_lamports : BigInt, what the admin could withdraw with Wallet.withdraw_excess().  Note that if the
-     *         account was deactivated and its stake is still cooling down, the stake program will refuse that
-     *         withdrawal until the cooldown is complete.
-     * }
-     **/
-    async get_master_stake()
-    {
-        let account = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(g_master_stake_pubkey);
-        }, "get master stake");
-
-        // All stake accounts have 200 bytes of data
-        if ((account == null) || (account.data == null) || (account.data.length != 200)) {
-            return null;
-        }
-
-        // The stake account's state: 1 is Initialized (never delegated), 2 is Stake (has a delegation, which may
-        // or may not have been deactivated).  The master stake account is never in any other state.
-        let state = account.data[0];
-        if ((state != 1) && (state != 2)) {
-            return null;
-        }
-
-        // The program never withdraws the larger of the reserve that the stake account was created with and the
-        // current rent exempt minimum
-        let rent_exempt_reserve_lamports = buffer_le_u64(account.data, 4);
-        let rent_exempt_minimum_lamports = await this.get_rent_exempt_minimum(account.data.length);
-        if (rent_exempt_minimum_lamports > rent_exempt_reserve_lamports) {
-            rent_exempt_reserve_lamports = rent_exempt_minimum_lamports;
-        }
-
-        let master_stake = { address : g_master_stake_address,
-                             lamports : BigInt(account.lamports),
-                             rent_exempt_reserve_lamports : rent_exempt_reserve_lamports,
-                             is_actively_delegated : false };
-
-        // In addition to the reserve, the program always leaves this many lamports in the account
-        let keep_lamports = MASTER_STAKE_ACCOUNT_MIN_LAMPORTS;
-
-        if (state == 2) {
-            let deactivation_epoch = buffer_le_u64(account.data, 172);
-
-            // A deactivation epoch of the maximum u64 value means "never deactivated"
-            if (deactivation_epoch == 0xFFFFFFFFFFFFFFFFn) {
-                deactivation_epoch = null;
-                master_stake.is_actively_delegated = true;
-            }
-
-            master_stake.delegation = { vote_account : buffer_address(account.data, 124),
-                                        lamports : buffer_le_u64(account.data, 156),
-                                        activation_epoch : buffer_le_u64(account.data, 164),
-                                        deactivation_epoch : deactivation_epoch };
-
-            // Actively delegated stake cannot be withdrawn; it counts towards the minimum that is always kept, so
-            // what is kept is the larger of the two
-            if (master_stake.is_actively_delegated && (master_stake.delegation.lamports > keep_lamports)) {
-                keep_lamports = master_stake.delegation.lamports;
-            }
-        }
-
-        master_stake.excess_lamports = excess_of(master_stake.lamports, rent_exempt_reserve_lamports + keep_lamports);
-
-        return master_stake;
     }
 
     // Returns as a BigInt the rent exempt minimum, in lamports, of an account with data_length bytes of data
@@ -1146,8 +1050,6 @@ class Block
         this.block_start_timestamp = Number(buffer_le_s64(data, 80));
         this.mysteries_sold_count = buffer_le_u16(data, 88);
         this.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 96));
-        this.commission = buffer_le_u16(data, 104);
-        this.last_commission_change_epoch = Number(buffer_le_u64(data, 112));
     }
 
     update(data)
@@ -1168,18 +1070,6 @@ class Block
             this.mysteries_sold_count = new_block.mysteries_sold_count;
             // mystery_phase_end_timestamp can only change in conjection with mysteries_sold_count
             this.mystery_phase_end_timestamp = new_block.mystery_phase_end_timestamp;
-            changed = true;
-        }
-
-        if (new_block.commission != this.commission) {
-            this.commission = new_block.commission;
-            changed = true;
-        }
-
-        // last_commission_change_epoch could theoretically change independently of commission, because could
-        // query before and after the commission has changed and then changed back -- i.e. the ABA problem
-        if (new_block.last_commission_change_epoch != this.last_commission_change_epoch) {
-            this.last_commission_change_epoch = new_block.last_commission_change_epoch;
             changed = true;
         }
 
@@ -1252,20 +1142,21 @@ class Entry
         this.refund_awarded = data[216];
         // Nonzero once the entry's metadata has been reauthorized to another program; the entry is then retired
         this.reauthorized = data[217];
-        this.commission = buffer_le_u16(data, 218);
         this.auction_highest_bid_lamports = buffer_le_u64(data, 224);
         this.auction_winning_bid_address = buffer_address(data, 232);
         this.owned_stake_account = buffer_address(data, 264);
         this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 296);
-        this.owned_last_commission_charge_stake_account_lamports = buffer_le_u64(data, 304);
-        this.owned_last_commission_charge_epoch = Number(buffer_le_u64(data, 312));
-        this.level = data[320];
-        this.most_recent_ki_applied_window = buffer_le_u64(data, 3168);
-        this.ki_applied_this_window = buffer_le_u64(data, 3176);
-        this.total_level_credits = buffer_le_u64(data, 3184);
+        this.level = data[304];
+        this.most_recent_ki_applied_window = buffer_le_u64(data, 3152);
+        this.ki_applied_this_window = buffer_le_u64(data, 3160);
+        this.total_level_credits = buffer_le_u64(data, 3168);
 
-        this.metadata_level_1_credits = buffer_le_u32(data, 324);
-        this.metadata_random = [ buffer_le_u32(data, 328),
+        this.metadata_level_1_credits = buffer_le_u32(data, 308);
+        this.metadata_random = [ buffer_le_u32(data, 312),
+                                 buffer_le_u32(data, 316),
+                                 buffer_le_u32(data, 320),
+                                 buffer_le_u32(data, 324),
+                                 buffer_le_u32(data, 328),
                                  buffer_le_u32(data, 332),
                                  buffer_le_u32(data, 336),
                                  buffer_le_u32(data, 340),
@@ -1276,27 +1167,23 @@ class Entry
                                  buffer_le_u32(data, 360),
                                  buffer_le_u32(data, 364),
                                  buffer_le_u32(data, 368),
-                                 buffer_le_u32(data, 372),
-                                 buffer_le_u32(data, 376),
-                                 buffer_le_u32(data, 380),
-                                 buffer_le_u32(data, 384),
-                                 buffer_le_u32(data, 388) ];
+                                 buffer_le_u32(data, 372) ];
         this.level_metadata = [ ];
 
         for (let i = 0; i < 9; i += 1) {
             this.level_metadata[i] = {
-                form : data[392 + (i * 308)],
-                skill : data[396 + (i * 308)],
-                ki_factor : buffer_le_u32(data, 400 + (i * 308)),
-                name : buffer_string(data, 404 + (i * 308), 32),
-                title : buffer_string(data, 436 + (i * 308), 32),
-                uri : buffer_string(data, 468 + (i * 308), 200),
-                uri_contents_sha256 : buffer_sha256(data, 668 + (i * 308))
+                form : data[376 + (i * 308)],
+                skill : data[380 + (i * 308)],
+                ki_factor : buffer_le_u32(data, 384 + (i * 308)),
+                name : buffer_string(data, 388 + (i * 308), 32),
+                title : buffer_string(data, 420 + (i * 308), 32),
+                uri : buffer_string(data, 452 + (i * 308), 200),
+                uri_contents_sha256 : buffer_sha256(data, 652 + (i * 308))
             };
         }
 
         // Expected annual stake reward rate in basis points, which calibrates the level credits curve
-        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3164);
+        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3148);
     }
 
     update(data)
@@ -1328,11 +1215,6 @@ class Entry
             changed = true;
         }
 
-        if (new_entry.commission != this.commission) {
-            this.commission = new_entry.commission;
-            changed = true;
-        }
-
         if (new_entry.auction_highest_bid_lamports != this.auction_highest_bid_lamports) {
             this.auction_highest_bid_lamports = new_entry.auction_highest_bid_lamports;
             changed = true;
@@ -1351,18 +1233,6 @@ class Entry
         if (new_entry.owned_last_ki_harvest_stake_account_lamports !=
             this.owned_last_ki_harvest_stake_account_lamports) {
             this.owned_last_ki_harvest_stake_account_lamports = new_entry.owned_last_ki_harvest_stake_account_lamports;
-            changed = true;
-        }
-
-        if (new_entry.owned_last_commission_charge_stake_account_lamports !=
-            this.owned_last_commission_charge_stake_account_lamports) {
-            this.owned_last_commission_charge_stake_account_lamports =
-                new_entry.owned_last_commission_charge_stake_account_lamports;
-            changed = true;
-        }
-
-        if (new_entry.owned_last_commission_charge_epoch != this.owned_last_commission_charge_epoch) {
-            this.owned_last_commission_charge_epoch = new_entry.owned_last_commission_charge_epoch;
             changed = true;
         }
 
@@ -2131,21 +2001,14 @@ class Wallet
         }, sign_callback);
     }
 
-    // Delegates the master stake account to Shinobi Systems.  This succeeds only if the master stake account is not
-    // actively delegated (see Cluster.get_master_stake()), which can only come about if it was deactivated with the
-    // stake program's DeactivateDelinquent instruction after Shinobi Systems had not voted for five epochs.  Any
-    // wallet may do this; the wallet only pays the transaction fee.
-    async delegate_master_stake(sign_callback)
+    // Delegates the stake account of a staked entry to Shinobi Systems.  This succeeds only if the stake account is
+    // not actively delegated, which is the case when it was staked to the entry while undelegated or delegated to
+    // another validator (Stake deactivates it in the latter case; the delegation then succeeds once it has cooled
+    // down).  Any wallet may do this; the wallet only pays the transaction fee.
+    async delegate(entry, sign_callback)
     {
-        // The vote account to delegate to is the one that the master stake account was delegated to before
-        let vote_account = await this.cluster.get_shinobi_systems_vote_account();
-
-        if (vote_account == null) {
-            throw new Error("Shinobi Systems vote account could not be determined");
-        }
-
         return this.complete_tx((wallet_address) => {
-            return this.make_delegate_master_stake_tx(vote_account, wallet_address);
+            return this.make_delegate_tx(entry, wallet_address);
         }, sign_callback);
     }
 
@@ -2154,7 +2017,7 @@ class Wallet
     // if there is no excess.  This only succeeds if the wallet is the admin.
     //
     // account_type is one of the WithdrawExcessAccountType values.  account identifies the account to withdraw from:
-    // - for MasterStake, ProgramState and Authority, it is ignored
+    // - for ProgramState and Authority, it is ignored
     // - for Block and Whitelist, it is the Block (or the string address of the block account)
     // - for Entry, it is the Entry (or the string address of the entry account)
     async withdraw_excess(account_type, account, sign_callback)
@@ -2259,8 +2122,6 @@ class Wallet
               isSigner : false, isWritable : true },
             // The owner of the Ki destination account
             { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : false },
-            // The master stake account, which receives commission
-            { pubkey : g_master_stake_pubkey, isSigner : false, isWritable : true },
             // The Ki mint
             { pubkey : g_ki_mint_pubkey, isSigner : false, isWritable : true },
             // The program authority
@@ -2271,8 +2132,6 @@ class Wallet
             { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
             // The stake program
             { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
-            // Stake history sysvar
-            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false },
             // The SPL Token program
             { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
             // The Associated Token Account program
@@ -2411,13 +2270,17 @@ class Wallet
         return tx;
     }
 
-    // Accounts and data here must match those of scripts/anyone_delegate_master_stake_tx.sh
-    async make_delegate_master_stake_tx(vote_account_address, wallet_address)
+    // Accounts and data here must match those of scripts/anyone_delegate_tx.sh
+    async make_delegate_tx(entry, wallet_address)
     {
         let keys = [
-            // The master stake account
-            { pubkey : g_master_stake_pubkey, isSigner : false, isWritable : true },
-            // The program authority, which is the stake authority of the master stake account
+            // The block
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The entry's stake account
+            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : true },
+            // The program authority, which is the stake authority of the stake account
             { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
             // Clock sysvar, required by the stake program
             { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
@@ -2426,13 +2289,13 @@ class Wallet
             // Stake history sysvar, required by the stake program
             { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false },
             // The Shinobi Systems vote account
-            { pubkey : make_pubkey(vote_account_address), isSigner : false, isWritable : false },
+            { pubkey : make_pubkey(g_shinobi_systems_vote_address), isSigner : false, isWritable : false },
             // The stake config account, required by the stake program
             { pubkey : g_stake_config_pubkey, isSigner : false, isWritable : false }
         ];
 
         // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_DELEGATE_MASTER_STAKE ]);
+        let data = Buffer.Buffer.from([ INSTRUCTION_DELEGATE ]);
 
         let tx = new SolanaWeb3.Transaction();
 
@@ -2450,9 +2313,6 @@ class Wallet
         // Find the address of the account to withdraw from
         let from_address;
         switch (account_type) {
-        case WithdrawExcessAccountType.MasterStake:
-            from_address = g_master_stake_address;
-            break;
         case WithdrawExcessAccountType.ProgramState:
             from_address = g_program_state_address;
             break;
@@ -2475,23 +2335,13 @@ class Wallet
             throw new Error("No account to withdraw from was provided for account type " + account_type.name);
         }
 
-        // The authority account, clock sysvar, stake program and stake history sysvar are only used by the program
-        // when withdrawing from the master stake account, but the instruction requires them for every account type
         let keys = [
             // The program state account, which identifies the admin
             { pubkey : g_program_state_pubkey, isSigner : false, isWritable : false },
             // The admin, who must sign and who receives the lamports
             { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
             // The account to withdraw from
-            { pubkey : make_pubkey(from_address), isSigner : false, isWritable : true },
-            // The program authority, which is the withdraw authority of the master stake account
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // Clock sysvar, required by the stake program
-            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
-            // The stake program
-            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
-            // Stake history sysvar, required by the stake program
-            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false }
+            { pubkey : make_pubkey(from_address), isSigner : false, isWritable : true }
         ];
 
         // The instruction data is the instruction code followed by the code of the account type
@@ -2616,7 +2466,7 @@ function get_metaplex_metadata_address(mint_address)
 
 function get_block_address(group_number, block_number)
 {
-    return find_pda([ [ 14 ],
+    return find_pda([ [ 10 ],
                       u32_to_le_bytes(group_number),
                       u32_to_le_bytes(block_number) ],
                     g_self_program_pubkey)[0].toBase58();
@@ -2625,7 +2475,7 @@ function get_block_address(group_number, block_number)
 
 function get_whitelist_address(block_address)
 {
-    return find_pda([ [ 13 ],
+    return find_pda([ [ 9 ],
                       address_to_buffer(block_address) ],
                     g_self_program_pubkey)[0].toBase58();
 }
@@ -2633,7 +2483,7 @@ function get_whitelist_address(block_address)
 
 function get_entry_mint_address(block_address, entry_index)
 {
-    return find_pda([ [ 5 ],
+    return find_pda([ [ 4 ],
                       address_to_buffer(block_address),
                       u16_to_le_bytes(entry_index) ],
                     g_self_program_pubkey)[0].toBase58();
@@ -2642,7 +2492,7 @@ function get_entry_mint_address(block_address, entry_index)
 
 function get_entry_address(entry_mint_address)
 {
-    return find_pda([ [ 15 ],
+    return find_pda([ [ 11 ],
                       address_to_buffer(entry_mint_address) ],
                     g_self_program_pubkey)[0].toBase58();
 }
@@ -2659,7 +2509,7 @@ function get_associated_token_address(token_owner_address, token_mint_address)
 
 function get_bid_marker_token_address(entry_mint_address, bidder_address)
 {
-    return find_pda([ [ 12 ],
+    return find_pda([ [ 8 ],
                       address_to_buffer(entry_mint_address),
                       address_to_buffer(bidder_address) ],
                     g_self_program_pubkey)[0].toBase58();
@@ -2668,7 +2518,7 @@ function get_bid_marker_token_address(entry_mint_address, bidder_address)
 
 function get_bid_address(bid_marker_token_address)
 {
-    return find_pda([ [ 9 ],
+    return find_pda([ [ 6 ],
                       address_to_buffer(bid_marker_token_address) ],
                     g_self_program_pubkey)[0].toBase58();
 }

@@ -86,8 +86,8 @@ typedef enum
     // Attempt to stake when an entry is not in a stakeable state
     Error_NotStakeable                                 = 1026,
 
-    // Attempted an operation that requires a staked entry (Destake, Harvest, TakeCommissionOrDelegate, stake-only
-    // ReAuthorize) on an entry that is not staked
+    // Attempted an operation that requires a staked entry (Destake, Harvest, Delegate, stake-only ReAuthorize)
+    // on an entry that is not staked
     Error_NotStaked                                    = 1027,
 
     // Attempt to level up, or thaw the token account of, an entry that is not owned
@@ -96,57 +96,51 @@ typedef enum
     // Attempt to level up an entry that is already at max level
     Error_AlreadyAtMaxLevel                            = 1029,
 
-    // Commission already set this epoch and can't be set again
-    Error_CommissionAlreadySetThisEpoch                = 1030,
-
-    // Attempted to set commission to a value more than 1 percentage point higher than current commission
-    Error_CommissionTooHigh                            = 1031,
-
     // Invalid metaplex metadata in metadata account
-    Error_InvalidMetadataValues                        = 1032,
+    Error_InvalidMetadataValues                        = 1030,
 
     // User requested a buy but privided a maximum allowed price that is lower than the actual price
-    Error_PriceTooHigh                                 = 1033,
+    Error_PriceTooHigh                                 = 1031,
 
     // Not the correct whitelist account
-    Error_NotWhitelistAccount                          = 1034,
+    Error_NotWhitelistAccount                          = 1032,
 
     // Cannot add entries to a whitelist when the block is already created
-    Error_BlockAlreadyExists                           = 1035,
+    Error_BlockAlreadyExists                           = 1033,
 
     // Attempted to add more whitelist entries than are supported by a whitelist
-    Error_TooManyWhitelistEntries                      = 1036,
+    Error_TooManyWhitelistEntries                      = 1034,
 
     // Cannot delete a whitelist for a block in progress
-    Error_WhitelistBlockInProgress                     = 1037,
+    Error_WhitelistBlockInProgress                     = 1035,
 
     // Buy attempt failed because the fee payer was not in the whitelist
-    Error_FailedWhitelistCheck                         = 1038,
+    Error_FailedWhitelistCheck                         = 1036,
 
     // Attempt to add entries to an already complete block
-    Error_BlockAlreadyComplete                         = 1039,
+    Error_BlockAlreadyComplete                         = 1037,
 
     // Invalid attempt to resize an account
-    Error_InvalidResize                                = 1040,
+    Error_InvalidResize                                = 1038,
 
     // Attempt to level up with an amount of Ki that would not earn even one tenth of a level credit; no Ki is burned
-    Error_NoLevelCreditsEarned                         = 1041,
+    Error_NoLevelCreditsEarned                         = 1039,
 
-    // Attempt to delegate the master stake account when it is already actively delegated
-    Error_MasterStakeAlreadyDelegated                  = 1042,
+    // Attempt to delegate an entry's stake account when it is already actively delegated
+    Error_AlreadyDelegated                             = 1040,
 
     // Attempt to withdraw excess lamports from an account that holds nothing beyond what it is required to hold
-    Error_NothingToWithdraw                            = 1043,
+    Error_NothingToWithdraw                            = 1041,
 
     // Attempt by someone other than the winning bidder to settle a winning bid before
     // SETTLE_WINNING_BID_DELAY_SECONDS have passed since the end of the auction
-    Error_OnlyBidderCanSettleYet                       = 1044,
+    Error_OnlyBidderCanSettleYet                       = 1042,
 
     // Attempt to thaw the token account of an entry that is staked; it stays frozen for as long as the entry is staked
-    Error_EntryStaked                                  = 1045,
+    Error_EntryStaked                                  = 1043,
 
     // Attempt to thaw a token account that is not frozen
-    Error_TokenAccountNotFrozen                        = 1046,
+    Error_TokenAccountNotFrozen                        = 1044,
 
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First

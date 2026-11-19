@@ -1,8 +1,8 @@
 
 # Make sure that the admin has signed the tx
 if should_run_test admin_delete_whitelist_no_auth; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 7 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 7 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_delete_whitelist_no_auth                                                                       \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
     `echo "encoding c                                                                                                \
@@ -12,8 +12,8 @@ if should_run_test admin_delete_whitelist_no_auth; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY                                                                                     \
            account $WHITELIST_PUBKEY w                                                                               \
-           // Instruction code 9 = DeleteWhitelist //                                                                \
-           u8 9"                                                                                                     \
+           // Instruction code 7 = DeleteWhitelist //                                                                \
+           u8 7"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -23,10 +23,10 @@ fi
 
 # Wrong block
 if should_run_test admin_delete_whitelist_wrong_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 7 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 7 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_delete_whitelist_wrong_block                                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -34,8 +34,8 @@ if should_run_test admin_delete_whitelist_wrong_block; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $STATE_PUBKEY                                                                                    \
            account $WHITELIST_PUBKEY w                                                                               \
-           // Instruction code 9 = DeleteWhitelist //                                                                \
-           u8 9"                                                                                                     \
+           // Instruction code 7 = DeleteWhitelist //                                                                \
+           u8 7"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -45,10 +45,10 @@ fi
 
 # Wrong whitelist
 if should_run_test admin_delete_whitelist_wrong_whitelist; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 7 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 7 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_delete_whitelist_wrong_whitelist                                                               \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -56,8 +56,8 @@ if should_run_test admin_delete_whitelist_wrong_whitelist; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY                                                                                     \
            account $STATE_PUBKEY w                                                                                  \
-           // Instruction code 9 = DeleteWhitelist //                                                                \
-           u8 9"                                                                                                     \
+           // Instruction code 7 = DeleteWhitelist //                                                                \
+           u8 7"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -77,7 +77,7 @@ if should_run_test admin_delete_whitelist_in_progress; then
     # Make the block for that whitelist
     assert admin_delete_whitelist_in_progress_setup_2                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 7 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         $ADMIN_PUBKEY 7 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 12                                   \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -93,7 +93,7 @@ if should_run_test admin_delete_whitelist_in_progress; then
     START_BLOCK_TIME=`current_block_time`
     # Delete the whitelist, fails because the non-empty whitelist is still in use
     assert_fail admin_delete_whitelist_in_progress                                                                   \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40d'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40b'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_delete_whitelist_tx.sh                           \
          $ADMIN_PUBKEY 7 0                                                                                           \
         | solxact hash l                                                                                             \

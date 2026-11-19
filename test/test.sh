@@ -32,10 +32,6 @@ source $SOURCE/test/test_admin_set_metadata_bytes
 
 source $SOURCE/test/test_admin_reveal_entries
 
-source $SOURCE/test/test_admin_set_block_commission
-
-source $SOURCE/test/test_admin_split_master_stake
-
 source $SOURCE/test/test_admin_add_whitelist_entries
 
 source $SOURCE/test/test_admin_delete_whitelist
@@ -62,8 +58,6 @@ source $SOURCE/test/test_user_level_up
 
 source $SOURCE/test/test_anyone_settle_winning_bid
 
-source $SOURCE/test/test_anyone_take_commission_or_delegate
-
-source $SOURCE/test/test_anyone_delegate_master_stake
+source $SOURCE/test/test_anyone_delegate
 
 source $SOURCE/test/test_special_reauthorize

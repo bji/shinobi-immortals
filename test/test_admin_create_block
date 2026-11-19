@@ -2,7 +2,7 @@
 # Make sure that the admin has signed the tx
 if should_run_test admin_create_block_no_auth; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_no_auth                                                                           \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
     `echo "encoding c                                                                                                \
@@ -15,8 +15,6 @@ if should_run_test admin_create_block_no_auth; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -66,8 +64,6 @@ if should_run_test admin_create_block_overwrite; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -117,8 +113,6 @@ if should_run_test admin_create_block_wrong_block; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -156,7 +150,7 @@ fi
 # Must have nonzero total entry count
 if should_run_test admin_create_block_zero_entries; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_zero_entries                                                                      \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514'                     \
     `echo "encoding c                                                                                                \
@@ -169,8 +163,6 @@ if should_run_test admin_create_block_zero_entries; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -207,7 +199,7 @@ fi
 
 if should_run_test admin_create_block_bad_mystery_count; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_mystery_count                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515'                     \
     `echo "encoding c                                                                                                \
@@ -220,8 +212,6 @@ if should_run_test admin_create_block_bad_mystery_count; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -259,7 +249,7 @@ fi
 # Too many mysteries is rejected even when the mystery phase duration is zero (current_issues.txt issue 18)
 if should_run_test admin_create_block_bad_mystery_count_zero_duration; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_mystery_count_zero_duration                                                   \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515'                     \
     `echo "encoding c                                                                                                \
@@ -272,8 +262,6 @@ if should_run_test admin_create_block_bad_mystery_count_zero_duration; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -311,7 +299,7 @@ fi
 # Mysteries with a zero mystery phase duration are rejected (current_issues.txt issue 18)
 if should_run_test admin_create_block_mysteries_zero_duration; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_mysteries_zero_duration                                                           \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x51c'                     \
     `echo "encoding c                                                                                                \
@@ -324,8 +312,6 @@ if should_run_test admin_create_block_mysteries_zero_duration; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -362,7 +348,7 @@ fi
 
 if should_run_test admin_create_block_bad_mystery_start_price; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_mystery_start_price                                                           \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x516'                     \
     `echo "encoding c                                                                                                \
@@ -375,8 +361,6 @@ if should_run_test admin_create_block_bad_mystery_start_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -413,7 +397,7 @@ fi
 
 if should_run_test admin_create_block_bad_mystery_price; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_mystery_price                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x517'                     \
     `echo "encoding c                                                                                                \
@@ -426,8 +410,6 @@ if should_run_test admin_create_block_bad_mystery_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -464,7 +446,7 @@ fi
 
 if should_run_test admin_create_block_bad_auction_duration; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_auction_duration                                                              \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x518'                     \
     `echo "encoding c                                                                                                \
@@ -477,8 +459,6 @@ if should_run_test admin_create_block_bad_auction_duration; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -515,7 +495,7 @@ fi
 
 if should_run_test admin_create_block_bad_final_start_price; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_final_start_price                                                             \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x519'                     \
     `echo "encoding c                                                                                                \
@@ -528,8 +508,6 @@ if should_run_test admin_create_block_bad_final_start_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -566,7 +544,7 @@ fi
 
 if should_run_test admin_create_block_bad_final_start_price_2; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_final_start_price_2                                                           \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x51a'                     \
     `echo "encoding c                                                                                                \
@@ -579,8 +557,6 @@ if should_run_test admin_create_block_bad_final_start_price_2; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -617,7 +593,7 @@ fi
 
 if should_run_test admin_create_block_bad_minimum_price; then
     # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     assert_fail admin_create_block_bad_minimum_price                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x51b'                     \
     `echo "encoding c                                                                                                \
@@ -630,8 +606,6 @@ if should_run_test admin_create_block_bad_minimum_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Commission //                                                                                          \
-           u16 0                                                                                                     \
            // Block Configuration //                                                                                 \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
@@ -670,14 +644,14 @@ if should_run_test admin_create_block_success; then
     # Test with block 0 0
     assert admin_create_block_success                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 0 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                             \
+         $ADMIN_PUBKEY 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 
     # Check that the created block has all expected parameters
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
     EXPECTED_BLOCK_JSON=`cat <<EOF
 {
   "block_pubkey": "$BLOCK_PUBKEY",
@@ -702,8 +676,6 @@ if should_run_test admin_create_block_success; then
   "block_start_timestamp": 0,
   "mysteries_sold_count": 0,
   "mystery_phase_end_timestamp": 0,
-  "commission": 0,
-  "last_commission_change_epoch": 0,
   "entries_added": [
     false,
     false,
@@ -728,7 +700,7 @@ EOF`
 fi
 
 
-# The block account holds the fixed 120 byte part of the Block, followed by a bitmap of one bit per entry rounded up to
+# The block account holds the fixed 104 byte part of the Block, followed by a bitmap of one bit per entry rounded up to
 # whole bytes, and nothing more.  Blocks 90 0 through 90 3 are created with 1, 7, 8 and 9 entries, the counts on either
 # side of a byte boundary, and each account's size is checked.
 if should_run_test admin_create_block_sizes; then
@@ -736,17 +708,17 @@ if should_run_test admin_create_block_sizes; then
     for ENTRY_COUNT in 1 7 8 9; do
         assert admin_create_block_sizes_$ENTRY_COUNT                                                                 \
         `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                           \
-             $ADMIN_PUBKEY 90 $BLOCK_NUMBER 0 $ENTRY_COUNT 0 0 0 0                                                   \
+             $ADMIN_PUBKEY 90 $BLOCK_NUMBER $ENTRY_COUNT 0 0 0 0                                                     \
              \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                \
             | solxact hash l                                                                                         \
             | solxact sign $LEDGER/admin.json                                                                        \
             | solxact submit l 2>&1`
 
-        # The expected size: 120 bytes, plus the entry count divided by 8, rounded up
-        EXPECTED_SIZE=$((120 + ((ENTRY_COUNT + 7) / 8)))
+        # The expected size: 104 bytes, plus the entry count divided by 8, rounded up
+        EXPECTED_SIZE=$((104 + ((ENTRY_COUNT + 7) / 8)))
 
         # The actual size, which is the number of bytes of account data
-        BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 90 u32 $BLOCK_NUMBER ]`
+        BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 90 u32 $BLOCK_NUMBER ]`
         ACTUAL_SIZE=`get_account_data $BLOCK_PUBKEY | base64 -d | wc -c | tr -d [:space:]`
 
         if [ "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]; then
@@ -765,7 +737,7 @@ if should_run_test admin_create_block_again; then
     assert_fail admin_create_block_again                                                                             \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 0 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                             \
+         $ADMIN_PUBKEY 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -776,11 +748,11 @@ fi
 # Now test creating a block where the block account already exists, to ensure that it is not disrupted
 if should_run_test admin_create_block_already_exists; then
     # Test with block 0 1
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 0 u32 1 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 1 ]`
     transfer $LEDGER/rich_user1.json $BLOCK_PUBKEY 0.1
     assert admin_create_block_already_exists                                                                         \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 0 1 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                             \
+         $ADMIN_PUBKEY 0 1 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \

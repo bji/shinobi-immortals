@@ -17,7 +17,7 @@ if [ -z "$TESTS" ]; then
     # 10 0 -- not complete
     assert user_bid_setup_10_0_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 10 0 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 10 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -26,7 +26,7 @@ if [ -z "$TESTS" ]; then
     # 10 1 -- no auction
     assert user_bid_setup_10_1_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 10 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 10 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -56,7 +56,7 @@ if [ -z "$TESTS" ]; then
     # 10 2 -- long auction (entries 0 and 1 revealed, entry 2 never revealed)
     assert user_bid_setup_10_2_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 10 2 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 10 2 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -98,7 +98,7 @@ if [ -z "$TESTS" ]; then
     # 10 3 -- short auction
     assert user_bid_setup_10_3_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 10 3 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 10 3 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` true 10 \`lamports_from_sol 1000\` 0                                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -161,11 +161,11 @@ fi
 # Incorrect data size
 if should_run_test user_bid_bad_data; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 8 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     assert_fail user_bid_bad_data                                                                                    \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
     `echo "encoding c                                                                                                \
@@ -180,8 +180,8 @@ if should_run_test user_bid_bad_data; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 12 = Bid //                                                                           \
-           u8 12"                                                                                                    \
+           // Instruction code 10 = Bid //                                                                           \
+           u8 10"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -205,11 +205,11 @@ fi
 # Bad entry
 if should_run_test user_bid_bad_entry; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 8 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     assert_fail user_bid_bad_entry                                                                                   \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
@@ -224,8 +224,8 @@ if should_run_test user_bid_bad_entry; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 12 = Bid //                                                                           \
-           u8 12                                                                                                     \
+           // Instruction code 10 = Bid //                                                                           \
+           u8 10                                                                                                     \
            u64 \`lamports_from_sol 0.1\`                                                                             \
            u64 \`lamports_from_sol 0.1\`"                                                                            \
         | solxact encode                                                                                             \
@@ -285,11 +285,11 @@ fi
 # Bid from account with not enough lamports
 if should_run_test user_bid_insufficient_funds; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $POOR_USER_PUBKEY ]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 8 pubkey $MINT_PUBKEY pubkey $POOR_USER_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     assert_fail user_bid_insufficient_funds                                                                          \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x1'                       \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
@@ -303,11 +303,11 @@ fi
 # Success
 if should_run_test user_bid_success; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
-    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 8 pubkey $MINT_PUBKEY pubkey $RICH_USER1_PUBKEY ]`
+    BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $BID_MARKER_TOKEN_PUBKEY ]`
     # Pre-create the bid marker token account and bid account, to ensure that these being pre-created doesn't
     # break anything
     transfer $LEDGER/admin.json $BID_MARKER_TOKEN_PUBKEY 1
@@ -381,8 +381,8 @@ fi
 # Outbid another bid by the minimum
 if should_run_test user_bid_outbid_minimum; then
     # Test with block 10 2
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 10 u32 2 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 10 u32 2 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     assert user_bid_outbid_minimum                                                                                   \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_bid_tx.sh                                         \
          $RICH_USER2_PUBKEY 10 2 0 \`lamports_from_sol 0\` \`lamports_from_sol 30\`                                  \

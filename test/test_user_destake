@@ -37,7 +37,7 @@ if [ -z "$TESTS" ]; then
     # 14 0
     assert user_stake_setup_14_0_a                                                                                   \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 14 0 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 14 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -116,7 +116,7 @@ if [ -z "$TESTS" ]; then
     # 14 1
     assert user_stake_setup_14_1                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 14 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 14 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -124,10 +124,10 @@ if [ -z "$TESTS" ]; then
 
     # 14 1 is an incomplete block
 
-    # 14 2 0 is owned by rich_user1 and is in a block with 5% commission (65535, the maximum)
+    # 14 2 0 is owned by rich_user1
     assert user_stake_setup_14_2_a                                                                                   \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 14 2 65535 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                      \
+         $ADMIN_PUBKEY 14 2 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -167,7 +167,7 @@ if [ -z "$TESTS" ]; then
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 
-    # 14 2 0 is owned and staked by rich_user1 and is in a block with 5% commission (65535, the maximum)
+    # 14 2 0 is owned and staked by rich_user1
 fi
 
 
@@ -179,9 +179,9 @@ export    UNDELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/undelegated2_stake.js
 
 # Bad block
 if should_run_test user_destake_bad_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_destake_bad_block                                                                               \
@@ -197,18 +197,16 @@ if should_run_test user_destake_bad_block; then
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $MASTER_STAKE_PUBKEY w                                                                            \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
-           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 15 = Destake //                                                                       \
-           u8 15                                                                                                     \
+           // Instruction code 13 = Destake //                                                                       \
+           u8 13                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -234,9 +232,9 @@ fi
 
 # Bad entry
 if should_run_test user_destake_bad_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_destake_bad_block                                                                               \
@@ -252,18 +250,16 @@ if should_run_test user_destake_bad_entry; then
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $MASTER_STAKE_PUBKEY w                                                                            \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
-           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 15 = Destake //                                                                       \
-           u8 15                                                                                                     \
+           // Instruction code 13 = Destake //                                                                       \
+           u8 13                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -277,12 +273,12 @@ fi
 
 # Entry of wrong block
 if should_run_test user_destake_entry_wrong_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BAD_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 2 ]`
+    BAD_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 2 ]`
     assert_fail user_destake_entry_wrong_block                                                                       \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
     `echo "encoding c                                                                                                \
@@ -296,18 +292,16 @@ if should_run_test user_destake_entry_wrong_block; then
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $MASTER_STAKE_PUBKEY w                                                                            \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
-           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 15 = Destake //                                                                       \
-           u8 15                                                                                                     \
+           // Instruction code 13 = Destake //                                                                       \
+           u8 13                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -321,9 +315,9 @@ fi
 
 # Entry that is not staked
 if should_run_test user_destake_entry_not_staked; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 2 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     # 0x403 = 1027 = Error_NotStaked
@@ -340,18 +334,16 @@ if should_run_test user_destake_entry_not_staked; then
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $MASTER_STAKE_PUBKEY w                                                                            \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
-           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 15 = Destake //                                                                       \
-           u8 15                                                                                                     \
+           // Instruction code 13 = Destake //                                                                       \
+           u8 13                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -365,9 +357,9 @@ fi
 
 # Token not owned by user
 if should_run_test user_destake_entry_not_owned; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_destake_entry_not_owned                                                                         \
@@ -383,18 +375,16 @@ if should_run_test user_destake_entry_not_owned; then
            account $DELEGATED_STAKE_PUBKEY w                                                                         \
            account $KI_DESTINATION_PUBKEY w                                                                          \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $MASTER_STAKE_PUBKEY w                                                                            \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $CLOCK_SYSVAR_PUBKEY                                                                              \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $STAKE_PROGRAM_PUBKEY                                                                             \
-           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $MINT_PUBKEY                                                                                      \
-           // Instruction code 15 = Destake //                                                                       \
-           u8 15                                                                                                     \
+           // Instruction code 13 = Destake //                                                                       \
+           u8 13                                                                                                     \
            // no_ki_harvest flag: 0 = harvest Ki //                                                                  \
            u8 0                                                                                                      \
            // no_thaw flag: 0 = thaw the token account //                                                            \
@@ -429,9 +419,9 @@ function destake_14_0_0_raw ()
     local ATA_PROGRAM="$3"
     shift 3
 
-    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    local MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    local ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
+    local BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 0 ]`
+    local MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    local ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     local TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
 
     echo "encoding c                                                                                                 \
@@ -445,18 +435,16 @@ function destake_14_0_0_raw ()
           account $DELEGATED_STAKE_PUBKEY w                                                                          \
           account $KI_DESTINATION                                                                                    \
           account $RICH_USER1_PUBKEY                                                                                 \
-          account $MASTER_STAKE_PUBKEY w                                                                             \
           account $KI_MINT                                                                                           \
           account $AUTHORITY_PUBKEY                                                                                  \
           account $CLOCK_SYSVAR_PUBKEY                                                                               \
           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
           account $STAKE_PROGRAM_PUBKEY                                                                              \
-          account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
           account $ATA_PROGRAM                                                                                       \
           account $MINT_PUBKEY                                                                                       \
-          // Instruction code 15 = Destake //                                                                        \
-          u8 15 $@"                                                                                                  \
+          // Instruction code 13 = Destake //                                                                        \
+          u8 13 $@"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -515,98 +503,57 @@ if should_run_test user_destake_bad_ki_accounts; then
     assert_fail user_destake_bad_ki_accounts_destination_not_writable                                                \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b6'                     \
     `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY" "$KI_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY u8 0 u8 0`
-    # Not the Ki mint (Error_InvalidAccount_First + 9, 1109)
+    # Not the Ki mint (Error_InvalidAccount_First + 8, 1108)
     assert_fail user_destake_bad_ki_accounts_wrong_mint                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x455'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x454'                     \
     `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$BID_MARKER_MINT_PUBKEY w" $SPLATA_PROGRAM_PUBKEY u8 0 u8 0`
-    # Ki mint not writable (Error_InvalidAccountPermissions_First + 9, 1209)
+    # Ki mint not writable (Error_InvalidAccountPermissions_First + 8, 1208)
     assert_fail user_destake_bad_ki_accounts_mint_not_writable                                                       \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b9'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b8'                     \
     `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY" $SPLATA_PROGRAM_PUBKEY u8 0 u8 0`
-    # Not the Associated Token Account program (Error_InvalidAccount_First + 16, 1116)
+    # Not the Associated Token Account program (Error_InvalidAccount_First + 14, 1114)
     assert_fail user_destake_bad_ki_accounts_wrong_ata_program                                                       \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45c'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45a'                     \
     `destake_14_0_0_raw "$KI_DESTINATION_PUBKEY w" "$KI_MINT_PUBKEY w" $SPL_TOKEN_PROGRAM_PUBKEY u8 0 u8 0`
 fi
 
 
-# Success with no commission
-if should_run_test user_destake_success_no_commission; then
-    STAKED=`solana -u l stake-account $MASTER_STAKE_PUBKEY | grep "^Active Stake:" | cut -d ' ' -f 3`
-    # Wait for master stake to settle, which would happen immediately after stake rewards paid.  This should then
-    # given an interval for destaking that should not change master stake amount.
-    while true; do
-        NEW_STAKED=`solana -u l stake-account $MASTER_STAKE_PUBKEY | grep "^Active Stake:" | cut -d ' ' -f 3`
-        if [ "$STAKED" != "$NEW_STAKED" ]; then
-            STAKED=$NEW_STAKED
-            break
-        fi
-        echo "Waiting for master stake to settle"
-        sleep 1
-    done
-    # Save the master stake account account staked
-    ADMIN_BALANCE=`lamports_from_sol \`account_balance $ADMIN_PUBKEY\``
+# Success
+if should_run_test user_destake_success; then
     # The entry is staked, so its token account must be frozen (2) before the destake
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 14 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "2" ]; then
-        echo "FAIL: user_destake_success_no_commission: token account of a staked entry is not frozen"
+        echo "FAIL: user_destake_success: token account of a staked entry is not frozen"
         exit 1
     fi
-    assert user_destake_success_no_commission                                                                        \
+    # Save the stake account's balance, which destake must return in full
+    STAKE_BALANCE=`account_balance $DELEGATED_STAKE_PUBKEY`
+    assert user_destake_success                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_destake_tx.sh                                     \
          $RICH_USER1_PUBKEY 14 0 0 $DELEGATED_STAKE_PUBKEY                                                           \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
-    # Check that the master stake account has not changed its balance
-    NEW_STAKED=`solana -u l stake-account $MASTER_STAKE_PUBKEY | grep "^Active Stake:" | cut -d ' ' -f 3`
-    if [ "$STAKED" != "$NEW_STAKED" ]; then
-        echo "FAIL: user_destake_success_no_commission: master stake account increased:"
-        echo $STAKED
-        echo $NEW_STAKED
+    # The stake account must have been returned to the token owner: both of its authorities are now rich_user1
+    STAKE_JSON=`solana -u l stake-account $DELEGATED_STAKE_PUBKEY --output json`
+    if [ "`echo "$STAKE_JSON" | jq -r .staker`" != "$RICH_USER1_PUBKEY" ] ||
+       [ "`echo "$STAKE_JSON" | jq -r .withdrawer`" != "$RICH_USER1_PUBKEY" ]; then
+        echo "FAIL: user_destake_success: stake account was not returned to the token owner:"
+        echo "$STAKE_JSON"
+        exit 1
+    fi
+    # Nothing may have been taken out of the stake account
+    NEW_STAKE_BALANCE=`account_balance $DELEGATED_STAKE_PUBKEY`
+    if less_than $NEW_STAKE_BALANCE $STAKE_BALANCE; then
+        echo "FAIL: user_destake_success: stake account balance decreased from $STAKE_BALANCE to $NEW_STAKE_BALANCE"
         exit 1
     fi
     # Destake must have thawed the token account, which was frozen while the entry was staked: it must be back in the
     # Initialized state (1), still holding the token
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 14 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
     if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ] ||
        [ "`get_token_balance $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "1" ]; then
-        echo "FAIL: user_destake_success_no_commission: token account was not thawed"
-        exit 1
-    fi
-fi
-
-
-# Success with commission
-if should_run_test user_destake_success_with_commission; then
-    STAKED=`solana -u l stake-account $MASTER_STAKE_PUBKEY | grep "^Active Stake:" | cut -d ' ' -f 3`
-    # Wait for master stake to settle, which would happen immediately after stake rewards paid.  This should then
-    # given an interval for destaking that should not change master stake amount.
-    while true; do
-        NEW_STAKED=`solana -u l stake-account $MASTER_STAKE_PUBKEY | grep "^Active Stake:" | cut -d ' ' -f 3`
-        if [ "$STAKED" != "$NEW_STAKED" ]; then
-            STAKED=$NEW_STAKED
-            break
-        fi
-        echo "Waiting for master stake to settle"
-        sleep 1
-    done
-    # Save the master stake account account staked
-    ADMIN_BALANCE=`lamports_from_sol \`account_balance $ADMIN_PUBKEY\``
-    assert user_destake_success_with_commission                                                                      \
-    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_destake_tx.sh                                     \
-         $RICH_USER1_PUBKEY 14 2 0 $DELEGATED_STAKE3_PUBKEY                                                          \
-        | solxact hash l                                                                                             \
-        | solxact sign $LEDGER/rich_user1.json                                                                       \
-        | solxact submit l 2>&1`
-    # Check that the master stake account has increased its balance
-    NEW_STAKED=`solana -u l stake-account $MASTER_STAKE_PUBKEY | grep "^Active Stake:" | cut -d ' ' -f 3`
-    if less_than $STAKED $NEW_STAKED; then
-        echo -n
-    else
-        echo "FAIL: user_destake_success_with_commission: master stake account did not increase"
+        echo "FAIL: user_destake_success: token account was not thawed"
         exit 1
     fi
 fi

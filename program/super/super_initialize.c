@@ -10,7 +10,6 @@
 #include "util/util_accounts.c"
 #include "util/util_metaplex.c"
 #include "util/util_rent.c"
-#include "util/util_stake.c"
 #include "util/util_token.c"
 
 
@@ -31,22 +30,16 @@ static uint64_t super_initialize(const SolParameters *params)
         DECLARE_ACCOUNT(0,   superuser_account,             ReadWrite,  Signer,     KnownAccount_SuperUser);
         DECLARE_ACCOUNT(1,   state_account,                 ReadWrite,  NotSigner,  KnownAccount_ProgramState);
         DECLARE_ACCOUNT(2,   authority_account,             ReadWrite,  NotSigner,  KnownAccount_Authority);
-        DECLARE_ACCOUNT(3,   master_stake_account,          ReadWrite,  NotSigner,  KnownAccount_MasterStake);
-        DECLARE_ACCOUNT(4,   shinobi_systems_vote_account,  ReadOnly,   NotSigner,  KnownAccount_ShinobiSystemsVote);
-        DECLARE_ACCOUNT(5,   ki_mint_account,               ReadWrite,  NotSigner,  KnownAccount_KiMint);
-        DECLARE_ACCOUNT(6,   ki_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_KiMetadata);
-        DECLARE_ACCOUNT(7,   bid_marker_mint_account,       ReadWrite,  NotSigner,  KnownAccount_BidMarkerMint);
-        DECLARE_ACCOUNT(8,   bid_marker_metadata_account,   ReadWrite,  NotSigner,  KnownAccount_BidMarkerMetadata);
-        DECLARE_ACCOUNT(9,   clock_sysvar_account,          ReadOnly,   NotSigner,  KnownAccount_ClockSysvar);
-        DECLARE_ACCOUNT(10,  rent_sysvar_account,           ReadOnly,   NotSigner,  KnownAccount_RentSysvar);
-        DECLARE_ACCOUNT(11,  stake_history_sysvar_account,  ReadOnly,   NotSigner,  KnownAccount_StakeHistorySysvar);
-        DECLARE_ACCOUNT(12,  stake_config_account,          ReadOnly,   NotSigner,  KnownAccount_StakeConfig);
-        DECLARE_ACCOUNT(13,  system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
-        DECLARE_ACCOUNT(14,  stake_program_account,         ReadOnly,   NotSigner,  KnownAccount_StakeProgram);
-        DECLARE_ACCOUNT(15,  spl_token_program_account,     ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
-        DECLARE_ACCOUNT(16,  metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
+        DECLARE_ACCOUNT(3,   ki_mint_account,               ReadWrite,  NotSigner,  KnownAccount_KiMint);
+        DECLARE_ACCOUNT(4,   ki_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_KiMetadata);
+        DECLARE_ACCOUNT(5,   bid_marker_mint_account,       ReadWrite,  NotSigner,  KnownAccount_BidMarkerMint);
+        DECLARE_ACCOUNT(6,   bid_marker_metadata_account,   ReadWrite,  NotSigner,  KnownAccount_BidMarkerMetadata);
+        DECLARE_ACCOUNT(7,   rent_sysvar_account,           ReadOnly,   NotSigner,  KnownAccount_RentSysvar);
+        DECLARE_ACCOUNT(8,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(9,   spl_token_program_account,     ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
+        DECLARE_ACCOUNT(10,  metaplex_program_account,      ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
-    DECLARE_ACCOUNTS_NUMBER(17);
+    DECLARE_ACCOUNTS_NUMBER(11);
 
     // Ensure that the input data is the correct size
     if (params->data_len != sizeof(InitializeData)) {
@@ -97,23 +90,6 @@ static uint64_t super_initialize(const SolParameters *params)
         Authority *authority = (Authority *) (authority_account->data);
         authority->data_type = DataType_Authority;
     }
-
-    // Create the master stake account
-    {
-        const uint8_t *seed_bytes = (uint8_t *) Constants.master_stake_seed_bytes;
-        SolSignerSeed seed = { seed_bytes, sizeof(Constants.master_stake_seed_bytes) };
-
-        uint64_t ret = create_stake_account(master_stake_account, &seed, 1, superuser_account->key,
-                                            MASTER_STAKE_ACCOUNT_MIN_LAMPORTS, &(Constants.authority_pubkey),
-                                            &(Constants.authority_pubkey), params->ka, params->ka_num);
-        if (ret) {
-            return ret;
-        }
-    }
-
-    // Delegate master stake account to Shinobi Systems
-    delegate_stake_signed(master_stake_account->key, &(Constants.shinobi_systems_vote_pubkey), params->ka,
-                          params->ka_num);
 
     // Create the Ki mint
     {

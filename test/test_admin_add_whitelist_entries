@@ -1,8 +1,8 @@
 
 # Make sure that the admin has signed the tx
 if should_run_test admin_add_whitelist_entries_no_auth; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_no_auth                                                                  \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ec'                     \
     `echo "encoding c                                                                                                \
@@ -14,8 +14,8 @@ if should_run_test admin_add_whitelist_entries_no_auth; then
            account $BLOCK_PUBKEY                                                                                     \
            account $WHITELIST_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = AddWhitelistEntries //                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 6 = AddWhitelistEntries //                                                            \
+           u8 6                                                                                                      \
            u16 1                                                                                                     \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
@@ -27,10 +27,10 @@ fi
 
 # Bad block
 if should_run_test admin_add_whitelist_entries_bad_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_bad_block                                                                \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -40,8 +40,8 @@ if should_run_test admin_add_whitelist_entries_bad_block; then
            account $STATE_PUBKEY                                                                                    \
            account $WHITELIST_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = AddWhitelistEntries //                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 6 = AddWhitelistEntries //                                                            \
+           u8 6                                                                                                      \
            u16 1                                                                                                     \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
@@ -53,11 +53,11 @@ fi
 
 # Bad whitelist
 if should_run_test admin_add_whitelist_entries_bad_whitelist; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     NONEXISTENT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 255 ]`
     assert_fail admin_add_whitelist_entries_bad_whitelist                                                            \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x408'                     \
     `echo "encoding c                                                                                                \
            fee_payer $ADMIN_PUBKEY                                                                                   \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -67,8 +67,8 @@ if should_run_test admin_add_whitelist_entries_bad_whitelist; then
            account $NONEXISTENT_PUBKEY                                                                               \
            account $STATE_PUBKEY w                                                                                  \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = AddWhitelistEntries //                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 6 = AddWhitelistEntries //                                                            \
+           u8 6                                                                                                      \
            u16 1                                                                                                     \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
@@ -80,8 +80,8 @@ fi
 
 # Count too small
 if should_run_test admin_add_whitelist_entries_count_too_small; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_count_too_small                                                          \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514'                     \
     `echo "encoding c                                                                                                \
@@ -93,8 +93,8 @@ if should_run_test admin_add_whitelist_entries_count_too_small; then
            account $BLOCK_PUBKEY                                                                                     \
            account $WHITELIST_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = AddWhitelistEntries //                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 6 = AddWhitelistEntries //                                                            \
+           u8 6                                                                                                      \
            u16 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -105,8 +105,8 @@ fi
 
 # Count too large
 if should_run_test admin_add_whitelist_entries_count_too_large; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_count_too_large                                                          \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514'                     \
     `echo "encoding c                                                                                                \
@@ -118,8 +118,8 @@ if should_run_test admin_add_whitelist_entries_count_too_large; then
            account $BLOCK_PUBKEY                                                                                     \
            account $WHITELIST_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = AddWhitelistEntries //                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 6 = AddWhitelistEntries //                                                            \
+           u8 6                                                                                                      \
            u16 29"                                                                                                   \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -130,8 +130,8 @@ fi
 
 # Short data
 if should_run_test admin_add_whitelist_entries_short_data; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_short_data                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
     `echo "encoding c                                                                                                \
@@ -143,8 +143,8 @@ if should_run_test admin_add_whitelist_entries_short_data; then
            account $BLOCK_PUBKEY                                                                                     \
            account $WHITELIST_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = AddWhitelistEntries //                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 6 = AddWhitelistEntries //                                                            \
+           u8 6                                                                                                      \
            u16 2                                                                                                     \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
@@ -156,8 +156,8 @@ fi
 
 # Long data
 if should_run_test admin_add_whitelist_entries_long_data; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 0 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 0 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     assert_fail admin_add_whitelist_entries_long_data                                                                \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
     `echo "encoding c                                                                                                \
@@ -169,8 +169,8 @@ if should_run_test admin_add_whitelist_entries_long_data; then
            account $BLOCK_PUBKEY                                                                                     \
            account $WHITELIST_PUBKEY w                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 8 = AddWhitelistEntries //                                                            \
-           u8 8                                                                                                      \
+           // Instruction code 6 = AddWhitelistEntries //                                                            \
+           u8 6                                                                                                      \
            u16 2                                                                                                     \
            pubkey $RICH_USER1_PUBKEY                                                                                 \
            pubkey $RICH_USER2_PUBKEY                                                                                 \
@@ -257,8 +257,8 @@ fi
 # Add too many
 if should_run_test admin_add_whitelist_entries_too_many; then
     # There are already 30 entries in the 6 1 block, add 269 more
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 6 u32 1 ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 6 u32 1 ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     PUBKEYS_28="$RICH_USER1_PUBKEY $RICH_USER2_PUBKEY $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                          \
                 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                          \
                 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY                          \
@@ -288,7 +288,7 @@ if should_run_test admin_add_whitelist_entries_too_many; then
         | solxact submit l 2>&1`
     # Now try to add two more, which is too many
     assert_fail admin_add_whitelist_entries_too_many                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40a'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
          $ADMIN_PUBKEY 6 1 $ADMIN_PUBKEY $SUPERUSER_PUBKEY                                                           \
         | solxact hash l                                                                                             \
@@ -308,13 +308,13 @@ fi
 if should_run_test admin_add_whitelist_entries_block_exists; then
     assert admin_add_whitelist_block_entries_exists_setup                                                            \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 6 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         $ADMIN_PUBKEY 6 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     assert_fail admin_add_whitelist_entries_block_exists                                                             \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40b'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x409'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
          $ADMIN_PUBKEY 6 0 $RICH_USER1_PUBKEY                                                                        \
         | solxact hash l                                                                                             \

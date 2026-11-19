@@ -91,15 +91,6 @@ typedef struct
     // with mysteries unsold, this stays 0; use get_mystery_phase_end_timestamp() rather than reading it directly.
     timestamp_t mystery_phase_end_timestamp;
 
-    // Commission currently charged per epoch for staked entries, where 65535 is 5% (see commission_t), so it can
-    // never exceed 5%.  This value can be updated but not more often than once per epoch, and it can only be raised
-    // by at most 1 percentage point (13107) at a time.  For any given entry, the change will only take effect after
-    // the commission charge *after this change*.
-    commission_t commission;
-
-    // Epoch of the last time that the commission was changed
-    uint64_t last_commission_change_epoch;
-
     // This is a bitmap of all entries which have been added to the block.  If a bit is 1, the entry has been
     // added already; if it is 0, the entry has not been added.  This allows entries to be added in parallel.
     uint8_t entries_added_bitmap[0];

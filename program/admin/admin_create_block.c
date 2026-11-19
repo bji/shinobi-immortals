@@ -10,10 +10,6 @@ typedef struct
     // This is the instruction code for CreateBlock
     uint8_t instruction_code;
 
-    // Initial commission to use in the newly created block.  65535 is 5% (see commission_t), so any value is allowed:
-    // no value that can be given is more than 5%.
-    commission_t initial_commission;
-
     // The actual configuration of the block is provided
     BlockConfiguration config;
 
@@ -112,8 +108,6 @@ static uint64_t admin_create_block(const SolParameters *params)
     block->data_type = DataType_Block;
 
     block->config = *config;
-
-    block->commission = data->initial_commission;
 
     return 0;
 }

@@ -1,13 +1,10 @@
 
-# Tests of WithdrawExcess (23): the admin withdraws the excess lamports of an account that the program controls.
+# Tests of WithdrawExcess (20): the admin withdraws the excess lamports of an account that the program controls.
 #
 # These tests make their own block group (77) so that they do not depend on what earlier tests left behind, with one
 # deliberate exception: the test of the authority account first checks that after every mystery purchase, reveal and
 # refund of the whole suite, the escrow total that the authority account records still accounts exactly for its
 # balance.
-#
-# Withdrawal from a deactivated master stake account is tested by test/test_master_stake_recovery.sh, which runs on
-# its own validator.
 
 # This must be set so that user_stake_tx.sh will use the correct vote account
 export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
@@ -22,37 +19,29 @@ WE_SHA2561=`compute_metadata_sha256 $WE_METADATA1 1`
 WE_SHA2562=`compute_metadata_sha256 $WE_METADATA2 2`
 
 # Addresses of the accounts that these tests withdraw from, or try to
-WE_BLOCK_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 77 u32 0 ]`
-WE_MINT_0_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $WE_BLOCK_0_PUBKEY u16 0 ]`
-WE_ENTRY_0_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $WE_MINT_0_0_PUBKEY ]`
-WE_BLOCK_1_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 77 u32 1 ]`
-WE_MINT_1_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $WE_BLOCK_1_PUBKEY u16 0 ]`
-WE_BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 12 pubkey $WE_MINT_1_0_PUBKEY pubkey $RICH_USER2_PUBKEY ]`
-WE_BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $WE_BID_MARKER_TOKEN_PUBKEY ]`
+WE_BLOCK_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 77 u32 0 ]`
+WE_MINT_0_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $WE_BLOCK_0_PUBKEY u16 0 ]`
+WE_ENTRY_0_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $WE_MINT_0_0_PUBKEY ]`
+WE_BLOCK_1_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 77 u32 1 ]`
+WE_MINT_1_0_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $WE_BLOCK_1_PUBKEY u16 0 ]`
+WE_BID_MARKER_TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 8 pubkey $WE_MINT_1_0_PUBKEY pubkey $RICH_USER2_PUBKEY ]`
+WE_BID_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $WE_BID_MARKER_TOKEN_PUBKEY ]`
 # The whitelist of block 77 5, a block that is never created
-WE_BLOCK_5_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 77 u32 5 ]`
-WE_WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $WE_BLOCK_5_PUBKEY ]`
+WE_BLOCK_5_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 77 u32 5 ]`
+WE_WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $WE_BLOCK_5_PUBKEY ]`
 
 # The account type codes of WithdrawExcessAccountType in program/admin/admin_withdraw_excess.c
-WE_TYPE_MASTER_STAKE=0
-WE_TYPE_STATE=1
-WE_TYPE_AUTHORITY=2
-WE_TYPE_BLOCK=3
-WE_TYPE_ENTRY=4
-WE_TYPE_WHITELIST=5
+WE_TYPE_STATE=0
+WE_TYPE_AUTHORITY=1
+WE_TYPE_BLOCK=2
+WE_TYPE_ENTRY=3
+WE_TYPE_WHITELIST=4
 
 
 # Prints the balance of account $1 in lamports
 function lamports_of ()
 {
     solana -u l balance --lamports $1 | cut -d ' ' -f 1
-}
-
-
-# Prints a field of the JSON description of the master stake account, or "null" if it is not present
-function master_stake_field ()
-{
-    solana -u l stake-account $MASTER_STAKE_PUBKEY --output json | jq -r ".$1"
 }
 
 
@@ -122,12 +111,8 @@ function withdraw_excess_raw ()
           account $STATE_PUBKEY                                                                                      \
           account $ADMIN_PUBKEY ws                                                                                   \
           account $FROM_PUBKEY w                                                                                     \
-          account $AUTHORITY_PUBKEY                                                                                  \
-          account $CLOCK_SYSVAR_PUBKEY                                                                               \
-          account $STAKE_PROGRAM_PUBKEY                                                                              \
-          account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                       \
-          // Instruction code 23 = WithdrawExcess //                                                                 \
-          u8 23                                                                                                      \
+          // Instruction code 20 = WithdrawExcess //                                                                 \
+          u8 20                                                                                                      \
           $@"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -188,7 +173,7 @@ function test_withdraw_excess_of_program_account ()
     fi
 
     assert_fail ${TEST_NAME}_nothing_after                                                                           \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                     \
     `withdraw_excess $LEDGER/admin.json "$@"`
 }
 
@@ -198,7 +183,7 @@ if [ -z "$TESTS" ]; then
     # 77 0 -- three entries, two of them mysteries, with a 1 second reveal period
     assert withdraw_excess_setup_77_0_a                                                                              \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 77 0 0 3 2 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 77 0 3 2 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -221,7 +206,7 @@ if [ -z "$TESTS" ]; then
     # 77 1 -- one entry, no mysteries, with an auction that lasts a day
     assert withdraw_excess_setup_77_1_a                                                                              \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 77 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 77 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -293,7 +278,7 @@ fi
 if should_run_test admin_withdraw_excess_bad_type; then
     assert_fail admin_withdraw_excess_bad_type                                                                       \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515'                     \
-    `withdraw_excess_raw $WE_BLOCK_0_PUBKEY u8 6`
+    `withdraw_excess_raw $WE_BLOCK_0_PUBKEY u8 5`
 fi
 
 
@@ -324,14 +309,6 @@ if should_run_test admin_withdraw_excess_wrong_type; then
     assert_fail admin_withdraw_excess_wrong_type_authority_as_state                                                  \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
     `withdraw_excess_raw $AUTHORITY_PUBKEY u8 $WE_TYPE_STATE`
-    # The authority account is not the master stake account
-    assert_fail admin_withdraw_excess_wrong_type_authority_as_master_stake                                           \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
-    `withdraw_excess_raw $AUTHORITY_PUBKEY u8 $WE_TYPE_MASTER_STAKE`
-    # The master stake account is not an entry
-    assert_fail admin_withdraw_excess_wrong_type_master_stake_as_entry                                               \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
-    `withdraw_excess_raw $MASTER_STAKE_PUBKEY u8 $WE_TYPE_ENTRY`
 fi
 
 
@@ -340,7 +317,7 @@ if should_run_test admin_withdraw_excess_bid_account; then
     # Put lamports beyond the bid into the bid account, so that if it were accepted there would be something to take
     transfer $LEDGER/rich_user1.json $WE_BID_PUBKEY 1
     BID_BEFORE=`lamports_of $WE_BID_PUBKEY`
-    for WE_TYPE in 0 1 2 3 4 5; do
+    for WE_TYPE in 0 1 2 3 4; do
         assert_fail admin_withdraw_excess_bid_account_as_type_$WE_TYPE                                               \
         'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                 \
         `withdraw_excess_raw $WE_BID_PUBKEY u8 $WE_TYPE`
@@ -410,7 +387,7 @@ if should_run_test admin_withdraw_excess_authority; then
 
     # The authority account now holds a great deal of SOL, all of it escrow; none of it may be withdrawn
     assert_fail ${TEST_NAME}_only_escrow                                                                             \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                     \
     `withdraw_excess $LEDGER/admin.json authority`
 
     # Someone transfers 1 SOL to the authority account.  Exactly that is withdrawn, and the escrow stays.
@@ -437,7 +414,7 @@ if should_run_test admin_withdraw_excess_authority; then
     fi
     check_authority_holds_exactly_escrow ${TEST_NAME}_after_stray
     assert_fail ${TEST_NAME}_only_escrow_again                                                                       \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                     \
     `withdraw_excess $LEDGER/admin.json authority`
 
     # Entry 77 0 1 is revealed: its purchase price leaves escrow for the admin
@@ -466,7 +443,7 @@ if should_run_test admin_withdraw_excess_authority; then
 
     # The price of 77 0 0, which was not revealed, is still in escrow and still cannot be withdrawn
     assert_fail ${TEST_NAME}_only_escrow_after_reveal                                                                \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x411'                     \
     `withdraw_excess $LEDGER/admin.json authority`
 
     # Wait to be sure that block 77 0 is past its 1 second reveal period, then rich_user1 gets a refund for 77 0 0.
@@ -512,11 +489,11 @@ if should_run_test admin_withdraw_excess_user_stake_account; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
-    # The stake account's authorities are now the program authority, as the master stake account's are; and it holds
-    # lamports beyond what is staked.  It is still refused as every type.
+    # The stake account's authorities are now the program authority; and it holds lamports beyond what is staked.  It
+    # is still refused as every type.
     transfer $LEDGER/rich_user1.json $WE_STAKE_PUBKEY 1
     STAKE_BEFORE=`lamports_of $WE_STAKE_PUBKEY`
-    for WE_TYPE in 0 1 2 3 4 5; do
+    for WE_TYPE in 0 1 2 3 4; do
         assert_fail admin_withdraw_excess_user_stake_account_as_type_$WE_TYPE                                        \
         'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                 \
         `withdraw_excess_raw $WE_STAKE_PUBKEY u8 $WE_TYPE`
@@ -525,68 +502,4 @@ if should_run_test admin_withdraw_excess_user_stake_account; then
         echo "FAIL: admin_withdraw_excess_user_stake_account: stake account balance changed"
         exit 1
     fi
-fi
-
-
-# The master stake account, while it is actively delegated: lamports that are in it but not staked are withdrawn, and
-# nothing else is
-if should_run_test admin_withdraw_excess_master_stake; then
-    TEST_NAME=admin_withdraw_excess_master_stake
-
-    # Put a known amount of lamports that are not staked into the master stake account.  There may be more there
-    # already, left by earlier tests (SplitMasterStake with a pre-merge account leaves that account's rent exempt
-    # reserve behind); whatever is there must all be withdrawn.
-    transfer $LEDGER/rich_user1.json $MASTER_STAKE_PUBKEY 1
-
-    # The balance and delegated stake of the master stake account are read together, from one description of it, both
-    # before and after the withdrawal.  Stake rewards can be paid into the master stake account at any moment between
-    # the two (the test validator's epochs are short); a reward adds the same amount to both its balance and its
-    # delegated stake, so the growth of its delegated stake is the reward, which is what the checks below allow for.
-    MASTER_BEFORE_JSON=`solana -u l stake-account $MASTER_STAKE_PUBKEY --output json`
-    ADMIN_BEFORE=`lamports_of $ADMIN_PUBKEY`
-    assert $TEST_NAME                                                                                                \
-    `withdraw_excess $LEDGER/admin.json master_stake`
-    MASTER_AFTER_JSON=`solana -u l stake-account $MASTER_STAKE_PUBKEY --output json`
-    ADMIN_AFTER=`lamports_of $ADMIN_PUBKEY`
-    MASTER_BEFORE=`echo "$MASTER_BEFORE_JSON" | jq -r .accountBalance`
-    MASTER_AFTER=`echo "$MASTER_AFTER_JSON" | jq -r .accountBalance`
-    DELEGATED_BEFORE=`echo "$MASTER_BEFORE_JSON" | jq -r .delegatedStake`
-    DELEGATED_AFTER=`echo "$MASTER_AFTER_JSON" | jq -r .delegatedStake`
-    # Any stake rewards paid into the master stake account between the two readings
-    REWARDS=$((DELEGATED_AFTER - DELEGATED_BEFORE))
-
-    # What must remain in the master stake account: its rent exempt reserve, plus the larger of its delegated stake
-    # and its 2 SOL minimum
-    MASTER_KEEP=$DELEGATED_AFTER
-    if [ $MASTER_KEEP -lt 2000000000 ]; then
-        MASTER_KEEP=2000000000
-    fi
-    MASTER_EXPECTED=$((`echo "$MASTER_AFTER_JSON" | jq -r .rentExemptReserve` + MASTER_KEEP))
-    if [ "$MASTER_AFTER" != "$MASTER_EXPECTED" ]; then
-        echo "FAIL: $TEST_NAME: master stake account has $MASTER_AFTER lamports, expected $MASTER_EXPECTED"
-        exit 1
-    fi
-    # What was withdrawn is what left the master stake account, not counting any rewards that arrived meanwhile
-    WITHDRAWN=$((MASTER_BEFORE + REWARDS - MASTER_AFTER))
-    # At least the lamports that were just transferred in must have been withdrawn
-    if [ $WITHDRAWN -lt 1000000000 ]; then
-        echo "FAIL: $TEST_NAME: only $WITHDRAWN lamports withdrawn"
-        exit 1
-    fi
-    # The admin received everything that was withdrawn, and paid the 5000 lamport transaction fee
-    if [ $((ADMIN_AFTER - ADMIN_BEFORE)) != $((WITHDRAWN - 5000)) ]; then
-        echo "FAIL: $TEST_NAME: admin balance changed by $((ADMIN_AFTER - ADMIN_BEFORE)), expected"                  \
-             "$((WITHDRAWN - 5000)) (rewards paid meanwhile: $REWARDS)"
-        exit 1
-    fi
-    # The master stake account is still actively delegated
-    if [ "`master_stake_field deactivationEpoch`" != "null" ]; then
-        echo "FAIL: $TEST_NAME: master stake account was deactivated"
-        exit 1
-    fi
-
-    # With everything withdrawable now withdrawn, there is nothing left to withdraw
-    assert_fail ${TEST_NAME}_nothing                                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
-    `withdraw_excess $LEDGER/admin.json master_stake`
 fi

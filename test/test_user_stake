@@ -30,7 +30,7 @@ solana_stake -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated_st
 # 13 0
 assert user_stake_setup_13_0_a                                                                                       \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                   \
-     $ADMIN_PUBKEY 13 0 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                             \
+     $ADMIN_PUBKEY 13 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                               \
      \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/admin.json                                                                                \
@@ -107,10 +107,10 @@ export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
     
 # Invalid block
 if should_run_test user_stake_bad_block; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 13 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_bad_block                                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
     `echo "encoding c                                                                                                \
@@ -130,8 +130,8 @@ if should_run_test user_stake_bad_block; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 14 = Stake //                                                                         \
-           u8 14"                                                                                                    \
+           // Instruction code 12 = Stake //                                                                         \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -141,10 +141,10 @@ fi
 
 # Invalid entry
 if should_run_test user_stake_bad_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 13 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_bad_entry                                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
@@ -164,8 +164,8 @@ if should_run_test user_stake_bad_entry; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 14 = Stake //                                                                         \
-           u8 14"                                                                                                    \
+           // Instruction code 12 = Stake //                                                                         \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -175,10 +175,10 @@ fi
 
 # Entry not owned
 if should_run_test user_stake_entry_not_owned; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 13 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_entry_not_owned                                                                           \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
     `echo "encoding c                                                                                                \
@@ -198,16 +198,16 @@ if should_run_test user_stake_entry_not_owned; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 14 = Stake //                                                                         \
-           u8 14"                                                                                                    \
+           // Instruction code 12 = Stake //                                                                         \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
         | solxact submit l 2>&1`
 
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 2 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 2 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     assert_fail user_stake_entry_not_owned_2                                                                         \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x402'                     \
     `echo "encoding c                                                                                                \
@@ -227,8 +227,8 @@ if should_run_test user_stake_entry_not_owned; then
            account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 14 = Stake //                                                                         \
-           u8 14"                                                                                                    \
+           // Instruction code 12 = Stake //                                                                         \
+           u8 12"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -366,8 +366,8 @@ fi
 # rich_user1 in user_stake_undelegated_stake_account.  The SPL Token program rejects each of these with its
 # AccountFrozen error, which is 17 (0x11).
 if should_run_test user_stake_token_frozen; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 13 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 13 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     # The token account must be in the Frozen state (2)
     if [ "`get_token_account_state $MINT_PUBKEY $RICH_USER1_PUBKEY`" != "2" ]; then

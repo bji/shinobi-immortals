@@ -41,15 +41,15 @@ fi
       SPLATA_PROGRAM_PUBKEY="ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
            AUTHORITY_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 2 ]"
                BLOCK_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 14                                                                              \
+                                 [ u8 10                                                                              \
                                    u32 $GROUP_NUMBER                                                                  \
                                    u32 $BLOCK_NUMBER ]"
           ENTRY_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 5                                                                               \
+                                 [ u8 4                                                                               \
                                    $BLOCK_PUBKEY                                                                      \
                                    u16 $ENTRY_INDEX ]"
                ENTRY_PUBKEY="pda $SELF_PROGRAM_PUBKEY                                                                 \
-                                 [ u8 15                                                                              \
+                                 [ u8 11                                                                              \
                                    $ENTRY_MINT_PUBKEY ]"
 
 # The token account defaults to the user's Associated Token Account for the entry's mint
@@ -75,5 +75,5 @@ solxact encode                                                                  
         // The program authority, which is the freeze authority of the entry mint //                                  \
         account $AUTHORITY_PUBKEY                                                                                     \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
-        // Instruction code 16 = Thaw //                                                                              \
-        u8 16
+        // Instruction code 14 = Thaw //                                                                              \
+        u8 14

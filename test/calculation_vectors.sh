@@ -281,39 +281,6 @@ done
 emit Ki/full-width-earnings 4 "$MAX" 0 0 0 "$MAX"
 emit Ki/sticky-overflow 4 1 50000000000000 0 0 0 1 1
 
-# Commission is floor((current-baseline)*rate/1310700): a rate of 65535 is 5%, so 100% would be 65535 * 20 = 1310700.
-# Start with the zero-delta, zero-rate and maximum-rate endpoints before sampling bounded random earnings.
-emit commission/no-earnings 5 1000000 1000000 65535 0 0
-emit commission/zero-rate 5 2000000 1000000 0 0 0
-emit commission/max-rate 5 2000000 1000000 65535 0 50000
-emit commission/one-percent 5 2000000 1000000 13107 0 10000
-for ((i=0; i<128; ++i)); do
-    # Bound both balances below 10^12 and sample the entire uint16 commission range.
-    reward=$(dc_calc "${random_values[random_index]} 1000000000000 % p")
-    random_index=$((random_index + 1))
-    baseline=$(dc_calc "${random_values[random_index]} 1000000000000 % p")
-    random_index=$((random_index + 1))
-    rate=$(dc_calc "${random_values[random_index]} 65536 % p")
-    random_index=$((random_index + 1))
-    # Use wide reference math before division; the final result fits uint64_t.
-    current=$(dc_calc "$baseline $reward + p")
-    expected=$(dc_calc "$reward $rate * 1310700 / p")
-    emit "commission/normal/$i" 5 "$current" "$baseline" "$rate" 0 "$expected"
-done
-# Rewards large enough that reward * rate exceeds 2^64 (above about 281,000 SOL at the
-# maximum rate) must still give the exact result: the floor of reward * rate / 1310700,
-# which is 5% of the reward at the maximum rate.  A balance decrease earns none.
-emit commission/large-reward 5 300000000000000 0 65535 0 15000000000000
-emit commission/large-reward-rate 5 300000000000000 0 6553 0 $(dc_calc "300000000000000 6553 * 1310700 / p")
-emit commission/max-reward-max-rate 5 "$MAX" 0 65535 0 $(dc_calc "$MAX 65535 * 1310700 / p")
-emit commission/max-reward-max-minus-one 5 "$MAX" 0 65534 0 $(dc_calc "$MAX 65534 * 1310700 / p")
-emit commission/max-reward-rate-one 5 "$MAX" 0 1 0 $(dc_calc "$MAX 1310700 / p")
-emit commission/decreased-balance 5 99900000000 100000000000 6553 0 0
-# Stake exactly at the baseline, and the smallest and largest possible decreases, also earn no commission.
-emit commission/unchanged-balance 5 100000000000 100000000000 65535 0 0
-emit commission/decreased-by-one 5 99999999999 100000000000 65535 0 0
-emit commission/decreased-to-zero 5 0 "$MAX" 65535 0 0
-
 # Cumulative level thresholds use the same fixed-point rounding as the metadata
 # schedule, independently evaluated with arbitrary precision rather than C code.
 for first_cost in 1 100 4294967295; do

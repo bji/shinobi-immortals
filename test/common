@@ -671,14 +671,14 @@ function poke_byte ()
 #   0   data_type (u32): 3 = DataType_Entry
 #   168 reveal_sha256: all zero, meaning revealed
 #   208 purchase_price_lamports (u64): non-zero, meaning owned
-#   320 level (u8): 8
-#   324 metadata.level_1_credits (u32): 100
+#   304 level (u8): 8
+#   308 metadata.level_1_credits (u32): 100
 function make_max_level_entry_fixture ()
 {
     local PROGRAM_PUBKEY=$1
     local DATA_FILE=$FIXTURES/max_level_entry.bin
     # sizeof(Entry)
-    local SIZE=3192
+    local SIZE=3176
     # Rent exempt minimum: (data size + 128 bytes account overhead) * 3480 lamports/byte-year * 2 years
     local LAMPORTS=$(((SIZE + 128) * 3480 * 2))
 
@@ -690,8 +690,8 @@ function make_max_level_entry_fixture ()
     dd if=/dev/zero of=$DATA_FILE bs=$SIZE count=1 status=none
     poke_byte $DATA_FILE 0 3
     poke_byte $DATA_FILE 208 1
-    poke_byte $DATA_FILE 320 8
-    poke_byte $DATA_FILE 324 100
+    poke_byte $DATA_FILE 304 8
+    poke_byte $DATA_FILE 308 100
 
     # Write the account in the JSON format that solana-test-validator --account loads
     cat > $FIXTURES/max_level_entry.json <<EOF
@@ -765,13 +765,6 @@ function setup ()
     # to end, so by default extensions are turned off (0: no bid is ever within 0 seconds of the end).
     # test/test_auction_extension.sh, which tests extensions, sets a value before calling setup.
     export AUCTION_EXTENSION_SECONDS=${AUCTION_EXTENSION_SECONDS:-0}
-
-    # The number of epochs without a completed commission charge after which Destake stops charging commission, that
-    # the test program is built with (production uses 5).  Most tests stake an entry and destake it many epochs later
-    # without running the commission crank in between, and expect Destake to charge commission, so by default this is
-    # set far beyond any test's length.  test/test_destake_commission_waiver.sh, which tests the waiver itself, sets
-    # a small value before calling setup.
-    export DESTAKE_COMMISSION_WAIVER_EPOCHS=${DESTAKE_COMMISSION_WAIVER_EPOCHS:-1000000}
 
     # Make a temporary directory to hold the validator ledger
     export LEDGER=`mktemp -d`
@@ -853,18 +846,16 @@ function setup ()
     echo "Making build script"
     $SOURCE/make_build_program.sh $LEDGER/program.json $LEDGER/super.json $SHINOBI_SYSTEMS_VOTE_PUBKEY               \
         > $LEDGER/build_program.sh.in
-    # The test program differs from a production build in exactly four respects: a short level credit window, so
+    # The test program differs from a production build in exactly three respects: a short level credit window, so
     # that window rollover can be tested in real time; a short delay before anyone other than the winning bidder may
-    # settle a winning bid, so that the tests can wait it out; the number of epochs after which Destake stops
-    # charging commission (see DESTAKE_COMMISSION_WAIVER_EPOCHS above); and the auction extension (see
+    # settle a winning bid, so that the tests can wait it out; and the auction extension (see
     # AUCTION_EXTENSION_SECONDS above).  Production builds have no way to set these
     # (the generated build script has no override hook), so the defines are inserted here, into the test's copy of
     # the build script only, immediately after the program include directory argument.
     awk -v WINDOW=$LEVEL_CREDIT_WINDOW_SECONDS -v DELAY=$SETTLE_WINNING_BID_DELAY_SECONDS                            \
-        -v WAIVER=$DESTAKE_COMMISSION_WAIVER_EPOCHS -v EXTENSION=$AUCTION_EXTENSION_SECONDS                          \
+        -v EXTENSION=$AUCTION_EXTENSION_SECONDS                                                                     \
         '{ print } /^ *-I\$SOURCE_ROOT\/program / { print "    -DLEVEL_CREDIT_WINDOW_SECONDS=" WINDOW "ul \\";       \
                                                     print "    -DSETTLE_WINNING_BID_DELAY_SECONDS=" DELAY "ul \\";   \
-                                                    print "    -DDESTAKE_COMMISSION_WAIVER_EPOCHS=" WAIVER "ul \\";  \
                                                     print "    -DAUCTION_EXTENSION_SECONDS=" EXTENSION "ul \\" }' \
         $LEDGER/build_program.sh.in > $LEDGER/build_program.sh
     # Fail loudly if the build script's format changed and the define could not be inserted
@@ -875,11 +866,6 @@ function setup ()
     if ! grep -q -- "-DSETTLE_WINNING_BID_DELAY_SECONDS=${SETTLE_WINNING_BID_DELAY_SECONDS}ul" $LEDGER/build_program.sh
     then
         echo "FAIL: could not insert SETTLE_WINNING_BID_DELAY_SECONDS into the test build script"
-        exit 1
-    fi
-    if ! grep -q -- "-DDESTAKE_COMMISSION_WAIVER_EPOCHS=${DESTAKE_COMMISSION_WAIVER_EPOCHS}ul" $LEDGER/build_program.sh
-    then
-        echo "FAIL: could not insert DESTAKE_COMMISSION_WAIVER_EPOCHS into the test build script"
         exit 1
     fi
     if ! grep -q -- "-DAUCTION_EXTENSION_SECONDS=${AUCTION_EXTENSION_SECONDS}ul" $LEDGER/build_program.sh; then
@@ -918,9 +904,8 @@ function setup ()
     export         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
     export               STATE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
     export            AUTHORITY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 2 ]`
-    export         MASTER_STAKE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 3 ]`
-    export              KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 ]`
-    export      BID_MARKER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 ]`
+    export              KI_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 3 ]`
+    export      BID_MARKER_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 7 ]`
     export          KI_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                 \
                                             [ string metadata                                                        \
                                               pubkey $METAPLEX_PROGRAM_PUBKEY                                        \

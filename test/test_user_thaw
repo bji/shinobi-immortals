@@ -1,4 +1,4 @@
-# Tests of Thaw (16), and of Destake with the no_thaw flag set, which leaves the token account that holds the entry's
+# Tests of Thaw (14), and of Destake with the no_thaw flag set, which leaves the token account that holds the entry's
 # token frozen until Thaw thaws it.
 #
 # Uses block 19 0, which has two entries: 19 0 0, which rich_user1 buys and stakes, and 19 0 1, which is not owned.
@@ -30,10 +30,10 @@ if [ -z "$TESTS" ]; then
     # An undelegated stake account of rich_user1, which Stake delegates to Shinobi Systems
     make_stake_account $LEDGER/rich_user1.json $LEDGER/thaw_stake.json 1000 --commitment=finalized
 
-    # 19 0, with two entries and no commission
+    # 19 0, with two entries
     assert user_thaw_setup_19_0_a                                                                                    \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 19 0 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                         \
+         $ADMIN_PUBKEY 19 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -85,9 +85,9 @@ fi
 
 
 export THAW_STAKE_PUBKEY=`solxact pubkey $LEDGER/thaw_stake.json`
-THAW_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 19 u32 0 ]`
-THAW_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $THAW_BLOCK_PUBKEY u16 0 ]`
-THAW_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $THAW_MINT_PUBKEY ]`
+THAW_BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 19 u32 0 ]`
+THAW_MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $THAW_BLOCK_PUBKEY u16 0 ]`
+THAW_ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $THAW_MINT_PUBKEY ]`
 # rich_user1's token account for entry 19 0 0
 THAW_TOKEN_PUBKEY=`get_splata_account $THAW_MINT_PUBKEY $RICH_USER1_PUBKEY`
 
@@ -120,11 +120,11 @@ if should_run_test user_thaw_not_owned; then
 fi
 
 
-# Thaw of an entry that is staked: its token account must stay frozen (Error_EntryStaked, 1045)
+# Thaw of an entry that is staked: its token account must stay frozen (Error_EntryStaked, 1043)
 if should_run_test user_thaw_staked; then
     check_thaw_token_state user_thaw_staked "token account of a staked entry is not frozen" 2
     assert_fail user_thaw_staked                                                                                     \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x415'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x413'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_thaw_tx.sh                                        \
          $RICH_USER1_PUBKEY 19 0 0                                                                                   \
         | solxact hash l                                                                                             \
@@ -148,8 +148,8 @@ if should_run_test user_thaw_bad_data_size; then
            account $THAW_MINT_PUBKEY                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 16 = Thaw //                                                                          \
-           u8 16                                                                                                     \
+           // Instruction code 14 = Thaw //                                                                          \
+           u8 14                                                                                                     \
            u8 0"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -214,10 +214,10 @@ if should_run_test user_thaw_success; then
 fi
 
 
-# Thaw of a token account that is not frozen (Error_TokenAccountNotFrozen, 1046)
+# Thaw of a token account that is not frozen (Error_TokenAccountNotFrozen, 1044)
 if should_run_test user_thaw_not_frozen; then
     assert_fail user_thaw_not_frozen                                                                                 \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x416'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x414'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_thaw_tx.sh                                        \
          $RICH_USER1_PUBKEY 19 0 0                                                                                   \
         | solxact hash l                                                                                             \

@@ -92,12 +92,6 @@ static bool is_admin_account(const SolAccountInfo *state_account, const SolPubke
 }
 
 
-static bool is_master_stake_account(const SolPubkey *pubkey)
-{
-    return SolPubkey_same(&(Constants.master_stake_pubkey), pubkey);
-}
-
-
 static bool is_ki_mint_account(const SolPubkey *pubkey)
 {
     return SolPubkey_same(&(Constants.ki_mint_pubkey), pubkey);
@@ -276,18 +270,6 @@ static uint64_t create_account(SolAccountInfo *new_account, const SolPubkey *fun
     }
 
     return 0;
-}
-
-
-// The target_account must be a signer
-static uint64_t create_system_account(SolAccountInfo *new_account, const SolPubkey *funding_account_key,
-                                      const SolPubkey *owner_account_key, uint64_t space, uint64_t lamports,
-                                      // All cross-program invocation must pass all account infos through, it's
-                                      // the only sane way to cross-program invoke
-                                      const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
-{
-    return create_account(new_account, funding_account_key, owner_account_key, lamports, space, 0, 0,
-                          transaction_accounts, transaction_accounts_len);
 }
 
 

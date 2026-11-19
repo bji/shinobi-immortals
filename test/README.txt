@@ -24,7 +24,7 @@ do not prevent later batches from running.
 Known defects print XFAIL with "currently expected to fail" and a reason. They
 do not fail the suite. XPASS fails the suite so fixed defects must have their
 expected-failure annotations reviewed. There are currently no expected defects;
-price floor rounding and commission overflow were fixed.
+price floor rounding was fixed.
 
 Ki calculations scale earnings by effective total stake, using a 50 SOL
 asymptote K: effective(x) = K*x*(K+x)/(K*K+K*x+x*x).
@@ -63,7 +63,7 @@ Vectors are pipe-delimited rows: name, expected-failure reason (possibly empty),
 operation, initial-overflow, expected-failure flag, expected-overflow, four
 arguments, expected value. A fixed-seed 64-bit LCG supplies repeatable random
 inputs; dc performs all wide arithmetic, including overflow reference results.
-Operations: 0 add, 1 multiply, 2 price, 3 minimum bid, 4 Ki, 5 commission,
+Operations: 0 add, 1 multiply, 2 price, 3 minimum bid, 4 Ki, (5 unused),
 6 window level credits, 7 cumulative level requirement, 8 multiply fraction.
 The driver keeps binary transactions in files and decodes returned unsigned
 64-bit values with od, without lossy shell/JSON numeric conversions.

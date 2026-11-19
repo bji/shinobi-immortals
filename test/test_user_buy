@@ -3,14 +3,14 @@
 # Invalid admin account supplied
 if should_run_test user_buy_wrong_admin; then
     # Test with block 8 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_wrong_admin                                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
@@ -34,8 +34,8 @@ if should_run_test user_buy_wrong_admin; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -47,14 +47,14 @@ fi
 # Short input data
 if should_run_test user_buy_short_data; then
     # Test with block 8 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_short_data                                                                                  \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
@@ -78,8 +78,8 @@ if should_run_test user_buy_short_data; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10"                                                                                                    \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8"                                                                                                     \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -90,14 +90,14 @@ fi
 # Invalid block account
 if should_run_test user_buy_bad_block; then
     # Test with block 8 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_bad_block                                                                                   \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
@@ -121,8 +121,8 @@ if should_run_test user_buy_bad_block; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -151,7 +151,7 @@ if [ -z "$TESTS" ]; then
    # create block
     assert user_buy_setup_8_0                                                                                        \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 0 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         $ADMIN_PUBKEY 8 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -161,7 +161,7 @@ if [ -z "$TESTS" ]; then
     # create block
     assert user_buy_setup_8_1_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 1 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                              \
+         $ADMIN_PUBKEY 8 1 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -178,7 +178,7 @@ if [ -z "$TESTS" ]; then
     # create block
     assert user_buy_setup_8_2_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 2 0 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         $ADMIN_PUBKEY 8 2 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                            \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -195,7 +195,7 @@ if [ -z "$TESTS" ]; then
     # create block
     assert user_buy_setup_8_3_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 3 0 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         $ADMIN_PUBKEY 8 3 2 1 1 \`lamports_from_sol 1000\` $((24*60*60))                                            \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -235,7 +235,7 @@ if [ -z "$TESTS" ]; then
     # create block
     assert user_buy_setup_8_4_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 4 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         $ADMIN_PUBKEY 8 4 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                            \
          \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -273,7 +273,7 @@ if [ -z "$TESTS" ]; then
     # create block
     assert user_buy_setup_8_5_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 5 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         $ADMIN_PUBKEY 8 5 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                            \
          \`lamports_from_sol 1\` true 20 \`lamports_from_sol 1000\` 0                                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -317,7 +317,7 @@ if [ -z "$TESTS" ]; then
     # 8 6 -- no mystery, no auction, not revealed
     assert user_buy_setup_8_6_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 6 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         $ADMIN_PUBKEY 8 6 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                            \
          \`lamports_from_sol 1\` false 0 \`lamports_from_sol 1000\` 0                                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -347,7 +347,7 @@ if [ -z "$TESTS" ]; then
     # 8 7 -- no mystery, no auction, revealed
     assert user_buy_setup_8_7_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 7 0 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         $ADMIN_PUBKEY 8 7 2 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                            \
          \`lamports_from_sol 1\` true 1 \`lamports_from_sol 1000\` 0                                                 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -400,14 +400,14 @@ fi
 
 # Invalid entry
 if should_run_test user_buy_wrong_entry; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 7 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 7 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_wrong_entry                                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
@@ -431,8 +431,8 @@ if should_run_test user_buy_wrong_entry; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -443,18 +443,18 @@ fi
 
 # Valid entry but not the correct block
 if should_run_test user_buy_wrong_entry_2; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 7 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 7 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 6 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
+    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY1 u16 0 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
     assert_fail user_buy_wrong_entry_2                                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
     `echo "encoding c                                                                                                \
@@ -477,8 +477,8 @@ if should_run_test user_buy_wrong_entry_2; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -489,19 +489,19 @@ fi
 
 # Invalid token account
 if should_run_test user_buy_wrong_token; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 7 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 7 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 6 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY1 u16 0 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     assert_fail user_buy_wrong_token                                                                                 \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x453'                     \
     `echo "encoding c                                                                                                \
@@ -524,8 +524,8 @@ if should_run_test user_buy_wrong_token; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -536,19 +536,19 @@ fi
 
 # Invalid mint account
 if should_run_test user_buy_wrong_mint; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 7 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 7 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 6 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY1 u16 0 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     assert_fail user_buy_wrong_mint                                                                                  \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x454'                     \
     `echo "encoding c                                                                                                \
@@ -571,8 +571,8 @@ if should_run_test user_buy_wrong_mint; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -583,19 +583,19 @@ fi
 
 # Invalid metaplex metadata account
 if should_run_test user_buy_wrong_metadata; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 7 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 7 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
                                                     pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 13 pubkey $BLOCK_PUBKEY ]`
+    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 6 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY1 u16 0 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY1 ]`
+    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
+    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY1 u16 0 ]`
+    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
+    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
     METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
                                                      pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
                                                      pubkey $MINT_PUBKEY1 ]`
@@ -621,8 +621,8 @@ if should_run_test user_buy_wrong_metadata; then
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 10 = Buy //                                                                           \
-           u8 10                                                                                                     \
+           // Instruction code 8 = Buy //                                                                            \
+           u8 8                                                                                                      \
            u64 0"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -742,10 +742,10 @@ if should_run_test user_buy_normal; then
         echo "FAIL: user_buy_normal: admin account did not increase in balance"
     fi
     # Ensure that purchase price was set and tha the token is now owned by the purchaser
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 0 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 15 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $MINT_PUBKEY ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     ENTRY_PURCHASE_PRICE=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 8 7 0 |             \
                               jq .purchase_price`
@@ -784,7 +784,7 @@ fi
 # Price is higher than user specified maximum price
 if should_run_test user_buy_price_too_high; then
     assert_fail user_buy_price_too_high                                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x409'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x407'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
          $ADMIN_PUBKEY $RICH_USER1_PUBKEY 8 7 1 100                                                                  \
         | solxact hash l                                                                                             \
@@ -807,8 +807,8 @@ fi
 
 # Try buy when token destination account already exists (created by system program)
 if should_run_test user_buy_normal_2; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 14 u32 8 u32 7 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $BLOCK_PUBKEY u16 1 ]`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 7 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     transfer $LEDGER/admin.json $TOKEN_DESTINATION_PUBKEY 1
     assert user_buy_normal_2                                                                                         \
@@ -834,7 +834,7 @@ if should_run_test user_buy_with_whitelist; then
     # 8 8 -- no mystery, no auction, revealed
     assert user_buy_whitelist_setup_8_8_b                                                                            \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 8 8 0 3 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                          \
+         $ADMIN_PUBKEY 8 8 3 0 0 \`lamports_from_sol 1000\` $((24*60*60))                                            \
          \`lamports_from_sol 1\` false 0 \`lamports_from_sol 1000\` $((24*60*60))                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -883,7 +883,7 @@ if should_run_test user_buy_with_whitelist; then
 
     # Now admin cannot buy since the admin is not in the whitelist
     assert_fail user_buy_whitelist_fail                                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40e'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40c'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
          $ADMIN_PUBKEY $ADMIN_PUBKEY 8 8 0 \`lamports_from_sol 10000\`                                               \
         | solxact hash l                                                                                             \
