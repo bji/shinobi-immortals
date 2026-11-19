@@ -31,7 +31,7 @@
 // This is the Ki token symbol
 #define KI_TOKEN_SYMBOL "KI"
 
-// This is the Ki token metadata uri (to be updated with a permanent uri when one is available_
+// This is the Ki token metadata uri (to be updated with a permanent uri when one is available)
 #define KI_TOKEN_METADATA_URI "https://www.shinobi-systems.com/nifty_stakes/ki.json"
 
 // This is the Shinobi Immortals auction token name.  These tokens are used to create "markers" within users token

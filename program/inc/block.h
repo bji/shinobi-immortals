@@ -40,9 +40,10 @@ typedef struct
     uint64_t minimum_price_lamports;
 
     // If this is true, then when an entry is first revealed, if it is has not been sold already as a mystery, then it
-    // enters an auction period, with parameters defined by the values in [auction].  If this is false, then when an
-    // entry is first revealed, if it is has not been sold already as a mystery, it is immediately purchasable for a
-    // price that is determined by parameters in [non_auction];
+    // enters an auction period, with parameters defined by [minimum_price_lamports] and [duration].  If this is
+    // false, then when an entry is first revealed, if it is has not been sold already as a mystery, it is immediately
+    // purchasable for a price that starts at [final_start_price_lamports] and decays to [minimum_price_lamports] over
+    // [duration].
     bool has_auction;
 
     // This is the duration to use for auctions and for final sale periods.

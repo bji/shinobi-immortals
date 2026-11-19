@@ -2,7 +2,7 @@
 
 
 /**
- * Multiplies [x] by [y] and returns the result.  The result may have overflowed, and if so, the return value
+ * Adds [x] to [y] and returns the result.  The result may have overflowed, and if so, the return value
  * [overflowed] will be set to true; otherwise the return value [overflowed] will be unchanged.
  **/
 static uint64_t checked_add(const uint64_t x, const uint64_t y, bool *overflowed)
@@ -40,4 +40,18 @@ static uint64_t checked_multiply(const uint64_t x, const uint64_t y, bool *overf
     }
 
     return (middle << 32) | ((uint32_t) p00);
+}
+
+
+/**
+ * Saturating subtraction: if 'a' is less than 'b', returns 0 rather than underflowing; otherwise returns 'a' - 'b'.
+ **/
+static uint64_t saturating_sub(uint64_t a, uint64_t b)
+{
+    if (a <= b) {
+        return 0;
+    }
+    else {
+        return a - b;
+    }
 }

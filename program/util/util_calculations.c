@@ -82,18 +82,6 @@ static uint64_t multiply_fraction(uint64_t value, uint64_t numerator, uint64_t d
     return result;
 }
 
-// Saturating subtraction: if 'a' is less than 'b', returns 0 rather than underflowing; otherwise returns 'a' - 'b'.
-static uint64_t saturating_sub(uint64_t a, uint64_t b)
-{
-    if (a <= b) {
-        return 0;
-    }
-    else {
-        return a - b;
-    }
-}
-
-
 // The steepness k of the sale price curve (see compute_price), whose shape is
 //   y = 1/(kx + 1) - 1/(k + 1),
 // x being the fraction of the sale elapsed.  1069 makes the price fall to 1/10 of the way from the minimum to the

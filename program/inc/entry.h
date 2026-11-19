@@ -176,7 +176,7 @@ typedef struct
 
     // If the entry is owned, then this struct is used
     struct {
-        // EntryState_Staked: The stake account that this Entry holds, all zeroes if none
+        // The stake account that this Entry holds, all zeroes if none
         SolPubkey stake_account;
 
         // Lamports in the stake account at which Ki was most recently harvested

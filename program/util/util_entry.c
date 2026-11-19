@@ -254,7 +254,7 @@ static EntryState get_entry_state(const Block *block, const Entry *entry, const 
             if (entry->purchase_price_lamports) {
                 return EntryState_WaitingForRevealOwned;
             }
-            // Else it's not revealed, but the block has reached reveal criteria, and the entry has a purchase price,
+            // Else it's not revealed, but the block has reached reveal criteria, and the entry has no purchase price,
             // so it's waiting for reveal and unowned
             else {
                 return EntryState_WaitingForRevealUnowned;

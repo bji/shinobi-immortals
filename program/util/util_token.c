@@ -4,7 +4,6 @@
 #include "inc/constants.h"
 #include "inc/entry.h"
 #include "util/util_rent.c"
-#include "util/util_token.c"
 
 
 // A cross-program invocation either succeeds or aborts the entire transaction with the invoked program's error;

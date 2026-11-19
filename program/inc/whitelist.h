@@ -11,7 +11,7 @@ typedef struct
     DataType data_type;
 
     // Number of entries in the whitelist.  Entries may be removed after being added, in which case the entry
-    // at that index will be all zeroes.
+    // at that index will be replaced with the last entry from the whitelist, and the last entry zeroed.
     uint16_t count;
 
     // Pubkeys of system accounts that are whitelisted for a block.
