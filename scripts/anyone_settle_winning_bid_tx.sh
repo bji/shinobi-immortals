@@ -142,8 +142,6 @@ solxact encode                                                                  
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
-        account $ENTRY_METADATA_PUBKEY w                                                                              \
-        account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         $EXTRA_ACCOUNTS                                                                                               \
         // Instruction code 18 = SettleWinningBid //                                                                  \
         u8 18

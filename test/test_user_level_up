@@ -35,12 +35,33 @@ METADATA_NO_CREDITS=`(echo 0x01000000 | xxd -r | tr -d '\n';                    
                       echo "$METADATA" | base64 -d | dd bs=1 status=none skip=4) | base64 | tr -d '\n'`
 METADATA_NO_CREDITS_PIECE1=`echo "$METADATA_NO_CREDITS" | base64 -d | dd bs=1 count=900 status=none                 \
                             | base64 | tr -d '\n'`
+# Entry 3 gets metadata whose level credit curve is flat from the very first Ki, so that applying more than 1 Ki earns
+# no more credits than applying 1 Ki does; this is what the user_level_up_excess_not_burned test needs.  The curve is
+# P(k) = 240*L*k / (factor*bps + 40*N*k) tenths of a credit (see level_credit_reference below).  With ki_factor 1 and
+# expected_annual_reward_bps 1, factor*bps is 1, which is negligible next to 40*N*k for every k >= 1, so P(k) is
+# 6*L/N rounded down for every k >= 1.  level_1_credits 10000 (0x10270000 in little-endian) makes that 56 tenths of a
+# credit, far below the 100000 tenths that level 1 requires.
+METADATA_FLAT=`(echo 0x10270000 | xxd -r | tr -d '\n';                                                               \
+                dd if=/dev/zero bs=1 count=64 status=none;                                                           \
+                for i in \`seq 0 8\`; do                                                                             \
+                    dd if=/dev/zero bs=1 count=8 status=none;                                                        \
+                    echo 0x01000000 | xxd -r | tr -d '\n';                                                           \
+                    printf "%x" $i;                                                                                  \
+                    dd if=/dev/zero bs=1 count=295 status=none;                                                      \
+                done;                                                                                                \
+                echo 0x01000000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
+METADATA_FLAT_PIECE1=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none           | base64 | tr -d '\n'`
+METADATA_FLAT_PIECE2=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
+METADATA_FLAT_PIECE3=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none skip=1800 | base64 | tr -d '\n'`
+METADATA_FLAT_PIECE4=`echo "$METADATA_FLAT" | base64 -d | dd bs=1           status=none skip=2700 | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
+SALT3=3
 SHA2560=`compute_metadata_sha256 $METADATA $SALT0`
 SHA2561=`compute_metadata_sha256 $METADATA $SALT1`
 SHA2562=`compute_metadata_sha256 $METADATA_NO_CREDITS $SALT2`
+SHA2563=`compute_metadata_sha256 $METADATA_FLAT $SALT3`
 
 # This must be set so that user_stake_tx.sh will use the correct vote account
 export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
@@ -59,7 +80,7 @@ if [ -z "$TESTS" ]; then
     # 16 0
     assert user_level_up_setup_16_0_a                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
-         $ADMIN_PUBKEY 16 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
+         $ADMIN_PUBKEY 16 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
          \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -72,7 +93,7 @@ if [ -z "$TESTS" ]; then
         | solxact submit l 2>&1`
     assert user_level_up_setup_16_0_c                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
-         $ADMIN_PUBKEY 16 0 "http://foo.bar.com" none 2 $SHA2562                                                     \
+         $ADMIN_PUBKEY 16 0 "http://foo.bar.com" none 2 $SHA2562 $SHA2563                                            \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -149,10 +170,35 @@ if [ -z "$TESTS" ]; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
+    # Entry 3 gets the flat curve metadata (see METADATA_FLAT above)
+    assert user_level_up_setup_16_0_m                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 3 0 $METADATA_FLAT_PIECE1                                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_level_up_setup_16_0_n                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 3 900 $METADATA_FLAT_PIECE2                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_level_up_setup_16_0_o                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 3 1800 $METADATA_FLAT_PIECE3                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert user_level_up_setup_16_0_o2                                                                               \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 16 0 3 2700 $METADATA_FLAT_PIECE4                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
     # reveal entries
     assert user_level_up_setup_16_0_p                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
-         $ADMIN_PUBKEY 16 0 0 $SALT0 $SALT1 $SALT2                                                                   \
+         $ADMIN_PUBKEY 16 0 0 $SALT0 $SALT1 $SALT2 $SALT3                                                            \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -177,10 +223,18 @@ if [ -z "$TESTS" ]; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
+    # rich_user1 buy entry 3 (not staked)
+    assert user_level_up_setup_16_0_t                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                         \
+         $ADMIN_PUBKEY $RICH_USER1_PUBKEY 16 0 3 \`lamports_from_sol 1001\`                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
 
     # 16 0 0 is owned and staked by rich_user1
     # 16 0 1 is owned by rich_user2
     # 16 0 2 is not owned, and has metadata with which no contribution can earn level credits
+    # 16 0 3 is owned (not staked) by rich_user1, and has metadata whose level credit curve is flat from the first Ki
 fi
 
 
@@ -206,12 +260,14 @@ if should_run_test user_level_up_bad_entry; then
            account $TOKEN_PUBKEY                                                                                     \
            account $ENTRY_METADATA_PUBKEY w                                                                          \
            account $KI_SOURCE_PUBKEY w                                                                               \
-           account $RICH_USER1_PUBKEY s                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -241,12 +297,14 @@ if should_run_test user_level_up_unowned_entry; then
            account $TOKEN_PUBKEY                                                                                     \
            account $ENTRY_METADATA_PUBKEY w                                                                          \
            account $KI_SOURCE_PUBKEY w                                                                               \
-           account $RICH_USER1_PUBKEY s                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -276,12 +334,14 @@ if should_run_test user_level_up_unowned_token; then
            account $TOKEN_PUBKEY                                                                                     \
            account $ENTRY_METADATA_PUBKEY w                                                                          \
            account $KI_SOURCE_PUBKEY w                                                                               \
-           account $RICH_USER1_PUBKEY s                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -316,12 +376,14 @@ if should_run_test user_level_up_incorrect_metadata; then
            account $TOKEN_PUBKEY                                                                                     \
            account $BAD_ENTRY_METADATA_PUBKEY w                                                                      \
            account $KI_SOURCE_PUBKEY w                                                                               \
-           account $RICH_USER1_PUBKEY s                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -331,7 +393,8 @@ if should_run_test user_level_up_incorrect_metadata; then
 fi
 
 
-# Invalid Ki account
+# Invalid Ki account: neither a Ki token account of the Ki source owner, nor the Ki source owner's associated Ki
+# token account (which LevelUp would create).  0x450 = 1104 = Error_InvalidAccount_First + 4
 if should_run_test user_level_up_incorrect_ki; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
@@ -342,7 +405,7 @@ if should_run_test user_level_up_incorrect_ki; then
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_level_up_incorrect_ki                                                                           \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -351,12 +414,14 @@ if should_run_test user_level_up_incorrect_ki; then
            account $TOKEN_PUBKEY                                                                                     \
            account $ENTRY_METADATA_PUBKEY w                                                                          \
            account $STATE_PUBKEY w                                                                                  \
-           account $RICH_USER1_PUBKEY s                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -366,7 +431,7 @@ if should_run_test user_level_up_incorrect_ki; then
 
     # Ki account not owned by user
     assert_fail user_level_up_incorrect_ki_2                                                                         \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
@@ -375,12 +440,14 @@ if should_run_test user_level_up_incorrect_ki; then
            account $TOKEN_PUBKEY                                                                                     \
            account $ENTRY_METADATA_PUBKEY w                                                                          \
            account $RICH_USER2_PUBKEY w                                                                              \
-           account $RICH_USER1_PUBKEY s                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -390,7 +457,7 @@ if should_run_test user_level_up_incorrect_ki; then
 fi
 
 
-# Ki account doesn't have required amount of Ki
+# Ki account doesn't have required amount of Ki.  0x3fb = 1019 = Error_InsufficientFunds
 if should_run_test user_level_up_insufficient_ki; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 1 ]`
@@ -413,7 +480,7 @@ if should_run_test user_level_up_insufficient_ki; then
         | solxact sign $LEDGER/rich_user2.json                                                                       \
         | solxact submit l 2>&1`
     assert_fail user_level_up_insufficient_ki                                                                        \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3fb'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                    \
          $RICH_USER2_PUBKEY 16 0 1 1000                                                                              \
         | solxact hash l                                                                                             \
@@ -440,6 +507,29 @@ function level_credit_reference ()
     printf '%s\n' "$total 240 * $contribution * $factor $bps * 40 $windows * $contribution * + / p" | dc
 }
 
+# Independently compute the least window Ki total k for which P(k) (see level_credit_reference) is at least $4 tenths
+# of a credit, or "none" if no k reaches it.  This is how much Ki LevelUp actually burns: never more than the least
+# that earns the credits awarded.  With A = 240*L, C = factor*bps and D = 40*N, P(k) = floor(A*k / (C + D*k)), and
+# P(k) >= T exactly when k*(A - T*D) >= T*C.  So no k reaches T if A <= T*D, and otherwise the least k is
+# ceil(T*C / (A - T*D)).
+function level_credit_least_ki_reference ()
+{
+    local first=$1 factor=$2 bps=$3 target=$4 windows=$((31536000 / LEVEL_CREDIT_WINDOW_SECONDS)) cost total=0 e
+    cost=$(printf '%s\n' "$first 10 * p" | dc)
+    for ((index=0; index<8; ++index)); do
+        total=$(printf '%s\n' "$total $cost + p" | dc)
+        cost=$(printf '%s\n' "$cost d 2 / + p" | dc)
+    done
+    # E = A - T*D; dc prints a negative number with a leading underscore
+    e=$(printf '%s\n' "$total 240 * $target 40 * $windows * - p" | dc)
+    if [ "$e" = "0" ] || [ "${e:0:1}" = "_" ] || [ "${e:0:1}" = "-" ]; then
+        echo none
+        return
+    fi
+    # ceil(T*C / E) = (T*C + E - 1) / E
+    printf '%s\n' "$target $factor * $bps * $e + 1 - $e / p" | dc
+}
+
 # Prints entry 16 0 0's owned.last_ki_harvest_stake_account_lamports, the delegated stake at which Ki was last
 # harvested, which is at byte offset 296 of the Entry
 function entry_ki_baseline ()
@@ -452,14 +542,15 @@ function entry_ki_baseline ()
 
 # Check the full contribution: raw Ki burned, window accounting, lifetime credits,
 # and every cumulative threshold crossed. A contribution need not change level.
+# $2 is the amount of Ki requested.  LevelUp burns only the least Ki that earns the credits awarded, which may be less
+# than that (see level_credit_least_ki_reference); the checks use the amount actually expected to be burned.
+# Sets LEVEL_UP_OLD_WINDOW, LEVEL_UP_NEW_WINDOW, LEVEL_UP_OLD_KI and LEVEL_UP_NEXT_TOTAL (the window Ki total before
+# and after the contribution, as checked against the entry) for use by callers.
 function apply_level_ki_and_check ()
 {
     local test_name=$1 amount=$2 before after balance new_balance first factor bps old_window new_window old_ki
     local old_credits expected added previous_total next_total expected_level=0 cost threshold=0 deciki_amount
-    local ki_baseline_before ki_baseline_after harvest_factor harvested=0
-    # Transaction input and stored counters are whole Ki; token balances are in mint base units, which are
-    # deciKi because the Ki mint has 1 decimal place.  deciki_amount is used only to check the burned amount.
-    deciki_amount=$(printf '%s\n' "$amount 10 * p" | dc)
+    local ki_baseline_before ki_baseline_after harvest_factor harvested=0 requested_total least burned
     before=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0)
     balance=$(get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY)
     ki_baseline_before=`entry_ki_baseline`
@@ -488,9 +579,27 @@ function apply_level_ki_and_check ()
     if [ "$old_window" = "$new_window" ]; then
         old_ki=$(echo "$before" | jq -r '.ki_applied_this_window')
     fi
-    next_total=$(printf '%s\n' "$old_ki $amount + p" | dc)
+    requested_total=$(printf '%s\n' "$old_ki $amount + p" | dc)
     previous_total=$(level_credit_reference "$first" "$factor" "$bps" "$old_ki")
-    added=$(level_credit_reference "$first" "$factor" "$bps" "$next_total")
+    added=$(level_credit_reference "$first" "$factor" "$bps" "$requested_total")
+    # LevelUp burns only the least Ki that brings the window to the credits that the requested amount would earn.
+    # If that least window total is below the requested total (and above what the window already had), only the
+    # difference between it and what the window already had is burned, and it becomes the window's Ki total.
+    next_total=$requested_total
+    burned=$amount
+    least=$(level_credit_least_ki_reference "$first" "$factor" "$bps" "$added")
+    if [ "$least" != none ] && [ "$least" -gt "$old_ki" ] && [ "$least" -lt "$requested_total" ]; then
+        next_total=$least
+        burned=$((least - old_ki))
+    fi
+    # Transaction input and stored counters are whole Ki; token balances are in mint base units, which are
+    # deciKi because the Ki mint has 1 decimal place.  deciki_amount is used only to check the burned amount.
+    deciki_amount=$(printf '%s\n' "$burned 10 * p" | dc)
+    # Make the window values available to callers
+    LEVEL_UP_OLD_WINDOW=$old_window
+    LEVEL_UP_NEW_WINDOW=$new_window
+    LEVEL_UP_OLD_KI=$old_ki
+    LEVEL_UP_NEXT_TOTAL=$next_total
     old_credits=$(echo "$before" | jq -r '.total_level_credits')
     expected=$(printf '%s\n' "$old_credits $added + $previous_total - p" | dc)
     # A contribution that earns no credits would make the credit comparison below trivially true, so require
@@ -505,7 +614,8 @@ function apply_level_ki_and_check ()
         echo "FAIL: $test_name incorrect window or lifetime credits"
         # Print the inputs and both sides of the comparison to aid diagnosis
         echo "  first=$first factor=$factor bps=$bps window_seconds=$LEVEL_CREDIT_WINDOW_SECONDS"
-        echo "  old_window=$old_window new_window=$new_window old_ki=$old_ki amount=$amount old_credits=$old_credits"
+        echo "  old_window=$old_window new_window=$new_window old_ki=$old_ki amount=$amount burned=$burned"
+        echo "  old_credits=$old_credits"
         echo "  previous_total=$previous_total added=$added"
         echo "  expected total_level_credits=$expected actual=$(echo "$after" | jq -r '.total_level_credits')"
         echo "  expected ki_applied_this_window=$next_total actual=$(echo "$after" | jq -r '.ki_applied_this_window')"
@@ -536,7 +646,7 @@ function apply_level_ki_and_check ()
     new_balance=$(get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY)
     expected=$(printf '%s\n' "$balance $harvested + $deciki_amount - p" | dc)
     if [ "$new_balance" != "$expected" ]; then
-        echo "FAIL: $test_name did not burn exactly $amount whole Ki ($deciki_amount base units) after harvesting"\
+        echo "FAIL: $test_name did not burn exactly $burned whole Ki ($deciki_amount base units) after harvesting"\
              "$harvested base units: balance went from $balance to $new_balance"
         exit 1
     fi
@@ -564,10 +674,14 @@ if should_run_test user_level_up_success; then
     # Start at the beginning of a level credit window so that both contributions land in the same window
     sleep_until_next_level_credit_window
     apply_level_ki_and_check user_level_up_success "$FIRST_CONTRIBUTION"
+    FIRST_TOTAL=$LEVEL_UP_NEXT_TOTAL
     apply_level_ki_and_check user_level_up_success_second "$SECOND_CONTRIBUTION"
-    # Verify that the cumulative curve really was exercised
-    if [ "$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0 |                            \
-            jq -r .ki_applied_this_window)" != "$WHOLE_KI_BALANCE" ]; then
+    # Verify that the cumulative curve really was exercised: the second contribution must have been made in the same
+    # window as the first, continuing from the window total that the first left (apply_level_ki_and_check has checked
+    # the entry's recorded window total after each).  The window totals are those of the Ki actually burned, which
+    # LevelUp may have reduced from the amounts requested.
+    if [ "$FIRST_TOTAL" -lt 1 ] || [ "$LEVEL_UP_OLD_WINDOW" != "$LEVEL_UP_NEW_WINDOW" ] ||
+       [ "$LEVEL_UP_OLD_KI" != "$FIRST_TOTAL" ]; then
         echo "FAIL: user_level_up_success contributions did not accumulate within one level credit window"
         exit 1
     fi
@@ -604,8 +718,8 @@ done
 
 # A contribution that earns no level credits is rejected, so that no Ki is burned for nothing.  Entry 16 0 2 has a
 # level 1 credits value so small that no amount of Ki earns a tenth of a credit in the test program's short windows.
-# Both a small and a large amount are tried.  rich_user2 holds no Ki at all, so receiving this error, and not the Ki
-# source account error (0x451), also shows that the contribution is rejected before the burn is reached.
+# Both a small and a large amount are tried.  rich_user2 holds no Ki at all, so receiving this error, and not the
+# insufficient Ki error (0x3fb), also shows that the contribution is rejected before the burn is reached.
 if should_run_test user_level_up_no_credits; then
     # rich_user2 buys entry 2, which until now was left unowned for user_level_up_unowned_entry
     assert user_level_up_no_credits_setup                                                                            \
@@ -654,9 +768,9 @@ if should_run_test user_level_up_next_window; then
     fi
     sleep_until_next_level_credit_window
     apply_level_ki_and_check user_level_up_next_window "$WHOLE_KI_BALANCE"
-    # Only this contribution counts in the new window
-    if [ "$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0 |                            \
-            jq -r .ki_applied_this_window)" != "$WHOLE_KI_BALANCE" ]; then
+    # Only this contribution counts in the new window: the contribution must have been made in a later window than the
+    # previous one, so that apply_level_ki_and_check checked the entry's window total as starting over from 0
+    if [ "$LEVEL_UP_OLD_WINDOW" = "$LEVEL_UP_NEW_WINDOW" ] || [ "$LEVEL_UP_OLD_KI" != 0 ]; then
         echo "FAIL: user_level_up_next_window did not restart the curve in the new level credit window"
         exit 1
     fi
@@ -739,6 +853,173 @@ if should_run_test user_level_up_harvests_first; then
 fi
 
 
+# LevelUp on a staked entry creates the Ki source account, as the Ki source owner's associated Ki token account, if it
+# does not exist yet, so that a user who has never held Ki can level up using only the Ki that the entry has earned.
+# Here the token owner, rich_user1, has the Ki go to (and be applied from) the associated Ki token account of a brand
+# new keypair, which has never held Ki and which pays for the account's creation.
+if should_run_test user_level_up_creates_ki_account; then
+    TEST_NAME=user_level_up_creates_ki_account
+    make_funded_keypair $LEDGER/level_up_ki_owner.json 1 finalized
+    KI_OWNER_PUBKEY=`solxact pubkey $LEDGER/level_up_ki_owner.json`
+    NEW_KI_ACCOUNT=`get_splata_account $KI_MINT_PUBKEY $KI_OWNER_PUBKEY`
+    # Precondition: the Ki source account does not exist
+    if [ -n "`get_account_data $NEW_KI_ACCOUNT`" ]; then
+        echo "FAIL: $TEST_NAME: precondition: $NEW_KI_ACCOUNT already exists"
+        exit 1
+    fi
+    # Wait for this epoch's rewards, so that the harvest mints at least 1 whole Ki, which is applied below
+    sleep_until_next_epoch
+    BASELINE=`entry_ki_baseline`
+    WAITED=0
+    while true; do
+        DELEGATED=`solana -u l stake-account $DELEGATED_STAKE_PUBKEY --output json | jq -r .delegatedStake`
+        if [ $DELEGATED -gt $BASELINE ]; then
+            break
+        fi
+        if [ $WAITED -ge 60 ]; then
+            echo "FAIL: $TEST_NAME: no rewards were paid to the stake account above the Ki baseline $BASELINE"
+            exit 1
+        fi
+        sleep 1
+        WAITED=$((WAITED + 1))
+    done
+    BEFORE=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0)
+    FACTOR=$(echo "$BEFORE" | jq -r '.metadata.level_metadata[.level].ki_factor')
+    if [ "`expected_ki_mint $((DELEGATED - BASELINE)) $DELEGATED $FACTOR`" -lt 10 ]; then
+        echo "FAIL: $TEST_NAME: precondition: the pending rewards ($((DELEGATED - BASELINE)) lamports) earn no whole Ki"
+        exit 1
+    fi
+    # Start a new level credit window, so that the 1 Ki applied below earns credits however much was applied
+    # earlier in the current window
+    sleep_until_next_level_credit_window
+    BEFORE=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0)
+    RICH_USER1_KI_BEFORE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
+    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
+    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
+    ENTRY_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                            \
+                                                          pubkey $METAPLEX_PROGRAM_PUBKEY                            \
+                                                          pubkey $MINT_PUBKEY ]`
+    TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert $TEST_NAME                                                                                                \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $ENTRY_PUBKEY w                                                                                   \
+           account $RICH_USER1_PUBKEY s                                                                              \
+           account $TOKEN_PUBKEY                                                                                     \
+           account $ENTRY_METADATA_PUBKEY w                                                                          \
+           account $NEW_KI_ACCOUNT w                                                                                 \
+           account $KI_OWNER_PUBKEY ws                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 17 = LevelUp //                                                                       \
+           u8 17 u64 1"                                                                                              \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json $LEDGER/level_up_ki_owner.json                                        \
+        | solxact submit l 2>&1`
+    AFTER=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0)
+    # The Ki source account now exists, holding what was harvested (at the baseline move, as apply_level_ki_and_check
+    # computes it) less the 1 Ki (10 base units) applied
+    BASELINE_AFTER=`entry_ki_baseline`
+    HARVESTED=`expected_ki_mint $((BASELINE_AFTER - BASELINE)) $BASELINE_AFTER $FACTOR`
+    if [ -z "`get_account_data $NEW_KI_ACCOUNT`" ]; then
+        echo "FAIL: $TEST_NAME: LevelUp did not create the Ki source account"
+        exit 1
+    fi
+    if [ "$BASELINE_AFTER" = "$BASELINE" ] ||
+       [ "`get_token_balance $KI_MINT_PUBKEY $KI_OWNER_PUBKEY`" != "$((HARVESTED - 10))" ]; then
+        echo "FAIL: $TEST_NAME: Ki source account holds `get_token_balance $KI_MINT_PUBKEY $KI_OWNER_PUBKEY`,"     \
+             "expected $HARVESTED harvested less 10 applied"
+        exit 1
+    fi
+    # rich_user1's own Ki account was not touched
+    if [ "`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`" != "$RICH_USER1_KI_BEFORE" ]; then
+        echo "FAIL: $TEST_NAME: rich_user1's Ki balance changed"
+        exit 1
+    fi
+    # And the contribution earned credits
+    if [ "$(echo "$AFTER" | jq -r '.total_level_credits')" -le "$(echo "$BEFORE" | jq -r '.total_level_credits')" ]
+    then
+        echo "FAIL: $TEST_NAME: the contribution earned no level credits"
+        exit 1
+    fi
+fi
+
+
+# LevelUp burns only the least Ki that earns the credits awarded; Ki beyond that, which would earn nothing, is neither
+# burned nor even required to be in the Ki account.  Entry 16 0 3's level credit curve is flat from the first Ki (see
+# METADATA_FLAT), so a contribution of any amount earns exactly what 1 Ki does.  Request one more whole Ki than
+# rich_user1 holds: before LevelUp limited the burn, this failed because the Ki account did not hold the amount
+# requested; now it must succeed, and burn exactly 1 Ki.
+if should_run_test user_level_up_excess_not_burned; then
+    TEST_NAME=user_level_up_excess_not_burned
+    # rich_user1 needs at least 1 whole Ki.  If it has none left from the tests above, harvest some from entry 16 0 0,
+    # whose stake account earns rewards every epoch.
+    WHOLE_KI_BALANCE=$(printf '%s\n' "`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY` 10 / p" | dc)
+    if [ "$WHOLE_KI_BALANCE" -lt 1 ]; then
+        sleep_until_next_epoch
+        assert ${TEST_NAME}_harvest                                                                                  \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                 \
+             $RICH_USER1_PUBKEY 16 0 0 $DELEGATED_STAKE_PUBKEY                                                       \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/rich_user1.json                                                                   \
+            | solxact submit l 2>&1`
+        WHOLE_KI_BALANCE=$(printf '%s\n' "`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY` 10 / p" | dc)
+        if [ "$WHOLE_KI_BALANCE" -lt 1 ]; then
+            echo "FAIL: $TEST_NAME: precondition: rich_user1 has no whole Ki to apply"
+            exit 1
+        fi
+    fi
+    REQUESTED=$((WHOLE_KI_BALANCE + 1))
+    BEFORE=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 3)
+    FIRST=$(echo "$BEFORE" | jq -r '.metadata.level_1_credits')
+    FACTOR=$(echo "$BEFORE" | jq -r '.metadata.level_metadata[0].ki_factor')
+    BPS=$(echo "$BEFORE" | jq -r '.metadata.expected_annual_reward_bps')
+    # Precondition: this is the entry's first contribution, so the window's Ki total starts at 0 whatever the window
+    if [ "$(echo "$BEFORE" | jq -r '.ki_applied_this_window')" != 0 ] ||
+       [ "$(echo "$BEFORE" | jq -r '.total_level_credits')" != 0 ]; then
+        echo "FAIL: $TEST_NAME: precondition: entry 16 0 3 has already received a contribution"
+        exit 1
+    fi
+    # Precondition: the requested amount earns credits, and exactly what 1 Ki earns, so that only 1 Ki is needed
+    CREDITS=$(level_credit_reference "$FIRST" "$FACTOR" "$BPS" "$REQUESTED")
+    if [ "$CREDITS" -le 0 ] || [ "$CREDITS" != "$(level_credit_reference "$FIRST" "$FACTOR" "$BPS" 1)" ] ||
+       [ "$(level_credit_least_ki_reference "$FIRST" "$FACTOR" "$BPS" "$CREDITS")" != 1 ]; then
+        echo "FAIL: $TEST_NAME: precondition: entry 16 0 3's curve is not flat from 1 Ki"
+        echo "  first=$FIRST factor=$FACTOR bps=$BPS requested=$REQUESTED credits=$CREDITS"
+        exit 1
+    fi
+    BALANCE=`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
+    assert $TEST_NAME                                                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                    \
+         $RICH_USER1_PUBKEY 16 0 3 $REQUESTED none                                                                   \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+    AFTER=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 3)
+    # Exactly 1 Ki (10 base units) was burned; entry 16 0 3 is not staked, so nothing was harvested
+    if [ "`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`" != "$((BALANCE - 10))" ]; then
+        echo "FAIL: $TEST_NAME: did not burn exactly 1 Ki: balance went from $BALANCE to" \
+             "`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`"
+        exit 1
+    fi
+    # The window records only the Ki actually burned, and the full credits were awarded, without a level change
+    if [ "$(echo "$AFTER" | jq -r '.ki_applied_this_window')" != 1 ] ||
+       [ "$(echo "$AFTER" | jq -r '.total_level_credits')" != "$CREDITS" ] ||
+       [ "$(echo "$AFTER" | jq -r '.level')" != 0 ]; then
+        echo "FAIL: $TEST_NAME: incorrect window Ki, credits or level: $AFTER"
+        exit 1
+    fi
+fi
+
+
 # Entry already at level 9 (level index 8) can't be levelled up any further.  Reaching level 9 through transactions
 # takes months by design, so this uses the genesis fixture entry created by setup in test/common (see
 # make_max_level_entry_fixture), which is already at level index 8.  The maximum level check happens before the
@@ -765,12 +1046,14 @@ if should_run_test user_level_up_past_9; then
            account $TOKEN_PUBKEY                                                                                     \
            account $ENTRY_METADATA_PUBKEY w                                                                          \
            account $KI_SOURCE_PUBKEY w                                                                               \
-           account $RICH_USER1_PUBKEY s                                                                              \
+           account $RICH_USER1_PUBKEY ws                                                                             \
            account $KI_MINT_PUBKEY w                                                                                 \
            account $AUTHORITY_PUBKEY                                                                                 \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $DELEGATED_STAKE_PUBKEY                                                                           \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPLATA_PROGRAM_PUBKEY                                                                            \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1"                                                                                              \
         | solxact encode                                                                                             \

@@ -125,6 +125,8 @@ solxact encode                                                                  
         account $ADMIN_PUBKEY ws                                                                                      \
         account $BLOCK_PUBKEY w                                                                                       \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
+        // The whitelist of the block, which must already exist if WHITELIST_DURATION is nonzero //                   \
+        account $WHITELIST_PUBKEY                                                                                     \
         // Instruction code 2 = CreateBlock //                                                                        \
         u8 2                                                                                                          \
         // Block Configuration //                                                                                     \

@@ -1,13 +1,25 @@
 #pragma once
 
+#include "util/util_ki.c"
+#include "util/util_stake.c"
+
 
 // Delegates the stake account of a staked entry to Shinobi Systems, if it is not actively delegated.
 //
 // Stake accepts a stake account that is not delegated, or that is delegated to some other validator; in the latter
 // case it deactivates the stake account.  Such a stake account earns no Ki until it is delegated to Shinobi Systems,
-// which this instruction does.  It is permissionless because it can do only one thing, which is what the program
-// would always want done: the vote account is fixed, and the instruction does nothing if the stake account is
-// already actively delegated.
+// which this instruction does.  A stake account delegated to Shinobi Systems can also end up deactivated without this
+// program doing it: anyone can deactivate it with the Stake program's DeactivateDelinquent instruction if the Shinobi
+// Systems validator has been delinquent for long enough.  This instruction re-delegates such a stake account too.  It
+// is permissionless because it can do only one thing, which is what the program would always want done: the vote
+// account is fixed, and the instruction does nothing if the stake account is already actively delegated.
+//
+// Re-delegating sets the stake account's delegated stake to its entire balance less its rent exempt reserve, which
+// can include lamports that were deposited into it while it was inactive; those are not staking rewards.  So the
+// entry's Ki baseline is moved up by exactly as much as the delegated stake grows, which keeps the deposits out of
+// Ki, while keeping any Shinobi Systems rewards that were earned before the deactivation and not yet harvested owed
+// to the entry's owner.  This instruction cannot pay that Ki itself, since it is permissionless and has no Ki
+// destination; it is paid by the owner's next Harvest, LevelUp or Destake.
 
 static uint64_t anyone_delegate(const SolParameters *params)
 {
@@ -77,10 +89,26 @@ static uint64_t anyone_delegate(const SolParameters *params)
     }
 
     // The only other states that are acceptable are Initialized, and delegated stake that has been deactivated.  A
-    // deactivated stake account can only be one that user_stake deactivated because it was delegated to a different
-    // validator.
+    // deactivated stake account is either one that user_stake deactivated because it was delegated to a different
+    // validator, or one delegated to Shinobi Systems that was deactivated by the Stake program's DeactivateDelinquent
+    // instruction.
     if ((stake.state != StakeState_Initialized) && (stake.state != StakeState_Stake)) {
         return Error_InvalidAccount_First + 2;
+    }
+
+    // Before re-delegating, determine the Shinobi Systems staking rewards that the stake account has earned and that
+    // have not been harvested yet: the amount by which its delegated stake exceeds the entry's Ki baseline.  This is
+    // only the case for a stake account that was delegated to Shinobi Systems (see is_delegated_to_shinobi_systems);
+    // for an Initialized stake account, or one that was delegated to another validator, nothing is owed, and any
+    // increase of its delegated stake over the baseline is that other validator's rewards, which never earn Ki.
+    bool was_delegated_to_shinobi_systems = is_delegated_to_shinobi_systems(&stake);
+    uint64_t previous_delegated_stake = 0;
+    uint64_t unharvested_lamports = 0;
+    if (was_delegated_to_shinobi_systems) {
+        previous_delegated_stake = stake.stake.delegation.stake;
+        if (previous_delegated_stake > entry->owned.last_ki_harvest_stake_account_lamports) {
+            unharvested_lamports = previous_delegated_stake - entry->owned.last_ki_harvest_stake_account_lamports;
+        }
     }
 
     // Delegate it to Shinobi Systems.  If it is still cooling down, the stake program will refuse the delegation and
@@ -92,10 +120,28 @@ static uint64_t anyone_delegate(const SolParameters *params)
         return Error_InvalidAccount_First + 2;
     }
 
-    // The Ki baseline is reset to the newly delegated stake, so that neither rewards earned while delegated elsewhere
-    // nor any lamports deposited into the stake account while it was inactive are counted as Shinobi Systems staking
-    // rewards.
-    entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
+    // This is the newly delegated stake
+    uint64_t delegated_stake = stake.stake.delegation.stake;
+
+    // Set the Ki baseline so that only Shinobi Systems staking rewards ever earn Ki:
+    //
+    // - If the stake account was delegated to Shinobi Systems, then the baseline moves up by exactly as much as the
+    //   delegated stake grew in being re-delegated, which is lamports deposited into the stake account while it was
+    //   inactive.  Those are not counted as rewards, while the unharvested rewards stay owed: the baseline is the new
+    //   delegated stake less the unharvested rewards.  The delegated stake cannot shrink in being re-delegated, since
+    //   nothing can withdraw from the stake account while this program holds its withdraw authority; but if it ever
+    //   did, nothing is carried over, so that the baseline can never be set below what is certain to be rewards.
+    //
+    // - Otherwise the baseline is reset to the newly delegated stake, so that neither rewards earned while delegated
+    //   elsewhere nor any lamports deposited into the stake account while it was inactive are counted as Shinobi
+    //   Systems staking rewards.
+    if (was_delegated_to_shinobi_systems && (delegated_stake >= previous_delegated_stake)) {
+        // unharvested_lamports <= previous_delegated_stake <= delegated_stake, so this cannot underflow
+        entry->owned.last_ki_harvest_stake_account_lamports = delegated_stake - unharvested_lamports;
+    }
+    else {
+        entry->owned.last_ki_harvest_stake_account_lamports = delegated_stake;
+    }
 
     return 0;
 }

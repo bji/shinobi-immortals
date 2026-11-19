@@ -15,7 +15,9 @@
 # active at another validator.  Stake deactivates it, and records the entry's Ki baseline from its delegated stake.
 # The account still earns that validator's rewards for the epoch in which it was deactivated, so at the next epoch its
 # delegated stake is above the baseline.  Harvest must not mint Ki on those rewards, and Destake must return the stake
-# account untouched: no Ki is earned from a deactivated or activating stake account.
+# account untouched: no Ki is earned on rewards from a validator other than Shinobi Systems.  (A stake account that is
+# delegated to Shinobi Systems, and was deactivated by the Stake program's DeactivateDelinquent instruction, does still
+# earn Ki on the rewards that it earned at Shinobi Systems; see is_delegated_to_shinobi_systems in util_ki.c.)
 #
 # Each test checks a precondition showing that the account really does hold rewards that the program would have
 # minted Ki on without the fix, so that the tests cannot pass vacuously.

@@ -12,11 +12,12 @@ function require ()
 Usage: user_level_up_tx.sh <USER_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> <ENTRY_INDEX> <KI_AMOUNT> \\
                            [<STAKE_ACCOUNT_PUBKEY>|none] [<TOKEN_PUBKEY>]
 
-KI_AMOUNT is the contribution in whole Ki: 10 means ten Ki.
+KI_AMOUNT is the most Ki to contribute, in whole Ki: 10 means ten Ki.  Only as much of it as earns level credits is
+burned; any more than that would earn nothing, and is neither burned nor required to be in the Ki account.
 The contribution earns level credits even if no level threshold is crossed.
 
 If the entry is staked, <STAKE_ACCOUNT_PUBKEY> must be its stake account: the Ki that it has earned is harvested
-into the user's Ki account before the contribution is applied.  If the entry is not staked, it may be omitted or
+into the user's Ki account (which is created if it does not exist yet) before the contribution is applied.  If the entry is not staked, it may be omitted or
 given as "none".
 
 If <TOKEN_PUBKEY> is not provided, it is assumed to be the Associated Token Account.
@@ -126,12 +127,15 @@ solxact encode                                                                  
         account $TOKEN_PUBKEY                                                                                         \
         account $ENTRY_METADATA_PUBKEY w                                                                              \
         account $KI_SOURCE_PUBKEY w                                                                                   \
-        account $USER_PUBKEY s                                                                                        \
+        // The Ki source owner is writable because it pays for the Ki source account if that has to be created //       \
+        account $USER_PUBKEY ws                                                                                       \
         account $KI_MINT_PUBKEY w                                                                                     \
         account $AUTHORITY_PUBKEY                                                                                     \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         account $STAKE_ACCOUNT_PUBKEY                                                                                 \
+        account $SYSTEM_PROGRAM_PUBKEY                                                                                \
+        account $SPLATA_PROGRAM_PUBKEY                                                                                \
         // Instruction code 17 = LevelUp //                                                                           \
         u8 17                                                                                                        \
         u64 $KI_AMOUNT

@@ -112,7 +112,7 @@ while [ -n "$7" ]; do
     
     ENTRY_ACCOUNTS="$ENTRY_ACCOUNTS account $ENTRY_PUBKEY w account $MINT_PUBKEY w account $TOKEN_PUBKEY w            \
                     account $METADATA_PUBKEY w"
-    SHA256_DATA="$SHA256_DATA $(echo "$7" | xxd -r -p | od -An -tu1 | tr -d '\n' | tr -s '[:space:]')"
+    SHA256_DATA="$SHA256_DATA $(echo "$7" | xxd -r -p | od -An -v -tu1 | tr -d '\n' | tr -s '[:space:]')"
     shift
     ENTRY_INDEX=$(($ENTRY_INDEX+1))
 done

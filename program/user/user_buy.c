@@ -36,14 +36,12 @@ static uint64_t user_buy(const SolParameters *params)
         DECLARE_ACCOUNT(8,   entry_mint_account,               ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(9,   token_destination_account,        ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(10,  token_destination_owner_account,  ReadOnly,   NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(11,  entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(12,  program_account,                  ReadOnly,   NotSigner,  KnownAccount_SelfProgram);
-        DECLARE_ACCOUNT(13,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
-        DECLARE_ACCOUNT(14,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
-        DECLARE_ACCOUNT(15,  metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
-        DECLARE_ACCOUNT(16,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(11,  program_account,                  ReadOnly,   NotSigner,  KnownAccount_SelfProgram);
+        DECLARE_ACCOUNT(12,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
+        DECLARE_ACCOUNT(13,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        DECLARE_ACCOUNT(14,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
     }
-    DECLARE_ACCOUNTS_NUMBER(17);
+    DECLARE_ACCOUNTS_NUMBER(15);
 
     // Ensure that the correct admin account was passed in
     if (!is_admin_account(state_account, admin_account->key)) {
@@ -83,11 +81,6 @@ static uint64_t user_buy(const SolParameters *params)
     // Check that the correct mint account address is supplied
     if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
         return Error_InvalidAccount_First + 8;
-    }
-
-    // Check that the correct metaplex metadata account is supplied
-    if (!SolPubkey_same(entry_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
-        return Error_InvalidAccount_First + 11;
     }
 
     // Get the clock sysvar, needed below
@@ -136,7 +129,7 @@ static uint64_t user_buy(const SolParameters *params)
         purchase_price_lamports = compute_price(block->config.mystery_phase_duration,
                                                 block->config.mystery_start_price_lamports,
                                                 block->config.minimum_price_lamports,
-                                                clock.unix_timestamp - block->block_start_timestamp);
+                                                saturating_sub(clock.unix_timestamp, block->block_start_timestamp));
 
         // Update the entry's block to indicate that one more mystery was purchased.  If this is the last
         // mystery to purchase before the block becomes revealable, then the block reveal period begins.
@@ -162,7 +155,7 @@ static uint64_t user_buy(const SolParameters *params)
         else {
             purchase_price_lamports = compute_price(entry->duration, entry->non_auction_start_price_lamports,
                                                     entry->minimum_price_lamports,
-                                                    clock.unix_timestamp - entry->reveal_timestamp);
+                                                    saturating_sub(clock.unix_timestamp, entry->reveal_timestamp));
         }
 
         break;
@@ -215,9 +208,11 @@ static uint64_t user_buy(const SolParameters *params)
     // Set the purchase price in the Entry now that it's been purchased
     entry->purchase_price_lamports = purchase_price_lamports;
 
-    // And set the primary_sale_happened flag on the metaplex metadata, which isn't strictly necessary but just
-    // in case there are UI presentations that care
-    set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
+    // The Metaplex metadata's primary_sale_happened flag is deliberately not set.  Its only use is to distinguish
+    // primary from secondary sales for royalties, and entries have no royalties (seller_fee_basis_points is 0); and
+    // the token's owner can set it at any time with the Metaplex Metadata program's UpdatePrimarySaleHappenedViaToken
+    // instruction.  Setting it here would only make buying, and settling winning bids, depend on the Metaplex
+    // Metadata program for no benefit.
 
     // Finally, close the entry's token account since it will never be used again.  The lamports go to the admin
     // account.

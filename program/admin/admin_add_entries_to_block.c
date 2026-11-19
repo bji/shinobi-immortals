@@ -117,6 +117,11 @@ static uint64_t admin_add_entries_to_block(const SolParameters *params)
         // This is the entry details for the entry
         const sha256_t *entry_sha256 = &(data->entry_sha256s[i]);
 
+        // Don't allow an all-zero SHA-256.  It is meaningless in this context and can only cause unexpected behaviors
+        if (is_all_zeroes(entry_sha256, sizeof(*entry_sha256))) {
+            return Error_InvalidData_First + 3;
+        }
+
         // Add the entry
         uint64_t result = add_entry(entry_accounts, block_account->key, block, entry_index, funding_account->key,
                                     data, entry_sha256, params->ka, params->ka_num);

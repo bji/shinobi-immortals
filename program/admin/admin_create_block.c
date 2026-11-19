@@ -3,6 +3,7 @@
 #include "inc/block.h"
 #include "util/util_entry.c"
 #include "util/util_rent.c"
+#include "util/util_whitelist.c"
 
 // instruction data type for CreateBlock instruction.
 typedef struct
@@ -26,8 +27,11 @@ static uint64_t admin_create_block(const SolParameters *params)
         DECLARE_ACCOUNT(2,   funding_account,               ReadWrite,  Signer,     KnownAccount_NotKnown);
         DECLARE_ACCOUNT(3,   block_account,                 ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(4,   system_program_account,        ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        // The block's whitelist account.  Only used, and only checked, if the block uses a whitelist
+        // (whitelist_duration > 0); otherwise any account may be supplied.
+        DECLARE_ACCOUNT(5,   whitelist_account,             ReadOnly,   NotSigner,  KnownAccount_NotKnown);
     }
-    DECLARE_ACCOUNTS_NUMBER(5);
+    DECLARE_ACCOUNTS_NUMBER(6);
 
     // Ensure the the transaction has been authenticated by the admin
     if (!is_admin_account(state_account, admin_account->key)) {
@@ -93,6 +97,26 @@ static uint64_t admin_create_block(const SolParameters *params)
     // can always be created
     if (config->minimum_price_lamports < get_rent_exempt_minimum(sizeof(Bid))) {
         return Error_InvalidData_First + 7;
+    }
+
+    // If the block uses a whitelist, then its whitelist must already exist and have entries in it.  A whitelist can
+    // only be created and added to before its block is created (see add_whitelist_entries), and a non-empty whitelist
+    // cannot be deleted from the time its block is created until the block's whitelist period is over (see
+    // delete_whitelist_account).  So with this check, a block that uses a whitelist always has one, fixed from the
+    // moment the block is created, for its entire whitelist period; rather than having no whitelist at all, which
+    // would leave it open to everyone (see whitelist_check).
+    if (config->whitelist_duration > 0) {
+        // The whitelist account must be the one at this block's whitelist address
+        SolPubkey whitelist_address;
+        if (!compute_whitelist_address(block_account->key, &whitelist_address) ||
+            !SolPubkey_same(whitelist_account->key, &whitelist_address)) {
+            return Error_InvalidAccount_First + 5;
+        }
+        // And it must be a valid whitelist with entries in it
+        const Whitelist *whitelist = get_validated_whitelist(whitelist_account);
+        if (!whitelist || (whitelist->count == 0)) {
+            return Error_WhitelistRequired;
+        }
     }
 
     // Create the block account

@@ -82,10 +82,35 @@ if should_run_test admin_delete_whitelist_in_progress; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
-    # Add the block's entries to start the block timestamp, which then puts the whitelist into use
+    # Delete the whitelist while its block exists but has no entries yet; fails because a whitelist is in use from
+    # the time that its block is created, even though the block's whitelist period has not started yet (its
+    # block_start_timestamp is still 0 until its last entry is added)
+    assert_fail admin_delete_whitelist_block_no_entries                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40b'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_delete_whitelist_tx.sh                           \
+         $ADMIN_PUBKEY 7 0                                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Add the block's first entry only, leaving the block incomplete
     assert admin_delete_whitelist_in_progress_setup_3                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
-         $ADMIN_PUBKEY 7 0 "http://foo.bar.com" none 0 \`sha256_of 0\` \`sha256_of 1\`                               \
+         $ADMIN_PUBKEY 7 0 "http://foo.bar.com" none 0 \`sha256_of 0\`                                               \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Delete the whitelist while its block is partially complete; fails for the same reason
+    assert_fail admin_delete_whitelist_block_incomplete                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x40b'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_delete_whitelist_tx.sh                           \
+         $ADMIN_PUBKEY 7 0                                                                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Add the block's last entry, which completes the block and starts its whitelist period
+    assert admin_delete_whitelist_in_progress_setup_4                                                                \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 7 0 "http://foo.bar.com" none 1 \`sha256_of 1\`                                               \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

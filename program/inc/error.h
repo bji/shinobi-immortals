@@ -142,6 +142,10 @@ typedef enum
     // Attempt to thaw a token account that is not frozen
     Error_TokenAccountNotFrozen                        = 1044,
 
+    // Attempt to create a block that uses a whitelist (whitelist_duration > 0) when its whitelist does not exist, or
+    // is empty; a block's whitelist must be created, with its entries, before the block
+    Error_WhitelistRequired                            = 1045,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

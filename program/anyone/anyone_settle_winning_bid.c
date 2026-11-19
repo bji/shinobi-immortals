@@ -2,7 +2,6 @@
 
 #include "util/util_accounts.c"
 #include "util/util_bid.c"
-#include "util/util_metaplex.c"
 #include "util/util_rent.c"
 #include "util/util_token.c"
 
@@ -57,20 +56,18 @@ static uint64_t anyone_settle_winning_bid(const SolParameters *params)
         DECLARE_ACCOUNT(10,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(11,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(12,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
-        DECLARE_ACCOUNT(13,  entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(14,  metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
     }
 
-    // If there are more than 15 accounts, then the optional reclaiming of bid marker is requested
-    bool reclaim_bid_marker = (params->ka_num > 15);
+    // If there are more than 13 accounts, then the optional reclaiming of bid marker is requested
+    bool reclaim_bid_marker = (params->ka_num > 13);
 
-    // If reclaiming bid marker, there must be 17 accounts
+    // If reclaiming bid marker, there must be 15 accounts
     if (reclaim_bid_marker) {
-        DECLARE_ACCOUNTS_NUMBER(17);
-    }
-    // Else there must be 15
-    else {
         DECLARE_ACCOUNTS_NUMBER(15);
+    }
+    // Else there must be 13
+    else {
+        DECLARE_ACCOUNTS_NUMBER(13);
     }
 
     // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
@@ -97,11 +94,6 @@ static uint64_t anyone_settle_winning_bid(const SolParameters *params)
     // Check to make sure that the entry_mint_account is the correct account for this entry
     if (!SolPubkey_same(entry_mint_account->key, &(entry->mint_pubkey))) {
         return Error_InvalidAccount_First + 6;
-    }
-
-    // Check to make sure that the entry_metadata_account is the Metaplex metadata account of this entry
-    if (!SolPubkey_same(entry_metadata_account->key, &(entry->metaplex_metadata_pubkey))) {
-        return Error_InvalidAccount_First + 13;
     }
 
     // Get the clock sysvar, needed below
@@ -172,8 +164,8 @@ static uint64_t anyone_settle_winning_bid(const SolParameters *params)
     // If the accounts were provided that would allow the bid marker token account to be reclaimed, do so
     if (reclaim_bid_marker) {
         {
-            DECLARE_ACCOUNT(15,   bid_marker_mint_account,          ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-            DECLARE_ACCOUNT(16,   bid_marker_token_account,         ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+            DECLARE_ACCOUNT(13,   bid_marker_mint_account,          ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+            DECLARE_ACCOUNT(14,   bid_marker_token_account,         ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         }
 
         // Burn the bid marker tokens and close the bid marker token account, returning its lamports to the bidder
@@ -187,9 +179,10 @@ static uint64_t anyone_settle_winning_bid(const SolParameters *params)
     // Set the purchase price on the entry to the winning bid amount, so that the entry now goes into an Owned state.
     entry->purchase_price_lamports = entry->auction.highest_bid_lamports;
 
-    // Set the primary_sale_happened flag on the metaplex metadata, as user_buy does, which isn't strictly necessary
-    // but just in case there are UI presentations that care
-    set_metaplex_metadata_primary_sale_happened(entry, params->ka, params->ka_num);
+    // As in user_buy, the Metaplex metadata's primary_sale_happened flag is deliberately not set (see user_buy.c for
+    // why).  This keeps the Metaplex Metadata program out of the only path by which a winning bid can leave its bid
+    // account: settling a winning bid depends on nothing beyond the System, SPL Token, and (only if the bidder's
+    // associated token account does not exist yet) Associated Token Account programs.
 
     // Close the entry's token account, as user_buy does, since it is now empty and will never be used again.  Its
     // lamports go to the admin account.

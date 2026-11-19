@@ -330,49 +330,6 @@ static void set_metaplex_metadata_authority(const SolPubkey *metaplex_metadata_p
 }
 
 
-// Sets the primary_sale_happened metaplex metadata value to true
-static void set_metaplex_metadata_primary_sale_happened(const Entry *entry,
-                                                        // All cross-program invocation must pass all account
-                                                        // infos through, it's the only sane way to cross-program
-                                                        // invoke
-                                                        const SolAccountInfo *transaction_accounts,
-                                                        int transaction_accounts_len)
-{
-    SolInstruction instruction;
-
-    instruction.program_id = &(Constants.metaplex_program_pubkey);
-
-    // UpdateMetadataAccountV2
-    SolAccountMeta account_metas[] =
-          // Metadata key
-        { { /* pubkey */ (SolPubkey *) &(entry->metaplex_metadata_pubkey), /* is_writable */ true,
-              /* is_signer */ false },
-          // Update authority
-          { /* pubkey */ &(Constants.authority_pubkey), /* is_writable */ false, /* is_signer */ true } };
-
-    instruction.accounts = account_metas;
-    instruction.account_len = ARRAY_LEN(account_metas);
-
-    // The data is a very simple borsh serialized format
-    uint8_t data[1 /* Instruction code UpdateMetadataAccountV2 */ +
-                 1 /* None */ +
-                 1 /* None */ +
-                 2 /* Some(true) */ +
-                 1 /* None */]
-        = { 15, 0, 0, 1, 1, 0 };
-
-    instruction.data = (uint8_t *) data;
-    instruction.data_len = sizeof(data);
-
-    // Must invoke with signed authority account
-    const uint8_t *seed_bytes = (uint8_t *) Constants.authority_seed_bytes;
-    SolSignerSeed seed = { seed_bytes, sizeof(Constants.authority_seed_bytes) };
-    SolSignerSeeds signer_seeds = { &seed, 1 };
-
-    sol_invoke_signed(&instruction, transaction_accounts, transaction_accounts_len, &signer_seeds, 1);
-}
-
-
 // Set the metaplex metadata for the entry to that of the given level
 static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t level,
                                                 const SolAccountInfo *metaplex_metadata_account,

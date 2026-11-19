@@ -481,6 +481,29 @@ if should_run_test admin_add_entries_to_block_too_many_entries; then
 fi
 
 
+# All-zero entry SHA-256.  An all-zero reveal_sha256 is what marks an entry as revealed, so an entry added with one
+# would be treated as already revealed (with no metadata, and a reveal timestamp of 0), skipping its mystery phase and
+# the mystery escrow, and could never be revealed properly.  It must be refused.
+# 0x517 = 1303 = Error_InvalidData_First + 3 (the entry_sha256s field of the instruction data)
+if should_run_test admin_add_entries_to_block_zero_sha256; then
+    # Test with block 1 0, which has entries 0 - 8 added, so entry 9 is the only one left to add
+    assert_fail admin_add_entries_to_block_zero_sha256                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x517'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 1 0 "http://foo.bar.com" none 9                                                               \
+         0000000000000000000000000000000000000000000000000000000000000000                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # The refused transaction must not have added the entry: the block still has only entries 0 - 8 added
+    if [ "`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l block 1 0 | jq .added_entries_count`"     \
+         != "9" ]; then
+        echo "FAIL: admin_add_entries_to_block_zero_sha256 changed the block's added entries count"
+        exit 1
+    fi
+fi
+
+
 
 # Success, and verify
 if [ -z "$TESTS" ]; then

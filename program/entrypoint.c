@@ -18,7 +18,8 @@ typedef enum
     Instruction_SetAdmin                      =  1,
 
     // Admin functions: only the admin may perform these actions -------------------------------------------------------
-    // Create a new block
+    // Create a new block.  If the block uses a whitelist (whitelist_duration > 0), its whitelist must already exist and
+    // be non-empty (see AddWhitelistEntries, which can only add to a block's whitelist before the block is created).
     Instruction_CreateBlock                   =  2,
     // Add entries to a newly created block.  Is called multiple times in sequence until the block has had all of its
     // entries added.  When the last entry is added, the block becomes live
@@ -29,9 +30,10 @@ typedef enum
     // Reveal entries that have not been revealed yet.  This can only be done after the block has reached its reveal
     // criteria, and the entries have had their metadata set.
     Instruction_RevealEntries                 =  5,
-    // Add entries to a block whitelist
+    // Add entries to a block whitelist.  This can only be done before the block is created.
     Instruction_AddWhitelistEntries           =  6,
-    // Delete a whitelist after it is no longer needed
+    // Delete a whitelist after it is no longer needed.  Once its block exists, a non-empty whitelist can only be
+    // deleted after the block's whitelist period is over (see whitelist_duration in inc/block.h).
     Instruction_DeleteWhitelist               =  7,
     // Withdraws to the admin the excess lamports of an account that the program controls: the
     // program state account, the authority account, or a block, entry or whitelist account.  The excess is whatever
@@ -67,7 +69,8 @@ typedef enum
     Instruction_Thaw                          = 15,
     // Harvest Ki
     Instruction_Harvest                       = 16,
-    // Level up an entry.  This requires as input an amount of Ki, which is burned.  If the entry is staked, the Ki
+    // Level up an entry.  This requires as input an amount of Ki, which is the most that will be burned; only as much
+    // of it as actually earns level credits is burned (see user_level_up.c).  If the entry is staked, the Ki
     // that it has earned is harvested first, so that it is paid at the ki_factor of the level at which it was earned.
     Instruction_LevelUp                       = 17,
 

@@ -2045,7 +2045,6 @@ class Wallet
                          entry_mint_pubkey : entry.mint_address,
                          token_destination_pubkey : token_destination_address,
                          token_destination_owner_pubkey : wallet_address,
-                         metaplex_metadata_pubkey : entry.metaplex_metadata_address,
                          maximum_price_lamports : maximum_price_lamports });
     }
 
@@ -2201,6 +2200,9 @@ class Wallet
                               entry_metaplex_metadata_pubkey : entry.metaplex_metadata_address,
                               ki_source_pubkey : get_associated_token_address(wallet_address, g_ki_mint_address),
                               ki_source_owner_pubkey : wallet_address,
+                              // The entry's stake account; for an entry that is not staked this is the system
+                              // program address, which is the placeholder that LevelUp expects
+                              stake_pubkey : entry.owned_stake_account,
                               ki_to_apply : ki_to_apply });
     }
 
@@ -2241,11 +2243,7 @@ class Wallet
             // The SPL Token program
             { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
             // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
-            // The Metaplex metadata account of the entry
-            { pubkey : make_pubkey(entry.metaplex_metadata_address), isSigner : false, isWritable : true },
-            // The Metaplex program
-            { pubkey : g_metaplex_program_pubkey, isSigner : false, isWritable : false }
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false }
         ];
 
         // When the bidder settles their own bid, also reclaim the bid marker, which has no purpose once the bid is

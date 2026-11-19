@@ -13,6 +13,7 @@ if should_run_test admin_create_block_no_auth; then
            account $RICH_USER1_PUBKEY ws                                                                             \
            account $BLOCK_PUBKEY w                                                                                   \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -62,6 +63,7 @@ if should_run_test admin_create_block_overwrite; then
            // Should not be able to overwrite the config account //                                                  \
            account $STATE_PUBKEY w                                                                                  \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -110,6 +112,7 @@ if should_run_test admin_create_block_wrong_block; then
            account $ADMIN_PUBKEY ws                                                                                  \
            // Should not be able to write an invalid block address //                                                \
            account G36xzTxcezHcZTppRr4Ufj1dSi38Ks6x9JczaDXC84pD w                                                    \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
@@ -161,6 +164,7 @@ if should_run_test admin_create_block_zero_entries; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -209,6 +213,7 @@ if should_run_test admin_create_block_bad_mystery_count; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
@@ -260,6 +265,7 @@ if should_run_test admin_create_block_bad_mystery_count_zero_duration; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -310,6 +316,7 @@ if should_run_test admin_create_block_mysteries_zero_duration; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -358,6 +365,7 @@ if should_run_test admin_create_block_bad_mystery_start_price; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
@@ -408,6 +416,7 @@ if should_run_test admin_create_block_bad_mystery_price; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -456,6 +465,7 @@ if should_run_test admin_create_block_bad_auction_duration; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
@@ -506,6 +516,7 @@ if should_run_test admin_create_block_bad_final_start_price; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -555,6 +566,7 @@ if should_run_test admin_create_block_bad_final_start_price_2; then
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
            // Block Configuration //                                                                                 \
@@ -603,6 +615,7 @@ if should_run_test admin_create_block_bad_minimum_price; then
            account $ADMIN_PUBKEY s                                                                                   \
            account $ADMIN_PUBKEY ws                                                                                  \
            account $BLOCK_PUBKEY w                                                                                   \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
@@ -757,4 +770,106 @@ if should_run_test admin_create_block_already_exists; then
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
+fi
+
+
+# A block that uses a whitelist (whitelist duration > 0) can only be created if its whitelist already exists and has
+# entries in it, and the whitelist account supplied must be the block's own.  These use block 0 2, and block 0 3's
+# whitelist as a valid whitelist of some other block.
+if should_run_test admin_create_block_whitelist; then
+    BLOCK_0_2_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 2 ]`
+    BLOCK_0_3_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 3 ]`
+    WHITELIST_0_3_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_0_3_PUBKEY ]`
+
+    # Create a whitelist for block 0 3 (which is never created)
+    assert admin_create_block_whitelist_setup                                                                        \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
+         $ADMIN_PUBKEY 0 3 $RICH_USER1_PUBKEY                                                                        \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+
+    # Supplying a valid whitelist, but of a different block, fails.  0x451 = 1105 = Error_InvalidAccount_First + 5
+    assert_fail admin_create_block_whitelist_other_block                                                             \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $ADMIN_PUBKEY                                                                                   \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY                                                                                    \
+           account $ADMIN_PUBKEY s                                                                                   \
+           account $ADMIN_PUBKEY ws                                                                                  \
+           account $BLOCK_0_2_PUBKEY w                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // The whitelist of block 0 3, not of block 0 2 //                                                        \
+           account $WHITELIST_0_3_PUBKEY                                                                             \
+           // Instruction code 2 = CreateBlock //                                                                    \
+           u8 2                                                                                                      \
+           // Block Configuration //                                                                                 \
+           struct [                                                                                                  \
+           // Group Number //                                                                                        \
+           u32 0                                                                                                     \
+           // Block Number //                                                                                        \
+           u32 2                                                                                                     \
+           // Total Entry Count //                                                                                   \
+           u16 10                                                                                                    \
+           // Total Mystery Count //                                                                                 \
+           u16 5                                                                                                     \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Has Auction //                                                                                         \
+           bool false                                                                                                \
+           // Duration //                                                                                            \
+           u32 $((24*60*60))                                                                                         \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Whitelist Duration //                                                                                  \
+           u32 $((24*60*60))                                                                                         \
+           ]"                                                                                                        \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+
+    # Block 0 2's own whitelist does not exist yet, so creating it with a whitelist duration fails.
+    # 0x415 = 1045 = Error_WhitelistRequired
+    assert_fail admin_create_block_whitelist_missing                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x415'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 0 2 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                        \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+
+    # Neither failure created the block
+    if [ -n "`get_account_data $BLOCK_0_2_PUBKEY`" ]; then
+        echo "FAIL: admin_create_block_whitelist: a refused CreateBlock created block 0 2"
+        exit 1
+    fi
+
+    # Once block 0 2's whitelist exists, the block can be created with a whitelist duration
+    assert admin_create_block_whitelist_setup_2                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_whitelist_entries_tx.sh                      \
+         $ADMIN_PUBKEY 0 2 $RICH_USER1_PUBKEY                                                                        \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert admin_create_block_whitelist_success                                                                      \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 0 2 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                        \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    if [ "`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l block 0 2 |                               \
+           jq .configuration.whitelist_duration`" != "$((24*60*60))" ]; then
+        echo "FAIL: admin_create_block_whitelist_success did not create block 0 2 with its whitelist duration"
+        exit 1
+    fi
 fi

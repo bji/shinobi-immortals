@@ -7,9 +7,6 @@ if should_run_test user_buy_wrong_admin; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_wrong_admin                                                                                 \
@@ -28,11 +25,9 @@ if should_run_test user_buy_wrong_admin; then
            account $MINT_PUBKEY                                                                                      \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY w                                                                                \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 9 = Buy //                                                                            \
            u8 9                                                                                                      \
@@ -51,9 +46,6 @@ if should_run_test user_buy_short_data; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_short_data                                                                                  \
@@ -72,11 +64,9 @@ if should_run_test user_buy_short_data; then
            account $MINT_PUBKEY                                                                                      \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY w                                                                                \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 9 = Buy //                                                                            \
            u8 9"                                                                                                     \
@@ -94,9 +84,6 @@ if should_run_test user_buy_bad_block; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_bad_block                                                                                   \
@@ -115,11 +102,9 @@ if should_run_test user_buy_bad_block; then
            account $MINT_PUBKEY                                                                                      \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY w                                                                                \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 9 = Buy //                                                                            \
            u8 9                                                                                                      \
@@ -404,9 +389,6 @@ if should_run_test user_buy_wrong_entry; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_buy_wrong_entry                                                                                 \
@@ -425,11 +407,9 @@ if should_run_test user_buy_wrong_entry; then
            account $MINT_PUBKEY                                                                                      \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY w                                                                                \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 9 = Buy //                                                                            \
            u8 9                                                                                                      \
@@ -447,9 +427,6 @@ if should_run_test user_buy_wrong_entry_2; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
@@ -471,11 +448,9 @@ if should_run_test user_buy_wrong_entry_2; then
            account $MINT_PUBKEY                                                                                      \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY w                                                                                \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 9 = Buy //                                                                            \
            u8 9                                                                                                      \
@@ -493,9 +468,6 @@ if should_run_test user_buy_wrong_token; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
@@ -518,11 +490,9 @@ if should_run_test user_buy_wrong_token; then
            account $MINT_PUBKEY                                                                                      \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY w                                                                                \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 9 = Buy //                                                                            \
            u8 9                                                                                                      \
@@ -540,9 +510,6 @@ if should_run_test user_buy_wrong_mint; then
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
     ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
     TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
     WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
     TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
@@ -565,61 +532,9 @@ if should_run_test user_buy_wrong_mint; then
            account $MINT_PUBKEY1                                                                                     \
            account $TOKEN_DESTINATION_PUBKEY w                                                                       \
            account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY w                                                                                \
            account $SELF_PROGRAM_PUBKEY                                                                              \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 9 = Buy //                                                                            \
-           u8 9                                                                                                      \
-           u64 0"                                                                                                    \
-        | solxact encode                                                                                             \
-        | solxact hash l                                                                                             \
-        | solxact sign $LEDGER/rich_user1.json                                                                       \
-        | solxact submit l 2>&1`
-fi
-
-
-# Invalid metaplex metadata account
-if should_run_test user_buy_wrong_metadata; then
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 7 ]`
-    MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
-    ENTRY_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY ]`
-    TOKEN_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY ]`
-    METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                  \
-                                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                  \
-                                                    pubkey $MINT_PUBKEY ]`
-    WHITELIST_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 9 pubkey $BLOCK_PUBKEY ]`
-    TOKEN_DESTINATION_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
-    BLOCK_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 8 u32 6 ]`
-    MINT_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY1 u16 0 ]`
-    ENTRY_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $MINT_PUBKEY1 ]`
-    TOKEN_PUBKEY1=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $MINT_PUBKEY1 ]`
-    METADATA_PUBKEY1=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata                                                 \
-                                                     pubkey $METAPLEX_PROGRAM_PUBKEY                                 \
-                                                     pubkey $MINT_PUBKEY1 ]`
-    assert_fail user_buy_wrong_metadata                                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x457'                     \
-    `echo "encoding c                                                                                                \
-           fee_payer $RICH_USER1_PUBKEY                                                                              \
-           program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $RICH_USER1_PUBKEY ws                                                                             \
-           account $STATE_PUBKEY                                                                                    \
-           account $ADMIN_PUBKEY w                                                                                   \
-           account $AUTHORITY_PUBKEY w                                                                               \
-           account $BLOCK_PUBKEY w                                                                                   \
-           account $WHITELIST_PUBKEY w                                                                               \
-           account $ENTRY_PUBKEY w                                                                                   \
-           account $TOKEN_PUBKEY w                                                                                   \
-           account $MINT_PUBKEY                                                                                      \
-           account $TOKEN_DESTINATION_PUBKEY w                                                                       \
-           account $RICH_USER1_PUBKEY                                                                                \
-           account $METADATA_PUBKEY1 w                                                                               \
-           account $SELF_PROGRAM_PUBKEY                                                                              \
-           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 9 = Buy //                                                                            \
            u8 9                                                                                                      \
@@ -753,11 +668,12 @@ if should_run_test user_buy_normal; then
         echo "FAIL: user_buy_normal did not set entry purchase price"
         exit 1
     fi
-    # Check that the metaplex metadata was updated with primary sale happened set
+    # Buy deliberately does not invoke the Metaplex Metadata program (see user_buy.c), so the metaplex metadata's
+    # primary sale happened flag must be left unset
     PRIMARY_SALE_HAPPENED=`PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l metaplex 8 7 0 |         \
                               jq .primary_sale_happened`
-    if [ "$PRIMARY_SALE_HAPPENED" != "true" ]; then
-        echo "FAIL: user_buy_normal did not set 'primary sale happened' metaplex metadata flag"
+    if [ "$PRIMARY_SALE_HAPPENED" != "false" ]; then
+        echo "FAIL: user_buy_normal changed the 'primary sale happened' metaplex metadata flag"
         exit 1
     fi
     # Check to make sure that the entry token account is closed

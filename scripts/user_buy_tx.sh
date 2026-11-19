@@ -108,11 +108,9 @@ solxact encode                                                                  
         account $ENTRY_MINT_PUBKEY                                                                                    \
         account $TOKEN_DESTINATION_PUBKEY w                                                                           \
         account $USER_PUBKEY                                                                                          \
-        account $ENTRY_METADATA_PUBKEY w                                                                              \
         account $SELF_PROGRAM_PUBKEY                                                                                  \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
-        account $METAPLEX_PROGRAM_PUBKEY                                                                              \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         // Instruction code 9 = Buy //                                                                                \
         u8 9                                                                                                          \

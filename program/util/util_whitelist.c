@@ -31,6 +31,22 @@ static Whitelist *get_validated_whitelist(const SolAccountInfo *whitelist_accoun
 }
 
 
+// Computes the address of the whitelist account of the block at [block_key] into [fill_in].  Returns false if the
+// address could not be computed.
+static bool compute_whitelist_address(const SolPubkey *block_key, SolPubkey *fill_in)
+{
+    uint8_t prefix = PDA_Account_Seed_Prefix_Whitelist;
+
+    uint8_t bump_seed;
+
+    SolSignerSeed seeds[] = { { &prefix, sizeof(prefix) },
+                              { (uint8_t *) block_key, sizeof(*block_key) } };
+
+    return (sol_try_find_program_address(seeds, ARRAY_LEN(seeds), &(Constants.self_program_pubkey), fill_in,
+                                         &bump_seed) == 0);
+}
+
+
 // If the block already exists, this function will always return an error.
 // Adds pubkeys to the whitelist for a block.  Creates the whitelist account if it doesn't yet exist.
 static uint64_t add_whitelist_entries(SolAccountInfo *whitelist_account, const SolAccountInfo *block_account,
@@ -153,9 +169,11 @@ static bool whitelist_check(SolAccountInfo *whitelist_account, const SolPubkey *
 }
 
 
-// Deletes a whitelist, returning the lamports in it to the destination account.  An empty whitelist can always
-// be deleted.  This is not allowed if the block exists, uses a non-empty whitelist, and is not yet past its
-// whitelist phase.
+// Deletes a whitelist, returning the lamports in it to the destination account.  An empty whitelist can always be
+// deleted, as can any whitelist whose block has not been created yet.  A non-empty whitelist whose block exists and
+// uses a whitelist (whitelist_duration > 0) cannot be deleted until the block's whitelist period is over: neither
+// while the block's entries are still being added, nor during the whitelist period itself.  See the comment on
+// whitelist_duration in inc/block.h.
 static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, const SolAccountInfo *block_account,
                                          const Clock *clock, SolAccountInfo *destination_account,
                                          const SolAccountInfo *transaction_accounts, int transaction_accounts_len)
@@ -181,13 +199,19 @@ static uint64_t delete_whitelist_account(SolAccountInfo *whitelist_account, cons
         return Error_NotWhitelistAccount;
     }
 
-    // If the whitelist has entries in it, then check the block to make sure that it isn't valid with an in-progress
-    // whitelist
+    // If the whitelist has entries in it, then check the block to make sure that its whitelist is not in use.  A block
+    // that uses a whitelist uses it from the time that the block is created: while its entries are still being added,
+    // and then until whitelist_duration seconds after its last entry is added.  While the block is incomplete,
+    // block_start_timestamp is still 0, so the timestamp comparison alone would wrongly treat the whitelist period as
+    // already over; hence the separate check for an incomplete block.  Since a whitelist cannot be created or added to
+    // once its block exists, this makes a block's whitelist fixed, and in effect, from the moment that the block is
+    // created until its whitelist period is over.
     const Whitelist *whitelist = get_validated_whitelist(whitelist_account);
     if (whitelist && whitelist->count) {
         const Block *block = get_validated_block(block_account);
         if (block && (block->config.whitelist_duration > 0) &&
-            ((block->block_start_timestamp + block->config.whitelist_duration) > clock->unix_timestamp)) {
+            (!is_block_complete(block) ||
+             ((block->block_start_timestamp + block->config.whitelist_duration) > clock->unix_timestamp))) {
             return Error_WhitelistBlockInProgress;
         }
     }

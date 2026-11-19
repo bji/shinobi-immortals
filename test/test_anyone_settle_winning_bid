@@ -269,6 +269,8 @@ function settle_accounts ()
     S_MINT=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 $2 ]`
     S_ENTRY=`pda $SELF_PROGRAM_PUBKEY [ u8 11 pubkey $S_MINT ]`
     S_ENTRY_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 5 pubkey $S_MINT ]`
+    # The entry's Metaplex metadata account; not an account of SettleWinningBid, but used to check that settling does
+    # not change it
     S_METADATA=`pda $METAPLEX_PROGRAM_PUBKEY [ string metadata pubkey $METAPLEX_PROGRAM_PUBKEY pubkey $S_MINT ]`
     S_BID_MARKER_TOKEN=`pda $SELF_PROGRAM_PUBKEY [ u8 8 pubkey $S_MINT pubkey $3 ]`
     S_BID=`pda $SELF_PROGRAM_PUBKEY [ u8 6 pubkey $S_BID_MARKER_TOKEN ]`
@@ -304,8 +306,6 @@ function settle_submit ()
           account $SYSTEM_PROGRAM_PUBKEY                                                                             \
           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                          \
           account $SPLATA_PROGRAM_PUBKEY                                                                             \
-          account $S_METADATA w                                                                                      \
-          account $METAPLEX_PROGRAM_PUBKEY                                                                           \
           $S_EXTRA_ACCOUNTS                                                                                          \
           // Instruction code 18 = SettleWinningBid //                                                               \
           u8 18 $S_DATA"                                                                                             \
@@ -361,20 +361,21 @@ function settle_wait_until_anyone_may_settle ()
 }
 
 
-# Fails the test named $1 unless Metaplex primary_sale_happened is set in the metadata account $2, as Buy sets it.
+# Fails the test named $1 if Metaplex primary_sale_happened is set in the metadata account $2.  SettleWinningBid, like
+# Buy, deliberately does not invoke the Metaplex Metadata program (see user_buy.c), so it must leave the flag unset.
 # In the Metaplex metadata account it follows the key (1 byte), update authority (32), mint (32), name (4 + 32, as
 # this program always writes it), symbol (4 + 10), uri (4 + 200), seller_fee_basis_points (2), and the creators
 # option: a 1 byte flag at offset 321 and, when present, a u32 creator count at offset 322 followed by 34 bytes per
 # creator.
-function settle_check_primary_sale_happened ()
+function settle_check_primary_sale_not_happened ()
 {
     local OFFSET=322
     if [ "`get_account_data $2 321 1 | base64 -d | od -An -tu1 | tr -d ' '`" = "1" ]; then
         local CREATOR_COUNT=`get_account_data $2 322 4 | base64 -d | od -An -tu4 | tr -d ' '`
         OFFSET=$((326 + 34 * CREATOR_COUNT))
     fi
-    if [ "`get_account_data $2 $OFFSET 1 | base64 -d | od -An -tu1 | tr -d ' '`" != "1" ]; then
-        echo "FAIL: $1 did not set Metaplex primary_sale_happened"
+    if [ "`get_account_data $2 $OFFSET 1 | base64 -d | od -An -tu1 | tr -d ' '`" != "0" ]; then
+        echo "FAIL: $1 set Metaplex primary_sale_happened"
         exit 1
     fi
 }
@@ -433,19 +434,6 @@ if should_run_test anyone_settle_winning_bid_bad_mint; then
     S_MINT=$STATE_PUBKEY
     assert_fail anyone_settle_winning_bid_bad_mint                                                                   \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
-    `settle_submit $LEDGER/rich_user2.json`
-fi
-
-
-# Metaplex metadata account that is not the entry's: it is the metadata of entry 1 of the same block
-# (Error_InvalidAccount_First + 13)
-if should_run_test anyone_settle_winning_bid_bad_metadata; then
-    settle_accounts 2 1 $RICH_USER2_PUBKEY $RICH_USER2_PUBKEY
-    OTHER_METADATA=$S_METADATA
-    settle_accounts 2 0 $RICH_USER1_PUBKEY $RICH_USER2_PUBKEY
-    S_METADATA=$OTHER_METADATA
-    assert_fail anyone_settle_winning_bid_bad_metadata                                                               \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x459'                     \
     `settle_submit $LEDGER/rich_user2.json`
 fi
 
@@ -626,7 +614,7 @@ if should_run_test anyone_settle_winning_bid_by_bidder; then
         echo "FAIL: $TEST_NAME: purchase price is not the winning bid of $WINNING_BID"
         exit 1
     fi
-    settle_check_primary_sale_happened $TEST_NAME $S_METADATA
+    settle_check_primary_sale_not_happened $TEST_NAME $S_METADATA
     # Because the bidder settled, the bidder's bid marker tokens were burned and the bid marker token account closed
     if [ -n "`get_account_data $S_BID_MARKER_TOKEN`" ] || [ "`settle_lamports_of $S_BID_MARKER_TOKEN`" != "0" ]; then
         echo "FAIL: $TEST_NAME did not reclaim the bid marker token account"
@@ -706,7 +694,7 @@ if should_run_test anyone_settle_winning_bid_by_third_party; then
         echo "FAIL: $TEST_NAME deleted the bid marker token account"
         exit 1
     fi
-    settle_check_primary_sale_happened $TEST_NAME $S_METADATA
+    settle_check_primary_sale_not_happened $TEST_NAME $S_METADATA
 fi
 
 

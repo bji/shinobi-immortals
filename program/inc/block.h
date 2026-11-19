@@ -52,14 +52,30 @@ typedef struct
     // >= minimum_price_lamports.
     uint64_t final_start_price_lamports;
 
-    // Blocks may be configured to only allow purchasing of Entries by system accounts that are whitelisted.  A system
-    // account is whitelisted if there exists a PDA at the whitelist address for the { system account, block } tuple.
-    // For blocks that have a whitelist, having such an account is a prerequisite for buying.  The whitelist PDA is
-    // deleted (and its lamports returned to the admin) on a successful buy operation.  Whitelist entries are added
-    // via the admin_create_whitelist_entry instruction.  Whitelist requirements expire after whitelist_duration
-    // seconds have passed since block_start_timestamp, and at that time, whitelist entries that haven't been used yet
-    // may be deleted by the admin using the admin_delete_whitelist_entry instruction.  If whitelist_duration is 0,
-    // then no whitelist is ever used for this block.
+    // Blocks may be configured to only allow purchasing of Entries by accounts that are whitelisted.  Each block has
+    // at most one whitelist: a Whitelist account (see inc/whitelist.h) at the program derived address for the block,
+    // holding a list of up to MAX_WHITELIST_ENTRIES account pubkeys.  The admin adds pubkeys to it with the
+    // AddWhitelistEntries instruction, which is only possible before the block is created; so the whitelist is fixed
+    // from the moment that the block is created.  A block with a nonzero whitelist_duration can only be created if its
+    // whitelist already exists and is non-empty (CreateBlock fails with Error_WhitelistRequired otherwise).
+    //
+    // If whitelist_duration is 0, then no whitelist is ever used for this block.  Otherwise, the whitelist period
+    // lasts from the time that the block is complete (block_start_timestamp, which is when its last entry is added)
+    // until whitelist_duration seconds after that.  During the whitelist period, Buy requires that the account that
+    // pays for the purchase (the funding account) be in the whitelist, and removes it from the whitelist.  A pubkey
+    // that appears in the whitelist more than once can buy that many entries.  Once every pubkey has been used, the
+    // whitelist is empty, and anyone may buy for the remainder of the whitelist period; likewise if that empty
+    // whitelist is then deleted.  After the whitelist period, anyone may buy.
+    //
+    // The admin can delete the whitelist (its lamports go to the admin) with the DeleteWhitelist instruction.  An
+    // empty whitelist can always be deleted, as can any whitelist before its block is created.  Once the block is
+    // created, a non-empty whitelist cannot be deleted until the whitelist period is over: not while the block's
+    // entries are still being added, and not during the whitelist period itself.  So once a block that uses a
+    // whitelist exists, its whitelist stays in effect for the whole whitelist period.
+    //
+    // Note that whitelist_duration alone does not say whether a whitelist is in effect.  A tool that wants to know
+    // that must do what Buy does: check that a valid, non-empty whitelist exists at the block's whitelist address, and
+    // that the whitelist period has not ended.
     uint32_t whitelist_duration;
 
 } BlockConfiguration;
