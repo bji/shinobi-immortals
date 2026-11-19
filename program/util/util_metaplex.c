@@ -126,16 +126,22 @@ static uint32_t bounded_string_length(const uint8_t *str, uint32_t max_len)
 
 
 // [data] must have at least METAPLEX_METADATA_DATA_SIZE bytes in it.  Returns the pointer to the byte immediately
-// after the end of data
+// after the end of data.
+// [creator_1_verified] and [creator_2_verified] are the verified flags to encode for [creator_1] and [creator_2].
 static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, const uint8_t *symbol, const uint8_t *uri,
-                                         const SolPubkey *creator_1, const SolPubkey *creator_2,
+                                         const SolPubkey *creator_1, bool creator_1_verified,
+                                         const SolPubkey *creator_2, bool creator_2_verified,
                                          const SolPubkey *authority_key)
 {
-    // If the first pubkey is empty swap the pubkeys so that the logic below can readily test on 0, 1 or 2 creators
+    // If the first pubkey is empty swap the pubkeys (and their verified flags) so that the logic below can readily
+    // test on 0, 1 or 2 creators
     if (is_empty_pubkey(creator_1)) {
         const SolPubkey *tmp = creator_1;
         creator_1 = creator_2;
         creator_2 = tmp;
+        bool tmp_verified = creator_1_verified;
+        creator_1_verified = creator_2_verified;
+        creator_2_verified = tmp_verified;
     }
 
     if (is_empty_pubkey(creator_1)) {
@@ -171,6 +177,7 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, con
         metadata->has_creators = true;
         metadata->creator_count = 2;
         metadata->creator_1_pubkey = *creator_1;
+        metadata->creator_1_verified = creator_1_verified;
         metadata->creator_1_share = 100;
         metadata->creator_2_pubkey = *authority_key;
         return &(data[sizeof(*metadata)]);
@@ -190,8 +197,10 @@ static uint8_t *encode_metaplex_metadata(uint8_t *data, const uint8_t *name, con
         metadata->has_creators = true;
         metadata->creator_count = 3;
         metadata->creator_1_pubkey = *creator_1;
+        metadata->creator_1_verified = creator_1_verified;
         metadata->creator_1_share = 50;
         metadata->creator_2_pubkey = *creator_2;
+        metadata->creator_2_verified = creator_2_verified;
         metadata->creator_2_share = 50;
         metadata->creator_3_pubkey = *authority_key;
         return &(data[sizeof(*metadata)]);
@@ -247,7 +256,9 @@ static void create_metaplex_metadata(const SolPubkey *metaplex_metadata_key, con
                      BORSH_SIZE_BOOL /* is_mutable */ +
                      BORSH_SIZE_BOOL /* option(collection_details) */];
         uint8_t *d = borsh_encode_u8(data, 33); // instruction code 33 = CreateMetadataAccountV3
-        d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, creator_2, &(Constants.authority_pubkey));
+        // New metadata never has any verified creators other than the authority, which signs below
+        d = encode_metaplex_metadata(d, name, symbol, uri, creator_1, false, creator_2, false,
+                                     &(Constants.authority_pubkey));
         d = borsh_encode_bool(d, true); // is_mutable
         d = borsh_encode_bool(d, false); // option(collection_details)
 
@@ -381,6 +392,8 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
 
     uint32_t creator_count;
     SolPubkey creator_keys[3];
+    // Verified flag of each creator, which must be carried into the updated metadata unchanged
+    bool creator_verified[3] = { false, false, false };
 
     {
         const uint8_t *data = metaplex_metadata_account->data;
@@ -455,9 +468,8 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
                     return Error_InvalidMetadataValues;
                 }
                 data += ret, data_len -= ret;
-                // Decode verified status of creator, which is ignored
-                bool verified;
-                ret = borsh_decode_bool(data, data_len, &verified);
+                // Decode verified status of creator, which is retained so that it can be written back unchanged
+                ret = borsh_decode_bool(data, data_len, &(creator_verified[i]));
                 if (!ret) {
                     return Error_InvalidMetadataValues;
                 }
@@ -482,9 +494,16 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
     SolPubkey *creator_1 = &(creator_keys[0]);
     SolPubkey *creator_2 = &(creator_keys[1]);
 
+    // Verified flags of creator_1 and creator_2, which must be written back unchanged: Metaplex rejects any update
+    // by the update authority that changes the verified flag of a creator other than itself
+    bool creator_1_verified = creator_verified[0];
+    bool creator_2_verified = creator_verified[1];
+
     if (creator_count == 2) {
-        // creator_2 is an empty pubkey if there are only 2 creators
+        // creator_2 is an empty pubkey if there are only 2 creators; the second creator in the existing metadata is
+        // the authority, whose verified flag is not carried into creator_2
         sol_memset(&(creator_keys[1]), 0, sizeof(creator_keys[1]));
+        creator_2_verified = false;
     }
 
     // UpdateMetadataAccountV2
@@ -518,7 +537,8 @@ static uint64_t set_metaplex_metadata_for_level(const Entry *entry, uint8_t leve
         uint8_t *d = borsh_encode_u8(data, 15); // instruction code 15 = UpdateMetadataAccountV2
         d = borsh_encode_option_some(d);
         d = encode_metaplex_metadata(d, level_metadata->name, (uint8_t *) "SHIN", level_metadata->uri, creator_1,
-                                     creator_2, &(Constants.authority_pubkey));
+                                     creator_1_verified, creator_2, creator_2_verified,
+                                     &(Constants.authority_pubkey));
         d = borsh_encode_option_none(d); // update_authority
         d = borsh_encode_option_none(d); // primary_sale_happened
         d = borsh_encode_option_none(d); // is_mutable
