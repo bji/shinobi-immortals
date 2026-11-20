@@ -4,9 +4,9 @@ Tests are executed against a local test validator.
 Calculation integration tests
 -----------------------------
 Run: make test-calculations
-Or:  bash test/test_calculations.sh --verbose
+Or:  bash test/program/test_calculations.sh --verbose
 
-test/unit_tests.c is a separate C BPF program, not a host executable. It includes
+test/program/unit_tests.c is a separate C BPF program, not a host executable. It includes
 the production calculations, receives vectors in instruction data, checks results
 inside BPF, and returns per-case results. Bash and dc generate independent
 reference values using arbitrary-precision integers; they never execute
@@ -62,8 +62,8 @@ Occupied blocks are rejected. The runner stops only its own validator PID.
 Set KEEP_CALCULATION_LEDGER=1 to retain artifacts, logs, and ledger for diagnosis.
 --limit N runs only the first N cases; --verbose prints every individual result.
 
-To compile only: mkdir -p /tmp/codex; TMPDIR=/tmp/codex bash test/build_calculation_tests.sh /tmp/codex/calculation-build
-To inspect the vectors without a validator: bash test/calculation_vectors.sh
+To compile only: mkdir -p /tmp/codex; TMPDIR=/tmp/codex bash test/program/build_calculation_tests.sh /tmp/codex/calculation-build
+To inspect the vectors without a validator: bash test/program/calculation_vectors.sh
 
 Vectors are pipe-delimited rows: name, expected-failure reason (possibly empty),
 operation, initial-overflow, expected-failure flag, expected-overflow, four

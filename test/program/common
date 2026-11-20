@@ -722,7 +722,7 @@ function sleep_until_next_level_credit_window ()
 
 # Prints the Ki token base units (ten per whole Ki) that a harvest should mint for earned lamports $1, current
 # delegated stake lamports $2, and ki_factor $3.  This independently mirrors harvest_ki() using dc's arbitrary
-# precision integers (see ki_reference in test/calculation_vectors.sh): the earnings are scaled by the effective
+# precision integers (see ki_reference in test/program/calculation_vectors.sh): the earnings are scaled by the effective
 # stake ratio K*(K+x)/(K*K+K*x+x*x), with K = 50 SOL and the stake x, both measured in units of 100 lamports, made ten
 # times larger for as long as x exceeds 2,000,000,000 units, as the program measures them; the effective lamports are
 # converted to whole Ki by multiplying whole SOL and remaining lamports by the factor separately; and the result is
@@ -763,7 +763,7 @@ function setup ()
     # The number of seconds by which a bid near the end of an auction extends it, that the test program is built with
     # (production uses 10 minutes).  The shared tests run auctions only 20 seconds long and wait a fixed time for them
     # to end, so by default extensions are turned off (0: no bid is ever within 0 seconds of the end).
-    # test/test_auction_extension.sh, which tests extensions, sets a value before calling setup.
+    # test/program/test_auction_extension.sh, which tests extensions, sets a value before calling setup.
     export AUCTION_EXTENSION_SECONDS=${AUCTION_EXTENSION_SECONDS:-0}
 
     # Make a temporary directory to hold the validator ledger

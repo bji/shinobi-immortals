@@ -1,113 +1,63 @@
 'use strict';
 
-const SolanaWeb3 = require("@solana/web3.js");
-const Buffer = require("buffer");
-const bs58 = require("bs58");
+// shinobi_immortals.js
+//
+// The higher level Shinobi Immortals Javascript API: querying the cluster, tracking blocks, entries, and wallets, and
+// building, signing, and submitting transactions on behalf of a wallet.  It is built on shinobi_immortals_base.js,
+// which holds the program's addresses, account decoders, calculations, and instruction builders.
+//
+// This file uses @solana/kit to talk to the cluster, and to build, sign, and send transactions.  The instructions of
+// shinobi_immortals_base.js are already in @solana/kit's form.
+//
+// Transactions are signed by @solana/kit signers (see "Signing" in the Wallet class).  create_callback_signer makes a
+// signer from a function that obtains a signature in any way at all, such as by showing the transaction to a person
+// who signs it with their own tools.
+//
+// Nothing in this file needs Ed25519 support in the Javascript runtime's WebCrypto (crypto.subtle): signatures are
+// verified by shinobi_immortals_base.js's own ed25519_verify.  Only @solana/kit's key pair signers (such as those of
+// generateKeyPairSigner and createKeyPairSignerFromBytes), for callers that hold a secret key themselves, need it.
 
-const LAMPORTS_PER_SOL = 1000 * 1000 * 1000;
+const Kit = require("@solana/kit");
+
+const Base = require("./shinobi_immortals_base.js");
+
+// Names from shinobi_immortals_base.js that are used in this file
+const {
+    base58_decode,
+    g_system_program_address,
+    g_config_program_address,
+    g_validator_info_address,
+    g_program_authority_address,
+    g_program_state_address,
+    g_shinobi_systems_vote_address,
+    g_ki_mint_address,
+    g_bid_marker_mint_address,
+    g_spl_token_program_address,
+    g_stake_program_address,
+    WithdrawExcessAccountType,
+    get_metaplex_metadata_address,
+    get_block_address,
+    get_entry_mint_address,
+    get_entry_address,
+    get_bid_address,
+    decode_program_state,
+    decode_authority,
+    decode_block,
+    decode_entry,
+    compute_ki_harvest_retention,
+    compute_retained_ki_harvest,
+    compute_effective_stake_earnings,
+    compute_price,
+    compute_minimum_bid,
+    excess_of,
+    buffer_le_u32,
+    buffer_le_u64,
+    buffer_address,
+    buffer_string
+} = Base;
 
 const BLOCKS_AT_ONCE = 3;
 const ENTRIES_AT_ONCE = 20;
-
-// Turns an address into a SolanaWeb3.PublicKey
-function make_pubkey(address)
-{
-    return new SolanaWeb3.PublicKey(address);
-}
-
-// Finds a Program Derived Address
-function find_pda(seeds, program_id)
-{
-    return SolanaWeb3.PublicKey.findProgramAddressSync(seeds, program_id);
-}
-
-const g_system_program_address = "11111111111111111111111111111111";
-const g_system_program_pubkey = make_pubkey(g_system_program_address);
-
-const g_self_program_address = "Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG";
-const g_self_program_pubkey = make_pubkey(g_self_program_address);
-
-const g_metaplex_program_address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
-const g_metaplex_program_pubkey = make_pubkey(g_metaplex_program_address);
-
-const g_spl_token_program_address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-const g_spl_token_program_pubkey = make_pubkey(g_spl_token_program_address);
-
-const g_spl_associated_token_program_address = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
-const g_spl_associated_token_program_pubkey = make_pubkey(g_spl_associated_token_program_address);
-
-const g_stake_program_address = "Stake11111111111111111111111111111111111111";
-const g_stake_program_pubkey = make_pubkey(g_stake_program_address);
-
-const g_config_program_address = "Config1111111111111111111111111111111111111";
-const g_config_program_pubkey = make_pubkey(g_config_program_address);
-
-const g_validator_info_address = "Va1idator1nfo111111111111111111111111111111";
-const g_validator_info_pubkey = make_pubkey(g_validator_info_address);
-
-const g_program_authority_pubkey = find_pda([ [ 2 ] ], g_self_program_pubkey)[0];
-const g_program_authority_address = g_program_authority_pubkey.toBase58();
-
-const g_program_state_pubkey = find_pda([ [ 1 ] ], g_self_program_pubkey)[0];
-const g_program_state_address = g_program_state_pubkey.toBase58();
-
-// The Shinobi Systems vote account, which is compiled into the program (see GNUmakefile).  It is the only validator
-// that the program delegates stake accounts to.
-const g_shinobi_systems_vote_address = "BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2";
-
-const g_ki_mint_pubkey = find_pda([ [ 3 ] ], g_self_program_pubkey)[0];
-const g_ki_mint_address = g_ki_mint_pubkey.toBase58();
-
-const g_ki_metadata_address = get_metaplex_metadata_address(g_ki_mint_address);
-const g_ki_metadata_pubkey = make_pubkey(g_ki_metadata_address);
-
-const g_bid_marker_mint_pubkey = find_pda([ [ 7 ] ], g_self_program_pubkey)[0];
-const g_bid_marker_mint_address = g_bid_marker_mint_pubkey.toBase58();
-
-const g_clock_sysvar_address = "SysvarC1ock11111111111111111111111111111111";
-const g_clock_sysvar_pubkey = make_pubkey(g_clock_sysvar_address);
-
-const g_stake_history_sysvar_address = "SysvarStakeHistory1111111111111111111111111";
-const g_stake_history_sysvar_pubkey = make_pubkey(g_stake_history_sysvar_address);
-
-const g_stake_config_address = "StakeConfig11111111111111111111111111111111";
-const g_stake_config_pubkey = make_pubkey(g_stake_config_address);
-
-// Instruction codes of the instructions whose transactions are built in this file (see program/entrypoint.c)
-const INSTRUCTION_WITHDRAW_EXCESS = 8;
-const INSTRUCTION_BUY = 9;
-const INSTRUCTION_REFUND = 10;
-const INSTRUCTION_BID = 11;
-const INSTRUCTION_CLAIM_LOSING = 12;
-const INSTRUCTION_STAKE = 13;
-const INSTRUCTION_DESTAKE = 14;
-const INSTRUCTION_THAW = 15;
-const INSTRUCTION_HARVEST = 16;
-const INSTRUCTION_LEVEL_UP = 17;
-const INSTRUCTION_SETTLE_WINNING_BID = 18;
-const INSTRUCTION_DELEGATE = 19;
-const INSTRUCTION_UPDATE_EPOCHS_STAKED = 20;
-
-// Data type code of the authority account's data (DataType_Authority in program/inc/data_type.h)
-const DATA_TYPE_AUTHORITY = 6;
-
-// The types of account that the admin may withdraw excess lamports from with Wallet.withdraw_excess().  The "code"
-// of each is the value that the program knows the type by (WithdrawExcessAccountType in
-// program/admin/admin_withdraw_excess.c).
-const WithdrawExcessAccountType = Object.freeze(
-{
-    // The program state account
-    ProgramState  : Object.freeze({ code : 0, name : "ProgramState" }),
-    // The authority account.  The purchase prices of mysteries that have not yet been revealed or refunded are held
-    // there in escrow, and are never withdrawn.
-    Authority     : Object.freeze({ code : 1, name : "Authority" }),
-    // A block account
-    Block         : Object.freeze({ code : 2, name : "Block" }),
-    // An entry account
-    Entry         : Object.freeze({ code : 3, name : "Entry" }),
-    // The whitelist account of a block
-    Whitelist     : Object.freeze({ code : 4, name : "Whitelist" })
-});
 
 
 function delay(delay_ms)
@@ -115,14 +65,35 @@ function delay(delay_ms)
     return new Promise((resolve) => setTimeout(resolve, delay_ms));
 }
 
-function address_to_buffer(address)
+
+// Returns as a Uint8Array the bytes of account data as the RPC server returns it with base64 encoding: an array of
+// the base64 string and the encoding name
+function account_data_bytes(data)
 {
-    return Buffer.Buffer.from(bs58.decode(address));
+    return Uint8Array.from(Kit.getBase64Encoder().encode(data[0]));
 }
 
 
-// Single possibly rate-limited RPC connection.  If a rate limit is set, it will observe it, and throw an error
-// for any request that would exceed the limit
+// Returns an account that the RPC server returned with base64 encoding, as { lamports : BigInt, data : Uint8Array,
+// owner : string, executable : boolean }, or null if there was no account
+function normalize_account(account)
+{
+    if (account == null) {
+        return null;
+    }
+
+    return { lamports : BigInt(account.lamports),
+             data : account_data_bytes(account.data),
+             owner : account.owner,
+             executable : account.executable };
+}
+
+
+// Single possibly rate-limited RPC connection, to one RPC server.  If a rate limit is set, it will observe it, and
+// throw an error for any request that would exceed the limit.
+//
+// Its methods return values in plain forms, whatever the RPC server returns: addresses as base58 strings, account
+// data as Uint8Arrays, and u64 values (lamports, slots, epochs) as BigInts, except where noted.
 class RpcConnection
 {
     static create(rpc_endpoint, max_requests, max_data)
@@ -138,7 +109,10 @@ class RpcConnection
 
         this.data_sum = 0;
 
-        this.connection = new SolanaWeb3.Connection(rpc_endpoint, "confirmed");
+        this.rpc_endpoint = rpc_endpoint;
+
+        // The @solana/kit RPC client for the server
+        this.rpc = Kit.createSolanaRpc(rpc_endpoint);
 
         this.update(max_requests, max_data);
     }
@@ -158,82 +132,117 @@ class RpcConnection
         this.max_data = max_data;
     }
 
-    async getGenesisHash()
+    // Returns the cluster's genesis hash, as a string
+    async get_genesis_hash()
     {
-        return this.execute(() => { return this.connection.getGenesisHash(); }, 1024);
+        return this.execute(() => this.rpc.getGenesisHash().send(), 1024);
     }
 
-    async getAccountInfo(address, config)
+    // Returns the account at address, as normalize_account returns it, or null if there is none.  data_slice, if
+    // given, is { offset, length }: only those bytes of the account's data are returned.
+    async get_account(address, data_slice)
     {
-        let pubkey = make_pubkey(address);
-        return this.execute(() => { return this.connection.getAccountInfo(pubkey, config); }, 10 * 1024);
-    }
-
-    async getParsedAccountInfo(address, config)
-    {
-        let pubkey = make_pubkey(address);
-        return this.execute(() => { return this.connection.getParsedAccountInfo(pubkey, config); }, 10 * 1024);
-    }
-
-    async getEpochInfo()
-    {
-        return this.execute(() => { return this.connection.getEpochInfo(); }, 1024);
-    }
-
-    async getBlockTime(absoluteSlot)
-    {
-        return this.execute(() => { return this.connection.getBlockTime(absoluteSlot); }, 1024);
-    }
-
-    async getMultipleAccountsInfo(block_addresses)
-    {
-        let block_pubkeys = block_addresses.map((address) => { return make_pubkey(address); });
-        return this.execute(() => { return this.connection.getMultipleAccountsInfo(block_pubkeys); },
-                            block_pubkeys.length * 10 * 1024);
-    }
-
-    async getBalance(wallet_address)
-    {
-        let wallet_pubkey = make_pubkey(wallet_address);
-        return this.execute(() => { return this.connection.getBalance(wallet_pubkey); }, 1024);
-    }
-
-    async getParsedTokenAccountsByOwner(wallet_address, program_address)
-    {
-        let wallet_pubkey = make_pubkey(wallet_address);
-        let config;
-        if (program_address == null) {
-            config = null;
+        let config = { encoding : "base64", commitment : "confirmed" };
+        if (data_slice != null) {
+            config.dataSlice = data_slice;
         }
-        else {
-            config = { programId : make_pubkey(program_address) };
-        }
-        return this.execute(() => { return this.connection.getParsedTokenAccountsByOwner(wallet_pubkey, config); },
-                            20 * 1024);
+        let result = await this.execute(() => this.rpc.getAccountInfo(Kit.address(address), config).send(), 10 * 1024);
+        return normalize_account(result.value);
     }
 
-    async getParsedProgramAccounts(program_address, config)
+    // Returns the accounts at addresses, in the same order, each as get_account returns it
+    async get_multiple_accounts(addresses)
     {
-        let program_pubkey = make_pubkey(program_address);
-        return this.execute(() => { return this.connection.getParsedProgramAccounts(program_pubkey, config); },
-                            20 * 1024);
+        let result = await this.execute(() => this.rpc.getMultipleAccounts(addresses.map((a) => Kit.address(a)),
+                                                                           { encoding : "base64",
+                                                                             commitment : "confirmed" }).send(),
+                                        addresses.length * 10 * 1024);
+        return result.value.map(normalize_account);
     }
 
-    async getProgramAccounts(program_address, config)
+    // Returns the account at address as the RPC server parses it ("jsonParsed" encoding): { lamports : BigInt, data },
+    // where data is the server's parsed form ({ parsed, program, space }) for accounts that it can parse.  Returns
+    // null if there is no account.
+    async get_parsed_account(address)
     {
-        let program_pubkey = make_pubkey(program_address);
-        return this.execute(() => { return this.connection.getProgramAccounts(program_pubkey, config); },
-                            20 * 1024);
+        let result = await this.execute(() => this.rpc.getAccountInfo(Kit.address(address),
+                                                                      { encoding : "jsonParsed",
+                                                                        commitment : "confirmed" }).send(),
+                                        10 * 1024);
+        return (result.value == null) ? null : { lamports : BigInt(result.value.lamports), data : result.value.data };
     }
 
-    async getLatestBlockhash()
+    // Returns { epoch, absoluteSlot, blockHeight, slotIndex, slotsInEpoch }, each a BigInt
+    async get_epoch_info()
     {
-        return this.execute(() => { return this.connection.getLatestBlockhash(); }, 1024);
+        return this.execute(() => this.rpc.getEpochInfo({ commitment : "confirmed" }).send(), 1024);
     }
 
-    async sendRawTransaction(raw_tx)
+    // Returns the estimated unix timestamp of the slot, as a BigInt, or null if it is not available
+    async get_block_time(slot)
     {
-        return this.execute(() => { return this.connection.sendRawTransaction(raw_tx); }, 5 * 1024);
+        return this.execute(() => this.rpc.getBlockTime(BigInt(slot)).send(), 1024);
+    }
+
+    // Returns the current block height, as a BigInt
+    async get_block_height()
+    {
+        return this.execute(() => this.rpc.getBlockHeight({ commitment : "confirmed" }).send(), 1024);
+    }
+
+    // Returns the lamports held by the account at address, as a BigInt
+    async get_balance(address)
+    {
+        let result = await this.execute(() => this.rpc.getBalance(Kit.address(address),
+                                                                  { commitment : "confirmed" }).send(),
+                                        1024);
+        return BigInt(result.value);
+    }
+
+    // Returns the token accounts owned by owner_address that belong to the token program at program_address, as
+    // [ { address, account } ], where account is as get_parsed_account returns it
+    async get_parsed_token_accounts_by_owner(owner_address, program_address)
+    {
+        let result = await this.execute(() => this.rpc.getTokenAccountsByOwner(
+            Kit.address(owner_address), { programId : Kit.address(program_address) },
+            { encoding : "jsonParsed", commitment : "confirmed" }).send(), 20 * 1024);
+        return result.value.map((a) => ({ address : a.pubkey,
+                                          account : { lamports : BigInt(a.account.lamports),
+                                                      data : a.account.data } }));
+    }
+
+    // Returns the accounts of the program at program_address that pass filters (as the RPC server's
+    // getProgramAccounts takes them), as [ { address, account } ], where account is as get_parsed_account returns it
+    async get_parsed_program_accounts(program_address, filters)
+    {
+        let result = await this.execute(() => this.rpc.getProgramAccounts(
+            Kit.address(program_address), { encoding : "jsonParsed", commitment : "confirmed", filters : filters })
+                                        .send(), 20 * 1024);
+        return result.map((a) => ({ address : a.pubkey,
+                                    account : { lamports : BigInt(a.account.lamports), data : a.account.data } }));
+    }
+
+    // Returns the lamports that an account of data_length bytes must hold to be rent exempt, as a BigInt
+    async get_minimum_balance_for_rent_exemption(data_length)
+    {
+        return this.execute(() => this.rpc.getMinimumBalanceForRentExemption(BigInt(data_length)).send(), 1024);
+    }
+
+    // Returns { blockhash, lastValidBlockHeight }: a recent blockhash, and the last block height (a BigInt) at which
+    // a transaction using it can be processed, as @solana/kit's setTransactionMessageLifetimeUsingBlockhash takes them
+    async get_latest_blockhash()
+    {
+        let result = await this.execute(() => this.rpc.getLatestBlockhash({ commitment : "confirmed" }).send(), 1024);
+        return result.value;
+    }
+
+    // Sends the base64 encoded wire transaction to the cluster, returning its signature as a base58 string
+    async send_transaction(wire_transaction_base64)
+    {
+        return this.execute(() => this.rpc.sendTransaction(wire_transaction_base64,
+                                                           { encoding : "base64",
+                                                             preflightCommitment : "confirmed" }).send(),
+                            5 * 1024);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -264,12 +273,12 @@ class RpcConnection
 
         // If there is a limit on the maximum number of requests, make sure that limit is not exceeded
         if ((this.max_requests != null) && (this.requests_array.length >= this.max_requests.limit)) {
-            throw new Error(this.connection.rpcEndpoint + ": Too many outstanding requests");
+            throw new Error(this.rpc_endpoint + ": Too many outstanding requests");
         }
 
         // If there is a limit on the maximum amount of data, make sure that limit is not exceeded
         if ((this.max_data != null) && ((this.data_sum + data_size) > this.max_data.limit)) {
-            throw new Error(this.connection.rpcEndpoint + ": Too much request data");
+            throw new Error(this.rpc_endpoint + ": Too much request data");
         }
 
         // Add timeouts for some huge number we call "long enough" -- 10 years
@@ -386,8 +395,7 @@ class RpcConnections
                         rpc_endpoint : "https://api.mainnet-beta.solana.com",
                         max_requests : { limit : 40, duration : 10 * 1000 },
                         max_data : { limit : 100 * 1000 * 1000, duration : 30 * 1000 }
-                    },
-                    "https://ssc-dao.genesysgo.net"
+                    }
                 ];
         }
         else if (!Array.isArray(rpc_endpoint_descriptors)) {
@@ -416,7 +424,7 @@ class RpcConnections
                                                    descriptor.max_data);
 
                 // Check to make sure that the genesis hash is consistent
-                let genesis_hash = await rpc_connection.getGenesisHash();
+                let genesis_hash = await rpc_connection.get_genesis_hash();
 
                 if (this.genesis_hash == null) {
                     this.genesis_hash = genesis_hash;
@@ -539,7 +547,7 @@ class Cluster
 
         if (default_slot_duration_seconds == null) {
             if ((rpc_connections.array.length == 1) &&
-                (rpc_connections.array[0].rpcEndpoint == "http://localhost:8899")) {
+                (rpc_connections.array[0].rpc_endpoint == "http://localhost:8899")) {
                 default_slot_duration_seconds = 0.1;
             }
             else {
@@ -549,7 +557,7 @@ class Cluster
 
         if (slots_per_epoch == null) {
             if ((rpc_connections.array.length == 1) &&
-                (rpc_connections.array[0].rpcEndpoint == "http://localhost:8899")) {
+                (rpc_connections.array[0].rpc_endpoint == "http://localhost:8899")) {
                 slots_per_epoch = 2000;
             }
             else {
@@ -700,11 +708,8 @@ class Cluster
     {
         if (account == null) {
             account = await this.rpc_connections.run((rpc_connection) => {
-                return rpc_connection.getParsedAccountInfo(stake_account_address);
+                return rpc_connection.get_parsed_account(stake_account_address);
             });
-            if (account != null) {
-                account = account.value;
-            }
         }
 
         if (account == null) {
@@ -719,7 +724,7 @@ class Cluster
         }
         else {
             let delegation = account.data.parsed.info.stake.delegation;
-            stake.delegation = { lamports : delegation.stake, vote_account : delegation.voter };
+            stake.delegation = { lamports : BigInt(delegation.stake), vote_account : delegation.voter };
 
             // If the name of the stake account hasn't been fetched in 1 hour, fetch it now
             let validator_name = await this.get_validator_name(delegation.voter);
@@ -750,22 +755,21 @@ class Cluster
     async get_authority()
     {
         let account = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(g_program_authority_pubkey);
+            return rpc_connection.get_account(g_program_authority_address);
         }, "get authority");
 
-        // The authority account's data is an Authority (program/inc/authority.h): a 4 byte data type, 4 bytes of
-        // padding, and the 8 byte escrow total
-        if ((account == null) || (account.data == null) || (account.data.length != 16) ||
-            (buffer_le_u32(account.data, 0) != DATA_TYPE_AUTHORITY)) {
+        let decoded = (account == null) ? null : decode_authority(account.data);
+
+        if (decoded == null) {
             return null;
         }
 
         let rent_exempt_minimum_lamports = await this.get_rent_exempt_minimum(account.data.length);
 
         let authority = { address : g_program_authority_address,
-                          lamports : BigInt(account.lamports),
+                          lamports : account.lamports,
                           rent_exempt_minimum_lamports : rent_exempt_minimum_lamports,
-                          mystery_escrow_lamports : buffer_le_u64(account.data, 8) };
+                          mystery_escrow_lamports : decoded.mystery_escrow_lamports };
 
         // The account is required to hold its rent exempt minimum plus the escrow; anything beyond that is excess
         authority.excess_lamports = excess_of(authority.lamports,
@@ -777,9 +781,9 @@ class Cluster
     // Returns as a BigInt the rent exempt minimum, in lamports, of an account with data_length bytes of data
     async get_rent_exempt_minimum(data_length)
     {
-        return BigInt(await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getMinimumBalanceForRentExemption(data_length);
-        }, "get rent exempt minimum"));
+        return this.rpc_connections.run((rpc_connection) => {
+            return rpc_connection.get_minimum_balance_for_rent_exemption(data_length);
+        }, "get rent exempt minimum");
     }
 
     // Causes an entry to be immediately refreshed.  If this causes the Entry to change, asynchronously a callback
@@ -787,11 +791,11 @@ class Cluster
     async refresh_entry(entry)
     {
         let block_result = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(entry.block.address);
+            return rpc_connection.get_account(entry.block.address);
         }, "refresh entry update block");
 
         let entry_result = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(entry.address);
+            return rpc_connection.get_account(entry.address);
         }, "refresh entry update entry");
 
         let block_updated = entry.block.update(block_result.data);
@@ -813,18 +817,19 @@ class Cluster
     async update_clock()
     {
         let epoch_info = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getEpochInfo();
+            return rpc_connection.get_epoch_info();
         }, "update_clock get epoch info");
 
         let block_time = await this.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getBlockTime(epoch_info.absoluteSlot);
+            return rpc_connection.get_block_time(epoch_info.absoluteSlot);
         }, "update_clock get block time");
 
-        // Update the current data
+        // Update the current data.  The RPC server's values are BigInts; slots, epochs, and timestamps are kept as
+        // Numbers, which they always fit, so that get_clock can do arithmetic with them.
         this.confirmed_query_time = Date.now();
-        this.confirmed_epoch = epoch_info.epoch;
-        this.confirmed_slot = epoch_info.absoluteSlot;
-        this.confirmed_unix_timestamp = block_time;
+        this.confirmed_epoch = Number(epoch_info.epoch);
+        this.confirmed_slot = Number(epoch_info.absoluteSlot);
+        this.confirmed_unix_timestamp = (block_time == null) ? null : Number(block_time);
     }
 
     async update_blocks(group_number, block_number)
@@ -837,7 +842,7 @@ class Cluster
 
         let results = await this.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getMultipleAccountsInfo(block_addresses);
+                return rpc_connection.get_multiple_accounts(block_addresses);
             }, "update blocks get accounts");
 
         let entries_promises = [ ];
@@ -902,7 +907,7 @@ class Cluster
 
         let results = await this.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getMultipleAccountsInfo(entry_addresses);
+                return rpc_connection.get_multiple_accounts(entry_addresses);
             }, "update entries query accounts");
 
         let idx;
@@ -956,11 +961,7 @@ class Cluster
 
         try {
             result = await this.rpc_connections.run((rpc_connection) => {
-                return rpc_connection.getAccountInfo(vote_account,
-                                                     {
-                                                         dataSlice : { offset : 4,
-                                                                       length : 32 }
-                                                 });
+                return rpc_connection.get_account(vote_account, { offset : 4, length : 32 });
             });
         }
         catch (error) {
@@ -972,33 +973,17 @@ class Cluster
             return null;
         }
 
-        let validator_account = new SolanaWeb3.PublicKey(result.data).toBase58();
+        let validator_account = buffer_address(result.data, 0);
 
         try {
             result = await this.rpc_connections.run((rpc_connection) => {
                 // Fetch the validator info account for the vote account
-                return rpc_connection.getParsedProgramAccounts(g_config_program_address,
-                                                               {
-                                                                   filters : [
-                                                                       {
-                                                                           memcmp :
-                                                                           {
-                                                                               // Config program entry that is storing
-                                                                               // validator info
-                                                                               offset : 1,
-                                                                               bytes : g_validator_info_address
-                                                                           }
-                                                                       },
-                                                                       {
-                                                                           memcmp :
-                                                                           {
-                                                                               // Validator info for the vote account
-                                                                               offset : 34,
-                                                                               bytes : validator_account
-                                                                           }
-                                                                       }
-                                                                   ]
-                                                               });
+                return rpc_connection.get_parsed_program_accounts(g_config_program_address, [
+                    // Config program entry that is storing validator info
+                    { memcmp : { offset : 1n, bytes : g_validator_info_address, encoding : "base58" } },
+                    // Validator info for the vote account
+                    { memcmp : { offset : 34n, bytes : validator_account, encoding : "base58" } }
+                ]);
             });
         }
         catch (error) {
@@ -1034,24 +1019,10 @@ class Block
     {
         this.entries = entries;
         this.address = address;
-        this.group_number = buffer_le_u32(data, 8);
-        this.block_number = buffer_le_u32(data, 12);
-        this.total_entry_count = buffer_le_u16(data, 16);
-        this.total_mystery_count = buffer_le_u16(data, 18);
-        this.mystery_phase_duration = buffer_le_u32(data, 20);
-        this.mystery_start_price_lamports = buffer_le_u64(data, 24);
-        this.reveal_period_duration = buffer_le_u32(data, 32);
-        this.minimum_price_lamports = buffer_le_u64(data, 40);
-        this.has_auction = buffer_le_u32(data, 48);
-        this.duration = buffer_le_u32(data, 52);
-        this.non_auction_start_price_lamports = buffer_le_u64(data, 56);
-        this.whitelist_duration = buffer_le_u32(data, 64);
-        this.added_entries_count = buffer_le_u16(data, 72);
-        // The time at which the block was completed (0 until then), which is also the beginning of the life span of
-        // each of its entries, over which their Ki harvests are reduced
-        this.block_start_timestamp = Number(buffer_le_s64(data, 80));
-        this.mysteries_sold_count = buffer_le_u16(data, 88);
-        this.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 96));
+        // Decode the block's fields (see decode_block in shinobi_immortals_base.js); block_start_timestamp is the time
+        // at which the block was completed (0 until then), which is also the beginning of the life span of each of
+        // its entries, over which their Ki harvests are reduced
+        Object.assign(this, decode_block(data));
     }
 
     update(data)
@@ -1140,72 +1111,8 @@ class Entry
     {
         this.block = block;
         this.address = address;
-        this.group_number = buffer_le_u32(data, 36);
-        this.block_number = buffer_le_u32(data, 40);
-        this.entry_index = buffer_le_u16(data, 44);
-        this.mint_address = buffer_address(data, 46);
-        this.token_address = buffer_address(data, 78);
-        this.metaplex_metadata_address = buffer_address(data, 110);
-        this.minimum_price_lamports = buffer_le_u64(data, 144);
-        this.has_auction = data[152];
-        this.duration = buffer_le_u32(data, 156);
-        this.non_auction_start_price_lamports = buffer_le_u64(data, 160);
-        this.reveal_sha256 = buffer_sha256(data, 168);
-        this.reveal_timestamp = Number(buffer_le_s64(data, 200));
-        this.purchase_price_lamports = buffer_le_u64(data, 208);
-        this.refund_awarded = data[216];
-        // Nonzero once the entry's metadata has been reauthorized to another program; the entry is then retired
-        this.reauthorized = data[217];
-        this.auction_highest_bid_lamports = buffer_le_u64(data, 224);
-        this.auction_winning_bid_address = buffer_address(data, 232);
-        this.owned_stake_account = buffer_address(data, 264);
-        this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 296);
-        this.level = data[304];
-        this.most_recent_ki_applied_window = buffer_le_u64(data, 3160);
-        this.ki_applied_this_window = buffer_le_u64(data, 3168);
-        this.total_level_credits = buffer_le_u64(data, 3176);
-        // The number of whole epochs that the entry has been staked with stake active at Shinobi Systems, as last
-        // counted by the program, and the epoch up to which it has been counted (see program/inc/entry.h)
-        this.epochs_staked = buffer_le_u64(data, 3184);
-        this.epochs_staked_counted_to_epoch = buffer_le_u64(data, 3192);
-
-        this.metadata_level_1_credits = buffer_le_u32(data, 308);
-        this.metadata_random = [ buffer_le_u32(data, 312),
-                                 buffer_le_u32(data, 316),
-                                 buffer_le_u32(data, 320),
-                                 buffer_le_u32(data, 324),
-                                 buffer_le_u32(data, 328),
-                                 buffer_le_u32(data, 332),
-                                 buffer_le_u32(data, 336),
-                                 buffer_le_u32(data, 340),
-                                 buffer_le_u32(data, 344),
-                                 buffer_le_u32(data, 348),
-                                 buffer_le_u32(data, 352),
-                                 buffer_le_u32(data, 356),
-                                 buffer_le_u32(data, 360),
-                                 buffer_le_u32(data, 364),
-                                 buffer_le_u32(data, 368),
-                                 buffer_le_u32(data, 372) ];
-        this.level_metadata = [ ];
-
-        for (let i = 0; i < 9; i += 1) {
-            this.level_metadata[i] = {
-                // form is a uint32_t in LevelMetadata (program/inc/entry.h)
-                form : buffer_le_u32(data, 376 + (i * 308)),
-                skill : data[380 + (i * 308)],
-                ki_factor : buffer_le_u32(data, 384 + (i * 308)),
-                name : buffer_string(data, 388 + (i * 308), 32),
-                title : buffer_string(data, 420 + (i * 308), 32),
-                uri : buffer_string(data, 452 + (i * 308), 200),
-                uri_contents_sha256 : buffer_sha256(data, 652 + (i * 308))
-            };
-        }
-
-        // Expected annual stake reward rate in basis points, which calibrates the level credits curve
-        this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3148);
-
-        // The fraction, of UINT32_MAX, by which Ki harvests are reduced for each day of the entry's life span
-        this.metadata_ki_harvest_reduction_per_day = buffer_le_u32(data, 3152);
+        // Decode the entry's fields (see decode_entry in shinobi_immortals_base.js)
+        Object.assign(this, decode_entry(data));
     }
 
     update(data)
@@ -1218,7 +1125,7 @@ class Entry
         if (new_entry.reveal_sha256 != this.reveal_sha256) {
             this.reveal_sha256 = new_entry.reveal_sha256;
             // reveal_timestamp can only change when reveal_sha256 changes
-            this.reveal_timestamp = Number(buffer_le_s64(data, 200));
+            this.reveal_timestamp = new_entry.reveal_timestamp;
             changed = true;
         }
 
@@ -1308,7 +1215,7 @@ class Entry
     async get_metaplex_metadata_uri(rpc_connections)
     {
         let result = await rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(this.metaplex_metadata_address);
+            return rpc_connection.get_account(this.metaplex_metadata_address);
         }, "fetch metaplex metadata");
 
         let data = result.data;
@@ -1389,26 +1296,26 @@ class Entry
     get_price(clock)
     {
         if (this.get_entry_state(clock) == EntryState.PreRevealUnowned) {
-            return Entry.compute_price(BigInt(this.block.mystery_phase_duration),
-                                       this.block.mystery_start_price_lamports,
-                                       this.block.minimum_price_lamports,
-                                       Entry.seconds_since(clock, this.block.block_start_timestamp));
+            return compute_price(BigInt(this.block.mystery_phase_duration),
+                                 this.block.mystery_start_price_lamports,
+                                 this.block.minimum_price_lamports,
+                                 Entry.seconds_since(clock, this.block.block_start_timestamp));
         }
         else if (this.has_auction) {
             return this.block.minimum_price_lamports;
         }
         else {
-            return Entry.compute_price(BigInt(this.duration),
-                                       this.non_auction_start_price_lamports,
-                                       this.minimum_price_lamports,
-                                       Entry.seconds_since(clock, this.reveal_timestamp));
+            return compute_price(BigInt(this.duration),
+                                 this.non_auction_start_price_lamports,
+                                 this.minimum_price_lamports,
+                                 Entry.seconds_since(clock, this.reveal_timestamp));
         }
     }
 
     // This only returns a valid value if the entry state is InAuction
     get_auction_minimum_bid_lamports(clock)
     {
-        return Entry.compute_minimum_bid(this.minimum_price_lamports, this.auction_highest_bid_lamports);
+        return compute_minimum_bid(this.minimum_price_lamports, this.auction_highest_bid_lamports);
     }
 
     // This only returns a valid value if the entry state is InAuction.  A bid placed near the end of an auction extends
@@ -1441,11 +1348,7 @@ class Entry
         // layout is: state (u32) at 0, then Meta (rent_exempt_reserve, authorities, lockup) to 124, then the
         // delegation: voter_pubkey at 124, stake at 156, activation_epoch at 164, deactivation_epoch at 172.
         let result = await rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(this.owned_stake_account,
-                                                 {
-                                                     dataSlice : { offset : 0,
-                                                                   length : 180 }
-                                                 });
+            return rpc_connection.get_account(this.owned_stake_account, { offset : 0, length : 180 });
         }, "fetch stake account");
 
         if ((result == null) || (result.data == null) || (result.data.length < 180)) {
@@ -1464,7 +1367,7 @@ class Entry
 
         // A stake account that is still activating has not earned anything yet
         let epoch_info = await rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getEpochInfo();
+            return rpc_connection.get_epoch_info();
         }, "fetch epoch info");
 
         if ((epoch_info == null) || (activation_epoch >= BigInt(epoch_info.epoch))) {
@@ -1477,25 +1380,24 @@ class Entry
         }
 
         // Apply the effective stake curve to what was earned
-        let effective_earnings = Entry.compute_effective_stake_earnings(
-            stake - this.owned_last_ki_harvest_stake_account_lamports, stake);
+        let earnings = stake - this.owned_last_ki_harvest_stake_account_lamports;
+        let effective_earnings = compute_effective_stake_earnings(earnings, stake);
 
         // Reduce it to the fraction that the entry retains at the current point of its life span, which begins when
         // its block was completed, and is measured in whole days.  The cluster's current time is the block time of the
         // slot that the epoch info was fetched at, just as update_clock obtains it.
         let block_time = await rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getBlockTime(epoch_info.absoluteSlot);
+            return rpc_connection.get_block_time(epoch_info.absoluteSlot);
         }, "fetch block time");
         if (block_time == null) {
             return 0n;
         }
         let lifespan_seconds = BigInt(block_time) - BigInt(this.block.block_start_timestamp);
         let lifespan_days = (lifespan_seconds > 0n) ? (lifespan_seconds / 86400n) : 0n;
-        let retention = Entry.compute_ki_harvest_retention(this.metadata_ki_harvest_reduction_per_day, lifespan_days);
-        let retained_earnings = (effective_earnings * retention) / 4294967295n;
+        let retention = compute_ki_harvest_retention(this.metadata_ki_harvest_reduction_per_day, lifespan_days);
 
-        // Then convert to whole Ki at the current level's ki_factor
-        return (retained_earnings * BigInt(this.level_metadata[this.level].ki_factor)) / BigInt(LAMPORTS_PER_SOL);
+        // Then convert the retained earnings to whole Ki at the current level's ki_factor
+        return compute_retained_ki_harvest(effective_earnings, this.level_metadata[this.level].ki_factor, retention);
     }
 
     // Private implementation follows ---------------------------------------------------------------------------------
@@ -1508,99 +1410,6 @@ class Entry
         let elapsed = clock.unix_timestamp - timestamp;
 
         return BigInt((elapsed > 0) ? elapsed : 0);
-    }
-
-    // Mirrors compute_ki_harvest_retention in program/util/util_calculations.c: returns as a BigInt the fraction, of
-    // UINT32_MAX, of a Ki harvest that is retained by an entry whose life span is lifespan_days whole days (a BigInt)
-    // and whose harvests are reduced by reduction_per_day (a fraction of UINT32_MAX) per day.  It is computed by
-    // repeated squaring, rounding down each product to a whole fraction of UINT32_MAX exactly as the program does, so
-    // that the result is identical.
-    static compute_ki_harvest_retention(reduction_per_day, lifespan_days)
-    {
-        const ONE = 4294967295n;
-        let base = ONE - BigInt(reduction_per_day);
-        let result = ONE;
-        while (lifespan_days > 0n) {
-            if (lifespan_days & 1n) {
-                result = (result * base) / ONE;
-            }
-            if (result == 0n) {
-                break;
-            }
-            base = (base * base) / ONE;
-            lifespan_days >>= 1n;
-        }
-        return result;
-    }
-
-    // Mirrors compute_effective_stake_earnings in program/util/util_calculations.c, in BigInt lamports.  With
-    // K = EFFECTIVE_STAKE_CEILING_SOL (50 SOL) and x the stake, earnings are scaled by K(K + x) / (K(K + x) + x^2).
-    // The program computes x and K in units of 100 lamports, made ten times larger for as long as x is more than
-    // 2,000,000,000 units, and computes the floor of the scaled earnings exactly; this does the same.
-    static compute_effective_stake_earnings(earnings_lamports, stake_lamports)
-    {
-        let stake_units = stake_lamports / 100n;
-        let ceiling_units = 50n * (1000000000n / 100n);
-        while (stake_units > 2000000000n) {
-            stake_units /= 10n;
-            ceiling_units /= 10n;
-        }
-
-        let numerator = ceiling_units * (ceiling_units + stake_units);
-        let denominator = numerator + (stake_units * stake_units);
-
-        return (earnings_lamports * numerator) / denominator;
-    }
-
-    // Mirrors compute_price in program/util/util_calculations.c, in BigInt lamports.  With T = total_seconds,
-    // t = seconds_elapsed and k = PRICE_CURVE_STEEPNESS (1069), before the end of the sale the price is
-    //   end_price + floor(floor((start_price - end_price) * T / (kt + T)) * k(T - t) / ((k + 1)T)),
-    // which is the curve 1/(kx + 1) - 1/(k + 1), x = t/T, scaled between the start and end prices: it falls to 1/10
-    // of the way from end_price to start_price after 1/120 of the sale (2 hours of a 10 day sale), then keeps falling
-    // more and more slowly to end_price at the end.  BigInt division of non-negative values rounds down, as the
-    // program's does.
-    static compute_price(total_seconds, start_price, end_price, seconds_elapsed)
-    {
-        const PRICE_CURVE_STEEPNESS = 1069n;
-
-        if (seconds_elapsed >= total_seconds) {
-            return end_price;
-        }
-
-        let added = ((start_price - end_price) * total_seconds) /
-            ((PRICE_CURVE_STEEPNESS * seconds_elapsed) + total_seconds);
-
-        added = (added * PRICE_CURVE_STEEPNESS * (total_seconds - seconds_elapsed)) /
-            ((PRICE_CURVE_STEEPNESS + 1n) * total_seconds);
-
-        return end_price + added;
-    }
-
-    // Mirrors compute_minimum_bid in program/util/util_calculations.c: the first bid must be at least the initial
-    // minimum; every later bid must exceed the current highest bid by at least MINIMUM_BID_INCREMENT_BPS of it,
-    // rounded up and at least 1 lamport, saturating at the largest u64 value.  Returns 0 if no bid is possible.
-    static compute_minimum_bid(initial_minimum_bid, current_max_bid)
-    {
-        const U64_MAX = 18446744073709551615n;
-        // MINIMUM_BID_INCREMENT_BPS: 500 basis points, which is 5%
-        const MINIMUM_BID_INCREMENT_BPS = 500n;
-
-        if (current_max_bid == U64_MAX) {
-            return 0n;
-        }
-
-        if (current_max_bid < initial_minimum_bid) {
-            return initial_minimum_bid;
-        }
-
-        let increment = ((current_max_bid * MINIMUM_BID_INCREMENT_BPS) + 9999n) / 10000n;
-        if (increment == 0n) {
-            increment = 1n;
-        }
-
-        let result = current_max_bid + increment;
-
-        return (result > U64_MAX) ? U64_MAX : result;
     }
 }
 
@@ -1622,6 +1431,9 @@ class Wallet
         this.wallet_address_holder = { wallet_address : null };
 
         this.set_wallet_address(wallet_address);
+
+        // While a transaction is being signed, how often to check whether its blockhash has expired
+        this.expiry_check_interval_ms = 5000;
 
         // Fetch SOL balance only twice every 5 seconds
         // this.last_balance_fetch_time = 0;
@@ -1668,6 +1480,7 @@ class Wallet
         return (this.wallet_address_holder == null) ? null : this.wallet_address_holder.wallet_address;
     }
 
+    // Returns the wallet's balance, in lamports, as a BigInt
     async get_sol_balance()
     {
         // Save wallet_address_holder so that we know if it changed
@@ -1688,7 +1501,7 @@ class Wallet
 
             // Wait on getting SOL balance of wallet
             let sol_balance = await this.cluster.rpc_connections.run((rpc_connection) => {
-                return rpc_connection.getBalance(wallet_address);
+                return rpc_connection.get_balance(wallet_address);
             }, "update sol balance");
 
             if (wallet_address_holder == this.wallet_address_holder) {
@@ -1700,6 +1513,7 @@ class Wallet
         return this.sol_balance;
     }
 
+    // Returns the wallet's Ki, in whole Ki, as a BigInt
     async get_ki_balance()
     {
         await this.update_token_data();
@@ -1715,8 +1529,8 @@ class Wallet
         return this.entry_addresses.values();
     }
 
-    // Returns an iterator over { entry_address, bid_address, lamports }.  lamports is the number of lamports in the
-    // bid account, which could be more than the bid if lamports were added post-bid.
+    // Returns an iterator over { entry_address, bid_address, lamports }.  lamports (a BigInt) is the number of
+    // lamports in the bid account, which could be more than the bid if lamports were added post-bid.
     async get_bids()
     {
         await this.update_token_data();
@@ -1724,13 +1538,13 @@ class Wallet
         return this.bids_by_entry_address.values();
     }
 
-    // Returns an interator over { address : string,
-    //                             lamports : int,
-    //                             delegation : null or { lamports : int,
-    //                                                    vote_account : string,
-    //                                                    validator_name : string or null },
-    //                             is_immortal_staked : true or null
-    //                           }
+    // Returns an iterator over { address : string,
+    //                            lamports : BigInt (only if not delegated),
+    //                            delegation : null or { lamports : BigInt,
+    //                                                   vote_account : string,
+    //                                                   validator_name : string or null },
+    //                            is_immortal_staked : true or null
+    //                          }
     async get_stakes()
     {
         await this.update_stakes();
@@ -1782,10 +1596,11 @@ class Wallet
             ((now - this.last_tokens_fetch_time) > 30000)) {
             let results = await this.cluster.rpc_connections.run((rpc_connection) =>
                 {
-                    return rpc_connection.getParsedTokenAccountsByOwner(wallet_address, g_spl_token_program_address);
+                    return rpc_connection.get_parsed_token_accounts_by_owner(wallet_address,
+                                                                             g_spl_token_program_address);
                 }, "update token data token accounts");
 
-            let new_ki_balance = 0;
+            let new_ki_balance = 0n;
 
             let new_entry_addresses = new Set();
 
@@ -1795,9 +1610,9 @@ class Wallet
 
             let promises = [ ];
 
-            for (let idx = 0; idx < results.value.length; idx++) {
-                let account = results.value[idx].account;
-                let address = results.value[idx].pubkey.toBase58();
+            for (let idx = 0; idx < results.length; idx++) {
+                let account = results[idx].account;
+                let address = results[idx].address;
 
                 if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
                     (account.data.parsed.info == null)) {
@@ -1834,7 +1649,7 @@ class Wallet
                 else if (mint_address == g_ki_mint_address) {
                     // Ki tokens on chain have 1 decimal place, but in UI representations, they are shown without the
                     // decimal
-                    new_ki_balance += ((account.data.parsed.info.tokenAmount.amount / 10) | 0);
+                    new_ki_balance += (BigInt(account.data.parsed.info.tokenAmount.amount) / 10n);
                 }
                 else {
                     // Add an async function to check to see if its update authority is the Shinobi Immortals program
@@ -1869,8 +1684,6 @@ class Wallet
             return null;
         }
 
-        let wallet_pubkey = make_pubkey(wallet_address);
-
         let now = Date.now();
 
         // If never fetched stakes, fetch them
@@ -1879,19 +1692,11 @@ class Wallet
             ((now - this.last_stakes_fetch_time) > 30000)) {
             let results = await this.cluster.rpc_connections.run((rpc_connection) =>
                 {
-                    return rpc_connection.getParsedProgramAccounts(g_stake_program_address,
-                                                                   {
-                                                                       filters : [
-                                                                           {
-                                                                               memcmp :
-                                                                               {
-                                                                                   offset : 44,
-                                                                                   bytes : wallet_pubkey.toBase58()
-                                                                               }
-                                                                           }
-                                                                       ]
-                                                                   });
-                }, "update token data token accounts");
+                    // The withdraw authority of a stake account is at offset 44 of its data
+                    return rpc_connection.get_parsed_program_accounts(g_stake_program_address, [
+                        { memcmp : { offset : 44n, bytes : wallet_address, encoding : "base58" } }
+                    ]);
+                }, "update stakes stake accounts");
 
             if (wallet_address_holder != this.wallet_address_holder) {
                 return;
@@ -1903,7 +1708,7 @@ class Wallet
 
             for (let idx = 0; idx < results.length; idx++) {
                 let account = results[idx].account;
-                let pubkey = results[idx].pubkey;
+                let stake_address = results[idx].address;
 
                 if ((account == null) || (account.data == null) || (account.data.parsed == null) ||
                     (account.data.parsed.info == null)) {
@@ -1916,10 +1721,9 @@ class Wallet
                     continue;
                 }
 
-                // Ignore stake accounts with lockup
-                if (account.data.parsed.info.lockup &&
-                    ((account.data.parsed.info.lockup.epoch != 0) ||
-                     (account.data.parsed.info.lockup.unixTimestamp != 0))) {
+                // Ignore stake accounts with lockup (which the RPC server gives in the stake account's meta)
+                let lockup = account.data.parsed.info.meta.lockup;
+                if (lockup && ((lockup.epoch != 0) || (lockup.unixTimestamp != 0))) {
                     continue;
                 }
 
@@ -1929,7 +1733,7 @@ class Wallet
                     continue;
                 }
 
-                let stake = await this.cluster.get_stake_account(pubkey.toBase58(), account);
+                let stake = await this.cluster.get_stake_account(stake_address, account);
 
                 if (stake != null) {
                     new_stakes_by_address.set(stake.address, stake);
@@ -1966,11 +1770,7 @@ class Wallet
         // Read the mint out of the bid account
         let result = await this.cluster.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getAccountInfo(bid_address,
-                                                     {
-                                                         dataSlice : { offset : 4,
-                                                                       length : 32 }
-                                                     });
+                return rpc_connection.get_account(bid_address, { offset : 4, length : 32 });
             }, "fetch bid account");
 
         let entry_mint_address = buffer_address(result.data, 0);
@@ -1988,7 +1788,7 @@ class Wallet
     {
         // Load the metaplex metadata
         let result = await this.cluster.rpc_connections.run((rpc_connection) => {
-            return rpc_connection.getAccountInfo(get_metaplex_metadata_address(mint_address));
+            return rpc_connection.get_account(get_metaplex_metadata_address(mint_address));
         }, "fetch metaplex metadata");
 
         if (result == null) {
@@ -2003,73 +1803,87 @@ class Wallet
         }
     }
 
+    // Returns the admin's address as a string, or null if it cannot be determined
     async fetch_admin_address()
     {
         let result = await this.cluster.rpc_connections.run((rpc_connection) =>
             {
-                return rpc_connection.getAccountInfo(g_program_state_address,
-                                                     {
-                                                         dataSlice : { offset : 4,
-                                                                       length : 32 }
-                                                     });
+                return rpc_connection.get_account(g_program_state_address);
             }, "fetch admin address");
 
-        if (result == null) {
-            return null;
+        let program_state = (result == null) ? null : decode_program_state(result.data);
+
+        return (program_state == null) ? null : program_state.admin_address;
+    }
+
+    // Signing --------------------------------------------------------------------------------------------------------
+    //
+    // Each of the following builds a transaction holding one instruction of the program, has it signed by signer,
+    // and sends it, returning its signature (the transaction id, as a base58 string).  Each throws an error on any
+    // failure, including the signer's refusal to sign.
+    //
+    // signer is a @solana/kit transaction signer whose address is the wallet's address: a TransactionPartialSigner
+    // (such as a KeyPairSigner, or a signer made by create_callback_signer), or a TransactionModifyingSigner.  The
+    // wallet pays the transaction's fee.
+    //
+    // The signed transaction is only sent if it is exactly the transaction that was built (a modifying signer may
+    // not change it), and if every signature in it is valid.  So what is sent is always exactly what the signer was
+    // shown, and was signed by the signer's key.
+    //
+    // A transaction can only be processed until its blockhash expires, about a minute after it is built.  If the
+    // blockhash expires before the transaction is signed, signing is aborted (the signer is given an AbortSignal,
+    // which is then aborted), and the transaction is built again with a new blockhash and given to the signer again.
+    // A signer that takes a long time to sign (such as one that waits for a person) should stop waiting when its
+    // AbortSignal is aborted.
+
+    async buy_entry(entry, maximum_price_lamports, signer)
+    {
+        let admin_address = await this.fetch_admin_address_or_throw();
+
+        return this.complete_tx((wallet_address) => {
+            return Base.make_buy_instruction(entry, maximum_price_lamports, wallet_address, admin_address);
+        }, signer);
+    }
+
+    async refund_entry(entry, signer)
+    {
+        return this.complete_tx((wallet_address) => {
+            return Base.make_refund_instruction(entry, wallet_address);
+        }, signer);
+    }
+
+    async bid_on_entry(entry, minimum_bid_lamports, maximum_bid_lamports, signer)
+    {
+        return this.complete_tx((wallet_address) => {
+            return Base.make_bid_instruction(entry, minimum_bid_lamports, maximum_bid_lamports, wallet_address);
+        }, signer);
+    }
+
+    // Claims the entry if won is true (the wallet won its auction), or reclaims the wallet's losing bid on it if not
+    async claim_entry(entry, won, signer)
+    {
+        if (won) {
+            let admin_address = await this.fetch_admin_address_or_throw();
+
+            // Claiming a winning bid is settling it, with the wallet as both the funding account and the bidder
+            return this.complete_tx((wallet_address) => {
+                return Base.make_settle_winning_bid_instruction(entry, wallet_address, admin_address, wallet_address);
+            }, signer);
         }
 
-        return result.data;
-    }
-
-    // For all of the following, sign_callback must be an async function with this signature:
-    //    async sign_callback(tx_base64_string, slots_until_expiry);
-    // where:
-    //    tx_base64_string -- is a base64 encoded transaction ready to be offline-signed
-    //    slots_until_expiry -- is the number of slots until the tx expires and must be re-submitted
-    //
-    // The return value of sign_callback must be one of:
-    // a. a base64 encoded string version of signed tx
-    // b. 0 -- to cancel the transaction
-    // c. 1 -- to re-try with a new recent blockhash (i.e. a new expiration_slot); which call back into sign_tx again
-    //         with an updated version of the transaction
-
-    // Returns the string transaction id of the completed transaction.  Throws an error on all failures.
-    async buy_entry(entry, maximum_price_lamports, sign_callback)
-    {
         return this.complete_tx((wallet_address) => {
-            return this.make_buy_tx(entry, maximum_price_lamports, wallet_address);
-        }, sign_callback);
-    }
-
-    async refund_entry(entry, sign_callback)
-    {
-        return this.complete_tx((wallet_address) => {
-            return this.make_refund_tx(entry, wallet_address);
-        }, sign_callback);
-    }
-
-    async bid_on_entry(entry, minimum_bid_lamports, maximum_bid_lamports, sign_callback)
-    {
-        return this.complete_tx((wallet_address) => {
-            return this.make_bid_tx(entry, minimum_bid_lamports, maximum_bid_lamports, wallet_address);
-        }, sign_callback);
-    }
-
-    async claim_entry(entry, won, sign_callback)
-    {
-        return this.complete_tx((wallet_address) => {
-            return this.make_claim_tx(entry, won, wallet_address);
-        }, sign_callback);
+            return Base.make_claim_losing_instruction(entry, wallet_address);
+        }, signer);
     }
 
     // Stakes the entry, which the wallet must own, to stake_account, whose withdraw authority must be the wallet.  The
     // stake account is delegated to Shinobi Systems (the only vote account that Stake accepts), and the token account
     // holding the entry's token is frozen until the entry is destaked.
-    async stake_entry(entry, stake_account, sign_callback)
+    async stake_entry(entry, stake_account, signer)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_stake_tx(entry, stake_account, wallet_address);
-        }, sign_callback);
+            return Base.make_stake_instruction(entry, stake_account, wallet_address);
+        }, signer);
     }
 
     // Destake normally harvests the Ki that the entry has earned before it returns the stake account.  If
@@ -2082,77 +1896,73 @@ class Wallet
     // transferred or the entry staked again.  This exists so that the stake account can still be recovered if
     // thawing the token account were ever to fail; there is no other reason to use it, and it should normally be
     // omitted.
-    async destake_entry(entry, sign_callback, no_ki_harvest, no_thaw)
+    async destake_entry(entry, signer, no_ki_harvest, no_thaw)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_destake_tx(entry, wallet_address, no_ki_harvest, no_thaw);
-        }, sign_callback);
+            return Base.make_destake_instruction(entry, wallet_address, no_ki_harvest, no_thaw);
+        }, signer);
     }
 
     // Thaws the entry's token account, held by the wallet, when it was left frozen by a destake with no_thaw.  This
     // only succeeds if the entry is not staked and its token account is frozen.
-    async thaw_entry(entry, sign_callback)
+    async thaw_entry(entry, signer)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_thaw_tx(entry, wallet_address);
-        }, sign_callback);
+            return Base.make_thaw_instruction(entry, wallet_address);
+        }, signer);
     }
 
-    async harvest_entry(entry, sign_callback)
+    async harvest_entry(entry, signer)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_harvest_tx(entry, wallet_address);
-        }, sign_callback);
+            return Base.make_harvest_instruction(entry, wallet_address);
+        }, signer);
     }
 
     // ki_to_apply is whole Ki; use a decimal string for large integer amounts.
-    async level_up_entry(entry, ki_to_apply, sign_callback)
+    async level_up_entry(entry, ki_to_apply, signer)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_level_up_tx(entry, ki_to_apply, wallet_address);
-        }, sign_callback);
+            return Base.make_level_up_instruction(entry, ki_to_apply, wallet_address);
+        }, signer);
     }
 
     // Settles the winning bid of an auction that has ended, on behalf of its bidder: the entry's token goes to the
     // associated token account of bidder_address, the winning bid goes to the admin, and the entry becomes owned.
     // Any wallet may do this, but only once 30 days have passed since the end of the auction; until then only the
-    // winner may settle, which the winner does with claim_entry(entry, true, sign_callback).  The wallet pays the
+    // winner may settle, which the winner does with claim_entry(entry, true, signer).  The wallet pays the
     // transaction fee, and for the creation of the bidder's associated token account if it does not exist yet.
     // bidder_address must be the address of the bidder who won the auction.
-    async settle_winning_bid(entry, bidder_address, sign_callback)
+    async settle_winning_bid(entry, bidder_address, signer)
     {
-        let admin_address = await this.fetch_admin_address();
-
-        if (admin_address == null) {
-            throw new Error("Admin address could not be determined");
-        }
+        let admin_address = await this.fetch_admin_address_or_throw();
 
         return this.complete_tx((wallet_address) => {
-            return this.make_settle_winning_bid_tx(entry, bidder_address, admin_address, wallet_address);
-        }, sign_callback);
+            return Base.make_settle_winning_bid_instruction(entry, bidder_address, admin_address, wallet_address);
+        }, signer);
     }
 
     // Delegates the stake account of a staked entry to Shinobi Systems.  This succeeds only if the stake account is
     // not actively delegated, which is the case when it was staked to the entry while undelegated or delegated to
     // another validator (Stake deactivates it in the latter case; the delegation then succeeds once it has cooled
     // down).  Any wallet may do this; the wallet only pays the transaction fee.
-    async delegate(entry, sign_callback)
+    async delegate(entry, signer)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_delegate_tx(entry, wallet_address);
-        }, sign_callback);
+            return Base.make_delegate_instruction(entry);
+        }, signer);
     }
 
     // Brings the entry's epochs_staked up to date, so that it is exact as of the current epoch.  If the entry is not
     // staked, this does nothing, since its epochs_staked is already exact.  Any wallet may do this; the wallet only
     // pays the transaction fee.  A game that needs an exact epochs_staked would normally not use this, but would
-    // instead include the instruction returned by make_update_epochs_staked_instruction in its own transaction,
-    // before its own instruction.
-    async update_epochs_staked(entry, sign_callback)
+    // instead include the instruction returned by make_update_epochs_staked_instruction (in
+    // shinobi_immortals_base.js) in its own transaction, before its own instruction.
+    async update_epochs_staked(entry, signer)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_update_epochs_staked_tx(entry, wallet_address);
-        }, sign_callback);
+            return Base.make_update_epochs_staked_instruction(entry);
+        }, signer);
     }
 
     // Withdraws to the wallet the excess lamports of an account that the program controls: everything that the
@@ -2163,17 +1973,17 @@ class Wallet
     // - for ProgramState and Authority, it is ignored
     // - for Block and Whitelist, it is the Block (or the string address of the block account)
     // - for Entry, it is the Entry (or the string address of the entry account)
-    async withdraw_excess(account_type, account, sign_callback)
+    async withdraw_excess(account_type, account, signer)
     {
         return this.complete_tx((wallet_address) => {
-            return this.make_withdraw_excess_tx(account_type, account, wallet_address);
-        }, sign_callback);
+            return Base.make_withdraw_excess_instruction(account_type, account, wallet_address);
+        }, signer);
     }
 
     // Private implementation follows ---------------------------------------------------------------------------------
 
-    // Accounts and data here must match those of scripts/user_buy_tx.sh
-    async make_buy_tx(entry, maximum_price_lamports, wallet_address)
+    // Returns the admin's address as a string, throwing an error if it cannot be determined
+    async fetch_admin_address_or_throw()
     {
         let admin_address = await this.fetch_admin_address();
 
@@ -2181,579 +1991,12 @@ class Wallet
             throw new Error("Admin address could not be determined");
         }
 
-        let keys = [
-            // The funding account, which pays the purchase price
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The program state account, which identifies the admin
-            { pubkey : g_program_state_pubkey, isSigner : false, isWritable : false },
-            // The admin, who receives the purchase price of a non-mystery
-            { pubkey : new SolanaWeb3.PublicKey(admin_address), isSigner : false, isWritable : true },
-            // The program authority, which holds the purchase price of a mystery in escrow
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : true },
-            // The block
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : true },
-            // The block's whitelist, whose entry for the funding account is used up if the block is in its whitelist
-            // period
-            { pubkey : make_pubkey(get_whitelist_address(entry.block.address)), isSigner : false, isWritable : true },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The entry's own token account, which holds the token until now and is closed
-            { pubkey : make_pubkey(entry.token_address), isSigner : false, isWritable : true },
-            // The entry's mint
-            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
-            // The wallet's associated token account for the entry's mint, which receives the token, and is created if
-            // it does not exist yet
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
-              isSigner : false, isWritable : true },
-            // The owner of that token account
-            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : false },
-            // This program
-            { pubkey : g_self_program_pubkey, isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
-            // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
-            // The system program
-            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is the instruction code, 7 bytes of padding (the program's BuyData struct aligns its
-        // u64 to 8 bytes), and then the maximum price in lamports
-        let data = Buffer.Buffer.from([ INSTRUCTION_BUY, 0, 0, 0, 0, 0, 0, 0,
-                                        ...u64_to_le_bytes(maximum_price_lamports) ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
+        return admin_address;
     }
 
-    // Accounts and data here must match those of scripts/user_refund_tx.sh.  token_address is the token account that
-    // holds the entry's token; if it is not given, the wallet's associated token account for the entry's mint is used.
-    async make_refund_tx(entry, wallet_address, token_address)
-    {
-        if (token_address == null) {
-            token_address = get_associated_token_address(wallet_address, entry.mint_address);
-        }
-
-        let keys = [
-            // The token owner, who must sign
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
-            // The block
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The program authority, which holds the purchase price in escrow and pays the refund
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : true },
-            // The token account holding the entry's token
-            { pubkey : make_pubkey(token_address), isSigner : false, isWritable : false },
-            // The account that receives the refund
-            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : true }
-        ];
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_REFUND ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/user_bid_tx.sh
-    async make_bid_tx(entry, minimum_bid_lamports, maximum_bid_lamports, wallet_address)
-    {
-        let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
-
-        let keys = [
-            // The bidding account, which pays the bid
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The bid marker mint
-            { pubkey : g_bid_marker_mint_pubkey, isSigner : false, isWritable : true },
-            // The bidder's bid marker token account for the entry
-            { pubkey : make_pubkey(bid_marker_token_address), isSigner : false, isWritable : true },
-            // The bid account, which holds the bid
-            { pubkey : make_pubkey(get_bid_address(bid_marker_token_address)), isSigner : false, isWritable : true },
-            // The program authority
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // The system program
-            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
-            // This program
-            { pubkey : g_self_program_pubkey, isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is the instruction code, 7 bytes of padding (the program's BidData struct aligns its
-        // u64s to 8 bytes), and then the minimum and maximum bids in lamports
-        let data = Buffer.Buffer.from([ INSTRUCTION_BID, 0, 0, 0, 0, 0, 0, 0,
-                                        ...u64_to_le_bytes(minimum_bid_lamports),
-                                        ...u64_to_le_bytes(maximum_bid_lamports) ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    async make_claim_tx(entry, won, wallet_address)
-    {
-        if (won) {
-            let admin_address = await this.fetch_admin_address();
-
-            if (admin_address == null) {
-                throw new Error("Admin address could not be determined");
-            }
-
-            // Claiming a winning bid is settling it, with the wallet as both the funding account and the bidder
-            return this.make_settle_winning_bid_tx(entry, wallet_address, admin_address, wallet_address);
-        }
-        else {
-            return this.make_claim_losing_tx(entry, wallet_address);
-        }
-    }
-
-    // Accounts and data here must match those of scripts/user_claim_losing_tx.sh.  The bid marker is reclaimed too
-    // (its tokens are burned and its token account closed), unless keep_bid_marker is true; keep_bid_marker is needed
-    // only if the bidder has already burned or closed their bid marker, which would make reclaiming it fail.
-    async make_claim_losing_tx(entry, wallet_address, keep_bid_marker)
-    {
-        let bid_marker_token_address = get_bid_marker_token_address(entry.mint_address, wallet_address);
-
-        let keys = [
-            // The bidding account, which receives the bid back
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : false },
-            // The bid account, which is closed
-            { pubkey : make_pubkey(get_bid_address(bid_marker_token_address)), isSigner : false, isWritable : true }
-        ];
-
-        if (!keep_bid_marker) {
-            // The bid marker mint
-            keys.push({ pubkey : g_bid_marker_mint_pubkey, isSigner : false, isWritable : true });
-            // The bidder's bid marker token account for the entry
-            keys.push({ pubkey : make_pubkey(bid_marker_token_address), isSigner : false, isWritable : true });
-            // The program authority
-            keys.push({ pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false });
-            // The SPL Token program
-            keys.push({ pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false });
-        }
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_CLAIM_LOSING ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/user_stake_tx.sh.  The wallet must be both the owner of the
-    // entry's token (held in its associated token account) and the withdraw authority of the stake account.
-    async make_stake_tx(entry, stake_address, wallet_address)
-    {
-        let keys = [
-            // The block
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The token owner
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
-            // The token account holding the entry's token, which is frozen for as long as the entry is staked
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
-              isSigner : false, isWritable : true },
-            // The stake account
-            { pubkey : make_pubkey(stake_address), isSigner : false, isWritable : true },
-            // The withdraw authority of the stake account
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
-            // The Shinobi Systems vote account
-            { pubkey : make_pubkey(g_shinobi_systems_vote_address), isSigner : false, isWritable : false },
-            // The program authority, which becomes the stake account's authority
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // Clock sysvar
-            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
-            // The stake program
-            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
-            // The stake config account, required by the stake program
-            { pubkey : g_stake_config_pubkey, isSigner : false, isWritable : false },
-            // Stake history sysvar, required by the stake program
-            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false },
-            // The entry's mint, needed to freeze the token account
-            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_STAKE ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/user_destake_tx.sh
-    async make_destake_tx(entry, wallet_address, no_ki_harvest, no_thaw)
-    {
-        let keys = [
-            // The funding account, which pays for the Ki destination account if it does not exist yet
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The block
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The token owner, who receives the stake account
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
-            // The token account holding the entry's token, which is thawed unless no_thaw
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
-              isSigner : false, isWritable : true },
-            // The entry's stake account
-            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : true },
-            // The Ki destination account, which receives harvested Ki
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, g_ki_mint_address)),
-              isSigner : false, isWritable : true },
-            // The owner of the Ki destination account
-            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : false },
-            // The Ki mint
-            { pubkey : g_ki_mint_pubkey, isSigner : false, isWritable : true },
-            // The program authority
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // Clock sysvar
-            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
-            // The system program
-            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
-            // The stake program
-            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
-            // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
-            // The entry's mint, which is needed to thaw the token account unless no_thaw
-            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is the instruction code, then the no_ki_harvest flag (1 = do not harvest Ki), then the
-        // no_thaw flag (1 = leave the token account frozen)
-        let data = Buffer.Buffer.from([ INSTRUCTION_DESTAKE, (no_ki_harvest ? 1 : 0), (no_thaw ? 1 : 0) ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/user_thaw_tx.sh
-    async make_thaw_tx(entry, wallet_address)
-    {
-        let keys = [
-            // The block
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : false },
-            // The token owner
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
-            // The token account holding the entry's token, which is thawed
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
-              isSigner : false, isWritable : true },
-            // The entry's mint
-            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
-            // The program authority, which is the freeze authority of the entry's mint
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_THAW ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/user_harvest_tx.sh
-    async make_harvest_tx(entry, wallet_address)
-    {
-        let keys = [
-            // The funding account, which pays for the Ki destination account if it does not exist yet
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The token owner
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
-            // The token account holding the entry's token
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
-              isSigner : false, isWritable : false },
-            // The entry's stake account
-            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : false },
-            // The Ki destination account, which receives harvested Ki
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, g_ki_mint_address)),
-              isSigner : false, isWritable : true },
-            // The owner of the Ki destination account
-            { pubkey : make_pubkey(wallet_address), isSigner : false, isWritable : false },
-            // The Ki mint
-            { pubkey : g_ki_mint_pubkey, isSigner : false, isWritable : true },
-            // The program authority
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // The system program
-            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
-            // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
-            // The entry's block, whose block_start_timestamp is the beginning of the entry's life span
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_HARVEST ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/user_level_up_tx.sh.  ki_to_apply is the most whole Ki to
-    // burn; only as much of it as earns level credits is burned.  The Ki comes from the wallet's associated Ki token
-    // account, which LevelUp creates (paid for by the wallet) if it does not exist yet.
-    async make_level_up_tx(entry, ki_to_apply, wallet_address)
-    {
-        let keys = [
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The token owner
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : false },
-            // The token account holding the entry's token
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, entry.mint_address)),
-              isSigner : false, isWritable : false },
-            // The entry's Metaplex metadata, which is updated to the new level
-            { pubkey : make_pubkey(entry.metaplex_metadata_address), isSigner : false, isWritable : true },
-            // The Ki source account, from which Ki is burned
-            { pubkey : make_pubkey(get_associated_token_address(wallet_address, g_ki_mint_address)),
-              isSigner : false, isWritable : true },
-            // The owner of the Ki source account, which pays for that account if it has to be created
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The Ki mint
-            { pubkey : g_ki_mint_pubkey, isSigner : false, isWritable : true },
-            // The program authority
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
-            // The Metaplex program
-            { pubkey : g_metaplex_program_pubkey, isSigner : false, isWritable : false },
-            // The entry's stake account; for an entry that is not staked this is the system program address, which is
-            // the placeholder that LevelUp expects
-            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : false },
-            // The system program
-            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
-            // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
-            // The entry's block, whose block_start_timestamp is the beginning of the entry's life span; LevelUp only
-            // uses it if the entry is staked
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is the instruction code, 7 bytes of padding (the program's LevelUpData struct aligns
-        // its u64 to 8 bytes), and then the most Ki to apply
-        let data = Buffer.Buffer.from([ INSTRUCTION_LEVEL_UP, 0, 0, 0, 0, 0, 0, 0, ...u64_to_le_bytes(ki_to_apply) ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/anyone_settle_winning_bid_tx.sh.  admin_address may be
-    // anything that SolanaWeb3.PublicKey accepts, including the bytes returned by fetch_admin_address().
-    //
-    // If the wallet is the bidder, the bid marker is reclaimed too, unless keep_bid_marker is true; keep_bid_marker
-    // is needed only if the bidder has already burned or closed their bid marker, which would make reclaiming it fail.
-    async make_settle_winning_bid_tx(entry, bidder_address, admin_address, wallet_address, keep_bid_marker)
-    {
-        // The bid account of the bidder for this entry
-        let bid_address = get_bid_address(get_bid_marker_token_address(entry.mint_address, bidder_address));
-
-        let keys = [
-            // The funding account, which pays for the bidder's associated token account if it does not exist yet
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The winning bid account
-            { pubkey : make_pubkey(bid_address), isSigner : false, isWritable : true },
-            // The program state account, which identifies the admin
-            { pubkey : g_program_state_pubkey, isSigner : false, isWritable : false },
-            // The admin, who receives the winning bid
-            { pubkey : new SolanaWeb3.PublicKey(admin_address), isSigner : false, isWritable : true },
-            // The entry's own token account, which holds the token until now and is closed
-            { pubkey : make_pubkey(entry.token_address), isSigner : false, isWritable : true },
-            // The entry's mint
-            { pubkey : make_pubkey(entry.mint_address), isSigner : false, isWritable : false },
-            // The program authority
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // The bidder's associated token account for the entry's mint, which receives the token
-            { pubkey : make_pubkey(get_associated_token_address(bidder_address, entry.mint_address)),
-              isSigner : false, isWritable : true },
-            // The bidder, who receives any lamports that the bid account holds beyond the winning bid
-            { pubkey : make_pubkey(bidder_address), isSigner : false, isWritable : true },
-            // The system program
-            { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
-            // The SPL Token program
-            { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
-            // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false }
-        ];
-
-        // When the bidder settles their own bid, also reclaim the bid marker, which has no purpose once the bid is
-        // settled: two more accounts make the program burn the bidder's bid marker tokens for the entry and close the
-        // bid marker token account, returning its lamports to the bidder.  Nobody else can do this, since it needs
-        // the bidder's signature.
-        if ((wallet_address == bidder_address) && !keep_bid_marker) {
-            // The bid marker mint
-            keys.push({ pubkey : g_bid_marker_mint_pubkey, isSigner : false, isWritable : true });
-            // The bidder's bid marker token account for the entry
-            keys.push({ pubkey : make_pubkey(get_bid_marker_token_address(entry.mint_address, bidder_address)),
-                        isSigner : false, isWritable : true });
-        }
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_SETTLE_WINNING_BID ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/anyone_delegate_tx.sh
-    async make_delegate_tx(entry, wallet_address)
-    {
-        let keys = [
-            // The block
-            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false },
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The entry's stake account
-            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : true },
-            // The program authority, which is the stake authority of the stake account
-            { pubkey : g_program_authority_pubkey, isSigner : false, isWritable : false },
-            // Clock sysvar, required by the stake program
-            { pubkey : g_clock_sysvar_pubkey, isSigner : false, isWritable : false },
-            // The stake program
-            { pubkey : g_stake_program_pubkey, isSigner : false, isWritable : false },
-            // Stake history sysvar, required by the stake program
-            { pubkey : g_stake_history_sysvar_pubkey, isSigner : false, isWritable : false },
-            // The Shinobi Systems vote account
-            { pubkey : make_pubkey(g_shinobi_systems_vote_address), isSigner : false, isWritable : false },
-            // The stake config account, required by the stake program
-            { pubkey : g_stake_config_pubkey, isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_DELEGATE ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    // Returns the UpdateEpochsStaked instruction for the entry, which brings its epochs_staked up to date.  This is
-    // provided separately from make_update_epochs_staked_tx so that another program's transaction (for example, a
-    // game's) can include it before its own instruction, after which that program can rely on the entry's
-    // epochs_staked being exact.  Accounts and data here must match those of scripts/anyone_update_epochs_staked_tx.sh
-    make_update_epochs_staked_instruction(entry)
-    {
-        let keys = [
-            // The entry
-            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
-            // The entry's stake account; for an entry that is not staked this is the system program address, which is
-            // a placeholder that UpdateEpochsStaked does not use
-            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : false }
-        ];
-
-        // The instruction data is just the instruction code
-        let data = Buffer.Buffer.from([ INSTRUCTION_UPDATE_EPOCHS_STAKED ]);
-
-        return new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data });
-    }
-
-    async make_update_epochs_staked_tx(entry, wallet_address)
-    {
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(this.make_update_epochs_staked_instruction(entry));
-
-        return tx;
-    }
-
-    // Accounts and data here must match those of scripts/admin_withdraw_excess_tx.sh
-    async make_withdraw_excess_tx(account_type, account, wallet_address)
-    {
-        // A Block or Entry may be passed in, or just an address
-        let account_address = ((account != null) && (account.address != null)) ? account.address : account;
-
-        // Find the address of the account to withdraw from
-        let from_address;
-        switch (account_type) {
-        case WithdrawExcessAccountType.ProgramState:
-            from_address = g_program_state_address;
-            break;
-        case WithdrawExcessAccountType.Authority:
-            from_address = g_program_authority_address;
-            break;
-        case WithdrawExcessAccountType.Block:
-        case WithdrawExcessAccountType.Entry:
-            from_address = account_address;
-            break;
-        case WithdrawExcessAccountType.Whitelist:
-            // The whitelist account is derived from the address of its block
-            from_address = (account_address == null) ? null : get_whitelist_address(account_address);
-            break;
-        default:
-            throw new Error("Invalid account type");
-        }
-
-        if (from_address == null) {
-            throw new Error("No account to withdraw from was provided for account type " + account_type.name);
-        }
-
-        let keys = [
-            // The program state account, which identifies the admin
-            { pubkey : g_program_state_pubkey, isSigner : false, isWritable : false },
-            // The admin, who must sign and who receives the lamports
-            { pubkey : make_pubkey(wallet_address), isSigner : true, isWritable : true },
-            // The account to withdraw from
-            { pubkey : make_pubkey(from_address), isSigner : false, isWritable : true }
-        ];
-
-        // The instruction data is the instruction code followed by the code of the account type
-        let data = Buffer.Buffer.from([ INSTRUCTION_WITHDRAW_EXCESS, account_type.code ]);
-
-        let tx = new SolanaWeb3.Transaction();
-
-        tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
-
-        return tx;
-    }
-
-    async complete_tx(tx_maker_func, sign_callback)
+    // Builds a transaction holding the single instruction returned by instruction_maker_func(wallet_address), has
+    // signer sign it, and sends it, returning its signature.  See "Signing" above.
+    async complete_tx(instruction_maker_func, signer)
     {
         let wallet_address_holder = this.wallet_address_holder;
         let wallet_address = wallet_address_holder.wallet_address;
@@ -2761,91 +2004,120 @@ class Wallet
             throw new Error("No wallet");
         }
 
-        let wallet_pubkey = make_pubkey(wallet_address);
+        check_signer(signer, wallet_address);
 
+        let instruction = await instruction_maker_func(wallet_address);
+
+        // Build, sign, and send the transaction; repeated with a new blockhash whenever the blockhash expires before
+        // the transaction is signed
         while (true) {
-            let tx = await tx_maker_func(wallet_address);
+            let lifetime = await this.cluster.rpc_connections.run((rpc_connection) => {
+                return rpc_connection.get_latest_blockhash();
+            }, "fetch latest blockhash");
 
             if (wallet_address_holder != this.wallet_address_holder) {
-                // Wallet address changed, so abort
                 throw new Error("Wallet change");
             }
 
-            let recent_blockhash_result = await this.cluster.rpc_connections.run((rpc_connection) =>
-                {
-                    return rpc_connection.getLatestBlockhash();
-                }, "fetch recent blockhash");
+            // A legacy transaction, which every tool can decode, with the wallet's signer as fee payer
+            let message = Kit.pipe(
+                Kit.createTransactionMessage({ version : "legacy" }),
+                (m) => Kit.setTransactionMessageFeePayerSigner(signer, m),
+                (m) => Kit.setTransactionMessageLifetimeUsingBlockhash(lifetime, m),
+                (m) => Kit.appendTransactionMessageInstruction(instruction, m));
 
-            if (wallet_address_holder != this.wallet_address_holder) {
-                // Wallet address changed, so abort
-                throw new Error("Wallet change");
+            // The bytes that are signed; the signed transaction must hold exactly these
+            let message_bytes = Kit.compileTransaction(message).messageBytes;
+
+            // Have the transaction signed, aborting the signing if the blockhash expires first
+            let expiry = this.watch_for_expiry(lifetime.lastValidBlockHeight);
+            let signed;
+            try {
+                signed = await Kit.signTransactionMessageWithSigners(message, { abortSignal : expiry.signal });
+            }
+            catch (error) {
+                if (expiry.expired) {
+                    continue;
+                }
+                throw error;
+            }
+            finally {
+                expiry.stop();
             }
 
-            if (recent_blockhash_result == null) {
-                throw new Error("Failed to fetch recent_blockhash_values");
-            }
-
-            let recent_blockhash = recent_blockhash_result.blockhash;
-
-            // It appears that last valid block height is not reported correctly!  Use 120 ...
-            // let recent_blockhash_expiry = recent_blockhash_result.lastValidBlockHeight;
-            let recent_blockhash_expiry = 120;
-
-            tx.feePayer = wallet_pubkey;
-            tx.recentBlockhash = recent_blockhash;
-
-            let tx_base64 = Buffer.Buffer.from(tx.serialize({ verifySignatures : false })).toString("base64");
-
-            let result = await sign_callback(tx_base64, recent_blockhash_expiry);
-
-            if (wallet_address_holder != this.wallet_address_holder) {
-                // Wallet address changed, so abort
-                throw new Error("Wallet change");
-            }
-
-            // Return value 0 means abort
-            if (result == 0) {
-                return null;
-            }
-            // Return value 1 means repeat with new recent blockhash
-            else if (result == 1) {
+            // A signer that does not stop when aborted may still sign after the blockhash has expired; such a
+            // transaction would be rejected, so build it again
+            if (expiry.expired) {
                 continue;
             }
 
-            // Else return value is base64 encoded signature to use
-            try {
-                tx.addSignature(wallet_pubkey, bs58.decode(result));
-            }
-            catch (error) {
-                throw new Error("Invalid signature: " + error);
+            if (wallet_address_holder != this.wallet_address_holder) {
+                throw new Error("Wallet change");
             }
 
-            let raw_tx;
-            try {
-                raw_tx = tx.serialize();
-            }
-            catch (error) {
-                throw new Error("Invalid transaction: " + error);
+            if (!bytes_equal(signed.messageBytes, message_bytes)) {
+                throw new Error("The signer changed the transaction; it was not sent");
             }
 
-            // Submit the tx
-            return this.submit_tx(raw_tx);
+            verify_transaction_signatures(signed);
+
+            return this.send_transaction(Kit.getBase64EncodedWireTransaction(signed));
         }
     }
 
-    async submit_tx(raw_tx)
+    // Returns { signal, expired, stop }: signal is an AbortSignal that is aborted, and expired becomes true, once the
+    // cluster's block height passes last_valid_block_height (when a transaction using the blockhash that it belongs
+    // to can no longer be processed).  The block height is checked every expiry_check_interval_ms milliseconds;
+    // stop() stops checking.
+    watch_for_expiry(last_valid_block_height)
+    {
+        let controller = new AbortController();
+        let watcher = { signal : controller.signal, expired : false };
+
+        let timer = setInterval(async () => {
+            try {
+                let block_height = await this.cluster.rpc_connections.run_once((rpc_connection) => {
+                    return rpc_connection.get_block_height();
+                }, "fetch block height");
+                if ((block_height > BigInt(last_valid_block_height)) && !watcher.expired) {
+                    watcher.expired = true;
+                    controller.abort(new Error("The transaction's blockhash expired before it was signed"));
+                }
+            }
+            catch (error) {
+                // Check again at the next interval
+            }
+        }, this.expiry_check_interval_ms);
+
+        watcher.stop = () => clearInterval(timer);
+
+        return watcher;
+    }
+
+    // Sends a signed transaction (as a base64 encoded wire transaction), returning its signature
+    async send_transaction(wire_transaction_base64)
     {
         // Retry up to 4 times with a 1 second delay in between each retry
         let retry_count = 0;
         while (true) {
             try {
                 return await this.cluster.rpc_connections.run_once((rpc_connection) => {
-                    return rpc_connection.sendRawTransaction(raw_tx);
-                }, "submit tx");
+                    return rpc_connection.send_transaction(wire_transaction_base64);
+                }, "send transaction");
             }
             catch (error) {
+                // A transaction that failed when the RPC server simulated it would fail again; report why, with its
+                // programs' logs, at once
+                const PREFLIGHT_FAILURE = Kit.SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE;
+                if (Kit.isSolanaError(error, PREFLIGHT_FAILURE)) {
+                    let reason = ((error.cause != null) && error.cause.message) ? error.cause.message : error.message;
+                    let logs = ((error.context != null) && Array.isArray(error.context.logs)) ?
+                        ("\n" + error.context.logs.join("\n")) : "";
+                    throw new Error("The transaction failed: " + reason + logs, { cause : error });
+                }
+                // Otherwise the transaction may not have reached the server; try again
                 if (retry_count++ == 4) {
-                    throw new Error("Failed to submit transaction: " + error);
+                    throw new Error("Failed to send transaction: " + error.message, { cause : error });
                 }
                 await delay(1000);
             }
@@ -2854,186 +2126,122 @@ class Wallet
 }
 
 
-function get_metaplex_metadata_address(mint_address)
+// Signers ------------------------------------------------------------------------------------------------------------
+
+
+// Throws an error unless signer is a @solana/kit signer that can be used to sign a transaction for the wallet at
+// wallet_address: a TransactionPartialSigner or TransactionModifyingSigner, whose address is wallet_address
+function check_signer(signer, wallet_address)
 {
-    return find_pda([ Buffer.Buffer.from("metadata"),
-                      g_metaplex_program_pubkey.toBuffer(),
-                      address_to_buffer(mint_address) ],
-                    g_metaplex_program_pubkey)[0].toBase58();
-}
-
-
-function get_block_address(group_number, block_number)
-{
-    return find_pda([ [ 10 ],
-                      u32_to_le_bytes(group_number),
-                      u32_to_le_bytes(block_number) ],
-                    g_self_program_pubkey)[0].toBase58();
-}
-
-
-function get_whitelist_address(block_address)
-{
-    return find_pda([ [ 9 ],
-                      address_to_buffer(block_address) ],
-                    g_self_program_pubkey)[0].toBase58();
-}
-
-
-function get_entry_mint_address(block_address, entry_index)
-{
-    return find_pda([ [ 4 ],
-                      address_to_buffer(block_address),
-                      u16_to_le_bytes(entry_index) ],
-                    g_self_program_pubkey)[0].toBase58();
-}
-
-
-function get_entry_address(entry_mint_address)
-{
-    return find_pda([ [ 11 ],
-                      address_to_buffer(entry_mint_address) ],
-                    g_self_program_pubkey)[0].toBase58();
-}
-
-
-function get_associated_token_address(token_owner_address, token_mint_address)
-{
-    return find_pda([ address_to_buffer(token_owner_address),
-                      g_spl_token_program_pubkey.toBuffer(),
-                      address_to_buffer(token_mint_address) ],
-                    g_spl_associated_token_program_pubkey)[0].toBase58();
-}
-
-
-function get_bid_marker_token_address(entry_mint_address, bidder_address)
-{
-    return find_pda([ [ 8 ],
-                      address_to_buffer(entry_mint_address),
-                      address_to_buffer(bidder_address) ],
-                    g_self_program_pubkey)[0].toBase58();
-}
-
-
-function get_bid_address(bid_marker_token_address)
-{
-    return find_pda([ [ 6 ],
-                      address_to_buffer(bid_marker_token_address) ],
-                    g_self_program_pubkey)[0].toBase58();
-}
-
-
-// Returns the excess of an account that holds lamports and is required to hold required_lamports (both BigInt): the
-// amount that the WithdrawExcess instruction would withdraw from it, which is zero if it holds no more than is
-// required
-function excess_of(lamports, required_lamports)
-{
-    return (lamports > required_lamports) ? (lamports - required_lamports) : 0n;
-}
-
-
-function buffer_le_u64(buffer, offset)
-{
-    let ret = BigInt(0);
-
-    for (let i = 8; i > 0; i -= 1) {
-        ret = ret * 256n;
-        ret += BigInt((buffer[offset + (i - 1)] & 0xFF));
+    if ((signer == null) || (typeof(signer) != "object")) {
+        throw new Error("A signer is required");
     }
 
-    return ret;
-}
-
-
-function buffer_le_s64(buffer, offset)
-{
-    return BigInt.asIntN(64, buffer_le_u64(buffer, offset));
-}
-
-
-// Reads a little-endian u32.  JavaScript bitwise operators work on signed 32-bit values (and take shift counts modulo
-// 32), so the most significant byte is shifted by 24, and the final ">>> 0" turns the signed result into an unsigned
-// one, so that values >= 2^31 are not negative.
-function buffer_le_u32(buffer, offset)
-{
-    return ((((buffer[offset + 0] & 0xFF) <<  0) |
-             ((buffer[offset + 1] & 0xFF) <<  8) |
-             ((buffer[offset + 2] & 0xFF) << 16) |
-             ((buffer[offset + 3] & 0xFF) << 24)) >>> 0);
-}
-
-
-function buffer_le_u16(buffer, offset)
-{
-    return (((buffer[offset + 0] & 0xFF) << 0) |
-            ((buffer[offset + 1] & 0xFF) << 8));
-}
-
-
-function buffer_sha256(buffer, offset)
-{
-    return buffer.slice(offset, offset + 32).toString("hex");
-}
-
-
-function buffer_address(buffer, offset)
-{
-    return bs58.encode(buffer.slice(offset, offset + 32));
-}
-
-
-function buffer_string(buffer, offset, length)
-{
-    let result = new TextDecoder("utf-8").decode(buffer.slice(offset, offset + length));
-
-    // To remove extra nulls, or add a null if one wasn't present
-    let index = result.indexOf('\0');
-
-    if (index >= 0) {
-        return result.substring(0, index);
+    if (signer.address != wallet_address) {
+        throw new Error("The signer's address " + signer.address + " is not the wallet's address " + wallet_address);
     }
-    else {
-        return result + '\0';
+
+    if (!Kit.isTransactionPartialSigner(signer) && !Kit.isTransactionModifyingSigner(signer)) {
+        throw new Error("The signer must be a @solana/kit TransactionPartialSigner or TransactionModifyingSigner");
     }
 }
 
 
-// Returns the 4 little-endian bytes of a u32.  ">>>" (unsigned shift) is used so that values >= 2^31 are handled
-// correctly.
-function u32_to_le_bytes(u)
+// Returns true if the two arrays of bytes are equal
+function bytes_equal(a, b)
 {
-    return [ (u >>>  0) & 0xFF,
-             (u >>>  8) & 0xFF,
-             (u >>> 16) & 0xFF,
-             (u >>> 24) & 0xFF ];
+    if (a.length != b.length) {
+        return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 
-// Returns the 8 little-endian bytes of a u64.  u may be a BigInt, a number, or a decimal string (use a string or a
-// BigInt for values that do not fit in 53 bits).  Throws if u is negative or does not fit in 64 bits.
-function u64_to_le_bytes(u)
+// Returns true if signature (64 bytes) is a valid signature by the key of address of message_bytes, as the Solana
+// runtime would judge it.  This uses the ed25519 verification of shinobi_immortals_base.js rather than @solana/kit's
+// verifySignature, because the latter needs Ed25519 support in the Javascript runtime's WebCrypto (crypto.subtle),
+// which not every runtime has; with this, nothing in this file needs WebCrypto.
+function verify_signature(address, signature, message_bytes)
 {
-    let value = BigInt(u);
-
-    if ((value < 0n) || (value > 0xFFFFFFFFFFFFFFFFn)) {
-        throw new Error("Value out of u64 range: " + u);
-    }
-
-    let ret = [ ];
-
-    for (let i = 0; i < 8; i += 1) {
-        ret.push(Number(value & 0xFFn));
-        value >>= 8n;
-    }
-
-    return ret;
+    return Base.ed25519_verify(Base.address_to_bytes(address), signature, message_bytes);
 }
 
 
-function u16_to_le_bytes(u)
+// Throws an error unless every signature of a @solana/kit Transaction is present and valid
+function verify_transaction_signatures(transaction)
 {
-    return [ (u >>  0) & 0xFF,
-             (u >>  8) & 0xFF ];
+    for (let [ address, signature ] of Object.entries(transaction.signatures)) {
+        if (signature == null) {
+            throw new Error("The transaction is not signed by " + address);
+        }
+        if (!verify_signature(address, signature, transaction.messageBytes)) {
+            throw new Error("The signature of " + address + " is not valid for the transaction");
+        }
+    }
+}
+
+
+// Returns a @solana/kit TransactionPartialSigner for address, which obtains each signature from callback, which may
+// obtain it in any way: for example, by showing the transaction to a person, who checks it and signs it with their
+// own tools, and then gives back its signature.  callback is called once for each transaction to be signed as:
+//
+//     async callback(transaction_base64, abort_signal)
+//
+// transaction_base64 is the transaction, as a base64 encoded wire transaction, with an empty (all zero) signature
+// for each of its signers.  Any tool that decodes Solana transactions can show it; for example, with solxact
+// (https://github.com/bji/solxact), the following shows it, and then signs it and prints the signature:
+//
+//     echo <transaction_base64> | base64 -d | solxact decode
+//     echo <transaction_base64> | base64 -d | solxact sign <key file> | solxact signature
+//
+// abort_signal is an AbortSignal (or undefined) which is aborted if the signature is no longer wanted, for example
+// because the transaction expired before it was signed.  The callback should then stop waiting, and throw (such as
+// abort_signal.reason).
+//
+// callback returns the signature by address of the transaction: a base58 string (as "solxact signature" prints it),
+// or 64 bytes.  To decline to sign, it throws.  The signature is checked, and an invalid one throws an error.
+function create_callback_signer(address, callback)
+{
+    let signer_address = Kit.address(address);
+
+    return Object.freeze({
+        address : signer_address,
+
+        async signTransactions(transactions, config)
+        {
+            let abort_signal = (config == null) ? undefined : config.abortSignal;
+
+            let signature_dictionaries = [ ];
+
+            for (let transaction of transactions) {
+                if (abort_signal != null) {
+                    abort_signal.throwIfAborted();
+                }
+
+                let returned = await callback(Kit.getBase64EncodedWireTransaction(transaction), abort_signal);
+
+                let signature = (typeof(returned) == "string") ? base58_decode(returned.trim()) :
+                    Uint8Array.from(returned);
+
+                if (signature.length != 64) {
+                    throw new Error("A signature must be 64 bytes, not " + signature.length);
+                }
+
+                if (!verify_signature(signer_address, signature, transaction.messageBytes)) {
+                    throw new Error("The signature is not " + signer_address + "'s signature of the transaction");
+                }
+
+                signature_dictionaries.push(Object.freeze({ [signer_address] : signature }));
+            }
+
+            return signature_dictionaries;
+        }
+    });
 }
 
 
@@ -3044,3 +2252,7 @@ exports.EntryState = EntryState;
 exports.Entry = Entry;
 exports.Wallet = Wallet;
 exports.WithdrawExcessAccountType = WithdrawExcessAccountType;
+exports.RpcConnection = RpcConnection;
+exports.create_callback_signer = create_callback_signer;
+// Everything in shinobi_immortals_base.js is also available here
+exports.Base = Base;

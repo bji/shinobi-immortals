@@ -3,12 +3,12 @@
 # Tests for current_issues.txt issue 6: destaking, and harvesting from, a stake account that Stake deactivated
 # because it was delegated to a validator other than Shinobi Systems.
 #
-# Usage: SOURCE=<root of the Shinobi Immortals source> test/test_destake_deactivated_elsewhere.sh
+# Usage: SOURCE=<root of the Shinobi Immortals source> test/program/test_destake_deactivated_elsewhere.sh
 #
-# This runs on its own test validator, separately from test/test.sh, because it needs something the shared suite
+# This runs on its own test validator, separately from test/program/test.sh, because it needs something the shared suite
 # cannot provide: a validator other than Shinobi Systems that pays staking rewards.  The test validator is the only
 # validator on the local cluster that votes, so it is the only one whose delegators earn rewards.  Here the program is
-# built (via SEPARATE_SHINOBI_SYSTEMS_VOTE, see setup in test/common) to treat a new, non-voting vote account as
+# built (via SEPARATE_SHINOBI_SYSTEMS_VOTE, see setup in test/program/common) to treat a new, non-voting vote account as
 # Shinobi Systems, and the test validator plays the part of the other validator.
 #
 # The situation under test is the one that issue 6 describes: a user stakes an entry with a stake account that is
@@ -31,10 +31,10 @@ if [ -z "$SOURCE" ]; then
     exit 1
 fi
 
-# Run every test; the helpers in test/common consult TESTS
+# Run every test; the helpers in test/program/common consult TESTS
 TESTS=
 
-source $SOURCE/test/common
+source $SOURCE/test/program/common
 
 # Build the program with a separate (non-voting) Shinobi Systems vote account; see the comments at the top
 export SEPARATE_SHINOBI_SYSTEMS_VOTE=1
@@ -94,7 +94,7 @@ function test_entry ()
 }
 
 
-# expected_ki_mint, used below, is in test/common
+# expected_ki_mint, used below, is in test/program/common
 
 
 # Waits up to 60 seconds for the delegated stake of stake account $2 to rise above entry $3's Ki baseline, which

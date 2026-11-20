@@ -108,13 +108,20 @@ You should verify the fidelity of these programs - the source is open and availa
 
 Then, run the following command:
 
-```$ SOURCE=`pwd`/shinobi-immortals ./shinobi-immortals/test/test.sh```
+```$ SOURCE=`pwd`/shinobi-immortals ./shinobi-immortals/test/program/test.sh```
 
 This will take a while to run to completion - about half an hour.  This is because it runs many
 tests and it is conservative in waiting for commands to complete successfully before proceeding
 to the next command.
 
-You can inspect all of the tests that were run by looking at the files in the `test` directory.
+You can inspect all of the tests that were run by looking at the files in the `test/program` directory.
+
+The Javascript SDK in sdk/js has its own tests, which take only seconds and need no validator:
+
+```$ ./shinobi-immortals/test/sdk/js/run_tests.sh```
+
+Some of them need an npm package, which `make sdk-js-packages` installs.  See `test/sdk/js/README.txt` for what they
+check and what they need.
 
 
 ## Issuing Manual Transactions
@@ -136,6 +143,10 @@ on-chain account data associated with the Shinobi Immortals program.
 ## Programmatic Interaction with Shinobi Immortals
 
 The sdk/js directory includes a Javascript API for interaction with Shinobi Immortals.
+shinobi_immortals_base.js holds the program's addresses, account decoders, and instruction builders, and has no
+dependencies; its instructions can be used directly with @solana/kit.  shinobi_immortals.js, built on it, reads the
+cluster and signs and sends transactions, using @solana/kit.  It verifies every signature before sending, with
+shinobi_immortals_base.js's own ed25519 verification, so it does not need WebCrypto's Ed25519 support.
 
 
 ## License

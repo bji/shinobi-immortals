@@ -3,7 +3,7 @@
 # no mainnet clones, Shinobi program deployment, or production wallets needed.
 set -euo pipefail
 # Resolve source paths before changing anything, and isolate keys, logs and ledger.
-SOURCE_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+SOURCE_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 CALCULATION_TMP=$(mktemp -d)
 VALIDATOR_PID=
 function cleanup ()
@@ -30,9 +30,9 @@ trap 'exit 143' TERM
 bash "$SOURCE_ROOT/build_tools/sdk/verify_agave.sh"
 # The smoke source uses the project's Clock type; supply that include path here
 # so the shared SDK builder does not depend on this repository's program layout.
-bash "$SOURCE_ROOT/build_tools/sdk/build.sh" "$SOURCE_ROOT/test/sbpfv3_smoke.c" "$CALCULATION_TMP/smoke.so"                      \
+bash "$SOURCE_ROOT/build_tools/sdk/build.sh" "$SOURCE_ROOT/test/program/sbpfv3_smoke.c" "$CALCULATION_TMP/smoke.so" \
     -I"$SOURCE_ROOT/program"
-bash "$SOURCE_ROOT/test/build_calculation_tests.sh" "$CALCULATION_TMP"
+bash "$SOURCE_ROOT/test/program/build_calculation_tests.sh" "$CALCULATION_TMP"
 # All accounts are disposable. Separate deployment buffers avoid CLI-generated
 # recovery phrases and ensure any deployment state stays in this temporary directory.
 solana-keygen new --no-bip39-passphrase --silent -o "$CALCULATION_TMP/program.json" >/dev/null
@@ -46,7 +46,7 @@ PROGRAM_PUBKEY=$(solana-keygen pubkey "$CALCULATION_TMP/program.json")
 PAYER_PUBKEY=$(solana-keygen pubkey "$CALCULATION_TMP/payer.json")
 # Check a private block to avoid stale/interrupted validators. PID and identity
 # checks below prevent a port-selection race from attaching to another server.
-PORT_BASE=$(bash "$SOURCE_ROOT/test/select_calculation_ports.sh" "${CALCULATION_RPC_PORT:-}")
+PORT_BASE=$(bash "$SOURCE_ROOT/test/program/select_calculation_ports.sh" "${CALCULATION_RPC_PORT:-}")
 RPC_PORT=$PORT_BASE
 RPC_URL=http://127.0.0.1:$RPC_PORT
 # Give genesis funds to the disposable payer. Bind locally and assign distinct
@@ -103,5 +103,5 @@ solana --url "$RPC_URL" --keypair "$CALCULATION_TMP/payer.json" program deploy  
     --buffer "$CALCULATION_TMP/calculation-buffer.json" --use-rpc --commitment finalized
 # The driver verifies the smoke result first, then executes the calculation
 # batches. Pass user controls such as --limit and --verbose through unchanged.
-bash "$SOURCE_ROOT/test/run_calculation_vectors.sh" --url "$RPC_URL"                                                 \
+bash "$SOURCE_ROOT/test/program/run_calculation_vectors.sh" --url "$RPC_URL"                                         \
     --smoke-program "$SMOKE_PUBKEY" --payer "$CALCULATION_TMP/payer.json" --program "$PROGRAM_PUBKEY" "$@"

@@ -349,8 +349,8 @@ SETTLE_ENTRY_HIGHEST_BID_OFFSET=224
 
 
 # Waits until anyone, and not only the winning bidder, may settle the winning bid of the entry account $1: until
-# SETTLE_WINNING_BID_DELAY_SECONDS (which test/common builds the test program with) have passed since the end of the
-# entry's auction.  The auction ends at the entry's reveal timestamp (the 8 byte value at offset 200 of the entry)
+# SETTLE_WINNING_BID_DELAY_SECONDS (which test/program/common builds the test program with) have passed since the end of
+# the entry's auction.  The auction ends at the entry's reveal timestamp (the 8 byte value at offset 200 of the entry)
 # plus its duration (the u32 at offset 156).
 function settle_wait_until_anyone_may_settle ()
 {

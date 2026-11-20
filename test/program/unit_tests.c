@@ -1,5 +1,5 @@
 /* Calculation integration-test program. Built for BPF, invoked by transactions.
- * See test/README.txt. There is deliberately no host-side main().
+ * See test/program/README.txt. There is deliberately no host-side main().
  * Wire format: count:u8, then count records of:
  *   op:u8, initial_overflow:u8, expected_failure:u8, expected_overflow:u8,
  *   args[4]:u64 little endian, expected_value:u64 little endian.
@@ -7,7 +7,7 @@
  * Status: 0 PASS, 1 XFAIL, 2 FAIL, 3 XPASS.
  */
 #include "solana_sdk.h"
-#include "../program/util/util_calculations.c"
+#include "../../program/util/util_calculations.c"
 
 #define MAX_CASES 16
 #define CASE_SIZE 44

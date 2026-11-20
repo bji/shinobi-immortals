@@ -4,12 +4,12 @@
 # MINIMUM_BID_INCREMENT_BPS (5%), and a bid placed with fewer than AUCTION_EXTENSION_SECONDS left in an auction
 # extends the auction to end AUCTION_EXTENSION_SECONDS after the bid, as many times as bids keep arriving.
 #
-# Usage: SOURCE=<root of the Shinobi Immortals source> test/test_auction_extension.sh
+# Usage: SOURCE=<root of the Shinobi Immortals source> test/program/test_auction_extension.sh
 #
-# This runs on its own test validator, separately from test/test.sh, because it needs the program built with auction
-# extensions turned on.  The shared suite turns them off (see AUCTION_EXTENSION_SECONDS in test/common), because its
-# auctions last only 20 seconds and its tests wait a fixed time for them to end.  Here the extension window is 20
-# seconds rather than the production 10 minutes, so that the tests do not take long.
+# This runs on its own test validator, separately from test/program/test.sh, because it needs the program built with
+# auction extensions turned on.  The shared suite turns them off (see AUCTION_EXTENSION_SECONDS in test/program/common),
+# because its auctions last only 20 seconds and its tests wait a fixed time for them to end.  Here the extension window
+# is 20 seconds rather than the production 10 minutes, so that the tests do not take long.
 #
 # The tests run in order and depend on each other.
 
@@ -20,10 +20,10 @@ if [ -z "$SOURCE" ]; then
     exit 1
 fi
 
-# Run every test; the helpers in test/common consult TESTS
+# Run every test; the helpers in test/program/common consult TESTS
 TESTS=
 
-source $SOURCE/test/common
+source $SOURCE/test/program/common
 
 # Build the program so that a bid with fewer than 20 seconds left in an auction extends it
 export AUCTION_EXTENSION_SECONDS=20

@@ -1,0 +1,31 @@
+# Reference programs for the tests of the Shinobi Immortals Javascript SDK (see ../README.txt).  Each prints test
+# vectors whose expected results are computed by the very Solana crates that define them, so that the SDK's own
+# implementations (in sdk/js/shinobi_immortals_base.js) are checked against what Solana actually does:
+#
+# - curve_points: whether 32 bytes are a point on the ed25519 curve, by solana-address's bytes_are_curve_point, which
+#   decides which addresses can be program derived addresses
+# - ed25519_signatures: whether signatures are valid, by solana-signature's Signature::verify, which the Solana runtime
+#   uses to verify transaction signatures
+#
+# The versions are pinned exactly here, and Cargo.lock pins every dependency (with its checksum).  Run by the tests as
+# "cargo run --release --locked".  This is only a test tool; nothing in the SDK or the program uses it.
+
+[package]
+name = "shinobi-sdk-js-reference"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# bytes_are_curve_point, with curve25519-dalek's point decompression
+solana-address = { version = "=2.7.0", features = [ "curve25519" ] }
+# Signature::verify
+solana-signature = { version = "=3.6.0", features = [ "verify" ] }
+# Points and scalars of the curve, for making signatures, including invalid ones of every kind
+solana-ed25519 = { version = "=0.2.4" }
+# SHA-512, for making signatures
+sha2 = { version = "=0.11.1" }
+
+[profile.release]
+# The programs are small; build them quickly rather than optimize them
+opt-level = 1

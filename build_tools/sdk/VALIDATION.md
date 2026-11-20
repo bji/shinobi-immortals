@@ -19,7 +19,7 @@ Completed migration steps 1–4 on Linux x86_64:
 Command:
 
 ```sh
-bash test/test_calculations.sh
+bash test/program/test_calculations.sh
 # Equivalent: make test-calculations
 ```
 

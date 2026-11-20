@@ -69,8 +69,8 @@ legacy dynamic linking sections. Linking rejects undefined symbols.
 ## Execution
 
 ```sh
-bash build_tools/sdk/build.sh test/sbpfv3_smoke.c /tmp/smoke.so -Iprogram
-bash test/build_calculation_tests.sh /tmp/calculation-build
+bash build_tools/sdk/build.sh test/program/sbpfv3_smoke.c /tmp/smoke.so -Iprogram
+bash test/program/build_calculation_tests.sh /tmp/calculation-build
 make test-calculations
 ```
 
@@ -100,4 +100,4 @@ standard Linux tools including `curl`, `sha256sum`, `od`, `wc`, and `base64`.
 All 64-bit values are kept as decimal strings until serialized: neither
 Bash's signed arithmetic nor jq's floating-point numbers compute test results.
 Known failures are XFAIL; unexpected failures, unexpected passes, transaction
-failures and missing results fail the run. See `test/README.txt` for controls.
+failures and missing results fail the run. See `test/program/README.txt` for controls.

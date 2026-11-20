@@ -54,7 +54,7 @@ function arithmetic_pair ()
 {
     local a=$1 b=$2 op label operator output value high sticky overflow
     for op in 0 1; do
-        # Operation indices must match the switch in test/unit_tests.c.
+        # Operation indices must match the switch in test/program/unit_tests.c.
         if [ "$op" = 0 ]; then
             label=add
             operator=+

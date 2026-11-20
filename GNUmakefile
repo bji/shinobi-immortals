@@ -6,17 +6,49 @@ program.so: $(wildcard program/*.c program/*.h program/*/*.c program/*/*.h) buil
 build_program.sh: make_build_program.sh
 	./make_build_program.sh program-key.json super-key.json BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2 > $@
 
-.PHONY: test base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension
-test: base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension
+.PHONY: test base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension test-sdk-js \
+        sdk-js-packages clean clean-test clean-test-sdk-js clean-sdk-js-packages
+test: base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension test-sdk-js
 
 base-tests:
-	SOURCE=`pwd` ./test/test.sh
+	SOURCE=`pwd` ./test/program/test.sh
 
 test-calculations:
-	./test/test_calculations.sh
+	./test/program/test_calculations.sh
 
 test-destake-deactivated-elsewhere:
-	SOURCE=`pwd` ./test/test_destake_deactivated_elsewhere.sh
+	SOURCE=`pwd` ./test/program/test_destake_deactivated_elsewhere.sh
 
 test-auction-extension:
-	SOURCE=`pwd` ./test/test_auction_extension.sh
+	SOURCE=`pwd` ./test/program/test_auction_extension.sh
+
+test-sdk-js:
+	./test/sdk/js/run_tests.sh
+
+# Installs the npm packages that some of the Javascript SDK tests need (test/sdk/js/package.json), exactly as
+# package-lock.json pins them.  --ignore-scripts keeps npm from running any install script of any package, which is a
+# common way for a compromised package to run code; install them only this way, not with a bare "npm ci" or "npm
+# install".
+sdk-js-packages:
+	cd test/sdk/js && npm ci --ignore-scripts
+
+# Removes the built program.  build_program.sh is not removed, though make builds it too: it is checked in, and it can
+# only be made again with the program's and superuser's key files (program-key.json and super-key.json), which are
+# not.
+clean:
+	rm -f program.so
+
+# Removes what the test targets leave behind.  The program tests (base-tests, test-calculations,
+# test-destake-deactivated-elsewhere, and test-auction-extension) build and run everything in temporary directories,
+# which they remove themselves, so only the Javascript SDK tests leave anything here.
+clean-test: clean-test-sdk-js
+
+# Removes the build output of the Javascript SDK tests' Rust reference programs (test/sdk/js/reference), which
+# test-sdk-js builds and keeps so that later runs need not build them again
+clean-test-sdk-js:
+	rm -rf test/sdk/js/reference/target
+
+# Removes the npm packages that sdk-js-packages installs.  Until they are installed again, the Javascript SDK tests
+# that need them are skipped.
+clean-sdk-js-packages:
+	rm -rf test/sdk/js/node_modules

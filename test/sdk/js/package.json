@@ -1,0 +1,9 @@
+{
+  "name": "shinobi-immortals-sdk-js-tests",
+  "private": true,
+  "description": "Packages used only by the tests of the Shinobi Immortals Javascript SDK (test_kit.js, test_rpc.js, and test_wallet.js).  sdk/js/shinobi_immortals_base.js itself has no dependencies; sdk/js/shinobi_immortals.js uses @solana/kit.  Install with: npm ci",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@solana/kit": "8.6.0"
+  }
+}

@@ -1,3 +1,5 @@
 /program.so
 /program-key.json
 /super-key.json
+/test/sdk/js/node_modules/
+/test/sdk/js/reference/target/

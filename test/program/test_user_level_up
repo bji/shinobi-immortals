@@ -3,10 +3,10 @@
 # Level 1 credits is the first little endian 32 bit value.  0x00286bee is 4000000000 in little-endian.
 # This is deliberately huge.  Credits per level credit window can never exceed 6*L/N tenths, where L is the lifetime
 # level requirement (about 49.26 * 10 * level_1_credits) and N is the number of windows per year.  The test program's
-# short window (LEVEL_CREDIT_WINDOW_SECONDS in test/common) makes N very large (525600 for 60 second windows), so with
-# a small level_1_credits every contribution earns 0 credits no matter how large it is, and the credit checks would
-# compare 0 with 0.  With this value, even a 1 Ki contribution earns many tenths of a credit.  As a consequence the
-# entry never actually reaches level 1 in these tests.
+# short window (LEVEL_CREDIT_WINDOW_SECONDS in test/program/common) makes N very large (525600 for 60 second windows),
+# so with a small level_1_credits every contribution earns 0 credits no matter how large it is, and the credit checks
+# would compare 0 with 0.  With this value, even a 1 Ki contribution earns many tenths of a credit.  As a consequence
+# the entry never actually reaches level 1 in these tests.
 # The ki_factor for levels appears as an unsigned little-endian 32 bit value at offset 76 + (level * 308).
 # 0xf4240000 is 9460 in little-endian.
 # Also set the names to the level.  This is used to ensure that metaplex metadata is being updated.  The first
@@ -1031,7 +1031,7 @@ fi
 
 
 # Entry already at level 9 (level index 8) can't be levelled up any further.  Reaching level 9 through transactions
-# takes months by design, so this uses the genesis fixture entry created by setup in test/common (see
+# takes months by design, so this uses the genesis fixture entry created by setup in test/program/common (see
 # make_max_level_entry_fixture), which is already at level index 8.  The maximum level check happens before the
 # token, metadata, and Ki accounts are examined, so entry 16 0 0's real accounts are supplied for those.
 if should_run_test user_level_up_past_9; then
