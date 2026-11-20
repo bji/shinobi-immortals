@@ -1,6 +1,6 @@
 /* Derived from Anza rust sbf_base.rs, commit
  * 3175de2636b6e1145b7655fd4131095e23452137 (V3_LINKER_SCRIPT).
- * Apache-2.0 / MIT upstream; see sdk/README.md.
+ * Apache-2.0 / MIT upstream; see build_tools/sdk/README.md.
  */
 SECTIONS
 {

@@ -1,4 +1,4 @@
-SDK_ROOT?=./sdk
+SDK_ROOT?=./build_tools/sdk
 
 program.so: $(wildcard program/*.c program/*.h program/*/*.c program/*/*.h) build_program.sh
 	SDK_ROOT=$(SDK_ROOT) SOURCE_ROOT=. ./build_program.sh

@@ -875,7 +875,7 @@ function setup ()
     chmod +x $LEDGER/build_program.sh
     echo "Building program"
     (cd $LEDGER;                                                                                                     \
-     SDK_ROOT=$SOURCE/sdk SOURCE_ROOT=$SOURCE ./build_program.sh)
+     SDK_ROOT=$SOURCE/build_tools/sdk SOURCE_ROOT=$SOURCE ./build_program.sh)
     
     # Deploy the program.
     echo "Deploying program"

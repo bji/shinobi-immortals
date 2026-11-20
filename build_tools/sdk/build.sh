@@ -4,8 +4,8 @@ set -euo pipefail
 # Resolve our include files and verifier scripts independently of the caller's directory.
 SDK_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # Require both paths before creating any temporary build artifacts.
-SOURCE_FILE=${1:?Usage: sdk/build.sh SOURCE.c OUTPUT.so [CLANG_ARGUMENT ...]}
-OUTPUT_FILE=${2:?Usage: sdk/build.sh SOURCE.c OUTPUT.so [CLANG_ARGUMENT ...]}
+SOURCE_FILE=${1:?Usage: build_tools/sdk/build.sh SOURCE.c OUTPUT.so [CLANG_ARGUMENT ...]}
+OUTPUT_FILE=${2:?Usage: build_tools/sdk/build.sh SOURCE.c OUTPUT.so [CLANG_ARGUMENT ...]}
 # The remaining positional arguments go directly to Clang. Quoted "$@" keeps
 # each definition intact, including strings with spaces and public-key arrays.
 # Do not combine these arguments into a string or re-interpret them with eval.

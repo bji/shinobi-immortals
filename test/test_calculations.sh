@@ -27,10 +27,10 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # Verify the selected runtime first, then compile the smoke and calculation programs.
-bash "$SOURCE_ROOT/sdk/verify_agave.sh"
+bash "$SOURCE_ROOT/build_tools/sdk/verify_agave.sh"
 # The smoke source uses the project's Clock type; supply that include path here
 # so the shared SDK builder does not depend on this repository's program layout.
-bash "$SOURCE_ROOT/sdk/build.sh" "$SOURCE_ROOT/test/sbpfv3_smoke.c" "$CALCULATION_TMP/smoke.so"                      \
+bash "$SOURCE_ROOT/build_tools/sdk/build.sh" "$SOURCE_ROOT/test/sbpfv3_smoke.c" "$CALCULATION_TMP/smoke.so"                      \
     -I"$SOURCE_ROOT/program"
 bash "$SOURCE_ROOT/test/build_calculation_tests.sh" "$CALCULATION_TMP"
 # All accounts are disposable. Separate deployment buffers avoid CLI-generated

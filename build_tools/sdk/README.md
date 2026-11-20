@@ -26,8 +26,8 @@ Setup on a new Linux x86_64 machine:
 ```sh
 agave-install init 4.4.0 --no-modify-path
 # Ensure the installed active_release/bin is first in PATH.
-bash sdk/install_toolchain.sh
-bash sdk/verify_agave.sh
+bash build_tools/sdk/install_toolchain.sh
+bash build_tools/sdk/verify_agave.sh
 ```
 
 The installer verifies the platform-tools download against its locked release
@@ -69,7 +69,7 @@ legacy dynamic linking sections. Linking rejects undefined symbols.
 ## Execution
 
 ```sh
-bash sdk/build.sh test/sbpfv3_smoke.c /tmp/smoke.so -Iprogram
+bash build_tools/sdk/build.sh test/sbpfv3_smoke.c /tmp/smoke.so -Iprogram
 bash test/build_calculation_tests.sh /tmp/calculation-build
 make test-calculations
 ```
@@ -79,7 +79,7 @@ the same `-D` definitions as in `build_program.sh`, quoting each entire argument
 when its value contains spaces or shell-special characters:
 
 ```sh
-bash sdk/build.sh source.c /tmp/program.so \
+bash build_tools/sdk/build.sh source.c /tmp/program.so \
     -DSTATE_BUMP_SEED=253 \
     '-DSUPERUSER_PUBKEY_ARRAY={149, 75, 37}' \
     '-DMESSAGE="hello world"'

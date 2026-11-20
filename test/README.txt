@@ -12,7 +12,7 @@ inside BPF, and returns per-case results. Bash and dc generate independent
 reference values using arbitrary-precision integers; they never execute
 production code.
 
-The runner uses the pinned C/SBPFv3 build in sdk/build.sh (see sdk/README.md),
+The runner uses the pinned C/SBPFv3 build in build_tools/sdk/build.sh (see build_tools/sdk/README.md),
 starts a disposable Agave 4.4.0 validator, deploys both the smoke and calculation
 programs to finalized commitment, verifies a smoke transaction, then sends
 real signed transactions using solxact, and checks confirmed execution metadata
@@ -50,8 +50,8 @@ effective lamports (a) and converts the result with ki_factor (b).
 
 Requirements: pinned Agave 4.4.0 and platform-tools v1.57 on Linux x86_64,
 solxact, Bash, dc, jq, curl, and standard Linux coreutils.
-Setup: bash sdk/install_toolchain.sh.
-Headers and the SBPFv3 linker script are maintained in sdk/. SDK_ROOT and
+Setup: bash build_tools/sdk/install_toolchain.sh.
+Headers and the SBPFv3 linker script are maintained in build_tools/sdk/. SDK_ROOT and
 BPF_TOOLS are no longer used by the standalone calculation tests. PLATFORM_TOOLS
 can select a different directory containing the identical pinned compiler files.
 

@@ -5,4 +5,4 @@ set -euo pipefail
 SOURCE_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 # Keep the artifact name stable for the deployment runner, using the shared build flags.
 OUTPUT_DIR=${1:?Usage: build_calculation_tests.sh OUTPUT_DIR}
-bash "$SOURCE_ROOT/sdk/build.sh" "$SOURCE_ROOT/test/unit_tests.c" "$OUTPUT_DIR/calculation_tests.so"
+bash "$SOURCE_ROOT/build_tools/sdk/build.sh" "$SOURCE_ROOT/test/unit_tests.c" "$OUTPUT_DIR/calculation_tests.so"

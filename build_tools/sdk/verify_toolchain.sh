@@ -22,7 +22,7 @@ while IFS=$'\t' read -r name expected; do
     fi
 done < <(jq -r '.linux_x86_64_binaries | to_entries[] | [.key,.value] | @tsv' "$LOCK")
 # Separately verify every archived header/source file; local adaptations belong
-# in sdk/include, so upstream edits must trigger a provenance/lock review.
+# in build_tools/sdk/include, so upstream edits must trigger a provenance/lock review.
 while IFS=$'\t' read -r name expected; do
     actual=$(sha256sum "$SDK_DIR/upstream/$name")
     if [ "${actual%% *}" != "$expected" ]; then
