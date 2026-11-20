@@ -10,8 +10,8 @@
 
 BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`

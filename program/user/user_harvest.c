@@ -17,18 +17,27 @@ static uint64_t user_harvest(const SolParameters *params)
         DECLARE_ACCOUNT(9,   system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(10,  spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
         DECLARE_ACCOUNT(11,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        // The entry's block, whose block_start_timestamp is the beginning of the entry's life span, over which its Ki
+        // harvests are reduced.  It is last so that adding it did not change the positions of the other accounts.
+        DECLARE_ACCOUNT(12,  block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
     }
-    DECLARE_ACCOUNTS_NUMBER(12);
+    DECLARE_ACCOUNTS_NUMBER(13);
 
     // This instruction takes no data beyond the instruction code byte, so ensure that no data was supplied
     if (params->data_len != 1) {
         return Error_InvalidDataSize;
     }
 
-    // This is the entry data
-    Entry *entry = get_validated_entry(entry_account);
+    // This is the entry data, which must be an entry of the given block
+    Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
         return Error_InvalidAccount_First + 1;
+    }
+
+    // This is the block data
+    const Block *block = get_validated_block(block_account);
+    if (!block) {
+        return Error_InvalidAccount_First + 12;
     }
 
     // Get the clock sysvar, needed below
@@ -60,8 +69,8 @@ static uint64_t user_harvest(const SolParameters *params)
     }
 
     // Harvest Ki
-    harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key,
-               funding_account->key, clock.epoch, params->ka, params->ka_num);
+    harvest_ki(&stake, block, entry, ki_destination_account, ki_destination_owner_account->key,
+               funding_account->key, &clock, params->ka, params->ka_num);
 
     return 0;
 }

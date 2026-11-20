@@ -200,8 +200,8 @@ if [ -z "$TESTS" ]; then
 fi
 
 # Need metadata to set.  Use something very simple as the actual contents do not matter.
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
@@ -486,16 +486,16 @@ if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
     fi
     # EntryMetadata (see "EntryMetadata layout" in instructions.txt): level_1_credits and random (68 bytes), then
     # level 0's LevelMetadata: form, skill and padding, and ki_factor (12 bytes), name (32), title (32), uri (200),
-    # and uri_contents_sha256 (32); then levels 1-8 (8 * 308 bytes) and expected_annual_reward_bps (4), all zero.
-    # 2844 bytes in all.
+    # and uri_contents_sha256 (32); then levels 1-8 (8 * 308 bytes), expected_annual_reward_bps (4) and
+    # ki_harvest_reduction_per_day (4), all zero.  2848 bytes in all.
     FULL_METADATA_FILE=$LEDGER/full_length_metadata.bin
     (dd if=/dev/zero bs=1 count=80 status=none;
      printf '%s' "$FULL_NAME";
      printf '%s' "$FULL_TITLE";
      printf '%s' "$FULL_URI";
-     dd if=/dev/zero bs=1 count=$((32 + 8*308 + 4)) status=none) > $FULL_METADATA_FILE
-    if [ `wc -c < $FULL_METADATA_FILE` -ne 2844 ]; then
-        echo "FAIL: $TEST_NAME: metadata is `wc -c < $FULL_METADATA_FILE` bytes, expected 2844"
+     dd if=/dev/zero bs=1 count=$((32 + 8*308 + 4 + 4)) status=none) > $FULL_METADATA_FILE
+    if [ `wc -c < $FULL_METADATA_FILE` -ne 2848 ]; then
+        echo "FAIL: $TEST_NAME: metadata is `wc -c < $FULL_METADATA_FILE` bytes, expected 2848"
         exit 1
     fi
     FULL_METADATA=`base64 < $FULL_METADATA_FILE | tr -d '\n'`
@@ -517,7 +517,7 @@ if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
     # Set the metadata in four pieces, since all of it does not fit in one transaction
-    for PIECE in "0 900" "900 900" "1800 900" "2700 144"; do
+    for PIECE in "0 900" "900 900" "1800 900" "2700 148"; do
         read -r PIECE_START PIECE_LEN <<< "$PIECE"
         PIECE_DATA=`dd if=$FULL_METADATA_FILE bs=1 skip=$PIECE_START count=$PIECE_LEN status=none | base64 | tr -d '\n'`
         assert ${TEST_NAME}_set_metadata_$PIECE_START                                                                \

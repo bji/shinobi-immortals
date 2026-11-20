@@ -41,6 +41,12 @@ Operation 16 converts effective lamports (a) with a uint32_t factor (b).
 Operation 17 checks the complete pipeline: earned lamports (a), current stake
 lamports (b), and ki_factor (c). Vectors include 500 epochs of earnings,
 50 effective SOL with UINT32_MAX factor, and full-range stake balances.
+Operation 18 computes the fraction of a harvest, as a fraction of UINT32_MAX,
+that an entry retains after a life span of b whole days with a per-day
+reduction of a (also a fraction of UINT32_MAX); the dc reference performs the same
+specified repeated
+squaring, with the same roundings. Operation 19 applies a retention (c) to
+effective lamports (a) and converts the result with ki_factor (b).
 
 Requirements: pinned Agave 4.4.0 and platform-tools v1.57 on Linux x86_64,
 solxact, Bash, dc, jq, curl, and standard Linux coreutils.
@@ -64,6 +70,8 @@ operation, initial-overflow, expected-failure flag, expected-overflow, four
 arguments, expected value. A fixed-seed 64-bit LCG supplies repeatable random
 inputs; dc performs all wide arithmetic, including overflow reference results.
 Operations: 0 add, 1 multiply, 2 price, 3 minimum bid, 4 Ki, (5 unused),
-6 window level credits, 7 cumulative level requirement, 8 multiply fraction.
+6 window level credits, 7 cumulative level requirement, 8 multiply fraction,
+9 level credit window, 10 Ki needed for credits, 16 Ki conversion, 17 Ki
+pipeline, 18 Ki harvest retention, 19 retained Ki harvest.
 The driver keeps binary transactions in files and decodes returned unsigned
 64-bit values with od, without lossy shell/JSON numeric conversions.

@@ -133,5 +133,11 @@ static uint64_t user_stake(const SolParameters *params)
     // Record current lamports in the stake account to be used for ki harvesting purposes
     entry->owned.last_ki_harvest_stake_account_lamports = stake.stake.delegation.stake;
 
+    // Epochs staked are counted only for epochs during the whole of which the entry holds the stake account, so the
+    // first epoch that can be counted is the next one.  An entry is never staked twice in the same epoch without
+    // being destaked in between, which counts only epochs before the destake's epoch, so this never causes any epoch
+    // to be counted twice.
+    entry->epochs_staked_counted_to_epoch = clock.epoch + 1;
+
     return 0;
 }

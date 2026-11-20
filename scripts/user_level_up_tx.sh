@@ -136,6 +136,8 @@ solxact encode                                                                  
         account $STAKE_ACCOUNT_PUBKEY                                                                                 \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
+        // The entry's block, whose block_start_timestamp begins the entry's life span, used only if staked //       \
+        account $BLOCK_PUBKEY                                                                                         \
         // Instruction code 17 = LevelUp //                                                                           \
         u8 17                                                                                                        \
         u64 $KI_AMOUNT

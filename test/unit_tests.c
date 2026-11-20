@@ -135,6 +135,22 @@ uint64_t entrypoint(const uint8_t *input)
             actual_result = compute_ki_harvest(compute_effective_stake_earnings(a, b), c);
             break;
 
+        case 18:
+            // a is the per-day reduction as a fraction of UINT32_MAX, b the life span in whole days
+            if (a > UINT32_MAX) {
+                return 4;
+            }
+            actual_result = compute_ki_harvest_retention((uint32_t) a, b);
+            break;
+
+        case 19:
+            // a is effective earnings in lamports, b the ki_factor, c the retention as a fraction of UINT32_MAX
+            if ((a > 60000000000ul) || (b > UINT32_MAX)) {
+                return 4;
+            }
+            actual_result = compute_retained_ki_harvest(a, (uint32_t) b, c);
+            break;
+
         default:
             return 5;
         }

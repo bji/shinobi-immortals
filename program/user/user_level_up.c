@@ -36,8 +36,12 @@ static uint64_t user_level_up(const SolParameters *params)
         // if Ki is harvested into it and it does not exist yet
         DECLARE_ACCOUNT(11,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(12,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        // The entry's block if the entry is staked: its block_start_timestamp is the beginning of the entry's life
+        // span, over which the Ki that is harvested is reduced.  Any account otherwise, since it is then not used.  It
+        // is last so that adding it did not change the positions of the other accounts.
+        DECLARE_ACCOUNT(13,  block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
     }
-    DECLARE_ACCOUNTS_NUMBER(13);
+    DECLARE_ACCOUNTS_NUMBER(14);
 
     // Ensure that the instruction data is the correct size
     if (params->data_len != sizeof(LevelUpData)) {
@@ -115,6 +119,12 @@ static uint64_t user_level_up(const SolParameters *params)
             return Error_InvalidAccount_First + 10;
         }
 
+        // Check to make sure that the block account passed in is the entry's block
+        const Block *block = get_validated_block(block_account);
+        if (!block || !SolPubkey_same(&(entry->block_pubkey), block_account->key)) {
+            return Error_InvalidAccount_First + 13;
+        }
+
         // Check that the Ki source account is either already a Ki token account of the Ki source owner, or else the
         // Ki source owner's associated Ki token account, which harvest_ki creates if it needs to and it does not
         // exist.  Checking this here, rather than leaving it to harvest_ki, means that any other account is refused
@@ -130,8 +140,8 @@ static uint64_t user_level_up(const SolParameters *params)
             }
         }
 
-        harvest_ki(&stake, entry, ki_source_account, ki_source_owner_account->key, ki_source_owner_account->key,
-                   clock.epoch, params->ka, params->ka_num);
+        harvest_ki(&stake, block, entry, ki_source_account, ki_source_owner_account->key,
+                   ki_source_owner_account->key, &clock, params->ka, params->ka_num);
     }
 
     // Contributions must be positive and use a fixed level-zero ki_factor.

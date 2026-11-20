@@ -467,3 +467,53 @@ for ((i=0; i<64; ++i)); do
     expected=$(dc_calc "$effective $factor * 1000000000 / p")
     emit "harvest/pipeline/random/$i" 17 "$earnings" "$stake" "$factor" 0 "$expected"
 done
+
+# Ki harvest retention: the fraction, of UINT32_MAX, of a harvest that an entry retains after a life span of n
+# whole days, with a per-day reduction of r (also a fraction of UINT32_MAX).  The specified computation is repeated
+# squaring of q = UINT32_MAX - r, starting from the least significant bit of n, with every product of two such
+# fractions rounded down to a whole fraction of UINT32_MAX.  This reference performs that same specified sequence of
+# roundings, entirely in dc, so it does not share any code with the program.  (The program stops early once the
+# result is 0; carrying on, as this does, gives the same result, since 0 stays 0.)
+function retention_reference ()
+{
+    local reduction=$1 days=$2
+    # The reduction is a uint32_t, so Bash arithmetic can compute the base
+    local base=$((4294967295 - reduction))
+    # dc registers: r is the result, b the base, n the remaining exponent.  Macro m multiplies the result by the
+    # base; macro L processes one bit of the exponent and repeats while any bits remain.  "X Y <L" runs L if Y < X.
+    dc_calc "4294967295 sr $base sb $days sn
+             [lr lb * 4294967295 / sr]sm
+             [ln 2 % 1 =m lb lb * 4294967295 / sb ln 2 / sn ln 0 <L]sL
+             ln 0 <L
+             lr p"
+}
+
+# Small, typical and extreme reductions (603528 is about 5% per year), over life spans around bit boundaries,
+# typical lifetimes (a year, ten years and a century), and the largest possible.
+for reduction in 0 1 603528 4294967 2147483647 2147483648 4294967294 4294967295; do
+    for days in 0 1 2 3 4 7 8 365 3650 36500 65535 65536 "$MAX"; do
+        expected=$(retention_reference "$reduction" "$days")
+        emit "harvest/retention/$reduction/$days" 18 "$reduction" "$days" 0 0 "$expected"
+    done
+done
+# Independent random reductions (mostly small, as they would be in practice) and life spans of up to about 270 years
+for ((i=0; i<64; ++i)); do
+    reduction=$(dc_calc "${random_values[i+192]} 10000000 % p")
+    days=$(dc_calc "${random_values[i+256]} 100000 % p")
+    expected=$(retention_reference "$reduction" "$days")
+    emit "harvest/retention/random/$i" 18 "$reduction" "$days" 0 0 "$expected"
+done
+
+# Retained harvest: effective earnings reduced to the retention (a retention above UINT32_MAX counts as UINT32_MAX),
+# rounded down to whole lamports, then converted to whole Ki at ki_factor.
+for effective in 0 1 999999999 1000000000 50000000000 60000000000; do
+    for factor in 1 70000 4294967295; do
+        for retention in 0 1 4080218930 4294967294 4294967295 4294967296 "$MAX"; do
+            # The retention, capped at UINT32_MAX: register x holds it, and macro c caps it if UINT32_MAX < x
+            capped=$(dc_calc "$retention sx [4294967295 sx]sc lx 4294967295 <c lx p")
+            retained=$(dc_calc "$effective $capped * 4294967295 / p")
+            expected=$(dc_calc "$retained $factor * 1000000000 / p")
+            emit "harvest/retained/$effective/$factor/$retention" 19 "$effective" "$factor" "$retention" 0 "$expected"
+        done
+    done
+done

@@ -1,0 +1,202 @@
+
+# Tests of UpdateEpochsStaked, which brings an entry's epochs_staked up to date.  Uses block 20 0, whose entry 0 is
+# staked by rich_user1 with a stake account that was already delegated to Shinobi Systems and active, and whose entry
+# 1 is owned by rich_user1 but not staked.
+
+BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
+BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+SALT0=0
+SALT1=1
+SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
+SHA2561=`compute_metadata_sha256 $METADATA1 $SALT1`
+
+
+# This must be set so that user_stake_tx.sh will use the correct vote account
+export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+
+
+# Prints the given field of entry 20 0 <ENTRY_INDEX>, as shown by show.sh
+function update_epochs_staked_entry_field ()
+{
+    local ENTRY_INDEX=$1
+    local FIELD=$2
+
+    PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 20 0 $ENTRY_INDEX | jq -r ".$FIELD"
+}
+
+
+# Create accounts and block
+if [ -z "$TESTS" ]; then
+    # Create a stake account and delegate it to Shinobi Systems, then wait for an epoch so that the delegation is
+    # active before the stake account is staked to the entry
+    make_stake_account $LEDGER/rich_user1.json $LEDGER/update_epochs_staked_stake.json 1000
+    echo "Delegating $LEDGER/update_epochs_staked_stake.json"
+    solana_stake -u l delegate-stake -k $LEDGER/rich_user1.json $LEDGER/update_epochs_staked_stake.json $VOTE_PUBKEY  \
+           >/dev/null 2>/dev/null
+
+    # 20 0: two entries, no mysteries, so it is revealable as soon as it is complete
+    assert anyone_update_epochs_staked_setup_a                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
+         $ADMIN_PUBKEY 20 0 2 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert anyone_update_epochs_staked_setup_b                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_add_entries_to_block_tx.sh                       \
+         $ADMIN_PUBKEY 20 0 "http://foo.bar.com" none 0 $SHA2560 $SHA2561                                            \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Set the metadata of each entry: only the first byte is non-zero
+    assert anyone_update_epochs_staked_setup_c                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 20 0 0 0 $BYTE_0                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    assert anyone_update_epochs_staked_setup_d                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
+         $ADMIN_PUBKEY 20 0 1 0 $BYTE_1                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # Reveal the entries
+    assert anyone_update_epochs_staked_setup_e                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_reveal_entries_tx.sh                             \
+         $ADMIN_PUBKEY 20 0 0 $SALT0 $SALT1                                                                          \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/admin.json                                                                            \
+        | solxact submit l 2>&1`
+    # rich_user1 buys both entries
+    for i in 0 1; do
+        assert anyone_update_epochs_staked_setup_f_$i                                                                \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_buy_tx.sh                                     \
+             $ADMIN_PUBKEY $RICH_USER1_PUBKEY 20 0 $i \`lamports_from_sol 1001\`                                     \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/rich_user1.json                                                                   \
+            | solxact submit l 2>&1`
+    done
+
+    # Wait for the stake account's delegation to become active
+    sleep_until_next_epoch
+
+    # rich_user1 stakes entry 0
+    assert anyone_update_epochs_staked_setup_g                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_stake_tx.sh                                       \
+         $RICH_USER1_PUBKEY 20 0 0 $LEDGER/update_epochs_staked_stake.json                                           \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+
+    # 20 0 0 is owned and staked by rich_user1
+    # 20 0 1 is owned by rich_user1 and not staked
+fi
+
+
+export UPDATE_EPOCHS_STAKED_STAKE_PUBKEY=`solxact pubkey $LEDGER/update_epochs_staked_stake.json`
+
+
+# The entry account is not an entry
+if should_run_test anyone_update_epochs_staked_bad_entry; then
+    STATE_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 1 ]`
+    assert_fail anyone_update_epochs_staked_bad_entry                                                                \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER2_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY w                                                                                   \
+           account $UPDATE_EPOCHS_STAKED_STAKE_PUBKEY                                                                \
+           // Instruction code 20 = UpdateEpochsStaked //                                                            \
+           u8 20"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# The entry is staked, but the stake account given is not its stake account
+if should_run_test anyone_update_epochs_staked_wrong_stake; then
+    assert_fail anyone_update_epochs_staked_wrong_stake                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_update_epochs_staked_tx.sh                      \
+         $RICH_USER2_PUBKEY 20 0 0 none                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# The entry is not staked: nothing to do, and the stake account is not used
+if should_run_test anyone_update_epochs_staked_not_staked; then
+    assert anyone_update_epochs_staked_not_staked                                                                    \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_update_epochs_staked_tx.sh                      \
+         $RICH_USER2_PUBKEY 20 0 1 none                                                                              \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    if [ "`update_epochs_staked_entry_field 1 epochs_staked`" != "0" ]; then
+        echo "FAIL: anyone_update_epochs_staked_not_staked: epochs_staked changed for an entry that is not staked"
+        exit 1
+    fi
+fi
+
+
+# The entry is staked: after waiting for some epochs, anyone (here, rich_user2, who does not own the entry) brings its
+# epochs_staked up to date.  The stake account was active before the entry was staked, so every epoch from the one
+# after the stake (epochs_staked_counted_to_epoch, as set by Stake) up to but not including the current epoch counts.
+if should_run_test anyone_update_epochs_staked_success; then
+    FIRST_COUNTED_EPOCH=`update_epochs_staked_entry_field 0 epochs_staked_counted_to_epoch`
+    BEFORE=`update_epochs_staked_entry_field 0 epochs_staked`
+
+    # Wait until at least two epochs after the first counted epoch have begun, so that at least two are counted
+    while [ `current_epoch` -lt $((FIRST_COUNTED_EPOCH + 2)) ]; do
+        sleep_until_next_epoch
+    done
+
+    # The epoch before and after the transaction; the transaction executes in one of them (normally the same one)
+    EPOCH_BEFORE=`current_epoch`
+    assert anyone_update_epochs_staked_success                                                                       \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_update_epochs_staked_tx.sh                      \
+         $RICH_USER2_PUBKEY 20 0 0 $UPDATE_EPOCHS_STAKED_STAKE_PUBKEY                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    EPOCH_AFTER=`current_epoch`
+
+    AFTER=`update_epochs_staked_entry_field 0 epochs_staked`
+    COUNTED_TO=`update_epochs_staked_entry_field 0 epochs_staked_counted_to_epoch`
+
+    # The epoch that the transaction executed in is the epoch counted up to
+    if [ $COUNTED_TO -lt $EPOCH_BEFORE ] || [ $COUNTED_TO -gt $EPOCH_AFTER ]; then
+        echo "FAIL: anyone_update_epochs_staked_success: counted to epoch $COUNTED_TO, expected $EPOCH_BEFORE to" \
+             "$EPOCH_AFTER"
+        exit 1
+    fi
+
+    # Every epoch from the first counted epoch up to that epoch was counted
+    if [ $AFTER -ne $((BEFORE + COUNTED_TO - FIRST_COUNTED_EPOCH)) ]; then
+        echo "FAIL: anyone_update_epochs_staked_success: epochs_staked is $AFTER, expected" \
+             "$((BEFORE + COUNTED_TO - FIRST_COUNTED_EPOCH))"
+        exit 1
+    fi
+
+    # Doing it again in the same epoch counts nothing more.  If the epoch has changed in between, then exactly the
+    # epochs since are counted.
+    assert anyone_update_epochs_staked_again                                                                         \
+    `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_update_epochs_staked_tx.sh                      \
+         $RICH_USER2_PUBKEY 20 0 0 $UPDATE_EPOCHS_STAKED_STAKE_PUBKEY                                                \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user2.json                                                                       \
+        | solxact submit l 2>&1`
+    AGAIN=`update_epochs_staked_entry_field 0 epochs_staked`
+    COUNTED_TO_AGAIN=`update_epochs_staked_entry_field 0 epochs_staked_counted_to_epoch`
+    if [ $AGAIN -ne $((AFTER + COUNTED_TO_AGAIN - COUNTED_TO)) ]; then
+        echo "FAIL: anyone_update_epochs_staked_again: epochs_staked is $AGAIN, expected" \
+             "$((AFTER + COUNTED_TO_AGAIN - COUNTED_TO))"
+        exit 1
+    fi
+fi

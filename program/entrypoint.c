@@ -83,6 +83,11 @@ typedef enum
     // If the entry is staked and the stake account is not actively delegated, this delegates the stake account to
     // Shinobi Systems so that it can start earning Ki.
     Instruction_Delegate                      = 19,
+    // Bring an entry's epochs_staked up to date, so that it is exact as of the current epoch.  Another program (for
+    // example, a game) can then rely on epochs_staked by reading only the entry, if this instruction is executed
+    // earlier in the same transaction.  If the entry is not staked, its epochs_staked is already exact, and this does
+    // nothing.
+    Instruction_UpdateEpochsStaked            = 20,
 
     // Special functions -----------------------------------------------------------------------------------------------
     // This is a special function that can only be called on an entry that is in the Owned or OwnedAndStaked state.
@@ -95,7 +100,7 @@ typedef enum
     // instruction (but only if both the user and admin agree to do so).  The instruction data includes a flag
     // that says whether or not to reauthorize the metadata; if it is false, the Metaplex Metadata program is not
     // invoked, so that a problem with that program cannot prevent a stake account from being returned.
-    Instruction_ReAuthorize                   = 20
+    Instruction_ReAuthorize                   = 21
 
 } Instruction;
 
@@ -124,6 +129,7 @@ typedef enum
 
 #include "anyone/anyone_settle_winning_bid.c"
 #include "anyone/anyone_delegate.c"
+#include "anyone/anyone_update_epochs_staked.c"
 
 #include "special/special_reauthorize.c"
 
@@ -210,6 +216,9 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_Delegate:
         return anyone_delegate(&params);
+
+    case Instruction_UpdateEpochsStaked:
+        return anyone_update_epochs_staked(&params);
 
     case Instruction_ReAuthorize:
         return special_reauthorize(&params);

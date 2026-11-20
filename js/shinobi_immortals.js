@@ -86,6 +86,7 @@ const INSTRUCTION_HARVEST = 16;
 const INSTRUCTION_LEVEL_UP = 17;
 const INSTRUCTION_SETTLE_WINNING_BID = 18;
 const INSTRUCTION_DELEGATE = 19;
+const INSTRUCTION_UPDATE_EPOCHS_STAKED = 20;
 
 // Data type code of the authority account's data (DataType_Authority in program/inc/data_type.h)
 const DATA_TYPE_AUTHORITY = 6;
@@ -1046,6 +1047,8 @@ class Block
         this.non_auction_start_price_lamports = buffer_le_u64(data, 56);
         this.whitelist_duration = buffer_le_u32(data, 64);
         this.added_entries_count = buffer_le_u16(data, 72);
+        // The time at which the block was completed (0 until then), which is also the beginning of the life span of
+        // each of its entries, over which their Ki harvests are reduced
         this.block_start_timestamp = Number(buffer_le_s64(data, 80));
         this.mysteries_sold_count = buffer_le_u16(data, 88);
         this.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 96));
@@ -1158,9 +1161,13 @@ class Entry
         this.owned_stake_account = buffer_address(data, 264);
         this.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 296);
         this.level = data[304];
-        this.most_recent_ki_applied_window = buffer_le_u64(data, 3152);
-        this.ki_applied_this_window = buffer_le_u64(data, 3160);
-        this.total_level_credits = buffer_le_u64(data, 3168);
+        this.most_recent_ki_applied_window = buffer_le_u64(data, 3160);
+        this.ki_applied_this_window = buffer_le_u64(data, 3168);
+        this.total_level_credits = buffer_le_u64(data, 3176);
+        // The number of whole epochs that the entry has been staked with stake active at Shinobi Systems, as last
+        // counted by the program, and the epoch up to which it has been counted (see program/inc/entry.h)
+        this.epochs_staked = buffer_le_u64(data, 3184);
+        this.epochs_staked_counted_to_epoch = buffer_le_u64(data, 3192);
 
         this.metadata_level_1_credits = buffer_le_u32(data, 308);
         this.metadata_random = [ buffer_le_u32(data, 312),
@@ -1196,6 +1203,9 @@ class Entry
 
         // Expected annual stake reward rate in basis points, which calibrates the level credits curve
         this.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3148);
+
+        // The fraction, of UINT32_MAX, by which Ki harvests are reduced for each day of the entry's life span
+        this.metadata_ki_harvest_reduction_per_day = buffer_le_u32(data, 3152);
     }
 
     update(data)
@@ -1260,7 +1270,8 @@ class Entry
         }
 
         // Contributions can change progression without changing the level.
-        for (const field of [ "most_recent_ki_applied_window", "ki_applied_this_window", "total_level_credits" ]) {
+        for (const field of [ "most_recent_ki_applied_window", "ki_applied_this_window", "total_level_credits",
+                              "epochs_staked", "epochs_staked_counted_to_epoch" ]) {
             if (new_entry[field] != this[field]) {
                 this[field] = new_entry[field];
                 changed = true;
@@ -1465,12 +1476,26 @@ class Entry
             return 0n;
         }
 
-        // Apply the effective stake curve to what was earned, then convert to whole Ki at the current level's
-        // ki_factor
+        // Apply the effective stake curve to what was earned
         let effective_earnings = Entry.compute_effective_stake_earnings(
             stake - this.owned_last_ki_harvest_stake_account_lamports, stake);
 
-        return (effective_earnings * BigInt(this.level_metadata[this.level].ki_factor)) / BigInt(LAMPORTS_PER_SOL);
+        // Reduce it to the fraction that the entry retains at the current point of its life span, which begins when
+        // its block was completed, and is measured in whole days.  The cluster's current time is the block time of the
+        // slot that the epoch info was fetched at, just as update_clock obtains it.
+        let block_time = await rpc_connections.run((rpc_connection) => {
+            return rpc_connection.getBlockTime(epoch_info.absoluteSlot);
+        }, "fetch block time");
+        if (block_time == null) {
+            return 0n;
+        }
+        let lifespan_seconds = BigInt(block_time) - BigInt(this.block.block_start_timestamp);
+        let lifespan_days = (lifespan_seconds > 0n) ? (lifespan_seconds / 86400n) : 0n;
+        let retention = Entry.compute_ki_harvest_retention(this.metadata_ki_harvest_reduction_per_day, lifespan_days);
+        let retained_earnings = (effective_earnings * retention) / 4294967295n;
+
+        // Then convert to whole Ki at the current level's ki_factor
+        return (retained_earnings * BigInt(this.level_metadata[this.level].ki_factor)) / BigInt(LAMPORTS_PER_SOL);
     }
 
     // Private implementation follows ---------------------------------------------------------------------------------
@@ -1483,6 +1508,29 @@ class Entry
         let elapsed = clock.unix_timestamp - timestamp;
 
         return BigInt((elapsed > 0) ? elapsed : 0);
+    }
+
+    // Mirrors compute_ki_harvest_retention in program/util/util_calculations.c: returns as a BigInt the fraction, of
+    // UINT32_MAX, of a Ki harvest that is retained by an entry whose life span is lifespan_days whole days (a BigInt)
+    // and whose harvests are reduced by reduction_per_day (a fraction of UINT32_MAX) per day.  It is computed by
+    // repeated squaring, rounding down each product to a whole fraction of UINT32_MAX exactly as the program does, so
+    // that the result is identical.
+    static compute_ki_harvest_retention(reduction_per_day, lifespan_days)
+    {
+        const ONE = 4294967295n;
+        let base = ONE - BigInt(reduction_per_day);
+        let result = ONE;
+        while (lifespan_days > 0n) {
+            if (lifespan_days & 1n) {
+                result = (result * base) / ONE;
+            }
+            if (result == 0n) {
+                break;
+            }
+            base = (base * base) / ONE;
+            lifespan_days >>= 1n;
+        }
+        return result;
     }
 
     // Mirrors compute_effective_stake_earnings in program/util/util_calculations.c, in BigInt lamports.  With
@@ -2095,6 +2143,18 @@ class Wallet
         }, sign_callback);
     }
 
+    // Brings the entry's epochs_staked up to date, so that it is exact as of the current epoch.  If the entry is not
+    // staked, this does nothing, since its epochs_staked is already exact.  Any wallet may do this; the wallet only
+    // pays the transaction fee.  A game that needs an exact epochs_staked would normally not use this, but would
+    // instead include the instruction returned by make_update_epochs_staked_instruction in its own transaction,
+    // before its own instruction.
+    async update_epochs_staked(entry, sign_callback)
+    {
+        return this.complete_tx((wallet_address) => {
+            return this.make_update_epochs_staked_tx(entry, wallet_address);
+        }, sign_callback);
+    }
+
     // Withdraws to the wallet the excess lamports of an account that the program controls: everything that the
     // account holds beyond what it is required to hold.  The program computes the amount, and fails the transaction
     // if there is no excess.  This only succeeds if the wallet is the admin.
@@ -2452,7 +2512,9 @@ class Wallet
             // The SPL Token program
             { pubkey : g_spl_token_program_pubkey, isSigner : false, isWritable : false },
             // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false }
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
+            // The entry's block, whose block_start_timestamp is the beginning of the entry's life span
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false }
         ];
 
         // The instruction data is just the instruction code
@@ -2499,7 +2561,10 @@ class Wallet
             // The system program
             { pubkey : g_system_program_pubkey, isSigner : false, isWritable : false },
             // The Associated Token Account program
-            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false }
+            { pubkey : g_spl_associated_token_program_pubkey, isSigner : false, isWritable : false },
+            // The entry's block, whose block_start_timestamp is the beginning of the entry's life span; LevelUp only
+            // uses it if the entry is staked
+            { pubkey : make_pubkey(entry.block.address), isSigner : false, isWritable : false }
         ];
 
         // The instruction data is the instruction code, 7 bytes of padding (the program's LevelUpData struct aligns
@@ -2605,6 +2670,35 @@ class Wallet
         let tx = new SolanaWeb3.Transaction();
 
         tx.add(new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data }));
+
+        return tx;
+    }
+
+    // Returns the UpdateEpochsStaked instruction for the entry, which brings its epochs_staked up to date.  This is
+    // provided separately from make_update_epochs_staked_tx so that another program's transaction (for example, a
+    // game's) can include it before its own instruction, after which that program can rely on the entry's
+    // epochs_staked being exact.  Accounts and data here must match those of scripts/anyone_update_epochs_staked_tx.sh
+    make_update_epochs_staked_instruction(entry)
+    {
+        let keys = [
+            // The entry
+            { pubkey : make_pubkey(entry.address), isSigner : false, isWritable : true },
+            // The entry's stake account; for an entry that is not staked this is the system program address, which is
+            // a placeholder that UpdateEpochsStaked does not use
+            { pubkey : make_pubkey(entry.owned_stake_account), isSigner : false, isWritable : false }
+        ];
+
+        // The instruction data is just the instruction code
+        let data = Buffer.Buffer.from([ INSTRUCTION_UPDATE_EPOCHS_STAKED ]);
+
+        return new SolanaWeb3.TransactionInstruction({ keys : keys, programId : g_self_program_pubkey, data : data });
+    }
+
+    async make_update_epochs_staked_tx(entry, wallet_address)
+    {
+        let tx = new SolanaWeb3.Transaction();
+
+        tx.add(this.make_update_epochs_staked_instruction(entry));
 
         return tx;
     }

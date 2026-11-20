@@ -96,6 +96,12 @@ static uint64_t anyone_delegate(const SolParameters *params)
         return Error_InvalidAccount_First + 2;
     }
 
+    // Before re-delegating, count the epochs staked under the stake account's current delegation, which re-delegating
+    // replaces.  This counts the epochs in which a delegation to Shinobi Systems was effective before it was
+    // deactivated (by the Stake program's DeactivateDelinquent instruction), up to the current epoch.  The new
+    // delegation's activation epoch is the current epoch, so it is counted from the next epoch on.
+    count_epochs_staked(&stake, entry, clock.epoch);
+
     // Before re-delegating, determine the Shinobi Systems staking rewards that the stake account has earned and that
     // have not been harvested yet: the amount by which its delegated stake exceeds the entry's Ki baseline.  This is
     // only the case for a stake account that was delegated to Shinobi Systems (see is_delegated_to_shinobi_systems);

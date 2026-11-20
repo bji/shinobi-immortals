@@ -15,8 +15,11 @@
 #define LEVEL_CREDIT_WINDOW_SECONDS (5ul * 24ul * 60ul * 60ul)
 #endif
 
+// A day, in seconds
+#define SECONDS_PER_DAY (24ul * 60ul * 60ul)
+
 // A 365 day year, in seconds
-#define SECONDS_PER_YEAR (365ul * 24ul * 60ul * 60ul)
+#define SECONDS_PER_YEAR (365ul * SECONDS_PER_DAY)
 
 // The number of windows per year, N (73 for the default 5 day window), must be at least 3:
 // - N must be non-zero, since every level credit calculation depends upon it.
@@ -264,6 +267,68 @@ static uint64_t compute_ki_harvest(uint64_t effective_earnings_lamports, uint32_
     uint64_t whole_sol = effective_earnings_lamports / 1000000000ul;
     uint64_t remaining_lamports = effective_earnings_lamports % 1000000000ul;
     return (whole_sol * ki_factor) + ((remaining_lamports * ki_factor) / 1000000000ul);
+}
+
+// The unit in which Ki harvest reductions and retentions are expressed: each is a fraction of UINT32_MAX, so this
+// value is one (all of a harvest)
+#define KI_HARVEST_RETENTION_ONE ((uint64_t) UINT32_MAX)
+
+// Returns the fraction, as a fraction of UINT32_MAX, of a Ki harvest that is retained by an entry whose life span is
+// lifespan_days whole days and whose Ki harvests are reduced by reduction_per_day (a fraction of UINT32_MAX) per day.
+// With
+//   q = (UINT32_MAX - reduction_per_day),
+// the fraction retained in each day, it is approximately
+//   UINT32_MAX * (q / UINT32_MAX)^lifespan_days.
+// A reduction of UINT32_MAX retains nothing after the first day.  The power is computed by repeated squaring, with
+// each multiplication of two such fractions rounded down to a whole fraction of UINT32_MAX:
+//   result = UINT32_MAX, base = q
+//   for each bit of lifespan_days, starting from the least significant:
+//     if the bit is set, result = floor((result * base) / UINT32_MAX)
+//     base = floor((base * base) / UINT32_MAX)
+// Every value is at most one, so each multiplication passes on no more than the sum of its inputs' errors, and each
+// rounding adds less than one unit (1 / UINT32_MAX).  So the k'th base is low by less than 2^k units, and the result,
+// which is the product of the bases for the set bits, is never above the exact value and is low by less than
+// lifespan_days + 1 units: about 0.0009% after a century.  All values are at most UINT32_MAX, so every product is less
+// than 2^64 and cannot overflow.
+static uint64_t compute_ki_harvest_retention(uint32_t reduction_per_day, uint64_t lifespan_days)
+{
+    // The fraction retained in each day; nothing at all if the reduction is everything
+    uint64_t base = KI_HARVEST_RETENTION_ONE - reduction_per_day;
+
+    // Raise base to the power lifespan_days, one bit of the exponent at a time
+    uint64_t result = KI_HARVEST_RETENTION_ONE;
+    while (lifespan_days) {
+        if (lifespan_days & 1) {
+            result = (result * base) / KI_HARVEST_RETENTION_ONE;
+        }
+        // Once nothing is retained, nothing ever will be; stop early (the result would be the same)
+        if (!result) {
+            break;
+        }
+        base = (base * base) / KI_HARVEST_RETENTION_ONE;
+        lifespan_days >>= 1;
+    }
+
+    return result;
+}
+
+// Returns the whole Ki earned by effective_earnings_lamports of effective stake earnings, at ki_factor Ki per SOL,
+// after reduction to retention (a fraction of UINT32_MAX, as returned by compute_ki_harvest_retention).  The reduction
+// is applied to the earnings before they are converted to Ki, so that only the final result is rounded to whole Ki.
+static uint64_t compute_retained_ki_harvest(uint64_t effective_earnings_lamports, uint32_t ki_factor,
+                                            uint64_t retention)
+{
+    // compute_ki_harvest_retention never returns more than KI_HARVEST_RETENTION_ONE; but be certain, since
+    // multiply_fraction requires that the numerator be no more than the denominator
+    if (retention > KI_HARVEST_RETENTION_ONE) {
+        retention = KI_HARVEST_RETENTION_ONE;
+    }
+
+    // The retained earnings are no more than the effective earnings, so compute_ki_harvest's bounds still hold
+    uint64_t retained_earnings_lamports =
+        multiply_fraction(effective_earnings_lamports, retention, KI_HARVEST_RETENTION_ONE);
+
+    return compute_ki_harvest(retained_earnings_lamports, ki_factor);
 }
 
 // Returns the level credit window to use for a contribution made at unix_timestamp, given the window most recently

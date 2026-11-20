@@ -563,6 +563,8 @@ if [ -z "$TESTS" ]; then
   "most_recent_ki_applied_window": 0,
   "ki_applied_this_window": 0,
   "total_level_credits": 0,
+  "epochs_staked": 0,
+  "epochs_staked_counted_to_epoch": 0,
   "metadata": {
     "level_1_credits": 0,
     "random": [
@@ -666,7 +668,8 @@ if [ -z "$TESTS" ]; then
         "uri_contents_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
       }
     ],
-    "expected_annual_reward_bps": 0
+    "expected_annual_reward_bps": 0,
+    "ki_harvest_reduction_per_day": 0
   }
 }
 EOF`

@@ -60,4 +60,6 @@ source $SOURCE/test/test_anyone_settle_winning_bid
 
 source $SOURCE/test/test_anyone_delegate
 
+source $SOURCE/test/test_anyone_update_epochs_staked
+
 source $SOURCE/test/test_special_reauthorize

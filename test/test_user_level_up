@@ -11,8 +11,9 @@
 # 0xf4240000 is 9460 in little-endian.
 # Also set the names to the level.  This is used to ensure that metaplex metadata is being updated.  The first
 # character of the name is at 80 + (level * 308).
-# The last 4 bytes, at offset 2840, are expected_annual_reward_bps as a little-endian 32 bit value.  0xea010000 is
-# 490 (4.90% per year) in little-endian.
+# The 4 bytes at offset 2840 are expected_annual_reward_bps as a little-endian 32 bit value.  0xea010000 is
+# 490 (4.90% per year) in little-endian.  The last 4 bytes, at offset 2844, are ki_harvest_reduction_per_day,
+# which is 0 (Ki harvests are never reduced).
 
 METADATA=`(echo 0x00286bee | xxd -r | tr -d '\n';                                                                    \
            dd if=/dev/zero bs=1 count=64 status=none;                                                                \
@@ -22,7 +23,8 @@ METADATA=`(echo 0x00286bee | xxd -r | tr -d '\n';                               
                printf "%x" $i;                                                                                       \
                dd if=/dev/zero bs=1 count=295 status=none;                                                           \
            done;                                                                                                     \
-           echo 0xea010000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
+           echo 0xea010000 | xxd -r | tr -d '\n';                                                                    \
+           dd if=/dev/zero bs=1 count=4 status=none) | base64 | tr -d '\n'`
 METADATA_PIECE1=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none           | base64 | tr -d '\n'`
 METADATA_PIECE2=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
 METADATA_PIECE3=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=1800 | base64 | tr -d '\n'`
@@ -49,7 +51,8 @@ METADATA_FLAT=`(echo 0x10270000 | xxd -r | tr -d '\n';                          
                     printf "%x" $i;                                                                                  \
                     dd if=/dev/zero bs=1 count=295 status=none;                                                      \
                 done;                                                                                                \
-                echo 0x01000000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
+                echo 0x01000000 | xxd -r | tr -d '\n';                                                               \
+                dd if=/dev/zero bs=1 count=4 status=none) | base64 | tr -d '\n'`
 METADATA_FLAT_PIECE1=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none           | base64 | tr -d '\n'`
 METADATA_FLAT_PIECE2=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
 METADATA_FLAT_PIECE3=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none skip=1800 | base64 | tr -d '\n'`
@@ -268,6 +271,7 @@ if should_run_test user_level_up_bad_entry; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -305,6 +309,7 @@ if should_run_test user_level_up_unowned_entry; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -342,6 +347,7 @@ if should_run_test user_level_up_unowned_token; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -384,6 +390,7 @@ if should_run_test user_level_up_incorrect_metadata; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -422,6 +429,7 @@ if should_run_test user_level_up_incorrect_ki; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -448,6 +456,7 @@ if should_run_test user_level_up_incorrect_ki; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -918,6 +927,7 @@ if should_run_test user_level_up_creates_ki_account; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1"                                                                                              \
         | solxact encode                                                                                             \
@@ -1054,6 +1064,7 @@ if should_run_test user_level_up_past_9; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
+           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1"                                                                                              \
         | solxact encode                                                                                             \

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/util_ki.c"
+
 typedef struct
 {
     // This is the instruction code for Reauthorize
@@ -203,6 +205,14 @@ static uint64_t special_reauthorize(const SolParameters *params)
     // stake account.  It has already been verified above that the token owner signed this transaction and owns the
     // token account that holds the entry's token.
     if (is_staked) {
+        // First count the epochs staked since they were last counted, so that the entry's record of them is complete
+        // for whichever program operates it next; this is the last chance to count them.  If the stake account cannot
+        // be decoded, they are forfeited, so that this instruction can still return it.
+        Stake stake;
+        if (decode_stake_account(stake_account, &stake)) {
+            count_epochs_staked(&stake, entry, clock.epoch);
+        }
+
         set_stake_authorities_signed(&(entry->owned.stake_account), token_owner_account->key,
                                      params->ka, params->ka_num);
 

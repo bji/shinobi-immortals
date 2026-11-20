@@ -1,4 +1,4 @@
-METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2764 status=none) | base64 | tr -d '\n'`
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2768 status=none) | base64 | tr -d '\n'`
 # Metadata to set into entries, only needs to include up to the ki_factor
 METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
 SALT0=0
@@ -177,8 +177,8 @@ if should_run_test special_reauthorize_bad_data; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $MINT_PUBKEY w                                                                                    \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 20 = Reauthorize //                                                                   \
-           u8 20"                                                                                                    \
+           // Instruction code 21 = Reauthorize //                                                                   \
+           u8 21"                                                                                                    \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
@@ -214,8 +214,8 @@ if should_run_test special_reauthorize_bad_entry; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $MINT_PUBKEY w                                                                                    \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 20 = Reauthorize //                                                                   \
-           u8 20                                                                                                     \
+           // Instruction code 21 = Reauthorize //                                                                   \
+           u8 21                                                                                                     \
            bool true                                                                                                 \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
@@ -266,8 +266,8 @@ if should_run_test special_reauthorize_bad_metadata; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $MINT_PUBKEY w                                                                                    \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 20 = Reauthorize //                                                                   \
-           u8 20                                                                                                     \
+           // Instruction code 21 = Reauthorize //                                                                   \
+           u8 21                                                                                                     \
            bool true                                                                                                 \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
         | solxact encode                                                                                             \
@@ -331,8 +331,8 @@ if should_run_test special_reauthorize_bad_flag; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $MINT_PUBKEY w                                                                                    \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 20 = Reauthorize //                                                                   \
-           u8 20                                                                                                     \
+           // Instruction code 21 = Reauthorize //                                                                   \
+           u8 21                                                                                                     \
            // Reauthorize metadata flag, which must be 0 or 1 //                                                     \
            u8 2                                                                                                      \
            pubkey $RICH_USER1_PUBKEY"                                                                                \
@@ -461,8 +461,8 @@ if should_run_test special_reauthorize_stake_only_success; then
            account $STAKE_PROGRAM_PUBKEY                                                                             \
            account $MINT_PUBKEY                                                                                      \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
-           // Instruction code 20 = Reauthorize //                                                                   \
-           u8 20                                                                                                     \
+           // Instruction code 21 = Reauthorize //                                                                   \
+           u8 21                                                                                                     \
            // Do not reauthorize metadata //                                                                         \
            bool false                                                                                                \
            // New metadata authority, which is ignored; it must not receive the stake account //                     \

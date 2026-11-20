@@ -155,13 +155,13 @@ if should_run_test admin_set_metadata_bytes_short_data; then
 fi
 
 
-# Beyond bounds of metadata: 2 bytes at offset 2843 end one byte past the 2844-byte metadata
+# Beyond bounds of metadata: 2 bytes at offset 2847 end one byte past the 2848-byte metadata
 if should_run_test admin_set_metadata_bytes_beyond_bounds; then
     # Test with block 3 0
     assert_fail admin_set_metadata_bytes_beyond_bounds                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x515'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_set_metadata_bytes_tx.sh                         \
-         $ADMIN_PUBKEY 3 0 0 2843 \`echo -n "01" | base64\`                                                          \
+         $ADMIN_PUBKEY 3 0 0 2847 \`echo -n "01" | base64\`                                                          \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

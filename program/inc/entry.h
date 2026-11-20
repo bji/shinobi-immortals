@@ -79,6 +79,19 @@ typedef struct
     // entry fully in about one year.  It must be non-zero for the entry to be levelled up.
     uint32_t expected_annual_reward_bps;
 
+    // The fraction by which this entry's Ki harvests are reduced for each day of its life span, as a fraction of
+    // UINT32_MAX (so 0 is no reduction at all, and UINT32_MAX is a reduction of everything).  An entry's life span
+    // begins when its block was completed (the block's block_start_timestamp) and ends at the current time
+    // (Clock.unix_timestamp); a harvest made when the entry's life span is n whole days pays
+    //   (1 - (ki_harvest_reduction_per_day / UINT32_MAX))^n
+    // of what it would otherwise pay (see compute_ki_harvest_retention in util_calculations.c).  So all of an entry's
+    // Ki production slowly declines over its lifetime, which bounds the total Ki that it can ever produce.  Measuring
+    // the life span in days of wall-clock time, rather than in epochs, means that the rate of decline does not depend
+    // upon the length of epochs, which can change.  For example, about 603,500 reduces harvests by about 5% per year.
+    // 0 means that harvests are never reduced; UINT32_MAX means that nothing is harvested once the life span is at
+    // least one day.
+    uint32_t ki_harvest_reduction_per_day;
+
 } EntryMetadata;
 
 
@@ -200,5 +213,24 @@ typedef struct
 
     // Lifetime level credits in tenths of a credit. Never deducted or reset on level-up or transfer.
     uint64_t total_level_credits;
+
+    // The number of whole epochs for which this entry has been staked with stake that was active and delegated to the
+    // Shinobi Systems validator: epochs during the whole of which the entry held the stake account, and in which that
+    // stake account's delegation to Shinobi Systems was effective.  This is a permanent record of the entry's history
+    // that other programs (for example, games) may use; it belongs to the entry, not its owner, so it is never reset,
+    // including when the entry is transferred.
+    //
+    // It is brought up to date only by instructions that examine the entry's stake account: Harvest, LevelUp (of a
+    // staked entry), Destake, Delegate, ReAuthorize, and UpdateEpochsStaked, which exists only to do this (see
+    // count_epochs_staked in util_ki.c).  So while the entry is staked, epochs since epochs_staked_counted_to_epoch may
+    // not have been counted yet.  A reader that needs the exact value can execute UpdateEpochsStaked earlier in the
+    // same transaction, or else count them itself from the stake account, in the same way.
+    uint64_t epochs_staked;
+
+    // Every epoch before this one has already been considered for epochs_staked, and will never be counted again.
+    // Stake sets it to the epoch after the one in which the entry is staked, so that only epochs during the whole of
+    // which the entry held the stake account are counted.  Only meaningful while the entry is staked.  (This is not
+    // part of owned, because owned is zeroed by Destake.)
+    uint64_t epochs_staked_counted_to_epoch;
 
 } Entry;

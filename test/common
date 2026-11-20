@@ -678,7 +678,7 @@ function make_max_level_entry_fixture ()
     local PROGRAM_PUBKEY=$1
     local DATA_FILE=$FIXTURES/max_level_entry.bin
     # sizeof(Entry)
-    local SIZE=3176
+    local SIZE=3200
     # Rent exempt minimum: (data size + 128 bytes account overhead) * 3480 lamports/byte-year * 2 years
     local LAMPORTS=$(((SIZE + 128) * 3480 * 2))
 

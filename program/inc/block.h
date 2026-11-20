@@ -96,7 +96,8 @@ typedef struct
     uint16_t added_entries_count;
 
     // This is the timestamp that the last entry was added to the block and it became complete; at that instant,
-    // the block is complete and the mystery phase begins.
+    // the block is complete and the mystery phase begins.  It is also the beginning of the life span of each of the
+    // block's entries, over which their Ki harvests are reduced (see ki_harvest_reduction_per_day in EntryMetadata).
     timestamp_t block_start_timestamp;
 
     // This is the total number of mysteries which have been sold

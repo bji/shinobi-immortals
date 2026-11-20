@@ -160,17 +160,26 @@ static uint64_t user_destake(const SolParameters *params)
         return Error_InvalidAccount_First + 5;
     }
 
-    // Harvest Ki, unless the instruction data says not to.  The stake account is decoded only if Ki is to be
-    // harvested.  This allows a destake with no Ki harvest even if decoding the stake account would fail (which could
-    // occur if there were a change to the format of stake accounts).
+    // Harvest Ki, unless the instruction data says not to.  The stake account must be decoded if Ki is to be
+    // harvested.  If not, it is not required to be decodable; this allows a destake with no Ki harvest even if
+    // decoding the stake account would fail (which could occur if there were a change to the format of stake
+    // accounts).
+    Stake stake;
+    bool stake_decoded = decode_stake_account(stake_account, &stake);
     if (should_harvest_ki) {
-        Stake stake;
-        if (!decode_stake_account(stake_account, &stake)) {
+        if (!stake_decoded) {
             return Error_InvalidAccount_First + 5;
         }
 
-        harvest_ki(&stake, entry, ki_destination_account, ki_destination_owner_account->key, funding_account->key,
-                   clock.epoch, params->ka, params->ka_num);
+        // This also brings the count of epochs staked up to date
+        harvest_ki(&stake, block, entry, ki_destination_account, ki_destination_owner_account->key,
+                   funding_account->key, &clock, params->ka, params->ka_num);
+    }
+    // Even without a harvest, count the epochs staked since they were last counted, if the stake account can be
+    // decoded; this is the last chance to count them.  If it cannot be decoded, they are forfeited, just as unharvested
+    // Ki is.
+    else if (stake_decoded) {
+        count_epochs_staked(&stake, entry, clock.epoch);
     }
 
     // Use stake account program to set all authorities to the token owner; must do this signed since the
