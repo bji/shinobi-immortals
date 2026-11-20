@@ -135,7 +135,7 @@ on-chain account data associated with the Shinobi Immortals program.
 
 ## Programmatic Interaction with Shinobi Immortals
 
-The js directory includes a Javascript API for interaction with Shinobi Immortals.
+The sdk/js directory includes a Javascript API for interaction with Shinobi Immortals.
 
 
 ## License
