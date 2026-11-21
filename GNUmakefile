@@ -7,8 +7,9 @@ build_program.sh: make_build_program.sh
 	./make_build_program.sh program-key.json super-key.json BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2 > $@
 
 .PHONY: test base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension test-sdk-js \
-        sdk-js-packages clean clean-test clean-test-sdk-js clean-sdk-js-packages
-test: base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension test-sdk-js
+        test-sdk-rust sdk-js-packages clean clean-test clean-test-sdk-js clean-test-sdk-rust clean-sdk-js-packages
+test: base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension test-sdk-js \
+      test-sdk-rust
 
 base-tests:
 	SOURCE=`pwd` ./test/program/test.sh
@@ -25,6 +26,9 @@ test-auction-extension:
 test-sdk-js:
 	./test/sdk/js/run_tests.sh
 
+test-sdk-rust:
+	./test/sdk/rust/run_tests.sh
+
 # Installs the npm packages that some of the Javascript SDK tests need (test/sdk/js/package.json), exactly as
 # package-lock.json pins them.  --ignore-scripts keeps npm from running any install script of any package, which is a
 # common way for a compromised package to run code; install them only this way, not with a bare "npm ci" or "npm
@@ -40,13 +44,20 @@ clean:
 
 # Removes what the test targets leave behind.  The program tests (base-tests, test-calculations,
 # test-destake-deactivated-elsewhere, and test-auction-extension) build and run everything in temporary directories,
-# which they remove themselves, so only the Javascript SDK tests leave anything here.
-clean-test: clean-test-sdk-js
+# which they remove themselves, so only the SDK tests leave anything here.
+clean-test: clean-test-sdk-js clean-test-sdk-rust
 
 # Removes the build output of the Javascript SDK tests' Rust reference programs (test/sdk/js/reference), which
 # test-sdk-js builds and keeps so that later runs need not build them again
 clean-test-sdk-js:
 	rm -rf test/sdk/js/reference/target
+
+# Removes the build output of the Rust SDK tests: cargo's output for the crate (sdk/rust), for the tests
+# (test/sdk/rust), and for the example game programs, which test-sdk-rust keeps so that later runs need not build them
+# again
+clean-test-sdk-rust:
+	rm -rf sdk/rust/target test/sdk/rust/target test/sdk/rust/example_game/target \
+	       test/sdk/rust/example_game_pinocchio/target
 
 # Removes the npm packages that sdk-js-packages installs.  Until they are installed again, the Javascript SDK tests
 # that need them are skipped.

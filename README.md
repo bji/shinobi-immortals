@@ -123,6 +123,12 @@ The Javascript SDK in sdk/js has its own tests, which take only seconds and need
 Some of them need an npm package, which `make sdk-js-packages` installs.  See `test/sdk/js/README.txt` for what they
 check and what they need.
 
+The Rust crate in sdk/rust has its own tests too, which also take only seconds:
+
+```$ ./shinobi-immortals/test/sdk/rust/run_tests.sh```
+
+See `test/sdk/rust/README.txt` for what they check and what they need.
+
 
 ## Issuing Manual Transactions
 
@@ -147,6 +153,13 @@ shinobi_immortals_base.js holds the program's addresses, account decoders, and i
 dependencies; its instructions can be used directly with @solana/kit.  shinobi_immortals.js, built on it, reads the
 cluster and signs and sends transactions, using @solana/kit.  It verifies every signature before sending, with
 shinobi_immortals_base.js's own ed25519 verification, so it does not need WebCrypto's Ed25519 support.
+
+The sdk/rust directory holds a Rust crate, `shinobi-immortals`, for Rust programs and clients, and in particular for
+on-chain programs (such as games) that use Immortals as game pieces.  It has the program's account types, read in place
+from account data, checked loading of them and verification that a wallet owns an Immortal (for programs built with the
+standard Solana crates or with Pinocchio), the program's addresses and calculations, and builders for its
+instructions.  Its documentation (`cargo doc` in sdk/rust) explains what a program must check before trusting an
+Immortal.  test/sdk/rust/example_game and example_game_pinocchio are small example programs that do so.
 
 
 ## License

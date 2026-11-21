@@ -88,8 +88,11 @@ typedef struct
     // This is an indicator that the data is a Block
     DataType data_type;
 
-    // This is the configuration of the block.  It is never changed after the block is created.  Each entry of the
-    // block contains a duplicate of this data in its config.
+    // This is the configuration of the block.  It is never changed after the block is created.  An entry does not
+    // hold a copy of it: when an entry is added to the block, only group_number, block_number, and the values that its
+    // sale depends on (minimum_price_lamports, has_auction, duration, and final_start_price_lamports, which the entry
+    // holds as non_auction_start_price_lamports) are copied into the entry's own fields.  The rest are only here.
+    // The entry's duration does not stay equal to this one: a bid that extends the entry's auction increases it.
     BlockConfiguration config;
 
     // This is the total number of entries that have been added to the block thus far.

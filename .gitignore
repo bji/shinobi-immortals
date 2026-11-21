@@ -3,3 +3,7 @@
 /super-key.json
 /test/sdk/js/node_modules/
 /test/sdk/js/reference/target/
+/sdk/rust/target/
+/test/sdk/rust/target/
+/test/sdk/rust/example_game/target/
+/test/sdk/rust/example_game_pinocchio/target/

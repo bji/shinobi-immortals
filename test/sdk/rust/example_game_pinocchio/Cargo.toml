@@ -1,0 +1,21 @@
+# An example of a game program that uses Shinobi Immortals as game pieces, built with Pinocchio.  run_tests.sh builds
+# it (with cargo build-sbf) to check that the crate's "pinocchio" feature builds for the Solana target.  See src/lib.rs.
+[package]
+name = "shinobi-immortals-example-game-pinocchio"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = [ "cdylib" ]
+
+[dependencies]
+shinobi-immortals = { path = "../../../../sdk/rust", default-features = false, features = [ "pinocchio" ] }
+pinocchio = "0.12"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = [ 'cfg(target_os, values("solana"))' ]
+
+# Not part of the test crate's workspace
+[workspace]

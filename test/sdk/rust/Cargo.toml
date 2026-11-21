@@ -1,0 +1,18 @@
+# Tests of the Shinobi Immortals Rust crate (sdk/rust).  See README.txt in this directory.
+[package]
+name = "shinobi-immortals-sdk-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+shinobi-immortals = { path = "../../../sdk/rust", features = [ "pinocchio" ] }
+# For building AccountInfos and AccountViews in the tests of checked loading
+solana-account-info = "3.1"
+solana-account-view = "3"
+solana-address = "2.2"
+solana-program-error = "3"
+solana-instruction = ">=3.5, <5"
+bytemuck = "1.14"
+# For reading the output of solxact and of c/layouts.c
+serde_json = "1"

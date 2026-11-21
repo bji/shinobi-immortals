@@ -1,0 +1,45 @@
+[package]
+name = "shinobi-immortals"
+version = "0.1.0"
+edition = "2021"
+description = """\
+The accounts of the Shinobi Immortals Solana program, checked loading of them and verification of Immortals for \
+on-chain programs (with the standard Solana crates or Pinocchio), and builders for its instructions"""
+license = "LGPL-3.0-only"
+repository = "https://github.com/bji/shinobi-immortals"
+keywords = [ "solana", "shinobi-immortals" ]
+categories = [ "no-std" ]
+
+# The crate's types are built on solana-address 2 (whose Address is also the Pubkey of solana-pubkey 4), which is the
+# address type of the standard Solana crates (solana-account-info 3, solana-instruction 3.5 and 4) and of Pinocchio
+# (0.10 and later), so that its values can be used directly with any of them.  The version requirements are kept as
+# wide as those crates allow, so that this crate does not force any upgrade on the crates that use it.
+
+[dependencies]
+# Reading account data in place: every account type is a plain #[repr(C)] structure
+bytemuck = { version = "1.14", features = [ "derive", "min_const_generics" ] }
+# The address type.  "bytemuck" lets addresses be fields of the account types, "decode" allows the fixed addresses to
+# be written as base58 constants, and "syscalls" gives program derived address derivation on chain.
+solana-address = { version = "2.2", default-features = false, features = [ "bytemuck", "decode", "syscalls" ] }
+# The standard Solana crates' AccountInfo, for the checked loading functions of the "solana" feature
+solana-account-info = { version = "3.1", optional = true }
+# Instruction and AccountMeta, for the instruction builders of the "solana" feature
+solana-instruction = { version = ">=3.5, <5", optional = true, default-features = false, features = [ "std" ] }
+# ProgramError, which both AccountInfo and Pinocchio's AccountView use, for converting this crate's errors
+solana-program-error = { version = "3", optional = true }
+# Pinocchio's AccountView, for the checked loading functions of the "pinocchio" feature
+solana-account-view = { version = "3", optional = true }
+
+# Off chain, finding program derived addresses needs curve25519-dalek (on chain, it is a syscall)
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
+solana-address = { version = "2.2", default-features = false, features = [ "curve25519" ] }
+
+[features]
+default = [ "solana" ]
+# Checked loading from the standard Solana crates' AccountInfo, and the instruction builders
+solana = [ "dep:solana-account-info", "dep:solana-instruction", "dep:solana-program-error" ]
+# Checked loading from Pinocchio's AccountView
+pinocchio = [ "dep:solana-account-view", "dep:solana-program-error" ]
+
+# The tests are in test/sdk/rust, as a separate crate, since they use the rest of this repository (the program's
+# headers and sources, the scripts, and solxact)
