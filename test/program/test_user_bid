@@ -2,9 +2,9 @@
 BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
 BYTE_2=`echo -n 2 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
-METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SALT2=2
@@ -18,7 +18,7 @@ if [ -z "$TESTS" ]; then
     assert user_bid_setup_10_0_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 10 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
-         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -27,7 +27,7 @@ if [ -z "$TESTS" ]; then
     assert user_bid_setup_10_1_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 10 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -57,7 +57,7 @@ if [ -z "$TESTS" ]; then
     assert user_bid_setup_10_2_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 10 2 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
-         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -99,7 +99,7 @@ if [ -z "$TESTS" ]; then
     assert user_bid_setup_10_3_a                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 10 3 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
-         \`lamports_from_sol 1\` true 10 \`lamports_from_sol 1000\` 0                                                \
+         \`lamports_from_sol 1\` true 10 \`lamports_from_sol 1000\` 0 490                                            \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

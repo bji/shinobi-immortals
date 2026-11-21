@@ -2,7 +2,7 @@
 # The ki_factor for level 1 appears as an unsigned short-endian 32 bit value at offset 80.  0x1027 is 10000 in
 # little-endian.
 
-METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2768 status=none) | base64 | tr -d '\n'`
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2764 status=none) | base64 | tr -d '\n'`
 # Metadata to set into entries, only needs to include up to the ki_factor
 METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
 SALT0=0
@@ -35,7 +35,7 @@ if [ -z "$TESTS" ]; then
     assert user_harvest_setup_15_0_a                                                                                 \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 15 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -132,11 +132,12 @@ if should_run_test user_harvest_bad_entry; then
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_DESTINATION_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_harvest_bad_entry                                                                               \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
            account $RICH_USER1_PUBKEY ws                                                                             \
+           account $BLOCK_PUBKEY                                                                                     \
            account $STATE_PUBKEY w                                                                                  \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -148,7 +149,6 @@ if should_run_test user_harvest_bad_entry; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 16 = Harvest //                                                                       \
            u8 16"                                                                                                    \
         | solxact encode                                                                                             \
@@ -161,7 +161,7 @@ fi
 # Entry not owned by the user
 if should_run_test user_harvest_unowned_entry; then
     assert_fail user_harvest_unowned_entry                                                                           \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                     \
          $RICH_USER1_PUBKEY 15 0 1 $DELEGATED_STAKE_PUBKEY                                                           \
         | solxact hash l                                                                                             \
@@ -185,7 +185,7 @@ fi
 # Incorrect stake account (not staked to entry)
 if should_run_test user_harvest_incorrect_stake; then
     assert_fail user_harvest_incorrect_stake                                                                         \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_harvest_tx.sh                                     \
          $RICH_USER1_PUBKEY 15 0 0 $DELEGATED_STAKE2_PUBKEY                                                          \
         | solxact hash l                                                                                             \

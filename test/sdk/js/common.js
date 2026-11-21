@@ -254,7 +254,7 @@ function sample_instructions()
         group_number : g, block_number : b, total_entry_count : 10, total_mystery_count : 5,
         mystery_phase_duration : 100, mystery_start_price_lamports : random_bigint(64), reveal_period_duration : 200,
         minimum_price_lamports : random_bigint(64), has_auction : true, duration : 300,
-        final_start_price_lamports : random_bigint(64), whitelist_duration : 0
+        final_start_price_lamports : random_bigint(64), whitelist_duration : 0, expected_annual_reward_bps : 490
     };
     let sha256s = [ random_bytes(32), random_bytes(32) ];
     const T = Base.WithdrawExcessAccountType;

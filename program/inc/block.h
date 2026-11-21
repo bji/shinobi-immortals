@@ -79,6 +79,17 @@ typedef struct
     // that the whitelist period has not ended.
     uint32_t whitelist_duration;
 
+    // The expected annual stake reward rate, in basis points (1/100ths of a percent), of a stake account delegated to
+    // the Shinobi Systems validator, as estimated for the year following the creation of this block.  This is the
+    // rate at which the stake account's balance is expected to grow from staking rewards (i.e. after validator
+    // commission).  It calibrates the level credits curve of every entry of the block: combined with the number of
+    // level credit windows per year, it gives the per-window Ki production of a 50 effective SOL stake account, which
+    // is the contribution rate that levels an entry fully in about one year.  It must be non-zero for the block's
+    // entries to be levelled up.  It applies equally to every entry of the block, so it is here rather than in each
+    // entry's metadata.  (It occupies what would otherwise be padding at the end of the structure, so that the
+    // structure's size, and so the size of CreateBlock's data, is the same as without it.)
+    uint32_t expected_annual_reward_bps;
+
 } BlockConfiguration;
 
 

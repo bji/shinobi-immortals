@@ -91,12 +91,14 @@ for (let [ has_auction, whitelist_duration ] of [ [ true, random_int(100000) + 1
         total_mystery_count : random_int(0x10000), mystery_phase_duration : random_int(0x100000000),
         mystery_start_price_lamports : random_bigint(64), reveal_period_duration : random_int(0x100000000),
         minimum_price_lamports : random_bigint(64), has_auction : has_auction, duration : random_int(0x100000000),
-        final_start_price_lamports : random_bigint(64), whitelist_duration : whitelist_duration
+        final_start_price_lamports : random_bigint(64), whitelist_duration : whitelist_duration,
+        expected_annual_reward_bps : random_int(0x100000000)
     };
     compare("CreateBlock (has_auction " + has_auction + ")", "admin_create_block_tx.sh",
             [ ADMIN, G, B, config.total_entry_count, config.total_mystery_count, config.mystery_phase_duration,
               config.mystery_start_price_lamports, config.reveal_period_duration, config.minimum_price_lamports,
-              has_auction, config.duration, config.final_start_price_lamports, whitelist_duration ],
+              has_auction, config.duration, config.final_start_price_lamports, whitelist_duration,
+              config.expected_annual_reward_bps ],
             Base.make_create_block_instruction(ADMIN, config));
 }
 

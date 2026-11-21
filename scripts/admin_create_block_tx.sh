@@ -12,7 +12,12 @@ function require ()
 Usage: admin_create_block_tx.sh <ADMIN_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> \\
                                 <TOTAL_ENTRY_COUNT> <TOTAL_MYSTERY_COUNT> <MYSTERY_PHASE_DURATION> \\
                                 <MYSTERY_START_PRICE_LAMPORTS> <REVEAL_PERIOD_DURATION> <MINIMUM_PRICE_LAMPORTS> \\
-                                <HAS_AUCTION> <DURATION> <FINAL_START_PRICE_LAMPORTS> <WHITELIST_DURATION>
+                                <HAS_AUCTION> <DURATION> <FINAL_START_PRICE_LAMPORTS> <WHITELIST_DURATION> \\
+                                <EXPECTED_ANNUAL_REWARD_BPS>
+
+EXPECTED_ANNUAL_REWARD_BPS is the expected annual stake reward rate, in basis points, of a stake account delegated to
+the Shinobi Systems validator (490 is 4.90% per year), which calibrates the level credit curve of the block's entries.
+The block's entries cannot be levelled up if it is 0.
 
 EOF
         exit 1
@@ -32,6 +37,7 @@ HAS_AUCTION=${10}
 DURATION=${11}
 FINAL_START_PRICE_LAMPORTS=${12}
 WHITELIST_DURATION=${13}
+EXPECTED_ANNUAL_REWARD_BPS=${14}
 
 require $ADMIN_PUBKEY
 require $GROUP_NUMBER
@@ -46,6 +52,7 @@ require $HAS_AUCTION
 require $DURATION
 require $FINAL_START_PRICE_LAMPORTS
 require $WHITELIST_DURATION
+require $EXPECTED_ANNUAL_REWARD_BPS
 
 if [ "$HAS_AUCTION" = "1" ]; then
     HAS_AUCTION=true
@@ -143,4 +150,5 @@ solxact encode                                                                  
         u32 $DURATION                                                                                                 \
         u64 $FINAL_START_PRICE_LAMPORTS                                                                               \
         u32 $WHITELIST_DURATION                                                                                       \
+        u32 $EXPECTED_ANNUAL_REWARD_BPS                                                                               \
         ]

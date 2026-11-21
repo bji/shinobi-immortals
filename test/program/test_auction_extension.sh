@@ -154,7 +154,7 @@ function bid_and_check_end ()
 # ---------------------------------------------------------------------------------------------------------------------
 
 BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
 
@@ -171,7 +171,7 @@ assert auction_extension_setup_initialize                                       
 assert auction_extension_setup_create_block                                                                          \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                   \
      $ADMIN_PUBKEY 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                                \
-     \`lamports_from_sol 1\` true $AUCTION_DURATION \`lamports_from_sol 1000\` 0                                     \
+     \`lamports_from_sol 1\` true $AUCTION_DURATION \`lamports_from_sol 1000\` 0 490                                 \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/admin.json                                                                                \
     | solxact submit l 2>&1`

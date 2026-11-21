@@ -11,9 +11,9 @@ export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
 
 WE_BYTE_0=`echo -n 0 | base64 | tr -d '\n'`
 WE_BYTE_1=`echo -n 1 | base64 | tr -d '\n'`
-WE_METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
-WE_METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
-WE_METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+WE_METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+WE_METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+WE_METADATA2=`(echo -n 2; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
 WE_SHA2560=`compute_metadata_sha256 $WE_METADATA0 0`
 WE_SHA2561=`compute_metadata_sha256 $WE_METADATA1 1`
 WE_SHA2562=`compute_metadata_sha256 $WE_METADATA2 2`
@@ -184,7 +184,7 @@ if [ -z "$TESTS" ]; then
     assert withdraw_excess_setup_77_0_a                                                                              \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 77 0 3 2 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -207,7 +207,7 @@ if [ -z "$TESTS" ]; then
     assert withdraw_excess_setup_77_1_a                                                                              \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 77 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                           \
-         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0                                     \
+         \`lamports_from_sol 1\` true $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                 \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

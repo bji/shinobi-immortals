@@ -11,9 +11,9 @@
 # 0xf4240000 is 9460 in little-endian.
 # Also set the names to the level.  This is used to ensure that metaplex metadata is being updated.  The first
 # character of the name is at 80 + (level * 308).
-# The 4 bytes at offset 2840 are expected_annual_reward_bps as a little-endian 32 bit value.  0xea010000 is
-# 490 (4.90% per year) in little-endian.  The last 4 bytes, at offset 2844, are ki_harvest_reduction_per_day,
-# which is 0 (Ki harvests are never reduced).
+# The last 4 bytes, at offset 2840, are ki_harvest_reduction_per_day, which is 0 (Ki harvests are never reduced).
+# The expected annual reward rate, which calibrates the level credit curve, is the block's: 490 basis points (4.90%
+# per year), given when block 16 0 is created below.
 
 METADATA=`(echo 0x00286bee | xxd -r | tr -d '\n';                                                                    \
            dd if=/dev/zero bs=1 count=64 status=none;                                                                \
@@ -23,7 +23,6 @@ METADATA=`(echo 0x00286bee | xxd -r | tr -d '\n';                               
                printf "%x" $i;                                                                                       \
                dd if=/dev/zero bs=1 count=295 status=none;                                                           \
            done;                                                                                                     \
-           echo 0xea010000 | xxd -r | tr -d '\n';                                                                    \
            dd if=/dev/zero bs=1 count=4 status=none) | base64 | tr -d '\n'`
 METADATA_PIECE1=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none           | base64 | tr -d '\n'`
 METADATA_PIECE2=`echo "$METADATA" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
@@ -40,9 +39,10 @@ METADATA_NO_CREDITS_PIECE1=`echo "$METADATA_NO_CREDITS" | base64 -d | dd bs=1 co
 # Entry 3 gets metadata whose level credit curve is flat from the very first Ki, so that applying more than 1 Ki earns
 # no more credits than applying 1 Ki does; this is what the user_level_up_excess_not_burned test needs.  The curve is
 # P(k) = 240*L*k / (factor*bps + 40*N*k) tenths of a credit (see level_credit_reference below).  With ki_factor 1 and
-# expected_annual_reward_bps 1, factor*bps is 1, which is negligible next to 40*N*k for every k >= 1, so P(k) is
-# 6*L/N rounded down for every k >= 1.  level_1_credits 10000 (0x10270000 in little-endian) makes that 56 tenths of a
-# credit, far below the 100000 tenths that level 1 requires.
+# the block's expected_annual_reward_bps of 490, factor*bps is 490, which is negligible next to 40*N*k (more than 21
+# million for every k >= 1, with the test program's short window), so P(k) is 6*L/N rounded down for every k >= 1.
+# level_1_credits 10000 (0x10270000 in little-endian) makes that 56 tenths of a credit, far below the 100000 tenths
+# that level 1 requires.
 METADATA_FLAT=`(echo 0x10270000 | xxd -r | tr -d '\n';                                                               \
                 dd if=/dev/zero bs=1 count=64 status=none;                                                           \
                 for i in \`seq 0 8\`; do                                                                             \
@@ -51,7 +51,6 @@ METADATA_FLAT=`(echo 0x10270000 | xxd -r | tr -d '\n';                          
                     printf "%x" $i;                                                                                  \
                     dd if=/dev/zero bs=1 count=295 status=none;                                                      \
                 done;                                                                                                \
-                echo 0x01000000 | xxd -r | tr -d '\n';                                                               \
                 dd if=/dev/zero bs=1 count=4 status=none) | base64 | tr -d '\n'`
 METADATA_FLAT_PIECE1=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none           | base64 | tr -d '\n'`
 METADATA_FLAT_PIECE2=`echo "$METADATA_FLAT" | base64 -d | dd bs=1 count=900 status=none skip=900  | base64 | tr -d '\n'`
@@ -84,7 +83,7 @@ if [ -z "$TESTS" ]; then
     assert user_level_up_setup_16_0_a                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 16 0 4 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -254,10 +253,11 @@ if should_run_test user_level_up_bad_entry; then
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_level_up_bad_entry                                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $STATE_PUBKEY w                                                                                  \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -271,7 +271,6 @@ if should_run_test user_level_up_bad_entry; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -296,6 +295,7 @@ if should_run_test user_level_up_unowned_entry; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -309,7 +309,6 @@ if should_run_test user_level_up_unowned_entry; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -330,10 +329,11 @@ if should_run_test user_level_up_unowned_token; then
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_level_up_unowned_token                                                                          \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44e'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -347,7 +347,6 @@ if should_run_test user_level_up_unowned_token; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -373,10 +372,11 @@ if should_run_test user_level_up_incorrect_metadata; then
                                                               pubkey $METAPLEX_PROGRAM_PUBKEY                        \
                                                               pubkey $BAD_MINT_PUBKEY ]`
     assert_fail user_level_up_incorrect_metadata                                                                     \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -390,7 +390,6 @@ if should_run_test user_level_up_incorrect_metadata; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -401,7 +400,7 @@ fi
 
 
 # Invalid Ki account: neither a Ki token account of the Ki source owner, nor the Ki source owner's associated Ki
-# token account (which LevelUp would create).  0x450 = 1104 = Error_InvalidAccount_First + 4
+# token account (which LevelUp would create).  0x451 = 1105 = Error_InvalidAccount_First + 5
 if should_run_test user_level_up_incorrect_ki; then
     BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]`
     MINT_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 4 pubkey $BLOCK_PUBKEY u16 0 ]`
@@ -412,10 +411,11 @@ if should_run_test user_level_up_incorrect_ki; then
     TOKEN_PUBKEY=`get_splata_account $MINT_PUBKEY $RICH_USER1_PUBKEY`
     KI_SOURCE_PUBKEY=`get_splata_account $KI_MINT_PUBKEY $RICH_USER1_PUBKEY`
     assert_fail user_level_up_incorrect_ki                                                                           \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -429,7 +429,6 @@ if should_run_test user_level_up_incorrect_ki; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -439,10 +438,11 @@ if should_run_test user_level_up_incorrect_ki; then
 
     # Ki account not owned by user
     assert_fail user_level_up_incorrect_ki_2                                                                         \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x450'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -456,7 +456,6 @@ if should_run_test user_level_up_incorrect_ki; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1000"                                                                                           \
         | solxact encode                                                                                             \
@@ -572,7 +571,8 @@ function apply_level_ki_and_check ()
     after=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 0)
     first=$(echo "$before" | jq -r '.metadata.level_1_credits')
     factor=$(echo "$before" | jq -r '.metadata.level_metadata[0].ki_factor')
-    bps=$(echo "$before" | jq -r '.metadata.expected_annual_reward_bps')
+    bps=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l block 16 0 |                              \
+              jq -r '.configuration.expected_annual_reward_bps')
     old_window=$(echo "$before" | jq -r '.most_recent_ki_applied_window')
     new_window=$(echo "$after" | jq -r '.most_recent_ki_applied_window')
     # The window that the program recorded must be the one containing the time at which it ran, which is no
@@ -805,10 +805,10 @@ fi
 
 # Levelling up a staked entry requires its stake account, since LevelUp harvests the Ki that the stake account has
 # earned before applying the contribution.  Supplying some other account fails.
-# 0x456 = 1110 = Error_InvalidAccount_First + 10
+# 0x457 = 1111 = Error_InvalidAccount_First + 11
 if should_run_test user_level_up_wrong_stake_account; then
     assert_fail user_level_up_wrong_stake_account                                                                    \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x456'                     \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x457'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/user_level_up_tx.sh                                    \
          $RICH_USER1_PUBKEY 16 0 0 1 none                                                                            \
         | solxact hash l                                                                                             \
@@ -914,6 +914,7 @@ if should_run_test user_level_up_creates_ki_account; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $ENTRY_PUBKEY w                                                                                   \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -927,7 +928,6 @@ if should_run_test user_level_up_creates_ki_account; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1"                                                                                              \
         | solxact encode                                                                                             \
@@ -991,7 +991,8 @@ if should_run_test user_level_up_excess_not_burned; then
     BEFORE=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l entry 16 0 3)
     FIRST=$(echo "$BEFORE" | jq -r '.metadata.level_1_credits')
     FACTOR=$(echo "$BEFORE" | jq -r '.metadata.level_metadata[0].ki_factor')
-    BPS=$(echo "$BEFORE" | jq -r '.metadata.expected_annual_reward_bps')
+    BPS=$(PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l block 16 0 |                              \
+              jq -r '.configuration.expected_annual_reward_bps')
     # Precondition: this is the entry's first contribution, so the window's Ki total starts at 0 whatever the window
     if [ "$(echo "$BEFORE" | jq -r '.ki_applied_this_window')" != 0 ] ||
        [ "$(echo "$BEFORE" | jq -r '.total_level_credits')" != 0 ]; then
@@ -1051,6 +1052,7 @@ if should_run_test user_level_up_past_9; then
     `echo "encoding c                                                                                                \
            fee_payer $RICH_USER1_PUBKEY                                                                              \
            program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $BLOCK_PUBKEY                                                                                     \
            account $MAX_LEVEL_ENTRY_PUBKEY w                                                                         \
            account $RICH_USER1_PUBKEY s                                                                              \
            account $TOKEN_PUBKEY                                                                                     \
@@ -1064,7 +1066,6 @@ if should_run_test user_level_up_past_9; then
            account $DELEGATED_STAKE_PUBKEY                                                                           \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPLATA_PROGRAM_PUBKEY                                                                            \
-           account $BLOCK_PUBKEY                                                                                     \
            // Instruction code 17 = LevelUp //                                                                       \
            u8 17 u64 1"                                                                                              \
         | solxact encode                                                                                             \

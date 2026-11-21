@@ -309,7 +309,7 @@ if should_run_test admin_add_whitelist_entries_block_exists; then
     assert admin_add_whitelist_block_entries_exists_setup                                                            \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 6 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

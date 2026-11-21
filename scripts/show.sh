@@ -475,7 +475,11 @@ case $1 in
         
         echo -n '"whitelist_duration":'$WHITELIST_DURATION','
         
-        echo -n '"whitelist_duration_display":"'`to_duration $WHITELIST_DURATION`'"'
+        echo -n '"whitelist_duration_display":"'`to_duration $WHITELIST_DURATION`'",'
+
+        # The expected annual stake reward rate in basis points, which calibrates the block's entries' level credit
+        # curve
+        echo -n '"expected_annual_reward_bps":'`get_data_u32 68 "$ACCOUNT_DATA"`
 
         echo -n '},'
 
@@ -567,8 +571,8 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -ne 3200 ]; then
-            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3200"
+        if [ $ACCOUNT_DATA_LEN -ne 3192 ]; then
+            echo "Entry account has invalid size $ACCOUNT_DATA_LEN, expected 3192"
             exit 1
         fi
 
@@ -659,13 +663,13 @@ case $1 in
 
         # Progression uses token-base-unit precision (tenths); these counters
         # persist across stake changes and are appended after the old metadata.
-        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3160 "$ACCOUNT_DATA"`','
-        echo -n '"ki_applied_this_window":'`get_data_u64 3168 "$ACCOUNT_DATA"`','
-        echo -n '"total_level_credits":'`get_data_u64 3176 "$ACCOUNT_DATA"`','
+        echo -n '"most_recent_ki_applied_window":'`get_data_u64 3152 "$ACCOUNT_DATA"`','
+        echo -n '"ki_applied_this_window":'`get_data_u64 3160 "$ACCOUNT_DATA"`','
+        echo -n '"total_level_credits":'`get_data_u64 3168 "$ACCOUNT_DATA"`','
 
         # Whole epochs staked with stake active at Shinobi Systems, as last counted, and the epoch counted up to
-        echo -n '"epochs_staked":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
-        echo -n '"epochs_staked_counted_to_epoch":'`get_data_u64 3192 "$ACCOUNT_DATA"`','
+        echo -n '"epochs_staked":'`get_data_u64 3176 "$ACCOUNT_DATA"`','
+        echo -n '"epochs_staked_counted_to_epoch":'`get_data_u64 3184 "$ACCOUNT_DATA"`','
 
         echo -n '"metadata":{'
 
@@ -703,10 +707,8 @@ case $1 in
             fi
         done            
 
-        echo -n '],"expected_annual_reward_bps":'`get_data_u32 3148 "$ACCOUNT_DATA"`
-
         # The fraction, of UINT32_MAX, by which Ki harvests are reduced per day of the entry's life span
-        echo -n ',"ki_harvest_reduction_per_day":'`get_data_u32 3152 "$ACCOUNT_DATA"`
+        echo -n '],"ki_harvest_reduction_per_day":'`get_data_u32 3148 "$ACCOUNT_DATA"`
 
         echo '}}'
 

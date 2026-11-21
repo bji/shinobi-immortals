@@ -1,4 +1,4 @@
-METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2768 status=none) | base64 | tr -d '\n'`
+METADATA=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n'; dd if=/dev/zero bs=1 count=2764 status=none) | base64 | tr -d '\n'`
 # Metadata to set into entries, only needs to include up to the ki_factor
 METADATA_HEAD=`(dd if=/dev/zero bs=1 count=76 status=none; echo 0x10270000 | xxd -r | tr -d '\n') | base64 | tr -d '\n'`
 SALT0=0
@@ -34,7 +34,7 @@ if [ -z "$TESTS" ]; then
     assert special_reauthorize_setup_18_0_a                                                                          \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 18 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

@@ -18,28 +18,29 @@ static uint64_t user_level_up(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
-        DECLARE_ACCOUNT(0,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(1,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(2,   token_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(3,   entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(4,   ki_source_account,                ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        // The entry's block.  Its configuration's expected_annual_reward_bps calibrates the entry's level credit
+        // curve; and if the entry is staked, its block_start_timestamp is the beginning of the entry's life span, over
+        // which the Ki that is harvested is reduced.  It comes right before the entry, as in other instructions that
+        // take both.
+        DECLARE_ACCOUNT(0,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(1,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(2,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(3,   token_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(4,   entry_metadata_account,           ReadWrite,  NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(5,   ki_source_account,                ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         // The Ki source owner pays for the creation of the Ki source account, if Ki is harvested into it and it does
         // not exist yet (see below), so it must be writable
-        DECLARE_ACCOUNT(5,   ki_source_owner_account,          ReadWrite,  Signer,     KnownAccount_NotKnown);
-        DECLARE_ACCOUNT(6,   ki_mint_account,                  ReadWrite,  NotSigner,  KnownAccount_KiMint);
-        DECLARE_ACCOUNT(7,   authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
-        DECLARE_ACCOUNT(8,   spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
-        DECLARE_ACCOUNT(9,   metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
+        DECLARE_ACCOUNT(6,   ki_source_owner_account,          ReadWrite,  Signer,     KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(7,   ki_mint_account,                  ReadWrite,  NotSigner,  KnownAccount_KiMint);
+        DECLARE_ACCOUNT(8,   authority_account,                ReadOnly,   NotSigner,  KnownAccount_Authority);
+        DECLARE_ACCOUNT(9,   spl_token_program_account,        ReadOnly,   NotSigner,  KnownAccount_SPLTokenProgram);
+        DECLARE_ACCOUNT(10,  metaplex_program_account,         ReadOnly,   NotSigner,  KnownAccount_MetaplexProgram);
         // The entry's stake account if the entry is staked; any account otherwise, since it is then not used
-        DECLARE_ACCOUNT(10,  stake_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(11,  stake_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         // These two are needed to create the Ki source account as the Ki source owner's associated Ki token account,
         // if Ki is harvested into it and it does not exist yet
-        DECLARE_ACCOUNT(11,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
-        DECLARE_ACCOUNT(12,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
-        // The entry's block if the entry is staked: its block_start_timestamp is the beginning of the entry's life
-        // span, over which the Ki that is harvested is reduced.  Any account otherwise, since it is then not used.  It
-        // is last so that adding it did not change the positions of the other accounts.
-        DECLARE_ACCOUNT(13,  block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
+        DECLARE_ACCOUNT(12,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
+        DECLARE_ACCOUNT(13,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
     }
     DECLARE_ACCOUNTS_NUMBER(14);
 
@@ -49,9 +50,15 @@ static uint64_t user_level_up(const SolParameters *params)
     }
     const LevelUpData *data = (const LevelUpData *) params->data;
 
-    // This is the entry data
-    Entry *entry = get_validated_entry(entry_account);
+    // This is the entry data, which must be an entry of the given block
+    Entry *entry = get_validated_entry_of_block(entry_account, block_account->key);
     if (!entry) {
+        return Error_InvalidAccount_First + 1;
+    }
+
+    // This is the block data
+    const Block *block = get_validated_block(block_account);
+    if (!block) {
         return Error_InvalidAccount_First;
     }
 
@@ -88,11 +95,11 @@ static uint64_t user_level_up(const SolParameters *params)
     // Check to make sure that the entry token is owned by the token owner account.  The entry may be staked, in which
     // case its token account is frozen.
     if (!is_token_owner(token_account, token_owner_account->key, &(entry->mint_pubkey), 1, true)) {
-        return Error_InvalidAccount_First + 2;
+        return Error_InvalidAccount_First + 3;
     }
     // Check to make sure that the correct entry metadata account was passed in
     if (!SolPubkey_same(&(entry->metaplex_metadata_pubkey), entry_metadata_account->key)) {
-        return Error_InvalidAccount_First + 3;
+        return Error_InvalidAccount_First + 4;
     }
 
     // If the entry is staked, harvest the Ki that its stake account has earned since the last harvest, before this
@@ -110,19 +117,13 @@ static uint64_t user_level_up(const SolParameters *params)
     if (entry_state == EntryState_OwnedAndStaked) {
         // Check to make sure that the stake account passed in is actually staked in the entry
         if (!SolPubkey_same(&(entry->owned.stake_account), stake_account->key)) {
-            return Error_InvalidAccount_First + 10;
+            return Error_InvalidAccount_First + 11;
         }
 
         // Decode the stake account
         Stake stake;
         if (!decode_stake_account(stake_account, &stake)) {
-            return Error_InvalidAccount_First + 10;
-        }
-
-        // Check to make sure that the block account passed in is the entry's block
-        const Block *block = get_validated_block(block_account);
-        if (!block || !SolPubkey_same(&(entry->block_pubkey), block_account->key)) {
-            return Error_InvalidAccount_First + 13;
+            return Error_InvalidAccount_First + 11;
         }
 
         // Check that the Ki source account is either already a Ki token account of the Ki source owner, or else the
@@ -136,7 +137,7 @@ static uint64_t user_level_up(const SolParameters *params)
             if (!compute_associated_token_address(ki_source_owner_account->key, &(Constants.ki_mint_pubkey),
                                                   &associated_ki_account) ||
                 !SolPubkey_same(ki_source_account->key, &associated_ki_account)) {
-                return Error_InvalidAccount_First + 4;
+                return Error_InvalidAccount_First + 5;
             }
         }
 
@@ -148,7 +149,7 @@ static uint64_t user_level_up(const SolParameters *params)
     // Changing levels must not change the curve within a window or retroactively
     // change the credit attributed to earlier contributions in that window.
     if (!data->ki_to_apply || !entry->metadata.level_1_credits ||
-        !entry->metadata.level_metadata[0].ki_factor || !entry->metadata.expected_annual_reward_bps) {
+        !entry->metadata.level_metadata[0].ki_factor || !block->config.expected_annual_reward_bps) {
         return Error_InvalidData_First;
     }
 
@@ -157,7 +158,7 @@ static uint64_t user_level_up(const SolParameters *params)
     bool overflow = false;
     uint64_t old_credits = compute_level_credits(entry->metadata.level_1_credits,
                                                  entry->metadata.level_metadata[0].ki_factor,
-                                                 entry->metadata.expected_annual_reward_bps,
+                                                 block->config.expected_annual_reward_bps,
                                                  previous_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &overflow);
     if (overflow) {
         return Error_InvalidData_First;
@@ -180,7 +181,7 @@ static uint64_t user_level_up(const SolParameters *params)
     }
     uint64_t ki_needed = compute_level_credits_ki_needed(entry->metadata.level_1_credits,
                                                          entry->metadata.level_metadata[0].ki_factor,
-                                                         entry->metadata.expected_annual_reward_bps,
+                                                         block->config.expected_annual_reward_bps,
                                                          target_credits, LEVEL_CREDIT_WINDOWS_PER_YEAR);
     // UINT64_MAX means the remaining credits cannot all be earned in this window, so no limit applies.  Otherwise
     // ki_needed > previous_ki, because previous_ki only reaches old_credits, which is below the target.
@@ -195,7 +196,7 @@ static uint64_t user_level_up(const SolParameters *params)
     uint64_t new_ki = checked_add(previous_ki, ki_to_apply, &overflow);
     uint64_t new_credits = compute_level_credits(entry->metadata.level_1_credits,
                                                  entry->metadata.level_metadata[0].ki_factor,
-                                                 entry->metadata.expected_annual_reward_bps,
+                                                 block->config.expected_annual_reward_bps,
                                                  new_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &overflow);
     if (overflow || (new_credits < old_credits)) {
         return Error_InvalidData_First;
@@ -221,7 +222,7 @@ static uint64_t user_level_up(const SolParameters *params)
     {
         uint64_t least_ki = compute_level_credits_ki_needed(entry->metadata.level_1_credits,
                                                             entry->metadata.level_metadata[0].ki_factor,
-                                                            entry->metadata.expected_annual_reward_bps,
+                                                            block->config.expected_annual_reward_bps,
                                                             new_credits, LEVEL_CREDIT_WINDOWS_PER_YEAR);
         // Only reduce the contribution if the smallest total is strictly between what the window had already received
         // and the total that this contribution would make.  UINT64_MAX (no answer) is never below new_ki.
@@ -232,7 +233,7 @@ static uint64_t user_level_up(const SolParameters *params)
             bool least_overflow = false;
             uint64_t least_credits = compute_level_credits(entry->metadata.level_1_credits,
                                                            entry->metadata.level_metadata[0].ki_factor,
-                                                           entry->metadata.expected_annual_reward_bps,
+                                                           block->config.expected_annual_reward_bps,
                                                            least_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &least_overflow);
             if (!least_overflow && (least_credits == new_credits)) {
                 ki_to_apply = least_ki - previous_ki;
@@ -263,7 +264,7 @@ static uint64_t user_level_up(const SolParameters *params)
         if ((ki_source_account->data_len == 0) && is_system_program(ki_source_account->owner)) {
             return Error_InsufficientFunds;
         }
-        return Error_InvalidAccount_First + 4;
+        return Error_InvalidAccount_First + 5;
     }
 
     // And check that it holds the Ki to burn

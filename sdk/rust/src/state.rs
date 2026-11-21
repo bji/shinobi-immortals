@@ -160,7 +160,10 @@ pub struct BlockConfiguration {
     /// Seconds after the completion of the block during which only whitelisted accounts may buy, or 0 if the block
     /// has no whitelist period
     pub whitelist_duration: u32,
-    _padding2: [u8; 4],
+    /// The expected annual stake reward rate, in basis points (490 is 4.90%), of a stake account delegated to the
+    /// Shinobi Systems validator, which calibrates the level credit curve of every entry of the block.  The block's
+    /// entries cannot be levelled up if it is 0.
+    pub expected_annual_reward_bps: u32,
 }
 
 impl BlockConfiguration {
@@ -303,8 +306,6 @@ pub struct EntryMetadata {
     pub random: [u32; 16],
     /// The metadata of each level, indexed by level (0 through 8)
     pub level_metadata: [LevelMetadata; LEVEL_COUNT],
-    /// The expected annual stake reward rate, in basis points, which calibrates the level credits curve
-    pub expected_annual_reward_bps: u32,
     /// The fraction, of `u32::MAX`, by which the entry's Ki harvests are reduced for each day of its life span (see
     /// [`crate::calc::compute_ki_harvest_retention`])
     pub ki_harvest_reduction_per_day: u32,
@@ -392,7 +393,6 @@ pub struct Entry {
     _padding3: [u8; 3],
     /// The entry's metadata, which is final only once the entry is revealed (see [`Entry::revealed_metadata`])
     pub metadata: EntryMetadata,
-    _padding4: [u8; 4],
     /// The level credit window in which `ki_applied_this_window` last changed
     pub most_recent_ki_applied_window: u64,
     /// The Ki applied in that window
@@ -545,7 +545,7 @@ const _: () = assert!(core::mem::size_of::<Authority>() == 16);
 const _: () = assert!(core::mem::size_of::<BlockConfiguration>() == 64);
 const _: () = assert!(core::mem::size_of::<Block>() == 104);
 const _: () = assert!(core::mem::size_of::<LevelMetadata>() == 308);
-const _: () = assert!(core::mem::size_of::<EntryMetadata>() == 2848);
-const _: () = assert!(core::mem::size_of::<Entry>() == 3200);
+const _: () = assert!(core::mem::size_of::<EntryMetadata>() == 2844);
+const _: () = assert!(core::mem::size_of::<Entry>() == 3192);
 const _: () = assert!(core::mem::size_of::<Bid>() == 68);
 const _: () = assert!(core::mem::size_of::<Whitelist>() == 9608);

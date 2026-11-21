@@ -102,6 +102,7 @@ fn rust_structure(name: &str, bytes: &[u8]) -> (usize, usize, Fields) {
             field!(f, BlockConfiguration, x, duration, value);
             field!(f, BlockConfiguration, x, final_start_price_lamports, value);
             field!(f, BlockConfiguration, x, whitelist_duration, value);
+            field!(f, BlockConfiguration, x, expected_annual_reward_bps, value);
             (size_of::<BlockConfiguration>(), align_of::<BlockConfiguration>(), f)
         }
         "Block" => {
@@ -130,7 +131,6 @@ fn rust_structure(name: &str, bytes: &[u8]) -> (usize, usize, Fields) {
             field!(f, EntryMetadata, x, level_1_credits, value);
             field!(f, EntryMetadata, x, random, value);
             field!(f, EntryMetadata, x, level_metadata, structure);
-            field!(f, EntryMetadata, x, expected_annual_reward_bps, value);
             field!(f, EntryMetadata, x, ki_harvest_reduction_per_day, value);
             (size_of::<EntryMetadata>(), align_of::<EntryMetadata>(), f)
         }

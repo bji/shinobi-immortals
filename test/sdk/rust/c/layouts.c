@@ -144,6 +144,7 @@ int main(void)
     FIELD(BlockConfiguration, config, duration, Unsigned);
     FIELD(BlockConfiguration, config, final_start_price_lamports, Unsigned);
     FIELD(BlockConfiguration, config, whitelist_duration, Unsigned);
+    FIELD(BlockConfiguration, config, expected_annual_reward_bps, Unsigned);
     END();
 
     DECLARE(Block, block);
@@ -174,7 +175,6 @@ int main(void)
     FIELD(EntryMetadata, entry_metadata, level_1_credits, Unsigned);
     FIELD(EntryMetadata, entry_metadata, random, Bytes);
     FIELD(EntryMetadata, entry_metadata, level_metadata, Structure);
-    FIELD(EntryMetadata, entry_metadata, expected_annual_reward_bps, Unsigned);
     FIELD(EntryMetadata, entry_metadata, ki_harvest_reduction_per_day, Unsigned);
     END();
 

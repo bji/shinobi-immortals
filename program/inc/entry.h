@@ -71,14 +71,6 @@ typedef struct
     // Metadata for each of the 9 levels
     LevelMetadata level_metadata[9];
 
-    // The expected annual stake reward rate, in basis points (1/100ths of a percent), of a stake account delegated to
-    // the Shinobi Systems validator, as estimated for the year following this entry's creation.  This is the rate at
-    // which the stake account's balance is expected to grow from staking rewards (i.e. after validator commission).
-    // It calibrates the level credits curve: combined with the number of level credit windows per year, it gives the
-    // per-window Ki production of a 50 effective SOL stake account, which is the contribution rate that levels an
-    // entry fully in about one year.  It must be non-zero for the entry to be levelled up.
-    uint32_t expected_annual_reward_bps;
-
     // The fraction by which this entry's Ki harvests are reduced for each day of its life span, as a fraction of
     // UINT32_MAX (so 0 is no reduction at all, and UINT32_MAX is a reduction of everything).  An entry's life span
     // begins when its block was completed (the block's block_start_timestamp) and ends at the current time

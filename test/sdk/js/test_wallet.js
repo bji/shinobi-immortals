@@ -173,7 +173,7 @@ async function main()
     // A block and an entry, decoded by the Block and Entry classes from random account data, which also checks
     // that the classes decode as the base decoders do
     let block_data = random_bytes(104);
-    let entry_data = random_bytes(3200);
+    let entry_data = random_bytes(3192);
     entry_data[304] = 3;
     let block = new SDK.Block(null, random_address(), block_data);
     let entry = new SDK.Entry(block, random_address(), entry_data);

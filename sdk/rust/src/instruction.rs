@@ -199,7 +199,9 @@ pub fn create_block(admin: &Address, config: &BlockConfiguration, funding: Optio
     ];
 
     // The instruction code, 7 bytes of padding (CreateBlockData in program/admin/admin_create_block.c aligns the
-    // configuration to 8 bytes), and then the BlockConfiguration, with its padding as zeroes
+    // configuration to 8 bytes), and then the BlockConfiguration, with its padding as zeroes.  Its last field,
+    // expected_annual_reward_bps, calibrates the level credit curve of the block's entries, which cannot be levelled up
+    // if it is 0.
     let mut data = alloc::vec![InstructionCode::CreateBlock as u8, 0, 0, 0, 0, 0, 0, 0];
     data.extend_from_slice(&config.group_number.to_le_bytes());
     data.extend_from_slice(&config.block_number.to_le_bytes());
@@ -215,7 +217,7 @@ pub fn create_block(admin: &Address, config: &BlockConfiguration, funding: Optio
     data.extend_from_slice(&config.duration.to_le_bytes());
     data.extend_from_slice(&config.final_start_price_lamports.to_le_bytes());
     data.extend_from_slice(&config.whitelist_duration.to_le_bytes());
-    data.extend_from_slice(&[0; 4]);
+    data.extend_from_slice(&config.expected_annual_reward_bps.to_le_bytes());
 
     instruction(accounts, data)
 }
@@ -682,6 +684,8 @@ pub fn harvest(entry: &Entry, wallet: &Address) -> Instruction {
     let accounts = alloc::vec![
         // The funding account, which pays for the Ki destination account if it does not exist yet
         account(wallet, true, true),
+        // The entry's block, whose block_start_timestamp begins the entry's life span
+        account(&entry.block_pubkey, false, false),
         account(&entry_address_of(entry), false, true),
         // The token owner
         account(wallet, true, false),
@@ -696,8 +700,6 @@ pub fn harvest(entry: &Entry, wallet: &Address) -> Instruction {
         account(&id::SYSTEM_PROGRAM, false, false),
         account(&id::SPL_TOKEN_PROGRAM, false, false),
         account(&id::SPL_ASSOCIATED_TOKEN_PROGRAM, false, false),
-        // The entry's block, whose block_start_timestamp begins the entry's life span
-        account(&entry.block_pubkey, false, false),
     ];
 
     instruction(accounts, alloc::vec![InstructionCode::Harvest as u8])
@@ -709,6 +711,9 @@ pub fn harvest(entry: &Entry, wallet: &Address) -> Instruction {
 /// entry's token.  (`scripts/user_level_up_tx.sh`)
 pub fn level_up(entry: &Entry, ki_to_apply: u64, wallet: &Address) -> Instruction {
     let accounts = alloc::vec![
+        // The entry's block, whose configuration's expected_annual_reward_bps calibrates the level credit curve, and
+        // whose block_start_timestamp begins the entry's life span
+        account(&entry.block_pubkey, false, false),
         account(&entry_address_of(entry), false, true),
         // The token owner
         account(wallet, true, false),
@@ -729,8 +734,6 @@ pub fn level_up(entry: &Entry, ki_to_apply: u64, wallet: &Address) -> Instructio
         account(&entry.owned.stake_account, false, false),
         account(&id::SYSTEM_PROGRAM, false, false),
         account(&id::SPL_ASSOCIATED_TOKEN_PROGRAM, false, false),
-        // The entry's block, used only if the entry is staked
-        account(&entry.block_pubkey, false, false),
     ];
 
     // The instruction code, 7 bytes of padding (LevelUpData aligns its u64), and the most Ki to apply

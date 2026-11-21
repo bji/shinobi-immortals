@@ -122,6 +122,9 @@ solxact encode                                                                  
         encoding c                                                                                                    \
         fee_payer $USER_PUBKEY                                                                                        \
         program $SELF_PROGRAM_PUBKEY                                                                                  \
+        // The entry's block, whose configuration calibrates the level credit curve, and whose //                     \
+        // block_start_timestamp begins the entry's life span //                                                      \
+        account $BLOCK_PUBKEY                                                                                         \
         account $ENTRY_PUBKEY w                                                                                       \
         account $USER_PUBKEY s                                                                                        \
         account $TOKEN_PUBKEY                                                                                         \
@@ -136,8 +139,6 @@ solxact encode                                                                  
         account $STAKE_ACCOUNT_PUBKEY                                                                                 \
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SPLATA_PROGRAM_PUBKEY                                                                                \
-        // The entry's block, whose block_start_timestamp begins the entry's life span, used only if staked //       \
-        account $BLOCK_PUBKEY                                                                                         \
         // Instruction code 17 = LevelUp //                                                                           \
         u8 17                                                                                                        \
         u64 $KI_AMOUNT

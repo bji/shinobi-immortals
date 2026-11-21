@@ -669,6 +669,8 @@ function poke_byte ()
 # Sets MAX_LEVEL_ENTRY_PUBKEY and writes $FIXTURES/max_level_entry.json.
 # Byte offsets (which must match program/inc/entry.h, and which are also used by scripts/show.sh):
 #   0   data_type (u32): 3 = DataType_Entry
+#   4   block_pubkey: block 16 0, which test_user_level_up creates, since LevelUp requires the entry's block (whose
+#       configuration holds the expected annual reward rate) and checks that it is the entry's
 #   168 reveal_sha256: all zero, meaning revealed
 #   208 purchase_price_lamports (u64): non-zero, meaning owned
 #   304 level (u8): 8
@@ -678,7 +680,7 @@ function make_max_level_entry_fixture ()
     local PROGRAM_PUBKEY=$1
     local DATA_FILE=$FIXTURES/max_level_entry.bin
     # sizeof(Entry)
-    local SIZE=3200
+    local SIZE=3192
     # Rent exempt minimum: (data size + 128 bytes account overhead) * 3480 lamports/byte-year * 2 years
     local LAMPORTS=$(((SIZE + 128) * 3480 * 2))
 
@@ -689,6 +691,7 @@ function make_max_level_entry_fixture ()
     # Start with all zeroes, then set the individual fields
     dd if=/dev/zero of=$DATA_FILE bs=$SIZE count=1 status=none
     poke_byte $DATA_FILE 0 3
+    pubkey_binary `pda $PROGRAM_PUBKEY [ u8 10 u32 16 u32 0 ]` | dd of=$DATA_FILE bs=1 seek=4 conv=notrunc status=none
     poke_byte $DATA_FILE 208 1
     poke_byte $DATA_FILE 304 8
     poke_byte $DATA_FILE 308 100

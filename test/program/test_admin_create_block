@@ -658,7 +658,7 @@ if should_run_test admin_create_block_success; then
     assert admin_create_block_success                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -683,7 +683,8 @@ if should_run_test admin_create_block_success; then
     "duration_display": "1 day 0 hr 0 min 0.00 sec",
     "final_start_price": 1000,
     "whitelist_duration": 0,
-    "whitelist_duration_display": "0.00 sec"
+    "whitelist_duration_display": "0.00 sec",
+    "expected_annual_reward_bps": 490
   },
   "added_entries_count": 0,
   "block_start_timestamp": 0,
@@ -722,7 +723,7 @@ if should_run_test admin_create_block_sizes; then
         assert admin_create_block_sizes_$ENTRY_COUNT                                                                 \
         `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                           \
              $ADMIN_PUBKEY 90 $BLOCK_NUMBER $ENTRY_COUNT 0 0 0 0                                                     \
-             \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                \
+             \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                            \
             | solxact hash l                                                                                         \
             | solxact sign $LEDGER/admin.json                                                                        \
             | solxact submit l 2>&1`
@@ -751,7 +752,7 @@ if should_run_test admin_create_block_again; then
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -766,7 +767,7 @@ if should_run_test admin_create_block_already_exists; then
     assert admin_create_block_already_exists                                                                         \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 1 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -842,7 +843,7 @@ if should_run_test admin_create_block_whitelist; then
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x415'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 2 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                        \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60)) 490                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -863,7 +864,7 @@ if should_run_test admin_create_block_whitelist; then
     assert admin_create_block_whitelist_success                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 2 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                        \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60)) 490                    \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

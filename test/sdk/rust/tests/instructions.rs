@@ -147,11 +147,12 @@ fn builders_match_the_scripts() {
         config.duration = rng.u32();
         config.final_start_price_lamports = rng.u64();
         config.whitelist_duration = whitelist_duration;
+        config.expected_annual_reward_bps = rng.u32();
         c.compare(&format!("CreateBlock (has_auction {})", has_auction), "admin_create_block_tx.sh",
                   &args![admin, g, b, config.total_entry_count, config.total_mystery_count,
                          config.mystery_phase_duration, config.mystery_start_price_lamports,
                          config.reveal_period_duration, config.minimum_price_lamports, has_auction, config.duration,
-                         config.final_start_price_lamports, whitelist_duration],
+                         config.final_start_price_lamports, whitelist_duration, config.expected_annual_reward_bps],
                   instruction::create_block(&admin, &config, None));
     }
 

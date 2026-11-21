@@ -159,6 +159,7 @@ static void block(void)
     b.config.duration = (uint32_t) next_u64();
     b.config.final_start_price_lamports = next_u64();
     b.config.whitelist_duration = (uint32_t) next_u64();
+    b.config.expected_annual_reward_bps = (uint32_t) next_u64();
     b.added_entries_count = (uint16_t) next_u64();
     b.block_start_timestamp = random_timestamp();
     b.mysteries_sold_count = (uint16_t) next_u64();
@@ -177,6 +178,7 @@ static void block(void)
     print_u64("duration", b.config.duration);
     print_u64("non_auction_start_price_lamports", b.config.final_start_price_lamports);
     print_u64("whitelist_duration", b.config.whitelist_duration);
+    print_u64("expected_annual_reward_bps", b.config.expected_annual_reward_bps);
     print_u64("added_entries_count", b.added_entries_count);
     print_s64("block_start_timestamp", b.block_start_timestamp);
     print_u64("mysteries_sold_count", b.mysteries_sold_count);
@@ -226,7 +228,6 @@ static void entry(void)
         random_string(m->uri, sizeof(m->uri));
         fill_random(&m->uri_contents_sha256, sizeof(m->uri_contents_sha256));
     }
-    e.metadata.expected_annual_reward_bps = (uint32_t) next_u64();
     e.metadata.ki_harvest_reduction_per_day = (uint32_t) next_u64();
     e.most_recent_ki_applied_window = next_u64();
     e.ki_applied_this_window = next_u64();
@@ -285,7 +286,6 @@ static void entry(void)
     }
     printf("]");
     g_first = false;
-    print_u64("metadata_expected_annual_reward_bps", e.metadata.expected_annual_reward_bps);
     print_u64("metadata_ki_harvest_reduction_per_day", e.metadata.ki_harvest_reduction_per_day);
     end_structure();
 }

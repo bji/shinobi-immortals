@@ -37,7 +37,7 @@ if [ -z "$TESTS" ]; then
     assert admin_create_block_success                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 1 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -668,7 +668,6 @@ if [ -z "$TESTS" ]; then
         "uri_contents_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
       }
     ],
-    "expected_annual_reward_bps": 0,
     "ki_harvest_reduction_per_day": 0
   }
 }

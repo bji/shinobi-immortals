@@ -976,6 +976,9 @@ function decode_block(data)
     block.duration = buffer_le_u32(data, 52);
     block.non_auction_start_price_lamports = buffer_le_u64(data, 56);
     block.whitelist_duration = buffer_le_u32(data, 64);
+    // The expected annual stake reward rate in basis points, which calibrates the level credit curve of the block's
+    // entries
+    block.expected_annual_reward_bps = buffer_le_u32(data, 68);
     block.added_entries_count = buffer_le_u16(data, 72);
     // The time at which the block was completed (0 until then), which is also the beginning of the life span of each of
     // its entries, over which their Ki harvests are reduced
@@ -1014,13 +1017,13 @@ function decode_entry(data)
     entry.owned_stake_account = buffer_address(data, 264);
     entry.owned_last_ki_harvest_stake_account_lamports = buffer_le_u64(data, 296);
     entry.level = data[304];
-    entry.most_recent_ki_applied_window = buffer_le_u64(data, 3160);
-    entry.ki_applied_this_window = buffer_le_u64(data, 3168);
-    entry.total_level_credits = buffer_le_u64(data, 3176);
+    entry.most_recent_ki_applied_window = buffer_le_u64(data, 3152);
+    entry.ki_applied_this_window = buffer_le_u64(data, 3160);
+    entry.total_level_credits = buffer_le_u64(data, 3168);
     // The number of whole epochs that the entry has been staked with stake active at Shinobi Systems, as last
     // counted by the program, and the epoch up to which it has been counted (see program/inc/entry.h)
-    entry.epochs_staked = buffer_le_u64(data, 3184);
-    entry.epochs_staked_counted_to_epoch = buffer_le_u64(data, 3192);
+    entry.epochs_staked = buffer_le_u64(data, 3176);
+    entry.epochs_staked_counted_to_epoch = buffer_le_u64(data, 3184);
 
     entry.metadata_level_1_credits = buffer_le_u32(data, 308);
     entry.metadata_random = [ buffer_le_u32(data, 312),
@@ -1054,11 +1057,9 @@ function decode_entry(data)
         };
     }
 
-    // Expected annual stake reward rate in basis points, which calibrates the level credits curve
-    entry.metadata_expected_annual_reward_bps = buffer_le_u32(data, 3148);
-
-    // The fraction, of UINT32_MAX, by which Ki harvests are reduced for each day of the entry's life span
-    entry.metadata_ki_harvest_reduction_per_day = buffer_le_u32(data, 3152);
+    // The fraction, of UINT32_MAX, by which Ki harvests are reduced for each day of the entry's life span.  (The
+    // expected annual stake reward rate, which calibrates the level credits curve, is the block's: see decode_block.)
+    entry.metadata_ki_harvest_reduction_per_day = buffer_le_u32(data, 3148);
 
     return entry;
 }
@@ -1302,7 +1303,10 @@ function make_set_admin_instruction(superuser_address, new_admin_address)
 //     has_auction : true or false,
 //     duration : seconds,
 //     final_start_price_lamports : lamports,
-//     whitelist_duration : seconds; if nonzero, the block's whitelist must already exist and be non-empty
+//     whitelist_duration : seconds; if nonzero, the block's whitelist must already exist and be non-empty,
+//     expected_annual_reward_bps : the expected annual stake reward rate in basis points (490 is 4.90%), which
+//                                  calibrates the level credit curve of the block's entries; they cannot be levelled up
+//                                  if it is 0
 // }
 function make_create_block_instruction(admin_address, config, funding_address)
 {
@@ -1354,8 +1358,10 @@ function make_create_block_instruction(admin_address, config, funding_address)
         ...u32_to_le_bytes(config.duration),
         // Offset 48
         ...u64_to_le_bytes(config.final_start_price_lamports),
-        // Offset 56, followed by 4 bytes of padding to make the structure size a multiple of 8
-        ...u32_to_le_bytes(config.whitelist_duration), 0, 0, 0, 0
+        // Offset 56
+        ...u32_to_le_bytes(config.whitelist_duration),
+        // Offset 60
+        ...u32_to_le_bytes(config.expected_annual_reward_bps)
     ];
 
     return make_instruction(accounts, data);
@@ -1917,6 +1923,8 @@ function make_harvest_instruction(entry, wallet_address)
     let accounts = [
         // The funding account, which pays for the Ki destination account if it does not exist yet
         account_meta(wallet_address, true, true),
+        // The entry's block, whose block_start_timestamp is the beginning of the entry's life span
+        account_meta(block_address_of(entry), false, false),
         // The entry
         account_meta(entry_address_of(entry), false, true),
         // The token owner
@@ -1938,9 +1946,7 @@ function make_harvest_instruction(entry, wallet_address)
         // The SPL Token program
         account_meta(g_spl_token_program_address, false, false),
         // The Associated Token Account program
-        account_meta(g_spl_associated_token_program_address, false, false),
-        // The entry's block, whose block_start_timestamp is the beginning of the entry's life span
-        account_meta(block_address_of(entry), false, false)
+        account_meta(g_spl_associated_token_program_address, false, false)
     ];
 
     // The instruction data is just the instruction code
@@ -1956,6 +1962,9 @@ function make_harvest_instruction(entry, wallet_address)
 function make_level_up_instruction(entry, ki_to_apply, wallet_address)
 {
     let accounts = [
+        // The entry's block, whose configuration's expected_annual_reward_bps calibrates the level credit curve, and
+        // whose block_start_timestamp is the beginning of the entry's life span
+        account_meta(block_address_of(entry), false, false),
         // The entry
         account_meta(entry_address_of(entry), false, true),
         // The token owner
@@ -1982,10 +1991,7 @@ function make_level_up_instruction(entry, ki_to_apply, wallet_address)
         // The system program
         account_meta(g_system_program_address, false, false),
         // The Associated Token Account program
-        account_meta(g_spl_associated_token_program_address, false, false),
-        // The entry's block, whose block_start_timestamp is the beginning of the entry's life span; LevelUp only
-        // uses it if the entry is staked
-        account_meta(block_address_of(entry), false, false)
+        account_meta(g_spl_associated_token_program_address, false, false)
     ];
 
     // The instruction data is the instruction code, 7 bytes of padding (the program's LevelUpData struct aligns

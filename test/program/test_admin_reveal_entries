@@ -193,15 +193,15 @@ if [ -z "$TESTS" ]; then
     assert admin_reveal_entries_setup                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 4 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
 
 # Need metadata to set.  Use something very simple as the actual contents do not matter.
-METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
-METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2847 status=none) | base64 | tr -d '\n'`
+METADATA0=`(echo -n 0; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
+METADATA1=`(echo -n 1; dd if=/dev/zero bs=1 count=2843 status=none) | base64 | tr -d '\n'`
 SALT0=0
 SALT1=1
 SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
@@ -486,16 +486,16 @@ if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
     fi
     # EntryMetadata (see "EntryMetadata layout" in instructions.txt): level_1_credits and random (68 bytes), then
     # level 0's LevelMetadata: form, skill and padding, and ki_factor (12 bytes), name (32), title (32), uri (200),
-    # and uri_contents_sha256 (32); then levels 1-8 (8 * 308 bytes), expected_annual_reward_bps (4) and
-    # ki_harvest_reduction_per_day (4), all zero.  2848 bytes in all.
+    # and uri_contents_sha256 (32); then levels 1-8 (8 * 308 bytes) and ki_harvest_reduction_per_day (4), all zero.
+    # 2844 bytes in all.
     FULL_METADATA_FILE=$LEDGER/full_length_metadata.bin
     (dd if=/dev/zero bs=1 count=80 status=none;
      printf '%s' "$FULL_NAME";
      printf '%s' "$FULL_TITLE";
      printf '%s' "$FULL_URI";
-     dd if=/dev/zero bs=1 count=$((32 + 8*308 + 4 + 4)) status=none) > $FULL_METADATA_FILE
-    if [ `wc -c < $FULL_METADATA_FILE` -ne 2848 ]; then
-        echo "FAIL: $TEST_NAME: metadata is `wc -c < $FULL_METADATA_FILE` bytes, expected 2848"
+     dd if=/dev/zero bs=1 count=$((32 + 8*308 + 4)) status=none) > $FULL_METADATA_FILE
+    if [ `wc -c < $FULL_METADATA_FILE` -ne 2844 ]; then
+        echo "FAIL: $TEST_NAME: metadata is `wc -c < $FULL_METADATA_FILE` bytes, expected 2844"
         exit 1
     fi
     FULL_METADATA=`base64 < $FULL_METADATA_FILE | tr -d '\n'`
@@ -506,7 +506,7 @@ if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
     assert ${TEST_NAME}_create_block                                                                                 \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 4 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
+         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

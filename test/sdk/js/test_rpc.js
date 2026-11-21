@@ -42,7 +42,7 @@ block_data.writeBigInt64LE(BigInt(BLOCK_TIME - (10 * 86400)), 80); // block_star
 const ENTRY_MINT = Base.get_entry_mint_address(BLOCK_ADDRESS, 0);
 const ENTRY_ADDRESS = Base.get_entry_address(ENTRY_MINT);
 const STAKE_ACCOUNT = random_address();
-const entry_data = random_bytes(3200);
+const entry_data = random_bytes(3192);
 entry_data.set(Base.address_to_bytes(ENTRY_MINT), 46);                 // mint
 entry_data.set(Base.address_to_bytes(Base.get_metaplex_metadata_address(ENTRY_MINT)), 110);
 entry_data.fill(0, 168, 200);                                          // revealed
@@ -52,7 +52,7 @@ entry_data.set(Base.address_to_bytes(STAKE_ACCOUNT), 264);             // staked
 entry_data.writeBigUInt64LE(1000000000000n, 296);                      // stake at the last harvest
 entry_data[304] = 2;                                                   // level
 entry_data.writeUInt32LE(1000, 384 + (2 * 308));                       // level 2's ki_factor
-entry_data.writeUInt32LE(4294967, 3152);                               // Ki harvest reduction per day (0.1%)
+entry_data.writeUInt32LE(4294967, 3148);                               // Ki harvest reduction per day (0.1%)
 
 // The entry's stake account: delegated to Shinobi Systems since an earlier epoch, having earned 2 SOL since the last
 // harvest
