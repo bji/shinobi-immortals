@@ -31,7 +31,7 @@ solana_stake -u l delegate-stake -k $LEDGER/rich_user2.json $LEDGER/delegated_st
 assert user_stake_setup_13_0_a                                                                                       \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                   \
      $ADMIN_PUBKEY 13 0 3 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                               \
-     \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                    \
+     \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                            \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/admin.json                                                                                \
     | solxact submit l 2>&1`

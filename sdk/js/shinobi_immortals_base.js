@@ -775,6 +775,10 @@ const g_bid_marker_mint_address = find_pda([ [ 7 ] ], g_self_program_address)[0]
 
 const g_bid_marker_metadata_address = get_metaplex_metadata_address(g_bid_marker_mint_address);
 
+// The reference stake account, which Initialize creates and delegates to Shinobi Systems, and from which
+// MeasureRewardRate measures the reward rate that a delegator to Shinobi Systems earns
+const g_reference_stake_address = find_pda([ [ 12 ] ], g_self_program_address)[0];
+
 const g_rent_sysvar_address = "SysvarRent111111111111111111111111111111111";
 
 const g_clock_sysvar_address = "SysvarC1ock11111111111111111111111111111111";
@@ -782,6 +786,8 @@ const g_clock_sysvar_address = "SysvarC1ock11111111111111111111111111111111";
 const g_stake_history_sysvar_address = "SysvarStakeHistory1111111111111111111111111";
 
 const g_stake_config_address = "StakeConfig11111111111111111111111111111111";
+
+const g_epoch_rewards_sysvar_address = "SysvarEpochRewards1111111111111111111111111";
 
 // Instruction codes of the program's instructions (see program/entrypoint.c)
 const INSTRUCTION_INITIALIZE = 0;
@@ -805,7 +811,8 @@ const INSTRUCTION_LEVEL_UP = 17;
 const INSTRUCTION_SETTLE_WINNING_BID = 18;
 const INSTRUCTION_DELEGATE = 19;
 const INSTRUCTION_UPDATE_EPOCHS_STAKED = 20;
-const INSTRUCTION_REAUTHORIZE = 21;
+const INSTRUCTION_MEASURE_REWARD_RATE = 21;
+const INSTRUCTION_REAUTHORIZE = 22;
 
 // Data type code of the authority account's data (DataType_Authority in program/inc/data_type.h)
 const DATA_TYPE_AUTHORITY = 6;
@@ -933,14 +940,31 @@ function block_address_of(entry)
 
 
 // Decodes the data of the program state account (ProgramState in program/inc/program_state.h).  Returns null if the
-// data is not long enough to be a program state; otherwise returns { admin_address : string }.
+// data is not long enough to be a program state; otherwise returns:
+//   {
+//     admin_address : string, the admin's address,
+//     reward_rate : number, the reward rate that LevelUp uses, as a fraction of 2^32 per year (see
+//                   compute_reward_rate_bps): set by Initialize, then updated by MeasureRewardRate,
+//     reward_rate_window : BigInt, the level credit window in which reward_rate was last set,
+//     snapshot_stake : BigInt, the delegated stake of the reference stake account snapshot that the next measurement
+//                      is made from; 0 if there is no snapshot,
+//     snapshot_epoch : BigInt, the epoch of that snapshot,
+//     snapshot_epoch_start_timestamp : BigInt, the start time of that epoch
+//   }
 function decode_program_state(data)
 {
-    if ((data == null) || (data.length < 36)) {
+    if ((data == null) || (data.length < 72)) {
         return null;
     }
 
-    return { admin_address : buffer_address(data, 4) };
+    return {
+        admin_address : buffer_address(data, 4),
+        reward_rate : buffer_le_u32(data, 36),
+        reward_rate_window : buffer_le_u64(data, 40),
+        snapshot_stake : buffer_le_u64(data, 48),
+        snapshot_epoch : buffer_le_u64(data, 56),
+        snapshot_epoch_start_timestamp : buffer_le_s64(data, 64)
+    };
 }
 
 
@@ -963,28 +987,27 @@ function decode_block(data)
 {
     let block = { };
 
+    // The configuration (BlockConfiguration) starts at offset 8; its fields are ordered so that it has no padding
     block.group_number = buffer_le_u32(data, 8);
     block.block_number = buffer_le_u32(data, 12);
-    block.total_entry_count = buffer_le_u16(data, 16);
-    block.total_mystery_count = buffer_le_u16(data, 18);
-    block.mystery_phase_duration = buffer_le_u32(data, 20);
-    block.mystery_start_price_lamports = buffer_le_u64(data, 24);
-    block.reveal_period_duration = buffer_le_u32(data, 32);
-    block.minimum_price_lamports = buffer_le_u64(data, 40);
-    // A one byte bool, followed by padding, which need not be zero (the program copies it from instruction data)
-    block.has_auction = data[48];
-    block.duration = buffer_le_u32(data, 52);
-    block.non_auction_start_price_lamports = buffer_le_u64(data, 56);
-    block.whitelist_duration = buffer_le_u32(data, 64);
-    // The expected annual stake reward rate in basis points, which calibrates the level credit curve of the block's
-    // entries
-    block.expected_annual_reward_bps = buffer_le_u32(data, 68);
-    block.added_entries_count = buffer_le_u16(data, 72);
+    block.mystery_start_price_lamports = buffer_le_u64(data, 16);
+    block.minimum_price_lamports = buffer_le_u64(data, 24);
+    block.non_auction_start_price_lamports = buffer_le_u64(data, 32);
+    block.mystery_phase_duration = buffer_le_u32(data, 40);
+    block.reveal_period_duration = buffer_le_u32(data, 44);
+    // Nonzero if the block's revealed entries are auctioned, for this many seconds; 0 if there is no auction
+    block.auction_duration = buffer_le_u32(data, 48);
+    // If there is no auction, the seconds over which a revealed entry's price decays to minimum_price_lamports
+    block.final_sale_duration = buffer_le_u32(data, 52);
+    block.whitelist_duration = buffer_le_u32(data, 56);
+    block.total_entry_count = buffer_le_u16(data, 60);
+    block.total_mystery_count = buffer_le_u16(data, 62);
+    block.added_entries_count = buffer_le_u16(data, 64);
     // The time at which the block was completed (0 until then), which is also the beginning of the life span of each of
     // its entries, over which their Ki harvests are reduced
-    block.block_start_timestamp = Number(buffer_le_s64(data, 80));
-    block.mysteries_sold_count = buffer_le_u16(data, 88);
-    block.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 96));
+    block.block_start_timestamp = Number(buffer_le_s64(data, 72));
+    block.mysteries_sold_count = buffer_le_u16(data, 80);
+    block.mystery_phase_end_timestamp = Number(buffer_le_s64(data, 88));
 
     return block;
 }
@@ -1202,6 +1225,69 @@ function compute_minimum_bid(initial_minimum_bid, current_max_bid)
 }
 
 
+// Reward rates are annual rates held as a fraction of 2^32 (see compute_updated_reward_rate in
+// program/util/util_calculations.c), kept between these bounds (100 and 2000 basis points)
+const REWARD_RATE_ONE = 4294967296n;
+const REWARD_RATE_MIN = (100n * REWARD_RATE_ONE) / 10000n;
+const REWARD_RATE_MAX = (2000n * REWARD_RATE_ONE) / 10000n;
+
+
+// Mirrors compute_measured_reward_rate in program/util/util_calculations.c: the annual reward rate, as a fraction of
+// 2^32, of a stake account whose delegated stake grew from snapshot_stake to current_stake in seconds.  Returns a
+// BigInt.
+function compute_measured_reward_rate(snapshot_stake, current_stake, seconds)
+{
+    snapshot_stake = BigInt(snapshot_stake);
+    current_stake = BigInt(current_stake);
+    seconds = BigInt(seconds);
+
+    if ((snapshot_stake == 0n) || (seconds == 0n) || (current_stake < snapshot_stake)) {
+        return 0n;
+    }
+
+    let growth = current_stake - snapshot_stake;
+    if (growth > snapshot_stake) {
+        return (1n << 64n) - 1n;
+    }
+
+    return (((REWARD_RATE_ONE * 31536000n) * growth) / snapshot_stake) / seconds;
+}
+
+
+// Mirrors compute_updated_reward_rate in program/util/util_calculations.c: the new reward rate given the previous one
+// and a new measurement: the measurement limited to within 5% of the previous rate, smoothed (3 parts previous to 1
+// part measurement), and kept within REWARD_RATE_MIN and REWARD_RATE_MAX.  Returns a BigInt.
+function compute_updated_reward_rate(previous_rate, measured_rate)
+{
+    previous_rate = BigInt(previous_rate);
+    measured_rate = BigInt(measured_rate);
+
+    let lowest = (previous_rate * 95n) / 100n;
+    let highest = (previous_rate * 105n) / 100n;
+    let limited = (measured_rate < lowest) ? lowest : ((measured_rate > highest) ? highest : measured_rate);
+    let rate = ((previous_rate * 3n) + limited) / 4n;
+
+    return (rate < REWARD_RATE_MIN) ? REWARD_RATE_MIN : ((rate > REWARD_RATE_MAX) ? REWARD_RATE_MAX : rate);
+}
+
+
+// Mirrors compute_reward_rate_bps in program/util/util_calculations.c: a reward rate (a fraction of 2^32) in basis
+// points, rounded to the nearest basis point.  Returns a number.
+function compute_reward_rate_bps(reward_rate)
+{
+    return Number(((BigInt(reward_rate) * 10000n) + (REWARD_RATE_ONE / 2n)) / REWARD_RATE_ONE);
+}
+
+
+// Returns the annual reward rate, in basis points, that LevelUp uses to calibrate the level credit curve of every
+// entry: the program state's reward rate (program_state, as decoded by decode_program_state; set by Initialize and then
+// updated by MeasureRewardRate), rounded to the nearest basis point
+function level_up_reward_bps(program_state)
+{
+    return compute_reward_rate_bps(program_state.reward_rate);
+}
+
+
 // Returns the excess of an account that holds lamports and is required to hold required_lamports (both BigInt): the
 // amount that the WithdrawExcess instruction would withdraw from it, which is zero if it holds no more than is
 // required
@@ -1225,9 +1311,12 @@ function excess_of(lamports, required_lamports)
 
 
 // Accounts and data here must match those of scripts/super_initialize_tx.sh.  Initializes the program: creates the
-// program state account (recording admin_address as the admin), the authority account, and the Ki and bid marker
-// mints and their metadata, all paid for by the superuser.  This can only be done once.
-function make_initialize_instruction(superuser_address, admin_address)
+// program state account (recording admin_address as the admin), the authority account, the Ki and bid marker mints
+// and their metadata, and the reference stake account (funded with 2 SOL plus its rent exempt reserve, and delegated
+// to Shinobi Systems), all paid for by the superuser.  This can only be done once.  initial_reward_bps is the annual
+// reward rate, in basis points (from 100 to 2000), that a delegator to Shinobi Systems is estimated to earn; LevelUp
+// uses it until MeasureRewardRate measures the real rate, which moves the rate from it gradually.
+function make_initialize_instruction(superuser_address, admin_address, initial_reward_bps)
 {
     let accounts = [
         // The superuser, who must sign, and who pays for the accounts that are created
@@ -1251,12 +1340,21 @@ function make_initialize_instruction(superuser_address, admin_address)
         // The SPL Token program
         account_meta(g_spl_token_program_address, false, false),
         // The Metaplex program
-        account_meta(g_metaplex_program_address, false, false)
+        account_meta(g_metaplex_program_address, false, false),
+        // The reference stake account, which is created and delegated to Shinobi Systems
+        account_meta(g_reference_stake_address, false, true),
+        // The Shinobi Systems vote account, and the sysvars and programs needed to delegate to it
+        account_meta(g_shinobi_systems_vote_address, false, false),
+        account_meta(g_clock_sysvar_address, false, false),
+        account_meta(g_stake_history_sysvar_address, false, false),
+        account_meta(g_stake_config_address, false, false),
+        account_meta(g_stake_program_address, false, false)
     ];
 
-    // The instruction data is the instruction code and then the admin's address (InitializeData in
-    // program/super/super_initialize.c)
-    let data = [ INSTRUCTION_INITIALIZE, ...address_to_bytes(admin_address) ];
+    // The instruction data is the instruction code, the admin's address, 3 bytes of padding (InitializeData in
+    // program/super/super_initialize.c aligns its u32), and the initial reward rate
+    let data = [ INSTRUCTION_INITIALIZE, ...address_to_bytes(admin_address), 0, 0, 0,
+                 ...u32_to_le_bytes(initial_reward_bps) ];
 
     return make_instruction(accounts, data);
 }
@@ -1300,13 +1398,10 @@ function make_set_admin_instruction(superuser_address, new_admin_address)
 //     mystery_start_price_lamports : lamports,
 //     reveal_period_duration : seconds,
 //     minimum_price_lamports : lamports,
-//     has_auction : true or false,
-//     duration : seconds,
+//     auction_duration : seconds for which each revealed entry is auctioned, or 0 for no auction,
+//     final_sale_duration : seconds over which a revealed entry's price decays, if there is no auction,
 //     final_start_price_lamports : lamports,
-//     whitelist_duration : seconds; if nonzero, the block's whitelist must already exist and be non-empty,
-//     expected_annual_reward_bps : the expected annual stake reward rate in basis points (490 is 4.90%), which
-//                                  calibrates the level credit curve of the block's entries; they cannot be levelled up
-//                                  if it is 0
+//     whitelist_duration : seconds; if nonzero, the block's whitelist must already exist and be non-empty
 // }
 function make_create_block_instruction(admin_address, config, funding_address)
 {
@@ -1332,8 +1427,8 @@ function make_create_block_instruction(admin_address, config, funding_address)
     ];
 
     // The instruction data is the instruction code, 7 bytes of padding (CreateBlockData in
-    // program/admin/admin_create_block.c aligns the configuration to 8 bytes), and then the BlockConfiguration, laid
-    // out with C alignment as commented
+    // program/admin/admin_create_block.c aligns the configuration to 8 bytes), and then the BlockConfiguration, whose
+    // fields are ordered so that it has no padding
     let data = [
         INSTRUCTION_CREATE_BLOCK, 0, 0, 0, 0, 0, 0, 0,
         // Offset 0 of the configuration
@@ -1341,27 +1436,25 @@ function make_create_block_instruction(admin_address, config, funding_address)
         // Offset 4
         ...u32_to_le_bytes(config.block_number),
         // Offset 8
-        ...u16_to_le_bytes(config.total_entry_count),
-        // Offset 10
-        ...u16_to_le_bytes(config.total_mystery_count),
-        // Offset 12
-        ...u32_to_le_bytes(config.mystery_phase_duration),
-        // Offset 16
         ...u64_to_le_bytes(config.mystery_start_price_lamports),
-        // Offset 24, followed by 4 bytes of padding to align the next u64
-        ...u32_to_le_bytes(config.reveal_period_duration), 0, 0, 0, 0,
-        // Offset 32
+        // Offset 16
         ...u64_to_le_bytes(config.minimum_price_lamports),
-        // Offset 40, a bool followed by 3 bytes of padding to align the next u32
-        (config.has_auction ? 1 : 0), 0, 0, 0,
-        // Offset 44
-        ...u32_to_le_bytes(config.duration),
-        // Offset 48
+        // Offset 24
         ...u64_to_le_bytes(config.final_start_price_lamports),
-        // Offset 56
+        // Offset 32
+        ...u32_to_le_bytes(config.mystery_phase_duration),
+        // Offset 36
+        ...u32_to_le_bytes(config.reveal_period_duration),
+        // Offset 40
+        ...u32_to_le_bytes(config.auction_duration),
+        // Offset 44
+        ...u32_to_le_bytes(config.final_sale_duration),
+        // Offset 48
         ...u32_to_le_bytes(config.whitelist_duration),
-        // Offset 60
-        ...u32_to_le_bytes(config.expected_annual_reward_bps)
+        // Offset 52
+        ...u16_to_le_bytes(config.total_entry_count),
+        // Offset 54
+        ...u16_to_le_bytes(config.total_mystery_count)
     ];
 
     return make_instruction(accounts, data);
@@ -1962,8 +2055,7 @@ function make_harvest_instruction(entry, wallet_address)
 function make_level_up_instruction(entry, ki_to_apply, wallet_address)
 {
     let accounts = [
-        // The entry's block, whose configuration's expected_annual_reward_bps calibrates the level credit curve, and
-        // whose block_start_timestamp is the beginning of the entry's life span
+        // The entry's block, whose block_start_timestamp is the beginning of the entry's life span
         account_meta(block_address_of(entry), false, false),
         // The entry
         account_meta(entry_address_of(entry), false, true),
@@ -1991,7 +2083,9 @@ function make_level_up_instruction(entry, ki_to_apply, wallet_address)
         // The system program
         account_meta(g_system_program_address, false, false),
         // The Associated Token Account program
-        account_meta(g_spl_associated_token_program_address, false, false)
+        account_meta(g_spl_associated_token_program_address, false, false),
+        // The program state, whose reward rate calibrates the level credit curve
+        account_meta(g_program_state_address, false, false)
     ];
 
     // The instruction data is the instruction code, 7 bytes of padding (the program's LevelUpData struct aligns
@@ -2112,6 +2206,42 @@ function make_update_epochs_staked_instruction(entry)
 
     // The instruction data is just the instruction code
     let data = [ INSTRUCTION_UPDATE_EPOCHS_STAKED ];
+
+    return make_instruction(accounts, data);
+}
+
+
+// Accounts and data here must match those of scripts/anyone_measure_reward_rate_tx.sh.  Returns the MeasureRewardRate
+// instruction, which measures the reward rate that a delegator to Shinobi Systems earns, using the reference stake
+// account, and records it in the program state for LevelUp to use (at most once per level credit window); and which
+// delegates the reference stake account to Shinobi Systems again if it has been deactivated and can be.  Anyone may run
+// it, and a wallet that levels up has reason to include it before LevelUp in the same transaction.
+//
+// If require_measured is true, the instruction fails (with error 1046, RewardRateNotMeasured) if the rate has not been
+// measured in the current level credit window and cannot be measured now, which fails the whole transaction; so a
+// LevelUp in the same transaction then happens only with a rate that is up to date for the window.  If it is false
+// (the default), the instruction then succeeds, doing whatever else it can, and LevelUp uses the most recent rate.
+function make_measure_reward_rate_instruction(require_measured)
+{
+    let accounts = [
+        // The program state, which records the rate and the snapshot that the next measurement is made from
+        account_meta(g_program_state_address, false, true),
+        // The reference stake account, which is writable so that it can be delegated again
+        account_meta(g_reference_stake_address, false, true),
+        // The program authority, which is the reference stake account's stake authority
+        account_meta(g_program_authority_address, false, false),
+        // The sysvars, vote account, and programs needed to read the epoch and its rewards, and to delegate
+        account_meta(g_clock_sysvar_address, false, false),
+        account_meta(g_stake_history_sysvar_address, false, false),
+        account_meta(g_epoch_rewards_sysvar_address, false, false),
+        account_meta(g_shinobi_systems_vote_address, false, false),
+        account_meta(g_stake_config_address, false, false),
+        account_meta(g_stake_program_address, false, false)
+    ];
+
+    // The instruction data is laid out as MeasureRewardRateData in program/anyone/anyone_measure_reward_rate.c: the
+    // instruction code, and whether to fail if no measurement is made
+    let data = [ INSTRUCTION_MEASURE_REWARD_RATE, (require_measured ? 1 : 0) ];
 
     return make_instruction(accounts, data);
 }
@@ -2371,10 +2501,12 @@ exports.g_ki_mint_address = g_ki_mint_address;
 exports.g_ki_metadata_address = g_ki_metadata_address;
 exports.g_bid_marker_mint_address = g_bid_marker_mint_address;
 exports.g_bid_marker_metadata_address = g_bid_marker_metadata_address;
+exports.g_reference_stake_address = g_reference_stake_address;
 exports.g_rent_sysvar_address = g_rent_sysvar_address;
 exports.g_clock_sysvar_address = g_clock_sysvar_address;
 exports.g_stake_history_sysvar_address = g_stake_history_sysvar_address;
 exports.g_stake_config_address = g_stake_config_address;
+exports.g_epoch_rewards_sysvar_address = g_epoch_rewards_sysvar_address;
 exports.INSTRUCTION_INITIALIZE = INSTRUCTION_INITIALIZE;
 exports.INSTRUCTION_SET_ADMIN = INSTRUCTION_SET_ADMIN;
 exports.INSTRUCTION_CREATE_BLOCK = INSTRUCTION_CREATE_BLOCK;
@@ -2396,6 +2528,7 @@ exports.INSTRUCTION_LEVEL_UP = INSTRUCTION_LEVEL_UP;
 exports.INSTRUCTION_SETTLE_WINNING_BID = INSTRUCTION_SETTLE_WINNING_BID;
 exports.INSTRUCTION_DELEGATE = INSTRUCTION_DELEGATE;
 exports.INSTRUCTION_UPDATE_EPOCHS_STAKED = INSTRUCTION_UPDATE_EPOCHS_STAKED;
+exports.INSTRUCTION_MEASURE_REWARD_RATE = INSTRUCTION_MEASURE_REWARD_RATE;
 exports.INSTRUCTION_REAUTHORIZE = INSTRUCTION_REAUTHORIZE;
 exports.DATA_TYPE_AUTHORITY = DATA_TYPE_AUTHORITY;
 exports.WithdrawExcessAccountType = WithdrawExcessAccountType;
@@ -2421,6 +2554,13 @@ exports.compute_ki_harvest_retention = compute_ki_harvest_retention;
 exports.compute_effective_stake_earnings = compute_effective_stake_earnings;
 exports.compute_price = compute_price;
 exports.compute_minimum_bid = compute_minimum_bid;
+exports.REWARD_RATE_ONE = REWARD_RATE_ONE;
+exports.REWARD_RATE_MIN = REWARD_RATE_MIN;
+exports.REWARD_RATE_MAX = REWARD_RATE_MAX;
+exports.compute_measured_reward_rate = compute_measured_reward_rate;
+exports.compute_updated_reward_rate = compute_updated_reward_rate;
+exports.compute_reward_rate_bps = compute_reward_rate_bps;
+exports.level_up_reward_bps = level_up_reward_bps;
 exports.excess_of = excess_of;
 exports.make_initialize_instruction = make_initialize_instruction;
 exports.make_set_admin_instruction = make_set_admin_instruction;
@@ -2444,6 +2584,7 @@ exports.make_level_up_instruction = make_level_up_instruction;
 exports.make_settle_winning_bid_instruction = make_settle_winning_bid_instruction;
 exports.make_delegate_instruction = make_delegate_instruction;
 exports.make_update_epochs_staked_instruction = make_update_epochs_staked_instruction;
+exports.make_measure_reward_rate_instruction = make_measure_reward_rate_instruction;
 exports.make_reauthorize_instruction = make_reauthorize_instruction;
 exports.buffer_le_u64 = buffer_le_u64;
 exports.buffer_le_s64 = buffer_le_s64;

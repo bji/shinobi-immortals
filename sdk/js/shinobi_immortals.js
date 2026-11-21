@@ -1803,15 +1803,23 @@ class Wallet
         }
     }
 
-    // Returns the admin's address as a string, or null if it cannot be determined
-    async fetch_admin_address()
+    // Returns the program state, as decoded by decode_program_state (in shinobi_immortals_base.js), or null if it
+    // cannot be fetched.  Its reward_rate is the reward rate that LevelUp uses (see level_up_reward_bps in
+    // shinobi_immortals_base.js).
+    async fetch_program_state()
     {
         let result = await this.cluster.rpc_connections.run((rpc_connection) =>
             {
                 return rpc_connection.get_account(g_program_state_address);
-            }, "fetch admin address");
+            }, "fetch program state");
 
-        let program_state = (result == null) ? null : decode_program_state(result.data);
+        return (result == null) ? null : decode_program_state(result.data);
+    }
+
+    // Returns the admin's address as a string, or null if it cannot be determined
+    async fetch_admin_address()
+    {
+        let program_state = await this.fetch_program_state();
 
         return (program_state == null) ? null : program_state.admin_address;
     }
@@ -1962,6 +1970,19 @@ class Wallet
     {
         return this.complete_tx((wallet_address) => {
             return Base.make_update_epochs_staked_instruction(entry);
+        }, signer);
+    }
+
+    // Measures the reward rate that a delegator to Shinobi Systems earns, and records it for LevelUp to use; at most
+    // once per level credit window (see make_measure_reward_rate_instruction in shinobi_immortals_base.js).  If
+    // require_measured is true, the transaction fails if the rate has not been measured in the current window and
+    // cannot be measured now.  Any wallet may do this; the wallet only pays the transaction fee.  A wallet that levels
+    // up would normally include the instruction returned by make_measure_reward_rate_instruction in the same
+    // transaction as LevelUp, before it, rather than use this.
+    async measure_reward_rate(require_measured, signer)
+    {
+        return this.complete_tx((wallet_address) => {
+            return Base.make_measure_reward_rate_instruction(require_measured);
         }, signer);
     }
 

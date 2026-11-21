@@ -79,10 +79,9 @@ static uint64_t admin_create_block(const SolParameters *params)
         }
     }
 
-    // Auctions must have nonzero duration
-    if (config->has_auction && (config->duration == 0)) {
-        return Error_InvalidData_First + 4;
-    }
+    // (A block has an auction exactly when its auction_duration is nonzero, so an auction always has a nonzero
+    // duration.  A block without an auction may have a final_sale_duration of 0, in which case a revealed entry is sold
+    // at minimum_price_lamports from the start.)
 
     // Ensure that the final start price is no more than 100,000,000 SOL, to avoid overflow
     if (config->final_start_price_lamports > (100ul * 1000ul * 1000ul * LAMPORTS_PER_SOL)) {

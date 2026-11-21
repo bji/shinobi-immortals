@@ -27,7 +27,10 @@ const OPERATIONS = {
     17 : [ "compute_ki_harvest of compute_effective_stake_earnings",
            (a, b, c) => Base.compute_ki_harvest(Base.compute_effective_stake_earnings(a, b), c) ],
     18 : [ "compute_ki_harvest_retention", (a, b) => Base.compute_ki_harvest_retention(a, b) ],
-    19 : [ "compute_retained_ki_harvest", (a, b, c) => Base.compute_retained_ki_harvest(a, b, c) ]
+    19 : [ "compute_retained_ki_harvest", (a, b, c) => Base.compute_retained_ki_harvest(a, b, c) ],
+    20 : [ "compute_measured_reward_rate", (a, b, c) => Base.compute_measured_reward_rate(a, b, c) ],
+    21 : [ "compute_updated_reward_rate", (a, b) => Base.compute_updated_reward_rate(a, b) ],
+    22 : [ "compute_reward_rate_bps", (a) => Base.compute_reward_rate_bps(a) ]
 };
 
 

@@ -32,6 +32,10 @@
 // - Stake accounts that users have staked to their entries.  These belong to their users, and the admin must never be
 //   able to withdraw from them.
 // - Mint and token accounts.  These are owned by the SPL Token program.
+// - The reference stake account (see MeasureRewardRate).  It is owned by the stake program, and nothing ever withdraws
+//   from it: its delegated stake must grow only by staking rewards for its measurement of the reward rate to be
+//   right.  Lamports transferred to it are not delegated, so they do not disturb that measurement; they simply stay
+//   there.
 //
 // The amount withdrawn is always the entire excess; the instruction takes no amount.
 

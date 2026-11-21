@@ -33,6 +33,8 @@ pub const WHITELIST_SEED: u8 = 9;
 pub const BLOCK_SEED: u8 = 10;
 /// The first seed of an entry's address: `[11]`
 pub const ENTRY_SEED: u8 = 11;
+/// The seed of the reference stake account ([`crate::id::REFERENCE_STAKE`])
+pub const REFERENCE_STAKE_SEED: u8 = 12;
 
 
 /// Finds the address and bump seed of the block `block_number` of group `group_number`

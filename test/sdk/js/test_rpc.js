@@ -34,10 +34,10 @@ const BLOCK_TIME = 1760000000;
 
 // One complete block, of group 0 and block 0, with one entry: its data is random but for the fields that matter here
 const BLOCK_ADDRESS = Base.get_block_address(0, 0);
-const block_data = random_bytes(104);
-block_data.writeUInt16LE(1, 16);                                   // total_entry_count
-block_data.writeUInt16LE(1, 72);                                   // added_entries_count
-block_data.writeBigInt64LE(BigInt(BLOCK_TIME - (10 * 86400)), 80); // block_start_timestamp: 10 days ago
+const block_data = random_bytes(96);
+block_data.writeUInt16LE(1, 60);                                   // total_entry_count
+block_data.writeUInt16LE(1, 64);                                   // added_entries_count
+block_data.writeBigInt64LE(BigInt(BLOCK_TIME - (10 * 86400)), 72); // block_start_timestamp: 10 days ago
 
 const ENTRY_MINT = Base.get_entry_mint_address(BLOCK_ADDRESS, 0);
 const ENTRY_ADDRESS = Base.get_entry_address(ENTRY_MINT);

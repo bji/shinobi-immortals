@@ -1,0 +1,443 @@
+# Tests of MeasureRewardRate, which measures the reward rate of a delegator to Shinobi Systems from the reference stake
+# account, and records it in the program state for LevelUp to use.
+#
+# These run after the LevelUp tests (test_user_level_up), which therefore all run with the initial reward rate that
+# Initialize was given (490 basis points; see test_super_initialize).  The last test here levels up again, with the
+# measured rate.
+#
+# The test validator pays rewards at the start of every epoch (about every 10 seconds), during which MeasureRewardRate
+# does nothing; so tests that wait for something to happen run the instruction repeatedly until it does.
+#
+# Program state layout (program/inc/program_state.h): reward_rate (u32) at 36, reward_rate_window (u64) at 40,
+# snapshot_stake (u64) at 48, snapshot_epoch (u64) at 56, snapshot_epoch_start_timestamp (i64) at 64.
+
+
+# This must be set so that anyone_measure_reward_rate_tx.sh uses the correct vote account
+export SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY
+
+
+# Prints the unsigned value of $2 bytes (4 or 8) at byte offset $1 of the program state
+function measure_state_value ()
+{
+    local OFFSET=$1
+    local SIZE=$2
+
+    get_account_data $STATE_PUBKEY $OFFSET $SIZE | base64 -d | od -An -tu$SIZE -v | tr -d '[:space:]'
+}
+
+
+# Prints the delegated stake of the reference stake account
+function reference_delegated_stake ()
+{
+    solana -u l stake-account $REFERENCE_STAKE_PUBKEY --output json | jq -r '.delegatedStake'
+}
+
+
+# Runs MeasureRewardRate, signed and paid for by rich_user1, printing the output of the submission.  $1, if given, is
+# "require_measured".
+function measure_reward_rate ()
+{
+    SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/anyone_measure_reward_rate_tx.sh $RICH_USER1_PUBKEY $1  \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1
+}
+
+
+# The reference measured reward rate: floor(floor(2^32 * 31536000 * (t - s) / s) / n) for a delegated stake that grew
+# from s ($1) to t ($2) in n ($3) seconds (see test/program/calculation_vectors.sh, which checks the full range of
+# inputs).  The stake here never more than doubles, nor falls.
+function measured_rate_reference ()
+{
+    printf '%s\n' "4294967296 31536000 * $2 $1 - * $1 / $3 / p" | dc
+}
+
+
+# The reference updated rate, given the previous rate $1 and a measurement $2: the measurement limited to within
+# floor(95%) and floor(105%) of the previous rate, then floor((3 * previous + limited) / 4), then kept between the
+# bounds of 100 and 2000 basis points as fractions of 2^32 (see test/program/calculation_vectors.sh, which checks the
+# full range of inputs).  In dc: registers p (previous), m (measurement), l and h (the limits), r (the rate), and b and
+# t (the bounds).  "X Y <a" runs a if Y (the value pushed last) is less than X, and "X Y >a" runs it if Y is greater.
+function updated_rate_reference ()
+{
+    printf '%s\n' "$1 sp $2 sm lp 95 * 100 / sl lp 105 * 100 / sh                                                    \
+                    [ll sm]sa ll lm <a [lh sm]sa lh lm >a                                                           \
+                    lp 3 * lm + 4 / sr                                                                              \
+                    100 4294967296 * 10000 / sb 2000 4294967296 * 10000 / st                                        \
+                    [lb sr]sa lb lr <a [lt sr]sa lt lr >a lr p" | dc
+}
+
+
+# Invalid program state account.  0x44c = 1100 = Error_InvalidAccount_First
+if should_run_test measure_reward_rate_wrong_state; then
+    assert_fail measure_reward_rate_wrong_state                                                                      \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44c'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           // Incorrect program state account //                                                                     \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $EPOCH_REWARDS_SYSVAR_PUBKEY                                                                      \
+           account $VOTE_PUBKEY                                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           u8 21 u8 0"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+# Program state account that is not writable.  0x4b0 = 1200 = Error_InvalidAccountPermissions_First
+if should_run_test measure_reward_rate_readonly_state; then
+    assert_fail measure_reward_rate_readonly_state                                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4b0'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           // Correct program state account, wrong permissions (should be w) //                                      \
+           account $STATE_PUBKEY                                                                                     \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $EPOCH_REWARDS_SYSVAR_PUBKEY                                                                      \
+           account $VOTE_PUBKEY                                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           u8 21 u8 0"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+# Invalid reference stake account: a stake account that rich_user1 controls.  0x44d = 1101 =
+# Error_InvalidAccount_First + 1
+if should_run_test measure_reward_rate_wrong_reference_stake; then
+    assert_fail measure_reward_rate_wrong_reference_stake                                                            \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY w                                                                                   \
+           // Incorrect reference stake account //                                                                   \
+           account $RICH_USER2_PUBKEY w                                                                              \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $EPOCH_REWARDS_SYSVAR_PUBKEY                                                                      \
+           account $VOTE_PUBKEY                                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           u8 21 u8 0"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+# Invalid epoch rewards sysvar.  0x451 = 1105 = Error_InvalidAccount_First + 5
+if should_run_test measure_reward_rate_wrong_epoch_rewards; then
+    assert_fail measure_reward_rate_wrong_epoch_rewards                                                              \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x451'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY w                                                                                   \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           // Incorrect epoch rewards sysvar //                                                                      \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $VOTE_PUBKEY                                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           u8 21 u8 0"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+# Invalid Shinobi Systems vote account.  0x452 = 1106 = Error_InvalidAccount_First + 6
+if should_run_test measure_reward_rate_wrong_vote_account; then
+    assert_fail measure_reward_rate_wrong_vote_account                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x452'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY w                                                                                   \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $EPOCH_REWARDS_SYSVAR_PUBKEY                                                                      \
+           // Incorrect vote account //                                                                              \
+           account $RICH_USER2_PUBKEY                                                                                \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           u8 21 u8 0"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+# Missing account.  0x3ea = 1002 = Error_IncorrectNumberOfAccounts
+if should_run_test measure_reward_rate_missing_account; then
+    assert_fail measure_reward_rate_missing_account                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3ea'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY w                                                                                   \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $EPOCH_REWARDS_SYSVAR_PUBKEY                                                                      \
+           account $VOTE_PUBKEY                                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           // The stake program account is missing //                                                                \
+           u8 21 u8 0"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+# Instruction data that is too short (no require_measured).  0x3e9 = 1001 = Error_InvalidDataSize
+if should_run_test measure_reward_rate_short_data; then
+    assert_fail measure_reward_rate_short_data                                                                       \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x3e9'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY w                                                                                   \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $EPOCH_REWARDS_SYSVAR_PUBKEY                                                                      \
+           account $VOTE_PUBKEY                                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           u8 21"                                                                                                    \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+# A require_measured value other than 0 or 1.  0x514 = 1300 = Error_InvalidData_First
+if should_run_test measure_reward_rate_bad_flag; then
+    assert_fail measure_reward_rate_bad_flag                                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x514'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $RICH_USER1_PUBKEY                                                                              \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $STATE_PUBKEY w                                                                                   \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $AUTHORITY_PUBKEY                                                                                 \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $EPOCH_REWARDS_SYSVAR_PUBKEY                                                                      \
+           account $VOTE_PUBKEY                                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           u8 21 u8 2"                                                                                               \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/rich_user1.json                                                                       \
+        | solxact submit l 2>&1`
+fi
+
+
+# With no snapshot, a measurement is impossible, so with require_measured the instruction fails, whatever the epoch,
+# and discards the snapshot that it would otherwise have taken.  0x416 = 1046 = Error_RewardRateNotMeasured
+if should_run_test measure_reward_rate_require_without_snapshot; then
+    if [ "`measure_state_value 48 8`" != 0 ]; then
+        echo "FAIL: measure_reward_rate_require_without_snapshot: precondition: a snapshot already exists"
+        exit 1
+    fi
+    assert_fail measure_reward_rate_require_without_snapshot                                                         \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x416'                     \
+    `measure_reward_rate require_measured`
+    if [ "`measure_state_value 48 8`" != 0 ]; then
+        echo "FAIL: measure_reward_rate_require_without_snapshot: a failed instruction left a snapshot"
+        exit 1
+    fi
+fi
+
+
+# The first successful MeasureRewardRate takes a snapshot of the reference stake account and measures nothing.  It is
+# run until it does so, since it does nothing while the epoch's rewards are being paid.  The snapshot is of the
+# reference stake account's delegated stake, in the current epoch.  The rate, and its window, are still those that
+# Initialize set.
+INITIAL_RATE=`measure_state_value 36 4`
+INITIAL_RATE_WINDOW=`measure_state_value 40 8`
+SNAPSHOT_TAKEN=
+for ATTEMPT in `seq 1 30`; do
+    EPOCH_BEFORE=`current_epoch`
+    assert measure_reward_rate_first_snapshot_$ATTEMPT "`measure_reward_rate`"
+    if [ "`measure_state_value 48 8`" != 0 ]; then
+        SNAPSHOT_TAKEN=1
+        break
+    fi
+    sleep 1
+done
+if [ -z "$SNAPSHOT_TAKEN" ]; then
+    echo "FAIL: measure_reward_rate_first_snapshot: no snapshot was taken"
+    exit 1
+fi
+SNAPSHOT_STAKE=`measure_state_value 48 8`
+SNAPSHOT_EPOCH=`measure_state_value 56 8`
+SNAPSHOT_TIMESTAMP=`measure_state_value 64 8`
+if [ "$SNAPSHOT_STAKE" != "`reference_delegated_stake`" ]; then
+    echo "FAIL: measure_reward_rate_first_snapshot: snapshot stake $SNAPSHOT_STAKE is not the reference stake account's"
+    exit 1
+fi
+if [ "$SNAPSHOT_EPOCH" -lt "$EPOCH_BEFORE" ] || [ "$SNAPSHOT_EPOCH" -gt "`current_epoch`" ]; then
+    echo "FAIL: measure_reward_rate_first_snapshot: snapshot epoch $SNAPSHOT_EPOCH is not the epoch in which it was taken"
+    exit 1
+fi
+if [ "`measure_state_value 36 4`" != "$INITIAL_RATE" ] || [ "`measure_state_value 40 8`" != "$INITIAL_RATE_WINDOW" ]
+then
+    echo "FAIL: measure_reward_rate_first_snapshot: a rate was measured from no snapshot"
+    exit 1
+fi
+echo "+ measure_reward_rate_first_snapshot"
+
+
+# Once an epoch has started since the snapshot, and its rewards have been paid, MeasureRewardRate measures, which is
+# seen as a change of the rate's window.  The rate is checked against one computed here from Initialize's rate, the
+# snapshot that the measurement was made from, and the snapshot that it then took; the delegated stake must have grown,
+# by the rewards of the epochs in between.  Begin at the start of a
+# level credit window, so that the window does not end during this test or the next.
+sleep_until_next_level_credit_window
+sleep_until_next_epoch
+MEASURED=
+for ATTEMPT in `seq 1 30`; do
+    assert measure_reward_rate_measures_$ATTEMPT "`measure_reward_rate`"
+    if [ "`measure_state_value 40 8`" != "$INITIAL_RATE_WINDOW" ]; then
+        MEASURED=1
+        break
+    fi
+    sleep 1
+done
+if [ -z "$MEASURED" ]; then
+    echo "FAIL: measure_reward_rate_measures: no rate was measured"
+    exit 1
+fi
+RATE=`measure_state_value 36 4`
+RATE_WINDOW=`measure_state_value 40 8`
+NEW_SNAPSHOT_STAKE=`measure_state_value 48 8`
+NEW_SNAPSHOT_EPOCH=`measure_state_value 56 8`
+NEW_SNAPSHOT_TIMESTAMP=`measure_state_value 64 8`
+if [ "$NEW_SNAPSHOT_STAKE" != "`reference_delegated_stake`" ] || [ "$NEW_SNAPSHOT_EPOCH" -le "$SNAPSHOT_EPOCH" ] ||
+   [ "$NEW_SNAPSHOT_TIMESTAMP" -le "$SNAPSHOT_TIMESTAMP" ]; then
+    echo "FAIL: measure_reward_rate_measures: the measurement did not take a new snapshot"
+    exit 1
+fi
+if [ "$NEW_SNAPSHOT_STAKE" -le "$SNAPSHOT_STAKE" ]; then
+    echo "FAIL: measure_reward_rate_measures: precondition: the reference stake account earned no rewards"
+    exit 1
+fi
+EXPECTED_RATE=`updated_rate_reference $INITIAL_RATE \`measured_rate_reference $SNAPSHOT_STAKE $NEW_SNAPSHOT_STAKE      \
+                                                   $((NEW_SNAPSHOT_TIMESTAMP - SNAPSHOT_TIMESTAMP))\``
+if [ "$RATE" != "$EXPECTED_RATE" ]; then
+    echo "FAIL: measure_reward_rate_measures: rate $RATE, expected $EXPECTED_RATE"
+    exit 1
+fi
+if [ "$RATE_WINDOW" != "$((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS))" ]; then
+    echo "FAIL: measure_reward_rate_measures: recorded window $RATE_WINDOW is not the current window"
+    exit 1
+fi
+echo "+ measure_reward_rate_measures (rate $RATE, `PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/show.sh -u l   \
+                                                        state | jq -r .reward_rate_bps` basis points)"
+
+
+# Only one measurement is made per window: once the rate has been measured in the window, MeasureRewardRate succeeds,
+# even with require_measured, and changes nothing, even once another epoch has started
+if should_run_test measure_reward_rate_once_per_window; then
+    STATE_BEFORE=`get_account_data $STATE_PUBKEY`
+    sleep_until_next_epoch
+    for ATTEMPT in 1 2 3; do
+        assert measure_reward_rate_once_per_window_$ATTEMPT "`measure_reward_rate require_measured`"
+        sleep 1
+    done
+    if [ "$RATE_WINDOW" != "$((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS))" ]; then
+        echo "FAIL: measure_reward_rate_once_per_window: precondition: the window ended during the test"
+        exit 1
+    fi
+    if [ "`get_account_data $STATE_PUBKEY`" != "$STATE_BEFORE" ]; then
+        echo "FAIL: measure_reward_rate_once_per_window: the program state changed"
+        exit 1
+    fi
+fi
+
+
+# In the next window, MeasureRewardRate measures again, and the new rate is the previous rate, updated with the new
+# measurement: limited to within 5% of it, and smoothed (3 parts previous to 1 part measurement), within the bounds
+if should_run_test measure_reward_rate_next_window; then
+    PREVIOUS_RATE=`measure_state_value 36 4`
+    PREVIOUS_STAKE=`measure_state_value 48 8`
+    PREVIOUS_TIMESTAMP=`measure_state_value 64 8`
+    sleep_until_next_level_credit_window
+    MEASURED=
+    for ATTEMPT in `seq 1 30`; do
+        assert measure_reward_rate_next_window_$ATTEMPT "`measure_reward_rate`"
+        if [ "`measure_state_value 40 8`" != "$RATE_WINDOW" ]; then
+            MEASURED=1
+            break
+        fi
+        sleep 1
+    done
+    if [ -z "$MEASURED" ]; then
+        echo "FAIL: measure_reward_rate_next_window: no rate was measured"
+        exit 1
+    fi
+    RATE=`measure_state_value 36 4`
+    NEW_STAKE=`measure_state_value 48 8`
+    NEW_TIMESTAMP=`measure_state_value 64 8`
+    MEASUREMENT=`measured_rate_reference $PREVIOUS_STAKE $NEW_STAKE $((NEW_TIMESTAMP - PREVIOUS_TIMESTAMP))`
+    EXPECTED_RATE=`updated_rate_reference $PREVIOUS_RATE $MEASUREMENT`
+    if [ "$RATE" != "$EXPECTED_RATE" ]; then
+        echo "FAIL: measure_reward_rate_next_window: rate $RATE, expected $EXPECTED_RATE (previous $PREVIOUS_RATE,"  \
+             "measurement $MEASUREMENT)"
+        exit 1
+    fi
+    echo "+ measure_reward_rate_next_window (rate $RATE)"
+fi
+
+
+# LevelUp now uses the measured rate, rounded to whole basis points, rather than Initialize's 490.  This uses the
+# entry, and the checks, of the LevelUp tests (see test_user_level_up), whose reference credit calculation takes the
+# rate that LevelUp uses from the program state.  Those exist only when all tests are run.
+if [ -z "$TESTS" ]; then
+    if [ "`level_up_bps_reference`" = 490 ]; then
+        echo "FAIL: measure_reward_rate_level_up: precondition: the measured rate is still 490 basis points, so this"  \
+             "test would not show which rate LevelUp used"
+        exit 1
+    fi
+    # The stake account of entry 16 0 0, which apply_level_ki_and_check passes to LevelUp; later test files have
+    # reused the variable for their own stake accounts since test_user_level_up set it
+    export DELEGATED_STAKE_PUBKEY=`solxact pubkey $LEDGER/delegated4_stake.json`
+    # Apply as much of rich_user1's Ki as there is, up to 1000 whole Ki; the LevelUp tests have spent most of it.  (The
+    # balance is in deciKi, ten to a whole Ki.)  Even 1 Ki earns credits on this entry's curve.
+    WHOLE_KI=$((`get_token_balance $KI_MINT_PUBKEY $RICH_USER1_PUBKEY` / 10))
+    if [ "$WHOLE_KI" -lt 1 ]; then
+        echo "FAIL: measure_reward_rate_level_up: precondition: rich_user1 has no whole Ki to apply"
+        exit 1
+    fi
+    if [ "$WHOLE_KI" -gt 1000 ]; then
+        WHOLE_KI=1000
+    fi
+    apply_level_ki_and_check measure_reward_rate_level_up $WHOLE_KI
+fi

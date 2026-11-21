@@ -5,7 +5,9 @@
 
 
 // This is all configuration values that define the operational parameters of a block of entries.  These values are
-// supplied when the block is first created, and can never be changed
+// supplied when the block is first created, and can never be changed.  The fields are ordered so that the structure
+// has no padding: the group and block numbers (two u32 values, which together fill 8 bytes), then the other fields by
+// size, largest first.
 typedef struct
 {
     // Identification of the group number of this block
@@ -14,24 +16,9 @@ typedef struct
     // Identification of the block number of this block within its group.
     uint32_t block_number;
 
-    // Total number of entries in this block.  Must be greater than 0.
-    uint16_t total_entry_count;
-
-    // Number of mysteries which may be purchased; when all are purchased, the block can be revealed.  Must be equal to
-    // or less than total_entry_count.
-    uint16_t total_mystery_count;
-
-    // Number of seconds to the timestamp of last entry add to get the end of the mystery phase.
-    uint32_t mystery_phase_duration;
-
     // If total_mystery_count > 0, this is the cost in lamports of each mystery at the time that the mystery phase
     // began, and must be >= the minimum_price_lamports
     uint64_t mystery_start_price_lamports;
-
-    // Number of seconds to add to the block state's all_mysteries_sold_timestamp value to get the cutoff period for
-    // reveal; any entry which has not been revealed by this point allows zero-penalty return of the purchase price
-    // (while retaining the mystery token itself).
-    uint32_t reveal_period_duration;
 
     // This value is used in three ways:
     // - It is the final price of the mystery at the end of this entry's mystery phase
@@ -39,19 +26,29 @@ typedef struct
     // - It is the final price of the entry if it is unsold and not a mystery and past its auction phase
     uint64_t minimum_price_lamports;
 
-    // If this is true, then when an entry is first revealed, if it is has not been sold already as a mystery, then it
-    // enters an auction period, with parameters defined by [minimum_price_lamports] and [duration].  If this is
-    // false, then when an entry is first revealed, if it is has not been sold already as a mystery, it is immediately
-    // purchasable for a price that starts at [final_start_price_lamports] and decays to [minimum_price_lamports] over
-    // [duration].
-    bool has_auction;
-
-    // This is the duration to use for auctions and for final sale periods.
-    uint32_t duration;
-
-    // This is the initial price to sell revealed entry for during its final sale period, which must be
-    // >= minimum_price_lamports.
+    // This is the initial price to sell revealed entry for during its final sale period, if the block has no auction
+    // (auction_duration is 0), which must be >= minimum_price_lamports.
     uint64_t final_start_price_lamports;
+
+    // Number of seconds to the timestamp of last entry add to get the end of the mystery phase.
+    uint32_t mystery_phase_duration;
+
+    // Number of seconds to add to the block state's all_mysteries_sold_timestamp value to get the cutoff period for
+    // reveal; any entry which has not been revealed by this point allows zero-penalty return of the purchase price
+    // (while retaining the mystery token itself).
+    uint32_t reveal_period_duration;
+
+    // If this is nonzero, then when an entry is first revealed, if it is has not been sold already as a mystery, then
+    // it enters an auction period of this many seconds, whose starting price is [minimum_price_lamports].  If this is
+    // 0, the block has no auction: when an entry is first revealed, if it is has not been sold already as a mystery,
+    // it is immediately purchasable for a price that starts at [final_start_price_lamports] and decays to
+    // [minimum_price_lamports] over [final_sale_duration].
+    uint32_t auction_duration;
+
+    // If the block has no auction (auction_duration is 0), this is the number of seconds over which a revealed entry's
+    // price decays from [final_start_price_lamports] to [minimum_price_lamports].  It is not used if the block has an
+    // auction.
+    uint32_t final_sale_duration;
 
     // Blocks may be configured to only allow purchasing of Entries by accounts that are whitelisted.  Each block has
     // at most one whitelist: a Whitelist account (see inc/whitelist.h) at the program derived address for the block,
@@ -79,18 +76,17 @@ typedef struct
     // that the whitelist period has not ended.
     uint32_t whitelist_duration;
 
-    // The expected annual stake reward rate, in basis points (1/100ths of a percent), of a stake account delegated to
-    // the Shinobi Systems validator, as estimated for the year following the creation of this block.  This is the
-    // rate at which the stake account's balance is expected to grow from staking rewards (i.e. after validator
-    // commission).  It calibrates the level credits curve of every entry of the block: combined with the number of
-    // level credit windows per year, it gives the per-window Ki production of a 50 effective SOL stake account, which
-    // is the contribution rate that levels an entry fully in about one year.  It must be non-zero for the block's
-    // entries to be levelled up.  It applies equally to every entry of the block, so it is here rather than in each
-    // entry's metadata.  (It occupies what would otherwise be padding at the end of the structure, so that the
-    // structure's size, and so the size of CreateBlock's data, is the same as without it.)
-    uint32_t expected_annual_reward_bps;
+    // Total number of entries in this block.  Must be greater than 0.
+    uint16_t total_entry_count;
+
+    // Number of mysteries which may be purchased; when all are purchased, the block can be revealed.  Must be equal to
+    // or less than total_entry_count.
+    uint16_t total_mystery_count;
 
 } BlockConfiguration;
+
+// The fields of BlockConfiguration are ordered so that it has no padding; this ensures that it stays that way
+static_assert(sizeof(BlockConfiguration) == 56, "BlockConfiguration must have no padding");
 
 
 // This is the format of data stored in a block account
@@ -101,9 +97,11 @@ typedef struct
 
     // This is the configuration of the block.  It is never changed after the block is created.  An entry does not
     // hold a copy of it: when an entry is added to the block, only group_number, block_number, and the values that its
-    // sale depends on (minimum_price_lamports, has_auction, duration, and final_start_price_lamports, which the entry
-    // holds as non_auction_start_price_lamports) are copied into the entry's own fields.  The rest are only here.
-    // The entry's duration does not stay equal to this one: a bid that extends the entry's auction increases it.
+    // sale depends on are copied into the entry's own fields: minimum_price_lamports; whether there is an auction
+    // (auction_duration is nonzero), as has_auction; auction_duration or final_sale_duration, whichever applies, as
+    // duration; and final_start_price_lamports, as non_auction_start_price_lamports.  The rest are only here.  The
+    // entry's duration does not stay equal to the block's auction_duration: a bid that extends the entry's auction
+    // increases it.
     BlockConfiguration config;
 
     // This is the total number of entries that have been added to the block thus far.

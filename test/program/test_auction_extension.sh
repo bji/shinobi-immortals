@@ -161,7 +161,7 @@ SHA2560=`compute_metadata_sha256 $METADATA0 $SALT0`
 # Initialize the program
 assert auction_extension_setup_initialize                                                                            \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY SHINOBI_SYSTEMS_VOTE_PUBKEY=$SHINOBI_SYSTEMS_VOTE_PUBKEY                   \
-     $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $ADMIN_PUBKEY                                          \
+     $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $ADMIN_PUBKEY 490                                      \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/super.json                                                                                \
     | solxact submit l 2>&1`
@@ -171,7 +171,7 @@ assert auction_extension_setup_initialize                                       
 assert auction_extension_setup_create_block                                                                          \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                                   \
      $ADMIN_PUBKEY 1 0 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                                \
-     \`lamports_from_sol 1\` true $AUCTION_DURATION \`lamports_from_sol 1000\` 0 490                                 \
+     \`lamports_from_sol 1\` $AUCTION_DURATION 0 \`lamports_from_sol 1000\` 0                                        \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/admin.json                                                                                \
     | solxact submit l 2>&1`

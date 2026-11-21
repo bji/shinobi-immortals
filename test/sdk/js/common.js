@@ -253,14 +253,14 @@ function sample_instructions()
     let config = {
         group_number : g, block_number : b, total_entry_count : 10, total_mystery_count : 5,
         mystery_phase_duration : 100, mystery_start_price_lamports : random_bigint(64), reveal_period_duration : 200,
-        minimum_price_lamports : random_bigint(64), has_auction : true, duration : 300,
-        final_start_price_lamports : random_bigint(64), whitelist_duration : 0, expected_annual_reward_bps : 490
+        minimum_price_lamports : random_bigint(64), auction_duration : 300, final_sale_duration : 0,
+        final_start_price_lamports : random_bigint(64), whitelist_duration : 0
     };
     let sha256s = [ random_bytes(32), random_bytes(32) ];
     const T = Base.WithdrawExcessAccountType;
 
     return [
-        [ "Initialize", superuser, Base.make_initialize_instruction(superuser, admin) ],
+        [ "Initialize", superuser, Base.make_initialize_instruction(superuser, admin, 650) ],
         [ "SetAdmin", superuser, Base.make_set_admin_instruction(superuser, other) ],
         [ "CreateBlock", admin, Base.make_create_block_instruction(admin, config) ],
         [ "CreateBlock (funded by another)", other, Base.make_create_block_instruction(admin, config, other) ],
@@ -288,6 +288,7 @@ function sample_instructions()
           Base.make_settle_winning_bid_instruction(entry, user, admin, user) ],
         [ "Delegate", other, Base.make_delegate_instruction(staked_entry) ],
         [ "UpdateEpochsStaked", other, Base.make_update_epochs_staked_instruction(staked_entry) ],
+        [ "MeasureRewardRate", other, Base.make_measure_reward_rate_instruction(true) ],
         [ "ReAuthorize", user, Base.make_reauthorize_instruction(staked_entry, admin, user, other, true) ]
     ].map(([ name, signer, instruction ]) => ({ name, signer, instruction }));
 }

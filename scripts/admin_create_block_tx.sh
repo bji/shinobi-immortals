@@ -12,12 +12,12 @@ function require ()
 Usage: admin_create_block_tx.sh <ADMIN_PUBKEY> <GROUP_NUMBER> <BLOCK_NUMBER> \\
                                 <TOTAL_ENTRY_COUNT> <TOTAL_MYSTERY_COUNT> <MYSTERY_PHASE_DURATION> \\
                                 <MYSTERY_START_PRICE_LAMPORTS> <REVEAL_PERIOD_DURATION> <MINIMUM_PRICE_LAMPORTS> \\
-                                <HAS_AUCTION> <DURATION> <FINAL_START_PRICE_LAMPORTS> <WHITELIST_DURATION> \\
-                                <EXPECTED_ANNUAL_REWARD_BPS>
+                                <AUCTION_DURATION> <FINAL_SALE_DURATION> <FINAL_START_PRICE_LAMPORTS> \\
+                                <WHITELIST_DURATION>
 
-EXPECTED_ANNUAL_REWARD_BPS is the expected annual stake reward rate, in basis points, of a stake account delegated to
-the Shinobi Systems validator (490 is 4.90% per year), which calibrates the level credit curve of the block's entries.
-The block's entries cannot be levelled up if it is 0.
+AUCTION_DURATION is the number of seconds for which each revealed entry is auctioned, or 0 for no auction.
+FINAL_SALE_DURATION is, for a block with no auction, the number of seconds over which a revealed entry's price decays
+from FINAL_START_PRICE_LAMPORTS to MINIMUM_PRICE_LAMPORTS; it is not used for a block with an auction.
 
 EOF
         exit 1
@@ -33,11 +33,10 @@ MYSTERY_PHASE_DURATION=$6
 MYSTERY_START_PRICE_LAMPORTS=$7
 REVEAL_PERIOD_DURATION=$8
 MINIMUM_PRICE_LAMPORTS=$9
-HAS_AUCTION=${10}
-DURATION=${11}
+AUCTION_DURATION=${10}
+FINAL_SALE_DURATION=${11}
 FINAL_START_PRICE_LAMPORTS=${12}
 WHITELIST_DURATION=${13}
-EXPECTED_ANNUAL_REWARD_BPS=${14}
 
 require $ADMIN_PUBKEY
 require $GROUP_NUMBER
@@ -48,17 +47,10 @@ require $MYSTERY_PHASE_DURATION
 require $MYSTERY_START_PRICE_LAMPORTS
 require $REVEAL_PERIOD_DURATION
 require $MINIMUM_PRICE_LAMPORTS
-require $HAS_AUCTION
-require $DURATION
+require $AUCTION_DURATION
+require $FINAL_SALE_DURATION
 require $FINAL_START_PRICE_LAMPORTS
 require $WHITELIST_DURATION
-require $EXPECTED_ANNUAL_REWARD_BPS
-
-if [ "$HAS_AUCTION" = "1" ]; then
-    HAS_AUCTION=true
-elif [ "$HAS_AUCTION" = "0" ]; then
-    HAS_AUCTION=false
-fi
 
 # Compute program, block, entry, and related pubkeys.  These may not all be valid, depending on input parameters
 # to the script, but any that are invalid won't be used by the solxact encode command that follows.
@@ -136,19 +128,18 @@ solxact encode                                                                  
         account $WHITELIST_PUBKEY                                                                                     \
         // Instruction code 2 = CreateBlock //                                                                        \
         u8 2                                                                                                          \
-        // Block Configuration //                                                                                     \
+        // Block Configuration, whose fields are ordered so that it has no padding: see program/inc/block.h //       \
         struct [                                                                                                      \
         u32 $GROUP_NUMBER                                                                                             \
         u32 $BLOCK_NUMBER                                                                                             \
+        u64 $MYSTERY_START_PRICE_LAMPORTS                                                                             \
+        u64 $MINIMUM_PRICE_LAMPORTS                                                                                   \
+        u64 $FINAL_START_PRICE_LAMPORTS                                                                               \
+        u32 $MYSTERY_PHASE_DURATION                                                                                   \
+        u32 $REVEAL_PERIOD_DURATION                                                                                   \
+        u32 $AUCTION_DURATION                                                                                         \
+        u32 $FINAL_SALE_DURATION                                                                                      \
+        u32 $WHITELIST_DURATION                                                                                       \
         u16 $TOTAL_ENTRY_COUNT                                                                                        \
         u16 $TOTAL_MYSTERY_COUNT                                                                                      \
-        u32 $MYSTERY_PHASE_DURATION                                                                                   \
-        u64 $MYSTERY_START_PRICE_LAMPORTS                                                                             \
-        u32 $REVEAL_PERIOD_DURATION                                                                                   \
-        u64 $MINIMUM_PRICE_LAMPORTS                                                                                   \
-        bool $HAS_AUCTION                                                                                             \
-        u32 $DURATION                                                                                                 \
-        u64 $FINAL_START_PRICE_LAMPORTS                                                                               \
-        u32 $WHITELIST_DURATION                                                                                       \
-        u32 $EXPECTED_ANNUAL_REWARD_BPS                                                                               \
         ]

@@ -6,10 +6,11 @@ program.so: $(wildcard program/*.c program/*.h program/*/*.c program/*/*.h) buil
 build_program.sh: make_build_program.sh
 	./make_build_program.sh program-key.json super-key.json BLADE1qNA1uNjRgER6DtUFf7FU3c1TWLLdpPeEcKatZ2 > $@
 
-.PHONY: test base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension test-sdk-js \
-        test-sdk-rust sdk-js-packages clean clean-test clean-test-sdk-js clean-test-sdk-rust clean-sdk-js-packages
-test: base-tests test-calculations test-destake-deactivated-elsewhere test-auction-extension test-sdk-js \
-      test-sdk-rust
+.PHONY: test base-tests test-calculations test-destake-deactivated-elsewhere test-reference-stake-deactivated \
+        test-auction-extension test-sdk-js test-sdk-rust sdk-js-packages clean clean-test clean-test-sdk-js \
+        clean-test-sdk-rust clean-sdk-js-packages
+test: base-tests test-calculations test-destake-deactivated-elsewhere test-reference-stake-deactivated \
+      test-auction-extension test-sdk-js test-sdk-rust
 
 base-tests:
 	SOURCE=`pwd` ./test/program/test.sh
@@ -19,6 +20,9 @@ test-calculations:
 
 test-destake-deactivated-elsewhere:
 	SOURCE=`pwd` ./test/program/test_destake_deactivated_elsewhere.sh
+
+test-reference-stake-deactivated:
+	SOURCE=`pwd` ./test/program/test_reference_stake_deactivated.sh
 
 test-auction-extension:
 	SOURCE=`pwd` ./test/program/test_auction_extension.sh
@@ -43,8 +47,8 @@ clean:
 	rm -f program.so
 
 # Removes what the test targets leave behind.  The program tests (base-tests, test-calculations,
-# test-destake-deactivated-elsewhere, and test-auction-extension) build and run everything in temporary directories,
-# which they remove themselves, so only the SDK tests leave anything here.
+# test-destake-deactivated-elsewhere, test-reference-stake-deactivated, and test-auction-extension) build and run
+# everything in temporary directories, which they remove themselves, so only the SDK tests leave anything here.
 clean-test: clean-test-sdk-js clean-test-sdk-rust
 
 # Removes the build output of the Javascript SDK tests' Rust reference programs (test/sdk/js/reference), which

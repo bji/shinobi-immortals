@@ -1,5 +1,6 @@
 #pragma once
 
+#include "inc/program_state.h"
 #include "util/util_calculations.c"
 #include "util/util_ki.c"
 #include "util/util_stake.c"
@@ -18,10 +19,9 @@ static uint64_t user_level_up(const SolParameters *params)
 {
     // Declare accounts, which checks the permissions and identity of all accounts
     DECLARE_ACCOUNTS {
-        // The entry's block.  Its configuration's expected_annual_reward_bps calibrates the entry's level credit
-        // curve; and if the entry is staked, its block_start_timestamp is the beginning of the entry's life span, over
-        // which the Ki that is harvested is reduced.  It comes right before the entry, as in other instructions that
-        // take both.
+        // The entry's block.  If the entry is staked, its block_start_timestamp is the beginning of the entry's life
+        // span, over which the Ki that is harvested is reduced.  It comes right before the entry, as in other
+        // instructions that take both.
         DECLARE_ACCOUNT(0,   block_account,                    ReadOnly,   NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(1,   entry_account,                    ReadWrite,  NotSigner,  KnownAccount_NotKnown);
         DECLARE_ACCOUNT(2,   token_owner_account,              ReadOnly,   Signer,     KnownAccount_NotKnown);
@@ -41,8 +41,11 @@ static uint64_t user_level_up(const SolParameters *params)
         // if Ki is harvested into it and it does not exist yet
         DECLARE_ACCOUNT(12,  system_program_account,           ReadOnly,   NotSigner,  KnownAccount_SystemProgram);
         DECLARE_ACCOUNT(13,  spl_ata_program_account,          ReadOnly,   NotSigner,  KnownAccount_SPLATAProgram);
+        // The program state, which holds the reward rate that calibrates the entry's level credit curve (see
+        // MeasureRewardRate).  It is only read, so that level ups do not contend with one another for it.
+        DECLARE_ACCOUNT(14,  state_account,                    ReadOnly,   NotSigner,  KnownAccount_ProgramState);
     }
-    DECLARE_ACCOUNTS_NUMBER(14);
+    DECLARE_ACCOUNTS_NUMBER(15);
 
     // Ensure that the instruction data is the correct size
     if (params->data_len != sizeof(LevelUpData)) {
@@ -145,11 +148,21 @@ static uint64_t user_level_up(const SolParameters *params)
                    ki_source_owner_account->key, &clock, params->ka, params->ka_num);
     }
 
+    // The annual reward rate, in basis points, that calibrates the level credit curve: the program state's reward
+    // rate (set by Initialize, and updated by MeasureRewardRate), rounded to whole basis points, which is the same for
+    // every entry of every block.  It is always at least REWARD_RATE_MIN (100 basis points), so is never zero.  If
+    // MeasureRewardRate measures a new rate partway through a window, the curve changes for the rest of the window;
+    // the credits of the window are then those of the old curve up to the Ki applied before the change, plus those of
+    // the new curve from there, which differs from the new curve alone only by the gap between the two curves at that
+    // point.  Rates move by at most 1.25% per window, so that is negligible.
+    const ProgramState *program_state = (const ProgramState *) state_account->data;
+    uint32_t reward_bps = compute_reward_rate_bps(program_state->reward_rate);
+
     // Contributions must be positive and use a fixed level-zero ki_factor.
     // Changing levels must not change the curve within a window or retroactively
     // change the credit attributed to earlier contributions in that window.
     if (!data->ki_to_apply || !entry->metadata.level_1_credits ||
-        !entry->metadata.level_metadata[0].ki_factor || !block->config.expected_annual_reward_bps) {
+        !entry->metadata.level_metadata[0].ki_factor) {
         return Error_InvalidData_First;
     }
 
@@ -158,7 +171,7 @@ static uint64_t user_level_up(const SolParameters *params)
     bool overflow = false;
     uint64_t old_credits = compute_level_credits(entry->metadata.level_1_credits,
                                                  entry->metadata.level_metadata[0].ki_factor,
-                                                 block->config.expected_annual_reward_bps,
+                                                 reward_bps,
                                                  previous_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &overflow);
     if (overflow) {
         return Error_InvalidData_First;
@@ -181,7 +194,7 @@ static uint64_t user_level_up(const SolParameters *params)
     }
     uint64_t ki_needed = compute_level_credits_ki_needed(entry->metadata.level_1_credits,
                                                          entry->metadata.level_metadata[0].ki_factor,
-                                                         block->config.expected_annual_reward_bps,
+                                                         reward_bps,
                                                          target_credits, LEVEL_CREDIT_WINDOWS_PER_YEAR);
     // UINT64_MAX means the remaining credits cannot all be earned in this window, so no limit applies.  Otherwise
     // ki_needed > previous_ki, because previous_ki only reaches old_credits, which is below the target.
@@ -196,7 +209,7 @@ static uint64_t user_level_up(const SolParameters *params)
     uint64_t new_ki = checked_add(previous_ki, ki_to_apply, &overflow);
     uint64_t new_credits = compute_level_credits(entry->metadata.level_1_credits,
                                                  entry->metadata.level_metadata[0].ki_factor,
-                                                 block->config.expected_annual_reward_bps,
+                                                 reward_bps,
                                                  new_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &overflow);
     if (overflow || (new_credits < old_credits)) {
         return Error_InvalidData_First;
@@ -222,7 +235,7 @@ static uint64_t user_level_up(const SolParameters *params)
     {
         uint64_t least_ki = compute_level_credits_ki_needed(entry->metadata.level_1_credits,
                                                             entry->metadata.level_metadata[0].ki_factor,
-                                                            block->config.expected_annual_reward_bps,
+                                                            reward_bps,
                                                             new_credits, LEVEL_CREDIT_WINDOWS_PER_YEAR);
         // Only reduce the contribution if the smallest total is strictly between what the window had already received
         // and the total that this contribution would make.  UINT64_MAX (no answer) is never below new_ki.
@@ -233,7 +246,7 @@ static uint64_t user_level_up(const SolParameters *params)
             bool least_overflow = false;
             uint64_t least_credits = compute_level_credits(entry->metadata.level_1_credits,
                                                            entry->metadata.level_metadata[0].ki_factor,
-                                                           block->config.expected_annual_reward_bps,
+                                                           reward_bps,
                                                            least_ki, LEVEL_CREDIT_WINDOWS_PER_YEAR, &least_overflow);
             if (!least_overflow && (least_credits == new_credits)) {
                 ki_to_apply = least_ki - previous_ki;

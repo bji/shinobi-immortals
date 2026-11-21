@@ -88,6 +88,10 @@ typedef enum
     // earlier in the same transaction.  If the entry is not staked, its epochs_staked is already exact, and this does
     // nothing.
     Instruction_UpdateEpochsStaked            = 20,
+    // Measure the reward rate that a delegator to Shinobi Systems earns, using the reference stake account, and record
+    // it for LevelUp to use.  At most one measurement is made per level credit window.  The caller chooses whether it
+    // fails if it does not measure.
+    Instruction_MeasureRewardRate             = 21,
 
     // Special functions -----------------------------------------------------------------------------------------------
     // This is a special function that can only be called on an entry that is in the Owned or OwnedAndStaked state.
@@ -100,7 +104,7 @@ typedef enum
     // instruction (but only if both the user and admin agree to do so).  The instruction data includes a flag
     // that says whether or not to reauthorize the metadata; if it is false, the Metaplex Metadata program is not
     // invoked, so that a problem with that program cannot prevent a stake account from being returned.
-    Instruction_ReAuthorize                   = 21
+    Instruction_ReAuthorize                   = 22
 
 } Instruction;
 
@@ -130,6 +134,7 @@ typedef enum
 #include "anyone/anyone_settle_winning_bid.c"
 #include "anyone/anyone_delegate.c"
 #include "anyone/anyone_update_epochs_staked.c"
+#include "anyone/anyone_measure_reward_rate.c"
 
 #include "special/special_reauthorize.c"
 
@@ -219,6 +224,9 @@ uint64_t entrypoint(const uint8_t *input)
 
     case Instruction_UpdateEpochsStaked:
         return anyone_update_epochs_staked(&params);
+
+    case Instruction_MeasureRewardRate:
+        return anyone_measure_reward_rate(&params);
 
     case Instruction_ReAuthorize:
         return special_reauthorize(&params);

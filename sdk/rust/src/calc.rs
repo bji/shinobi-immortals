@@ -1,11 +1,11 @@
-//! The program's calculations: sale prices, minimum bids, effective stake, and Ki harvests.
+//! The program's calculations: sale prices, minimum bids, effective stake, Ki harvests, and reward rates.
 //!
 //! Each function is a direct port of the function of the same name in `program/util/util_calculations.c`, with the
 //! same integer types and the same order of operations, so that it gives exactly the program's result for every input
 //! (including the program's fallbacks for values that would overflow).  The tests check them against the reference
 //! vectors that `test/program/calculation_vectors.sh` generates for the program's own calculation tests.
 
-use crate::state::{Block, Entry};
+use crate::state::{Block, Entry, ProgramState};
 
 /// One, in the units of Ki harvest reductions and retentions, which are fractions of `u32::MAX`
 /// (`KI_HARVEST_RETENTION_ONE`)
@@ -25,6 +25,25 @@ pub const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
 /// Seconds per day, the unit of an entry's life span
 pub const SECONDS_PER_DAY: u64 = 24 * 60 * 60;
+
+/// Seconds per 365 day year (`SECONDS_PER_YEAR`)
+pub const SECONDS_PER_YEAR: u64 = 365 * SECONDS_PER_DAY;
+
+/// One (a rate of 100% per year), in the units of reward rates, which are fractions of 2^32 (`REWARD_RATE_ONE`)
+pub const REWARD_RATE_ONE: u64 = 1 << 32;
+
+/// The least reward rate that is ever kept: 100 basis points (`REWARD_RATE_MIN`)
+pub const REWARD_RATE_MIN: u64 = (100 * REWARD_RATE_ONE) / 10000;
+
+/// The greatest reward rate that is ever kept: 2000 basis points (`REWARD_RATE_MAX`)
+pub const REWARD_RATE_MAX: u64 = (2000 * REWARD_RATE_ONE) / 10000;
+
+/// The most, in percent, by which one measurement may move the reward rate before smoothing
+/// (`REWARD_RATE_MAX_CHANGE_PERCENT`)
+pub const REWARD_RATE_MAX_CHANGE_PERCENT: u64 = 5;
+
+/// The smoothing of reward rate measurements (`REWARD_RATE_SMOOTHING`; see [`compute_updated_reward_rate`])
+pub const REWARD_RATE_SMOOTHING: u64 = 4;
 
 
 /// Returns `floor((value * numerator) / denominator)` without forming the product, which may overflow; requires
@@ -240,4 +259,47 @@ pub fn compute_harvestable_ki(entry: &Entry, block: &Block, delegated_stake_lamp
     let lifespan_days = compute_lifespan_days(block.block_start_timestamp, unix_timestamp);
     let retention = compute_ki_harvest_retention(entry.metadata.ki_harvest_reduction_per_day, lifespan_days);
     compute_retained_ki_harvest(effective_earnings_lamports, level.ki_factor, retention)
+}
+
+
+/// Returns the annual reward rate, as a fraction of 2^32, of a stake account whose delegated stake grew from
+/// `snapshot_stake` to `current_stake` in `seconds`: the simple annual rate, rounded down.  Returns `u64::MAX` if the
+/// stake more than doubled, and 0 if there is no snapshot stake, no time, or a decrease.
+pub fn compute_measured_reward_rate(snapshot_stake: u64, current_stake: u64, seconds: u64) -> u64 {
+    if (snapshot_stake == 0) || (seconds == 0) || (current_stake < snapshot_stake) {
+        return 0;
+    }
+    let growth = current_stake - snapshot_stake;
+    if growth > snapshot_stake {
+        return u64::MAX;
+    }
+    multiply_fraction(REWARD_RATE_ONE * SECONDS_PER_YEAR, growth, snapshot_stake) / seconds
+}
+
+
+/// Returns the new reward rate given the previous one and a new measurement: the measurement limited to within
+/// [`REWARD_RATE_MAX_CHANGE_PERCENT`] of the previous rate and then smoothed,
+/// `((REWARD_RATE_SMOOTHING - 1) * previous + limited) / REWARD_RATE_SMOOTHING`, and then kept between
+/// [`REWARD_RATE_MIN`] and [`REWARD_RATE_MAX`].
+pub fn compute_updated_reward_rate(previous_rate: u32, measured_rate: u64) -> u32 {
+    let previous = previous_rate as u64;
+    let lowest = (previous * (100 - REWARD_RATE_MAX_CHANGE_PERCENT)) / 100;
+    let highest = (previous * (100 + REWARD_RATE_MAX_CHANGE_PERCENT)) / 100;
+    let limited = measured_rate.clamp(lowest, highest);
+    let rate = ((previous * (REWARD_RATE_SMOOTHING - 1)) + limited) / REWARD_RATE_SMOOTHING;
+    rate.clamp(REWARD_RATE_MIN, REWARD_RATE_MAX) as u32
+}
+
+
+/// Returns a reward rate (a fraction of 2^32) in basis points, rounded to the nearest basis point
+pub fn compute_reward_rate_bps(rate: u32) -> u32 {
+    (((rate as u64) * 10000 + (REWARD_RATE_ONE / 2)) / REWARD_RATE_ONE) as u32
+}
+
+
+/// Returns the annual reward rate, in basis points, that LevelUp uses to calibrate the level credit curve of every
+/// entry: the program state's reward rate (set by Initialize, then updated by MeasureRewardRate), rounded to the
+/// nearest basis point
+pub fn level_up_reward_bps(program_state: &ProgramState) -> u32 {
+    compute_reward_rate_bps(program_state.reward_rate)
 }

@@ -10,7 +10,8 @@ use solana_address::{address, Address};
 /// The Shinobi Immortals program
 pub const PROGRAM_ID: Address = address!("Shin1cdrR1pmemXZU3yDV3PnQ48SX9UmrtHF4GbKzWG");
 
-/// The program state account, which holds the address of the admin ([`crate::ProgramState`]).  Seed: `[1]`.
+/// The program state account, which holds the address of the admin, and the reward rate that LevelUp uses
+/// ([`crate::ProgramState`]).  Seed: `[1]`.
 pub const PROGRAM_STATE: Address = address!("2kq3azddKFDmNqa9HGjzwm2K4zf97B837SyTQo3cqRbN");
 
 /// The bump seed of [`PROGRAM_STATE`]
@@ -40,6 +41,14 @@ pub const BID_MARKER_MINT_BUMP_SEED: u8 = 253;
 
 /// The Metaplex metadata of the bid marker mint
 pub const BID_MARKER_METADATA: Address = address!("93mNAwtPeYf7QwDodz4WGdxoWfbegHuNiRh3R9bDMUw5");
+
+/// The reference stake account: a stake account, delegated to Shinobi Systems and controlled only by the program,
+/// from which the program's MeasureRewardRate instruction measures the reward rate that a delegator to Shinobi Systems
+/// earns.  Seed: `[12]`.
+pub const REFERENCE_STAKE: Address = address!("EmoRfMeoBb5WdEjjNjxavp6heWNPgZxMYZ5BRpHc6bjv");
+
+/// The bump seed of [`REFERENCE_STAKE`]
+pub const REFERENCE_STAKE_BUMP_SEED: u8 = 255;
 
 /// The vote account of the Shinobi Systems validator, the only validator that an Immortal's stake account may be
 /// delegated to
@@ -72,3 +81,6 @@ pub const RENT_SYSVAR: Address = address!("SysvarRent111111111111111111111111111
 
 /// The stake history sysvar
 pub const STAKE_HISTORY_SYSVAR: Address = address!("SysvarStakeHistory1111111111111111111111111");
+
+/// The epoch rewards sysvar
+pub const EPOCH_REWARDS_SYSVAR: Address = address!("SysvarEpochRewards1111111111111111111111111");

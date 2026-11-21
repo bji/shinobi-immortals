@@ -63,8 +63,10 @@ pub enum InstructionCode {
     Delegate = 19,
     /// [`update_epochs_staked`]
     UpdateEpochsStaked = 20,
+    /// [`measure_reward_rate`]
+    MeasureRewardRate = 21,
     /// [`reauthorize`]
-    Reauthorize = 21,
+    Reauthorize = 22,
 }
 
 
@@ -124,9 +126,12 @@ fn entry_address_of(entry: &Entry) -> Address {
 // These can only be performed by the superuser, whose address is compiled into the program.
 
 /// Initialize: initializes the program, creating its program state account (recording `admin` as the admin), its
-/// authority account, and the Ki and bid marker mints and their metadata, all paid for by the superuser.  This can be
-/// done only once.  (`scripts/super_initialize_tx.sh`)
-pub fn initialize(superuser: &Address, admin: &Address) -> Instruction {
+/// authority account, the Ki and bid marker mints and their metadata, and the reference stake account (funded with 2
+/// SOL beyond its rent exempt reserve, and delegated to Shinobi Systems), all paid for by the superuser.  This can be
+/// done only once.  `initial_reward_bps` is the annual reward rate, in basis points (from 100 to 2000), that a delegator
+/// to Shinobi Systems is estimated to earn; LevelUp uses it until MeasureRewardRate measures the real rate, which moves
+/// the rate from it gradually.  (`scripts/super_initialize_tx.sh`)
+pub fn initialize(superuser: &Address, admin: &Address, initial_reward_bps: u32) -> Instruction {
     let accounts = alloc::vec![
         // The superuser, who must sign, and who pays for the accounts that are created
         account(superuser, true, true),
@@ -144,11 +149,21 @@ pub fn initialize(superuser: &Address, admin: &Address) -> Instruction {
         account(&id::SYSTEM_PROGRAM, false, false),
         account(&id::SPL_TOKEN_PROGRAM, false, false),
         account(&id::METAPLEX_PROGRAM, false, false),
+        // The reference stake account, which is created and delegated to Shinobi Systems, and what that needs
+        account(&id::REFERENCE_STAKE, false, true),
+        account(&id::SHINOBI_SYSTEMS_VOTE, false, false),
+        account(&id::CLOCK_SYSVAR, false, false),
+        account(&id::STAKE_HISTORY_SYSVAR, false, false),
+        account(&id::STAKE_CONFIG, false, false),
+        account(&id::STAKE_PROGRAM, false, false),
     ];
 
-    // The instruction code and then the admin's address (InitializeData in program/super/super_initialize.c)
+    // The instruction code, the admin's address, 3 bytes of padding (InitializeData in program/super/super_initialize.c
+    // aligns its u32), and the initial reward rate
     let mut data = alloc::vec![InstructionCode::Initialize as u8];
     data.extend_from_slice(admin.as_ref());
+    data.extend_from_slice(&[0; 3]);
+    data.extend_from_slice(&initial_reward_bps.to_le_bytes());
 
     instruction(accounts, data)
 }
@@ -199,25 +214,20 @@ pub fn create_block(admin: &Address, config: &BlockConfiguration, funding: Optio
     ];
 
     // The instruction code, 7 bytes of padding (CreateBlockData in program/admin/admin_create_block.c aligns the
-    // configuration to 8 bytes), and then the BlockConfiguration, with its padding as zeroes.  Its last field,
-    // expected_annual_reward_bps, calibrates the level credit curve of the block's entries, which cannot be levelled up
-    // if it is 0.
+    // configuration to 8 bytes), and then the BlockConfiguration, whose fields are ordered so that it has no padding
     let mut data = alloc::vec![InstructionCode::CreateBlock as u8, 0, 0, 0, 0, 0, 0, 0];
     data.extend_from_slice(&config.group_number.to_le_bytes());
     data.extend_from_slice(&config.block_number.to_le_bytes());
+    data.extend_from_slice(&config.mystery_start_price_lamports.to_le_bytes());
+    data.extend_from_slice(&config.minimum_price_lamports.to_le_bytes());
+    data.extend_from_slice(&config.final_start_price_lamports.to_le_bytes());
+    data.extend_from_slice(&config.mystery_phase_duration.to_le_bytes());
+    data.extend_from_slice(&config.reveal_period_duration.to_le_bytes());
+    data.extend_from_slice(&config.auction_duration.to_le_bytes());
+    data.extend_from_slice(&config.final_sale_duration.to_le_bytes());
+    data.extend_from_slice(&config.whitelist_duration.to_le_bytes());
     data.extend_from_slice(&config.total_entry_count.to_le_bytes());
     data.extend_from_slice(&config.total_mystery_count.to_le_bytes());
-    data.extend_from_slice(&config.mystery_phase_duration.to_le_bytes());
-    data.extend_from_slice(&config.mystery_start_price_lamports.to_le_bytes());
-    data.extend_from_slice(&config.reveal_period_duration.to_le_bytes());
-    data.extend_from_slice(&[0; 4]);
-    data.extend_from_slice(&config.minimum_price_lamports.to_le_bytes());
-    data.push(config.has_auction() as u8);
-    data.extend_from_slice(&[0; 3]);
-    data.extend_from_slice(&config.duration.to_le_bytes());
-    data.extend_from_slice(&config.final_start_price_lamports.to_le_bytes());
-    data.extend_from_slice(&config.whitelist_duration.to_le_bytes());
-    data.extend_from_slice(&config.expected_annual_reward_bps.to_le_bytes());
 
     instruction(accounts, data)
 }
@@ -711,8 +721,7 @@ pub fn harvest(entry: &Entry, wallet: &Address) -> Instruction {
 /// entry's token.  (`scripts/user_level_up_tx.sh`)
 pub fn level_up(entry: &Entry, ki_to_apply: u64, wallet: &Address) -> Instruction {
     let accounts = alloc::vec![
-        // The entry's block, whose configuration's expected_annual_reward_bps calibrates the level credit curve, and
-        // whose block_start_timestamp begins the entry's life span
+        // The entry's block, whose block_start_timestamp begins the entry's life span
         account(&entry.block_pubkey, false, false),
         account(&entry_address_of(entry), false, true),
         // The token owner
@@ -734,6 +743,8 @@ pub fn level_up(entry: &Entry, ki_to_apply: u64, wallet: &Address) -> Instructio
         account(&entry.owned.stake_account, false, false),
         account(&id::SYSTEM_PROGRAM, false, false),
         account(&id::SPL_ASSOCIATED_TOKEN_PROGRAM, false, false),
+        // The program state, whose reward rate calibrates the level credit curve
+        account(&id::PROGRAM_STATE, false, false),
     ];
 
     // The instruction code, 7 bytes of padding (LevelUpData aligns its u64), and the most Ki to apply
@@ -820,6 +831,36 @@ pub fn update_epochs_staked(entry: &Entry) -> Instruction {
     ];
 
     instruction(accounts, alloc::vec![InstructionCode::UpdateEpochsStaked as u8])
+}
+
+
+/// MeasureRewardRate: measures the reward rate that a delegator to Shinobi Systems earns, using the reference stake
+/// account, and records it in the program state for LevelUp to use, at most once per level credit window; and delegates
+/// the reference stake account to Shinobi Systems again if it has been deactivated and can be.  Anyone may run it; a
+/// wallet that levels up has reason to include it before LevelUp in the same transaction.  If `require_measured`, it
+/// fails (with error 1046, RewardRateNotMeasured), failing the whole transaction, if the rate has not been measured in
+/// the current window and cannot be measured now; otherwise it then succeeds, doing whatever else it can.
+/// (`scripts/anyone_measure_reward_rate_tx.sh`)
+pub fn measure_reward_rate(require_measured: bool) -> Instruction {
+    let accounts = alloc::vec![
+        // The program state, which records the rate and the snapshot that the next measurement is made from
+        account(&id::PROGRAM_STATE, false, true),
+        // The reference stake account, which is writable so that it can be delegated again
+        account(&id::REFERENCE_STAKE, false, true),
+        // The program authority, which is the reference stake account's stake authority
+        account(&id::AUTHORITY, false, false),
+        // What is needed to read the epoch and its rewards, and to delegate
+        account(&id::CLOCK_SYSVAR, false, false),
+        account(&id::STAKE_HISTORY_SYSVAR, false, false),
+        account(&id::EPOCH_REWARDS_SYSVAR, false, false),
+        account(&id::SHINOBI_SYSTEMS_VOTE, false, false),
+        account(&id::STAKE_CONFIG, false, false),
+        account(&id::STAKE_PROGRAM, false, false),
+    ];
+
+    // The instruction code, and whether to fail if no measurement is made (MeasureRewardRateData in
+    // program/anyone/anyone_measure_reward_rate.c)
+    instruction(accounts, alloc::vec![InstructionCode::MeasureRewardRate as u8, require_measured as u8])
 }
 
 

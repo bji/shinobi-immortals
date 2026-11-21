@@ -246,9 +246,11 @@ static uint64_t add_entry(SolAccountInfo *entry_accounts, const SolPubkey *block
 
     entry->minimum_price_lamports = block->config.minimum_price_lamports;
 
-    entry->has_auction = block->config.has_auction;
+    // The block has an auction exactly when its auction_duration is nonzero; the entry's duration is then the
+    // auction's, and otherwise the final sale period's
+    entry->has_auction = (block->config.auction_duration != 0);
 
-    entry->duration = block->config.duration;
+    entry->duration = entry->has_auction ? block->config.auction_duration : block->config.final_sale_duration;
 
     entry->non_auction_start_price_lamports = block->config.final_start_price_lamports;
 

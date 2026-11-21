@@ -294,7 +294,7 @@ for first_cost in 1 100 4294967295; do
     done
     for factor in 1 1000 1000000 4294967295; do
         for bps in 1 490 4294967295; do
-            # Operand a packs level_1_credits (low 32 bits) with expected_annual_reward_bps (high 32 bits).
+            # Operand a packs level_1_credits (low 32 bits) with the reward rate in basis points (high 32 bits).
             packed=$(dc_calc "$bps 4294967296 * $first_cost + p")
             # B = factor*K*(bps/10000)/N whole Ki = factor*bps/(200*N) for K = 50 SOL, with N the default 73
             # windows per year (5 day windows).  Sample around B and 5B, then large contributions, including the
@@ -516,4 +516,107 @@ for effective in 0 1 999999999 1000000000 50000000000 60000000000; do
             emit "harvest/retained/$effective/$factor/$retention" 19 "$effective" "$factor" "$retention" 0 "$expected"
         done
     done
+done
+
+# Measured reward rate: the annual rate, as a fraction of 2^32, of a delegated stake that grew from a snapshot stake s
+# to a current stake t in n seconds, which is floor(floor(2^32 * 31536000 * (t - s) / s) / n).  Invalid inputs (no
+# snapshot stake, no time, or a decrease) give 0, and more than doubling gives UINT64_MAX.
+function measured_rate_reference ()
+{
+    local snapshot=$1 current=$2 seconds=$3
+    if [ "$snapshot" = 0 ] || [ "$seconds" = 0 ] || [ "$(dc_less "$current" "$snapshot")" = 1 ]; then
+        echo 0
+        return
+    fi
+    local growth=$(dc_calc "$current $snapshot - p")
+    if [ "$(dc_less "$snapshot" "$growth")" = 1 ]; then
+        echo "$MAX"
+        return
+    fi
+    dc_calc "4294967296 31536000 * $growth * $snapshot / $seconds / p"
+}
+
+# The reward rate bounds, as fractions of 2^32: floor(100 * 2^32 / 10000) and floor(2000 * 2^32 / 10000)
+RATE_MIN=$(dc_calc "100 4294967296 * 10000 / p")
+RATE_MAX=$(dc_calc "2000 4294967296 * 10000 / p")
+
+# Updated reward rate: the measurement limited to between floor(95% of) and floor(105% of) the previous rate, then
+# floor((3 * previous + limited) / 4); then kept between the bounds.  The previous rate is always a kept rate in the
+# program, but any value is accepted.
+function updated_rate_reference ()
+{
+    local previous=$1 measured=$2 rate
+    local lowest=$(dc_calc "$previous 95 * 100 / p")
+    local highest=$(dc_calc "$previous 105 * 100 / p")
+    local limited=$measured
+    if [ "$(dc_less "$limited" "$lowest")" = 1 ]; then
+        limited=$lowest
+    elif [ "$(dc_less "$highest" "$limited")" = 1 ]; then
+        limited=$highest
+    fi
+    rate=$(dc_calc "$previous 3 * $limited + 4 / p")
+    if [ "$(dc_less "$rate" "$RATE_MIN")" = 1 ]; then
+        rate=$RATE_MIN
+    elif [ "$(dc_less "$RATE_MAX" "$rate")" = 1 ]; then
+        rate=$RATE_MAX
+    fi
+    echo "$rate"
+}
+
+# Measured rates: the reference stake account's typical growth (2 SOL earning about 6.5% a year, over one to three
+# two-day epochs), no growth, exact doubling and just beyond, invalid inputs, and extremes of stake and time
+for snapshot in 0 1 2000000000 2000000001 1000000000000 "$MAX"; do
+    for current_delta in 0 1 712328 1424657 2136986 1000000000 2000000000; do
+        current=$(dc_calc "$snapshot $current_delta + p")
+        # Keep the current stake within uint64_t
+        if [ "$(dc_less "$MAX" "$current")" = 1 ]; then
+            continue
+        fi
+        for seconds in 0 1 172800 345600 518400 31536000 "$MAX"; do
+            expected=$(measured_rate_reference "$snapshot" "$current" "$seconds")
+            emit "reward_rate/measured/$snapshot/$current/$seconds" 20 "$snapshot" "$current" "$seconds" 0 \
+                 "$expected"
+        done
+    done
+done
+# A decrease in stake, and exactly doubling
+emit "reward_rate/measured/decrease" 20 2000000000 1999999999 172800 0 0
+emit "reward_rate/measured/double" 20 2000000000 4000000000 31536000 0 4294967296
+emit "reward_rate/measured/beyond_double" 20 2000000000 4000000001 31536000 0 "$MAX"
+# Independent random snapshots of up to 10,000 SOL, growth of up to 1% of it, and up to about 70 days
+for ((i=0; i<64; ++i)); do
+    snapshot=$(dc_calc "${random_values[i+512]} 10000000000000 % 1 + p")
+    growth=$(dc_calc "${random_values[i+576]} $snapshot 100 / 1 + % p")
+    current=$(dc_calc "$snapshot $growth + p")
+    seconds=$(dc_calc "${random_values[i+640]} 6000000 % 1 + p")
+    expected=$(measured_rate_reference "$snapshot" "$current" "$seconds")
+    emit "reward_rate/measured/random/$i" 20 "$snapshot" "$current" "$seconds" 0 "$expected"
+done
+
+# Updated rates: previous rates at and between the bounds and outside them (including 0), and measurements far
+# below, at, and far above the limits around each
+for previous in 0 1 "$RATE_MIN" 279172874 "$RATE_MAX" 4294967295; do
+    for measured in 0 1 "$RATE_MIN" 265214230 265214231 279172874 293131517 293131518 "$RATE_MAX" 4294967295 \
+                    4294967296 "$MAX"; do
+        expected=$(updated_rate_reference "$previous" "$measured")
+        emit "reward_rate/updated/$previous/$measured" 21 "$previous" "$measured" 0 0 "$expected"
+    done
+done
+# Independent random previous rates within the bounds, and measurements of up to twice the upper bound
+for ((i=0; i<64; ++i)); do
+    previous=$(dc_calc "${random_values[i+704]} $RATE_MAX $RATE_MIN - 1 + % $RATE_MIN + p")
+    measured=$(dc_calc "${random_values[i+768]} $RATE_MAX 2 * % p")
+    expected=$(updated_rate_reference "$previous" "$measured")
+    emit "reward_rate/updated/random/$i" 21 "$previous" "$measured" 0 0 "$expected"
+done
+
+# Reward rates in basis points: floor((rate * 10000 + 2^31) / 2^32), at the bounds, around halves, and at the extremes
+for rate in 0 1 214748 214749 429496 429497 "$RATE_MIN" 279172874 "$RATE_MAX" 4294967295; do
+    expected=$(dc_calc "$rate 10000 * 2147483648 + 4294967296 / p")
+    emit "reward_rate/bps/$rate" 22 "$rate" 0 0 0 "$expected"
+done
+for ((i=0; i<32; ++i)); do
+    rate=$(dc_calc "${random_values[i+832]} 4294967296 % p")
+    expected=$(dc_calc "$rate 10000 * 2147483648 + 4294967296 / p")
+    emit "reward_rate/bps/random/$i" 22 "$rate" 0 0 0 "$expected"
 done

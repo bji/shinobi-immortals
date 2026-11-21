@@ -34,7 +34,7 @@ if [ -z "$TESTS" ]; then
     assert user_refund_setup_9_0                                                                                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 9 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -88,7 +88,7 @@ if [ -z "$TESTS" ]; then
     assert user_refund_setup_9_1_a                                                                                   \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 9 1 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -113,7 +113,7 @@ if [ -z "$TESTS" ]; then
     assert user_refund_setup_9_2_a                                                                                   \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 9 2 3 2 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -546,8 +546,8 @@ if should_run_test user_refund_mystery_timeout; then
     assert ${TEST_NAME}_setup_a                                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 9 3 2 2 $REFUND_TIMEOUT_MYSTERY_PHASE_DURATION \`lamports_from_sol 1000\`                     \
-         $REFUND_TIMEOUT_REVEAL_PERIOD_DURATION \`lamports_from_sol 1\` false $((24*60*60))                          \
-         \`lamports_from_sol 1000\` 0 490                                                                            \
+         $REFUND_TIMEOUT_REVEAL_PERIOD_DURATION \`lamports_from_sol 1\` 0 $((24*60*60))                              \
+         \`lamports_from_sol 1000\` 0                                                                                \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

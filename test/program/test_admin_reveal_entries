@@ -193,7 +193,7 @@ if [ -z "$TESTS" ]; then
     assert admin_reveal_entries_setup                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 4 0 2 1 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                                \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -506,7 +506,7 @@ if should_run_test admin_reveal_entries_full_length_name_title_and_uri; then
     assert ${TEST_NAME}_create_block                                                                                 \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 4 1 1 0 $((24*60*60)) \`lamports_from_sol 1000\` 1                                            \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

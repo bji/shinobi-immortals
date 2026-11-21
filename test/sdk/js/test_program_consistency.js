@@ -102,17 +102,19 @@ const ADDRESS_NAMES = {
     RENT_SYSVAR : "g_rent_sysvar_address",
     STAKE_HISTORY_SYSVAR : "g_stake_history_sysvar_address",
     STAKE_CONFIG_SYSVAR : "g_stake_config_address",
+    EPOCH_REWARDS_SYSVAR : "g_epoch_rewards_sysvar_address",
     SHINOBI_SYSTEMS_VOTE : "g_shinobi_systems_vote_address",
     STATE : "g_program_state_address",
     AUTHORITY : "g_program_authority_address",
     KI_MINT : "g_ki_mint_address",
     KI_METADATA : "g_ki_metadata_address",
     BID_MARKER_MINT : "g_bid_marker_mint_address",
-    BID_MARKER_METADATA : "g_bid_marker_metadata_address"
+    BID_MARKER_METADATA : "g_bid_marker_metadata_address",
+    REFERENCE_STAKE : "g_reference_stake_address"
 };
 
 // The seed of each of the program's own derived addresses, for checking bump seeds
-const PDA_SEEDS = { STATE : 1, AUTHORITY : 2, KI_MINT : 3, BID_MARKER_MINT : 7 };
+const PDA_SEEDS = { STATE : 1, AUTHORITY : 2, KI_MINT : 3, BID_MARKER_MINT : 7, REFERENCE_STAKE : 12 };
 
 let build_program = source("build_program.sh");
 let compiled = new Map([ ...build_program.matchAll(/^(\w+)_PUBKEY_C_ARRAY="\{([\d,]+)\}"/gm) ]
@@ -201,7 +203,7 @@ check_decoder("program_state", Base.decode_program_state(Base.hex_to_bytes(layou
 check_decoder("authority", Base.decode_authority(Base.hex_to_bytes(layouts.authority.bytes)));
 
 // The decoders of the program state and authority accounts reject data that is not of those accounts
-results.check("decode_program_state rejects short data", Base.decode_program_state(new Uint8Array(35)) == null);
+results.check("decode_program_state rejects short data", Base.decode_program_state(new Uint8Array(71)) == null);
 results.check("decode_authority rejects data of the wrong size", Base.decode_authority(new Uint8Array(17)) == null);
 let not_authority = Base.hex_to_bytes(layouts.authority.bytes);
 not_authority[0] = 5;

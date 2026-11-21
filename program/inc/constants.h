@@ -6,6 +6,28 @@
 // Number of lamports per SOL (1 billion)
 #define LAMPORTS_PER_SOL (1000ul * 1000ul * 1000ul)
 
+// The number of lamports that Initialize delegates in the reference stake account, in addition to its rent exempt
+// reserve.  The reference stake account exists only to measure the reward rate that a delegator to Shinobi Systems
+// actually earns (see MeasureRewardRate), and its delegation must always be at least the stake program's minimum
+// delegation, or it could not be delegated again if it were ever deactivated.  That minimum is currently 1 lamport, but
+// the stake program has a feature, not yet activated, which raises it to 1 SOL.  Because this program is not
+// upgradeable, and nothing can ever add to the reference stake account's delegation other than its own staking
+// rewards, this is twice the largest minimum delegation that is anticipated.  It is also large enough that its rewards
+// measure the reward rate precisely: about 1.6 million lamports per level credit window at current rates.
+#define REFERENCE_STAKE_ACCOUNT_LAMPORTS (2 * LAMPORTS_PER_SOL)
+
+// The number of seconds into an epoch before which MeasureRewardRate assumes that the epoch's staking rewards may still
+// be being paid, if it cannot tell from the EpochRewards sysvar.  The rewards of each epoch are paid at the start of
+// the next one, a partition of stake accounts per block, over the first blocks of the epoch; the EpochRewards sysvar's
+// active flag says whether that is still under way, and MeasureRewardRate uses that flag whenever the sysvar can be
+// read.  This is the fallback for a cluster on which it can't (for example, after some future change to the way that
+// rewards are paid): payment takes well under a minute on mainnet, so 10 minutes leaves a wide margin.  It may only be
+// overridden at build time, which is done only to build the program that the tests use, whose epochs are much shorter
+// than 10 minutes.
+#ifndef EPOCH_REWARDS_FALLBACK_SECONDS
+#define EPOCH_REWARDS_FALLBACK_SECONDS (10ul * 60ul)
+#endif
+
 // The number of seconds after the end of an entry's auction during which only the winning bidder may settle the
 // winning bid (see SettleWinningBid).  After that, anyone may settle it on the bidder's behalf.  This gives the
 // winner of an auction 30 days in which to claim their win themselves, before the admin or anyone else can complete
@@ -70,7 +92,9 @@ typedef enum
 
     PDA_Account_Seed_Prefix_Block = 10,
 
-    PDA_Account_Seed_Prefix_Entry = 11
+    PDA_Account_Seed_Prefix_Entry = 11,
+
+    PDA_Account_Seed_Prefix_Reference_Stake = 12
 
 } PDA_Account_Seed_Prefix;
 
@@ -101,6 +125,17 @@ typedef struct
 
     // These are the seed bytes used to derive the authority_pubkey address
     uint8_t authority_seed_bytes[2];
+
+    // The reference stake account: a stake account, created by Initialize at a program derived address, delegated to
+    // Shinobi Systems, whose stake and withdraw authorities are both the authority account.  It exists only to measure
+    // the reward rate that a delegator to Shinobi Systems actually earns, after commission and actual validator
+    // performance: its delegated stake grows only by staking rewards, and nothing ever withdraws from it (see
+    // MeasureRewardRate).  Because its authorities are the authority account, only the program has any control over
+    // it, and the program never does anything with it but delegate it to Shinobi Systems.
+    SolPubkey reference_stake_pubkey;
+
+    // These are the seed bytes used to derive the reference stake account address
+    uint8_t reference_stake_seed_bytes[2];
 
     // This is the Ki mint pubkey
     SolPubkey ki_mint_pubkey;
@@ -153,6 +188,9 @@ typedef struct
     // This is the stake config pubkey
     SolPubkey stake_config_pubkey;
 
+    // This is the epoch rewards sysvar pubkey
+    SolPubkey epoch_rewards_sysvar_pubkey;
+
 } _Constants;
 
 
@@ -181,6 +219,12 @@ static const _Constants Constants =
 
     // authority_seed_bytes
     { PDA_Account_Seed_Prefix_Authority, AUTHORITY_BUMP_SEED },
+
+    // reference_stake_pubkey
+    REFERENCE_STAKE_PUBKEY_ARRAY,
+
+    // reference_stake_seed_bytes
+    { PDA_Account_Seed_Prefix_Reference_Stake, REFERENCE_STAKE_BUMP_SEED },
 
     // ki_mint_pubkey
     KI_MINT_PUBKEY_ARRAY,
@@ -231,7 +275,10 @@ static const _Constants Constants =
     STAKE_HISTORY_SYSVAR_PUBKEY_ARRAY,
 
     // stake_config_account
-    STAKE_CONFIG_SYSVAR_PUBKEY_ARRAY
+    STAKE_CONFIG_SYSVAR_PUBKEY_ARRAY,
+
+    // epoch_rewards_sysvar_pubkey
+    EPOCH_REWARDS_SYSVAR_PUBKEY_ARRAY
 };
 
 

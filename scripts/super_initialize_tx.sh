@@ -2,14 +2,21 @@
 
 set -e
 
-# Emits an encoded transaction that initializes a cluster for use with Shinobi Immortals.
+# Emits an encoded transaction that initializes a cluster for use with Shinobi Immortals.  The superuser pays for all
+# of the accounts that are created, including the reference stake account, which is funded with 2 SOL (see
+# REFERENCE_STAKE_ACCOUNT_LAMPORTS in program/inc/constants.h) plus its rent exempt reserve, and which is delegated to
+# Shinobi Systems.
 
 function require ()
 {
     if [ -z "$1" ]; then
         cat <<EOF
 
-Usage: super_initialize_tx.sh <SUPERUSER_PUBKEY> <ADMIN_PUBKEY>
+Usage: super_initialize_tx.sh <SUPERUSER_PUBKEY> <ADMIN_PUBKEY> <INITIAL_REWARD_BPS>
+
+INITIAL_REWARD_BPS is the annual reward rate, in basis points, that a delegator to Shinobi Systems is estimated to
+earn (650 is 6.50% per year), from 100 to 2000.  LevelUp uses it to calibrate the level credit curve until
+MeasureRewardRate measures the real rate, which moves the rate from it gradually.
 
 EOF
         exit 1
@@ -18,9 +25,11 @@ EOF
 
 SUPERUSER_PUBKEY=$1
 ADMIN_PUBKEY=$2
+INITIAL_REWARD_BPS=$3
 
 require $SUPERUSER_PUBKEY
 require $ADMIN_PUBKEY
+require $INITIAL_REWARD_BPS
 
 # Compute program, block, entry, and related pubkeys.  These may not all be valid, depending on input parameters
 # to the script, but any that are invalid won't be used by the solxact encode command that follows.
@@ -40,6 +49,7 @@ fi
     METAPLEX_PROGRAM_PUBKEY="metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
         STAKE_CONFIG_PUBKEY="StakeConfig11111111111111111111111111111111"
+     REFERENCE_STAKE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 12 ]"
               STATE_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 1 ]"
            AUTHORITY_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 2 ]"
              KI_MINT_PUBKEY="pda $SELF_PROGRAM_PUBKEY [ u8 3 ]"
@@ -100,7 +110,15 @@ solxact encode                                                                  
         account $SYSTEM_PROGRAM_PUBKEY                                                                                \
         account $SPL_TOKEN_PROGRAM_PUBKEY                                                                             \
         account $METAPLEX_PROGRAM_PUBKEY                                                                              \
+        account $REFERENCE_STAKE_PUBKEY w                                                                             \
+        account $SHINOBI_SYSTEMS_VOTE_PUBKEY                                                                          \
+        account $CLOCK_SYSVAR_PUBKEY                                                                                  \
+        account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                          \
+        account $STAKE_CONFIG_PUBKEY                                                                                  \
+        account $STAKE_PROGRAM_PUBKEY                                                                                 \
         // Instruction code 0 = InitializeData //                                                                     \
         u8 0                                                                                                          \
         // Admin pubkey //                                                                                            \
-        pubkey $ADMIN_PUBKEY
+        pubkey $ADMIN_PUBKEY                                                                                          \
+        // Initial reward rate, in basis points //                                                                    \
+        u32 $INITIAL_REWARD_BPS

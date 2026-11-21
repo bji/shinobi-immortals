@@ -62,4 +62,6 @@ source $SOURCE/test/program/test_anyone_delegate
 
 source $SOURCE/test/program/test_anyone_update_epochs_staked
 
+source $SOURCE/test/program/test_anyone_measure_reward_rate
+
 source $SOURCE/test/program/test_special_reauthorize

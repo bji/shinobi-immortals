@@ -16,32 +16,32 @@ if should_run_test admin_create_block_no_auth; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -66,32 +66,32 @@ if should_run_test admin_create_block_overwrite; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -116,32 +116,32 @@ if should_run_test admin_create_block_wrong_block; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -167,32 +167,32 @@ if should_run_test admin_create_block_zero_entries; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count (bad -- must be nonzero) //                                                          \
            u16 0                                                                                                     \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -217,32 +217,32 @@ if should_run_test admin_create_block_bad_mystery_count; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count (bad -- cannot be > total entry count) //                                          \
            u16 11                                                                                                    \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -268,32 +268,32 @@ if should_run_test admin_create_block_bad_mystery_count_zero_duration; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration (zero; total mystery count is checked anyway) //                                \
+           u32 0                                                                                                     \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count (bad -- cannot be > total entry count) //                                          \
            u16 11                                                                                                    \
-           // Mystery Phase Duration (zero; total mystery count is checked anyway) //                                \
-           u32 0                                                                                                     \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -319,32 +319,32 @@ if should_run_test admin_create_block_mysteries_zero_duration; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration (bad -- must be nonzero when there are mysteries) //                            \
+           u32 0                                                                                                     \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration (bad -- must be nonzero when there are mysteries) //                            \
-           u32 0                                                                                                     \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -369,32 +369,32 @@ if should_run_test admin_create_block_bad_mystery_start_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports (bad, must be <= 100,000,000 SOL) //                                      \
+           u64 \`lamports_from_sol 100000000.00001\`                                                                 \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports (bad, must be <= 100,000,000 SOL) //                                      \
-           u64 \`lamports_from_sol 100000000.00001\`                                                                 \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -419,89 +419,38 @@ if should_run_test admin_create_block_bad_mystery_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
-           // Total Entry Count //                                                                                   \
-           u16 10                                                                                                    \
-           // Total Mystery Count //                                                                                 \
-           u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
            // Mystery Start Price Lamports //                                                                        \
            u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
            // Minimum Price Lamports (bad, must be <= mystery start price) //                                        \
            u64 \`lamports_from_sol 1000.0001\`                                                                       \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
            // Final Start Price Lamports //                                                                          \
            u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
            // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
-           ]"                                                                                                        \
-        | solxact encode                                                                                             \
-        | solxact hash l                                                                                             \
-        | solxact sign $LEDGER/admin.json                                                                            \
-        | solxact submit l 2>&1`
-fi
-
-
-if should_run_test admin_create_block_bad_auction_duration; then
-    # Test with block 0 0
-    BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 0 u32 0 ]`
-    assert_fail admin_create_block_bad_auction_duration                                                              \
-    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x518'                     \
-    `echo "encoding c                                                                                                \
-           fee_payer $ADMIN_PUBKEY                                                                                   \
-           program $SELF_PROGRAM_PUBKEY                                                                              \
-           account $STATE_PUBKEY                                                                                    \
-           account $ADMIN_PUBKEY s                                                                                   \
-           account $ADMIN_PUBKEY ws                                                                                  \
-           account $BLOCK_PUBKEY w                                                                                   \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
-           // Instruction code 2 = CreateBlock //                                                                    \
-           u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
-           struct [                                                                                                  \
-           // Group Number //                                                                                        \
-           u32 0                                                                                                     \
-           // Block Number //                                                                                        \
            u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool true                                                                                                 \
-           // Duration (bad, must be nonzero) //                                                                     \
-           u32 0                                                                                                     \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
 fi
-
 
 if should_run_test admin_create_block_bad_final_start_price; then
     # Test with block 0 0
@@ -519,32 +468,32 @@ if should_run_test admin_create_block_bad_final_start_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports (bad, must be <= 100,000,000 SOL) //                                        \
+           u64 \`lamports_from_sol 100000000.001\`                                                                   \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration (bad, must be nonzero) //                                                                     \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports (bad, must be <= 100,000,000 SOL) //                                        \
-           u64 \`lamports_from_sol 100000000.001\`                                                                   \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -569,32 +518,32 @@ if should_run_test admin_create_block_bad_final_start_price_2; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports (bad, must be >= minimum price) //                                          \
+           u64 \`lamports_from_sol 0.001\`                                                                           \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration (bad, must be nonzero) //                                                                     \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports (bad, must be >= minimum price) //                                          \
-           u64 \`lamports_from_sol 0.001\`                                                                           \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -619,32 +568,32 @@ if should_run_test admin_create_block_bad_minimum_price; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 0                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 0.000001\`                                                                        \
+           // Final Start Price Lamports  //                                                                         \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 0                                                                                                     \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 0.000001\`                                                                        \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration (bad, must be nonzero) //                                                                     \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports  //                                                                         \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 0                                                                                                     \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -658,7 +607,7 @@ if should_run_test admin_create_block_success; then
     assert admin_create_block_success                                                                                \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -678,13 +627,13 @@ if should_run_test admin_create_block_success; then
     "reveal_period_duration": 86400,
     "reveal_period_duration_display": "1 day 0 hr 0 min 0.00 sec",
     "minimum_price": 1,
-    "has_auction": false,
-    "duration": 86400,
-    "duration_display": "1 day 0 hr 0 min 0.00 sec",
+    "auction_duration": 0,
+    "auction_duration_display": "0.00 sec",
+    "final_sale_duration": 86400,
+    "final_sale_duration_display": "1 day 0 hr 0 min 0.00 sec",
     "final_start_price": 1000,
     "whitelist_duration": 0,
-    "whitelist_duration_display": "0.00 sec",
-    "expected_annual_reward_bps": 490
+    "whitelist_duration_display": "0.00 sec"
   },
   "added_entries_count": 0,
   "block_start_timestamp": 0,
@@ -714,7 +663,7 @@ EOF`
 fi
 
 
-# The block account holds the fixed 104 byte part of the Block, followed by a bitmap of one bit per entry rounded up to
+# The block account holds the fixed 96 byte part of the Block, followed by a bitmap of one bit per entry rounded up to
 # whole bytes, and nothing more.  Blocks 90 0 through 90 3 are created with 1, 7, 8 and 9 entries, the counts on either
 # side of a byte boundary, and each account's size is checked.
 if should_run_test admin_create_block_sizes; then
@@ -723,13 +672,13 @@ if should_run_test admin_create_block_sizes; then
         assert admin_create_block_sizes_$ENTRY_COUNT                                                                 \
         `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                           \
              $ADMIN_PUBKEY 90 $BLOCK_NUMBER $ENTRY_COUNT 0 0 0 0                                                     \
-             \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                            \
+             \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                    \
             | solxact hash l                                                                                         \
             | solxact sign $LEDGER/admin.json                                                                        \
             | solxact submit l 2>&1`
 
-        # The expected size: 104 bytes, plus the entry count divided by 8, rounded up
-        EXPECTED_SIZE=$((104 + ((ENTRY_COUNT + 7) / 8)))
+        # The expected size: 96 bytes, plus the entry count divided by 8, rounded up
+        EXPECTED_SIZE=$((96 + ((ENTRY_COUNT + 7) / 8)))
 
         # The actual size, which is the number of bytes of account data
         BLOCK_PUBKEY=`pda $SELF_PROGRAM_PUBKEY [ u8 10 u32 90 u32 $BLOCK_NUMBER ]`
@@ -752,7 +701,7 @@ if should_run_test admin_create_block_again; then
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44f'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 0 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -767,7 +716,7 @@ if should_run_test admin_create_block_already_exists; then
     assert admin_create_block_already_exists                                                                         \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 1 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` 0 490                                \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` 0                                        \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -805,32 +754,32 @@ if should_run_test admin_create_block_whitelist; then
            account $WHITELIST_0_3_PUBKEY                                                                             \
            // Instruction code 2 = CreateBlock //                                                                    \
            u8 2                                                                                                      \
-           // Block Configuration //                                                                                 \
+           // Block Configuration, whose fields are ordered so that it has no padding //                             \
            struct [                                                                                                  \
            // Group Number //                                                                                        \
            u32 0                                                                                                     \
            // Block Number //                                                                                        \
            u32 2                                                                                                     \
+           // Mystery Start Price Lamports //                                                                        \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Minimum Price Lamports //                                                                              \
+           u64 \`lamports_from_sol 1\`                                                                               \
+           // Final Start Price Lamports //                                                                          \
+           u64 \`lamports_from_sol 1000\`                                                                            \
+           // Mystery Phase Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Reveal Period Duration //                                                                              \
+           u32 $((24*60*60))                                                                                         \
+           // Auction Duration (0: no auction) //                                                                    \
+           u32 0                                                                                                     \
+           // Final Sale Duration //                                                                                 \
+           u32 $((24*60*60))                                                                                         \
+           // Whitelist Duration //                                                                                  \
+           u32 $((24*60*60))                                                                                         \
            // Total Entry Count //                                                                                   \
            u16 10                                                                                                    \
            // Total Mystery Count //                                                                                 \
            u16 5                                                                                                     \
-           // Mystery Phase Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Mystery Start Price Lamports //                                                                        \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Reveal Period Duration //                                                                              \
-           u32 $((24*60*60))                                                                                         \
-           // Minimum Price Lamports //                                                                              \
-           u64 \`lamports_from_sol 1\`                                                                               \
-           // Has Auction //                                                                                         \
-           bool false                                                                                                \
-           // Duration //                                                                                            \
-           u32 $((24*60*60))                                                                                         \
-           // Final Start Price Lamports //                                                                          \
-           u64 \`lamports_from_sol 1000\`                                                                            \
-           // Whitelist Duration //                                                                                  \
-           u32 $((24*60*60))                                                                                         \
            ]"                                                                                                        \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
@@ -843,7 +792,7 @@ if should_run_test admin_create_block_whitelist; then
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x415'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 2 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60)) 490                    \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                            \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`
@@ -864,7 +813,7 @@ if should_run_test admin_create_block_whitelist; then
     assert admin_create_block_whitelist_success                                                                      \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY $SOURCE/scripts/admin_create_block_tx.sh                               \
          $ADMIN_PUBKEY 0 2 10 5 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                               \
-         \`lamports_from_sol 1\` false $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60)) 490                    \
+         \`lamports_from_sol 1\` 0 $((24*60*60)) \`lamports_from_sol 1000\` $((24*60*60))                            \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/admin.json                                                                            \
         | solxact submit l 2>&1`

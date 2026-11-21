@@ -126,14 +126,16 @@ fn builders_match_the_scripts() {
 
     // Superuser instructions
 
-    c.compare("Initialize", "super_initialize_tx.sh", &args![superuser, admin],
-              instruction::initialize(&superuser, &admin));
+    c.compare("Initialize", "super_initialize_tx.sh", &args![superuser, admin, 650],
+              instruction::initialize(&superuser, &admin, 650));
     c.compare("SetAdmin", "super_set_admin_tx.sh", &args![superuser, other],
               instruction::set_admin(&superuser, &other));
 
     // Admin instructions
 
-    for (has_auction, whitelist_duration) in [ (true, 1 + rng.below(100000) as u32), (false, 0) ] {
+    // With an auction (and a whitelist), and without (and with no whitelist)
+    for (auction_duration, whitelist_duration) in [ (1 + rng.below(0xFFFFFFFF) as u32, 1 + rng.below(100000) as u32),
+                                                   (0, 0) ] {
         let mut config: BlockConfiguration = bytemuck::Zeroable::zeroed();
         config.group_number = g;
         config.block_number = b;
@@ -143,16 +145,15 @@ fn builders_match_the_scripts() {
         config.mystery_start_price_lamports = rng.u64();
         config.reveal_period_duration = rng.u32();
         config.minimum_price_lamports = rng.u64();
-        config.has_auction = has_auction as u8;
-        config.duration = rng.u32();
+        config.auction_duration = auction_duration;
+        config.final_sale_duration = rng.u32();
         config.final_start_price_lamports = rng.u64();
         config.whitelist_duration = whitelist_duration;
-        config.expected_annual_reward_bps = rng.u32();
-        c.compare(&format!("CreateBlock (has_auction {})", has_auction), "admin_create_block_tx.sh",
+        c.compare(&format!("CreateBlock (auction_duration {})", auction_duration), "admin_create_block_tx.sh",
                   &args![admin, g, b, config.total_entry_count, config.total_mystery_count,
                          config.mystery_phase_duration, config.mystery_start_price_lamports,
-                         config.reveal_period_duration, config.minimum_price_lamports, has_auction, config.duration,
-                         config.final_start_price_lamports, whitelist_duration, config.expected_annual_reward_bps],
+                         config.reveal_period_duration, config.minimum_price_lamports, auction_duration,
+                         config.final_sale_duration, config.final_start_price_lamports, whitelist_duration],
                   instruction::create_block(&admin, &config, None));
     }
 
@@ -270,6 +271,11 @@ fn builders_match_the_scripts() {
     c.compare("UpdateEpochsStaked (not staked)", "anyone_update_epochs_staked_tx.sh", &args![other, g, b, i, "none"],
               instruction::update_epochs_staked(&entry));
 
+    c.compare("MeasureRewardRate", "anyone_measure_reward_rate_tx.sh", &args![other],
+              instruction::measure_reward_rate(false));
+    c.compare("MeasureRewardRate (require measured)", "anyone_measure_reward_rate_tx.sh",
+              &args![other, "require_measured"], instruction::measure_reward_rate(true));
+
     // Special instructions.  When the metadata is not reauthorized, the builder gives the system program's address
     // (all zeroes) as the new metadata authority, which the program ignores.
 
@@ -281,7 +287,7 @@ fn builders_match_the_scripts() {
               instruction::reauthorize(&staked_entry, &admin, &user, None, Some(&token)));
 
     // Every instruction was compared
-    let all_codes: BTreeSet<u8> = (0..=21).collect();
+    let all_codes: BTreeSet<u8> = (0..=22).collect();
     assert_eq!(c.codes, all_codes, "not every instruction was compared");
 
     assert!(c.failures.is_empty(), "{} differences:\n{}", c.failures.len(), c.failures.join("\n"));

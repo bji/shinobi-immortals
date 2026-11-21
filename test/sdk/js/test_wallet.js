@@ -49,8 +49,8 @@ function make_cluster(send_error)
     let blockhashes = [ ];
     let block_height = 50;
 
-    // The program state account: its data type, then the admin's address
-    let program_state = new Uint8Array(36);
+    // The program state account: its data type, then the admin's address, and no measured reward rate or snapshot
+    let program_state = new Uint8Array(72);
     program_state[0] = 1;
     program_state.set(Base.address_to_bytes(ADMIN), 4);
 
@@ -67,7 +67,7 @@ function make_cluster(send_error)
             }
             return { context : { slot : 1 },
                      value : { data : [ Buffer.from(program_state).toString("base64"), "base64" ], executable : false,
-                               lamports : 1000000, owner : Base.g_self_program_address, rentEpoch : 0, space : 36 } };
+                               lamports : 1000000, owner : Base.g_self_program_address, rentEpoch : 0, space : 72 } };
         },
         sendTransaction : ([ wire_base64 ]) => {
             let wire = Buffer.from(wire_base64, "base64");
@@ -172,7 +172,7 @@ async function main()
 {
     // A block and an entry, decoded by the Block and Entry classes from random account data, which also checks
     // that the classes decode as the base decoders do
-    let block_data = random_bytes(104);
+    let block_data = random_bytes(96);
     let entry_data = random_bytes(3192);
     entry_data[304] = 3;
     let block = new SDK.Block(null, random_address(), block_data);
@@ -230,6 +230,10 @@ async function main()
         [ "delegate", other_signer, (w, s) => w.delegate(entry, s), Base.make_delegate_instruction(entry) ],
         [ "update_epochs_staked", other_signer, (w, s) => w.update_epochs_staked(entry, s),
           Base.make_update_epochs_staked_instruction(entry) ],
+        [ "measure_reward_rate", other_signer, (w, s) => w.measure_reward_rate(false, s),
+          Base.make_measure_reward_rate_instruction(false) ],
+        [ "measure_reward_rate (require measured)", other_signer, (w, s) => w.measure_reward_rate(true, s),
+          Base.make_measure_reward_rate_instruction(true) ],
         [ "withdraw_excess (program state)", admin_signer, (w, s) => w.withdraw_excess(T.ProgramState, null, s),
           Base.make_withdraw_excess_instruction(T.ProgramState, null, admin_mock_address) ],
         [ "withdraw_excess (authority)", admin_signer, (w, s) => w.withdraw_excess(T.Authority, null, s),

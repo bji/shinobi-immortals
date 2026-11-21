@@ -479,3 +479,90 @@ static uint64_t compute_level_credits_ki_needed(uint32_t level_1_credits, uint32
     // Not expected to happen; report the target as unreachable so that the caller applies no limit
     return UINT64_MAX;
 }
+
+// The reward rate that MeasureRewardRate measures, and LevelUp uses, is an annual rate held as a binary fraction: a
+// value of r is the rate r / 2^32 per year.  It is kept in a uint32_t, and so must be below 1 (100% per year); it is
+// always kept between REWARD_RATE_MIN and REWARD_RATE_MAX.  This much precision (about 0.000002 basis points) is used
+// so that the smoothing of measurements (see compute_updated_reward_rate), which rounds down, cannot noticeably bias the
+// rate downwards.
+#define REWARD_RATE_ONE (1ul << 32)
+
+// The bounds of the reward rate, in basis points, and as reward rates.  The rate that Initialize is given must be
+// within them too.  A measurement outside of these is taken to be
+// these: 1% is safely below the yield that staking is ever expected to fall to (inflation is scheduled to fall to 1.5%,
+// and yield is that divided by the fraction of SOL staked), and 20% is far above any yield since inflation began.  The
+// lower bound is the one that matters most, since a lower rate makes levelling easier.
+#define REWARD_RATE_MIN_BPS 100ul
+#define REWARD_RATE_MAX_BPS 2000ul
+#define REWARD_RATE_MIN ((REWARD_RATE_MIN_BPS * REWARD_RATE_ONE) / 10000ul)
+#define REWARD_RATE_MAX ((REWARD_RATE_MAX_BPS * REWARD_RATE_ONE) / 10000ul)
+static_assert((REWARD_RATE_MIN > 0) && (REWARD_RATE_MIN < REWARD_RATE_MAX) && (REWARD_RATE_MAX <= UINT32_MAX),
+              "The reward rate bounds must be ordered, non-zero, and fit in a uint32_t");
+
+// The most, in percent, by which a single measurement may move the reward rate before smoothing.  Real reward rates
+// move by about 0.2% per level credit window, so this lets the rate follow them easily, while limiting the effect of
+// a single unusual measurement (for example, one covering an epoch in which Shinobi Systems was briefly delinquent).
+#define REWARD_RATE_MAX_CHANGE_PERCENT 5ul
+
+// The smoothing of measurements: each new rate is (REWARD_RATE_SMOOTHING - 1) parts the previous rate to 1 part the
+// (limited) measurement.  With the limit above, the rate moves by at most 5%/4 = 1.25% per measurement.
+#define REWARD_RATE_SMOOTHING 4ul
+
+// Returns the annual reward rate (see REWARD_RATE_ONE) of a stake account whose delegated stake grew from
+// [snapshot_stake] to [current_stake] in [seconds]:
+//   ((current_stake - snapshot_stake) / snapshot_stake) * (SECONDS_PER_YEAR / seconds) * 2^32,
+// which is the simple (not compounded) annual rate, matching the way that the level credit curve uses the rate (the
+// rate per window is the annual rate divided by the windows per year).  Rounds down.  Returns UINT64_MAX, which is
+// above any rate that is kept, if the stake more than doubled, and 0 for invalid inputs (no snapshot stake, no time,
+// or a decrease in stake), none of which the caller passes.
+static uint64_t compute_measured_reward_rate(uint64_t snapshot_stake, uint64_t current_stake, uint64_t seconds)
+{
+    if (!snapshot_stake || !seconds || (current_stake < snapshot_stake)) {
+        return 0;
+    }
+
+    uint64_t growth = current_stake - snapshot_stake;
+
+    // multiply_fraction requires growth <= snapshot_stake; a rate that high is far above REWARD_RATE_MAX anyway
+    if (growth > snapshot_stake) {
+        return UINT64_MAX;
+    }
+
+    // 2^32 * SECONDS_PER_YEAR is about 1.35e17, so it fits a uint64_t; the fraction of it is computed without
+    // overflow, and is no more than it
+    return multiply_fraction(REWARD_RATE_ONE * SECONDS_PER_YEAR, growth, snapshot_stake) / seconds;
+}
+
+// Returns the new reward rate, given the previous rate [previous_rate] (the rate that Initialize set, or the result of
+// the previous measurement, so always a kept rate) and a new measurement [measured_rate] (see
+// compute_measured_reward_rate):
+// - The measurement is first limited to within REWARD_RATE_MAX_CHANGE_PERCENT of the previous rate.
+// - It is then smoothed: the new rate is ((REWARD_RATE_SMOOTHING - 1) * previous + limited) / REWARD_RATE_SMOOTHING.
+// - The result is then kept between REWARD_RATE_MIN and REWARD_RATE_MAX.
+// Every measurement, including the first, is treated this way, so that no single measurement can move the rate by more
+// than 1.25%.  All values are far below 2^64 at every step: rates are below 2^32.
+static uint32_t compute_updated_reward_rate(uint32_t previous_rate, uint64_t measured_rate)
+{
+    uint64_t previous = previous_rate;
+    uint64_t lowest = (previous * (100ul - REWARD_RATE_MAX_CHANGE_PERCENT)) / 100ul;
+    uint64_t highest = (previous * (100ul + REWARD_RATE_MAX_CHANGE_PERCENT)) / 100ul;
+    uint64_t limited = (measured_rate < lowest) ? lowest : ((measured_rate > highest) ? highest : measured_rate);
+    uint64_t rate = ((previous * (REWARD_RATE_SMOOTHING - 1)) + limited) / REWARD_RATE_SMOOTHING;
+
+    if (rate < REWARD_RATE_MIN) {
+        rate = REWARD_RATE_MIN;
+    }
+    else if (rate > REWARD_RATE_MAX) {
+        rate = REWARD_RATE_MAX;
+    }
+
+    return (uint32_t) rate;
+}
+
+// Returns a reward rate (see REWARD_RATE_ONE) in basis points, rounded to the nearest basis point (halves round up).
+// This is the form that the level credit curve takes (see compute_level_credits).  Kept rates are at least 100 basis
+// points, so the result is never zero for them.
+static uint32_t compute_reward_rate_bps(uint32_t rate)
+{
+    return (uint32_t) ((((uint64_t) rate * 10000ul) + (REWARD_RATE_ONE / 2)) / REWARD_RATE_ONE);
+}

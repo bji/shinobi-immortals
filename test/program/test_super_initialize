@@ -19,10 +19,18 @@ if should_run_test super_initialize_wrong_super; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -48,10 +56,18 @@ if should_run_test super_initialize_unsigned_super; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/rich_user1.json                                                                       \
@@ -77,10 +93,18 @@ if should_run_test super_initialize_wrong_state; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -106,10 +130,18 @@ if should_run_test super_initialize_wrong_state_permissions; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -135,10 +167,18 @@ if should_run_test super_initialize_wrong_authority; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -164,10 +204,18 @@ if should_run_test super_initialize_wrong_authority_permissions; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -196,10 +244,18 @@ if should_run_test super_initialize_wrong_ki_mint; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -225,10 +281,18 @@ if should_run_test super_initialize_wrong_ki_mint_permissions; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -254,10 +318,18 @@ if should_run_test super_initialize_wrong_ki_metadata; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -283,10 +355,18 @@ if should_run_test super_initialize_wrong_ki_metadata_permissions; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -312,10 +392,18 @@ if should_run_test super_initialize_wrong_bid_marker_mint; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -341,10 +429,18 @@ if should_run_test super_initialize_wrong_bid_marker_mint_permissions; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -370,10 +466,18 @@ if should_run_test super_initialize_wrong_bid_marker_metadata; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -399,10 +503,18 @@ if should_run_test super_initialize_wrong_bid_marker_metadata_permissions; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -429,10 +541,18 @@ if should_run_test super_initialize_wrong_rent_sysvar; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -460,10 +580,18 @@ if should_run_test super_initialize_wrong_system_program; then
            account $RICH_USER1_PUBKEY                                                                                \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -490,10 +618,18 @@ if should_run_test super_initialize_wrong_spl_token_program; then
            // Incorrect SPL Token program //                                                                         \
            account $RICH_USER2_PUBKEY                                                                                \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -519,15 +655,296 @@ if should_run_test super_initialize_wrong_metaplex_program; then
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            // Incorrect SPL Token program //                                                                         \
            account $RICH_USER1_PUBKEY                                                                                \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
         | solxact submit l 2>&1`
 fi
+
+# Issue an invalid super_initialize tx with wrong reference stake account
+if should_run_test super_initialize_wrong_reference_stake; then
+    assert_fail super_initialize_wrong_reference_stake                                                               \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x457'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $SUPERUSER_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SUPERUSER_PUBKEY s                                                                               \
+           account $STATE_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $KI_METADATA_PUBKEY w                                                                             \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                     \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Incorrect reference stake account //                                                                   \
+           account $RICH_USER1_PUBKEY w                                                                              \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 0 = InitializeData //                                                                 \
+           u8 0                                                                                                      \
+           // Admin pubkey //                                                                                        \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/super.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong reference stake account permissions
+if should_run_test super_initialize_wrong_reference_stake_permissions; then
+    assert_fail super_initialize_wrong_reference_stake_permissions                                                   \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x4bb'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $SUPERUSER_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SUPERUSER_PUBKEY s                                                                               \
+           account $STATE_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $KI_METADATA_PUBKEY w                                                                             \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                     \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           // Correct reference stake account, wrong permissions (should be w) //                                    \
+           account $REFERENCE_STAKE_PUBKEY                                                                           \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 0 = InitializeData //                                                                 \
+           u8 0                                                                                                      \
+           // Admin pubkey //                                                                                        \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/super.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong Shinobi Systems vote account
+if should_run_test super_initialize_wrong_vote_account; then
+    assert_fail super_initialize_wrong_vote_account                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x458'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $SUPERUSER_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SUPERUSER_PUBKEY s                                                                               \
+           account $STATE_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $KI_METADATA_PUBKEY w                                                                             \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                     \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           // Incorrect vote account //                                                                              \
+           account $RICH_USER1_PUBKEY                                                                                \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 0 = InitializeData //                                                                 \
+           u8 0                                                                                                      \
+           // Admin pubkey //                                                                                        \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/super.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong clock sysvar
+if should_run_test super_initialize_wrong_clock_sysvar; then
+    assert_fail super_initialize_wrong_clock_sysvar                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x459'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $SUPERUSER_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SUPERUSER_PUBKEY s                                                                               \
+           account $STATE_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $KI_METADATA_PUBKEY w                                                                             \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                     \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           // Incorrect clock sysvar //                                                                              \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 0 = InitializeData //                                                                 \
+           u8 0                                                                                                      \
+           // Admin pubkey //                                                                                        \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/super.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong stake history sysvar
+if should_run_test super_initialize_wrong_stake_history_sysvar; then
+    assert_fail super_initialize_wrong_stake_history_sysvar                                                          \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45a'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $SUPERUSER_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SUPERUSER_PUBKEY s                                                                               \
+           account $STATE_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $KI_METADATA_PUBKEY w                                                                             \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                     \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           // Incorrect stake history sysvar //                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 0 = InitializeData //                                                                 \
+           u8 0                                                                                                      \
+           // Admin pubkey //                                                                                        \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/super.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong stake config account
+if should_run_test super_initialize_wrong_stake_config; then
+    assert_fail super_initialize_wrong_stake_config                                                                  \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45b'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $SUPERUSER_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SUPERUSER_PUBKEY s                                                                               \
+           account $STATE_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $KI_METADATA_PUBKEY w                                                                             \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                     \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           // Incorrect stake config account //                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
+           // Instruction code 0 = InitializeData //                                                                 \
+           u8 0                                                                                                      \
+           // Admin pubkey //                                                                                        \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/super.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+# Issue an invalid super_initialize tx with wrong stake program
+if should_run_test super_initialize_wrong_stake_program; then
+    assert_fail super_initialize_wrong_stake_program                                                                 \
+    'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x45c'                     \
+    `echo "encoding c                                                                                                \
+           fee_payer $SUPERUSER_PUBKEY                                                                               \
+           program $SELF_PROGRAM_PUBKEY                                                                              \
+           account $SUPERUSER_PUBKEY s                                                                               \
+           account $STATE_PUBKEY w                                                                                   \
+           account $AUTHORITY_PUBKEY w                                                                               \
+           account $KI_MINT_PUBKEY w                                                                                 \
+           account $KI_METADATA_PUBKEY w                                                                             \
+           account $BID_MARKER_MINT_PUBKEY w                                                                         \
+           account $BID_MARKER_METADATA_PUBKEY w                                                                     \
+           account $RENT_SYSVAR_PUBKEY                                                                               \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           // Incorrect stake program //                                                                             \
+           account $SYSTEM_PROGRAM_PUBKEY                                                                            \
+           // Instruction code 0 = InitializeData //                                                                 \
+           u8 0                                                                                                      \
+           // Admin pubkey //                                                                                        \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
+        | solxact encode                                                                                             \
+        | solxact hash l                                                                                             \
+        | solxact sign $LEDGER/super.json                                                                            \
+        | solxact submit l 2>&1`
+fi
+
+# Issue invalid super_initialize txs with initial reward rates just outside the bounds of 100 to 2000 basis points.
+# 0x516 = 1302 = Error_InvalidData_First + 2
+for BPS in 99 2001; do
+    if should_run_test super_initialize_bad_reward_rate_$BPS; then
+        assert_fail super_initialize_bad_reward_rate_$BPS                                                            \
+        'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x516'                 \
+        `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY                           \
+             $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $ADMIN_PUBKEY $BPS                             \
+            | solxact hash l                                                                                         \
+            | solxact sign $LEDGER/super.json                                                                        \
+            | solxact submit l 2>&1`
+    fi
+done
 
 # Issue an invalid super_initialize tx with missing accounts
 if should_run_test super_initialize_missing_account; then
@@ -546,10 +963,19 @@ if should_run_test super_initialize_missing_account; then
            account $RENT_SYSVAR_PUBKEY                                                                               \
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
+           // The stake program account is missing //                                                                \
+           account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -574,6 +1000,12 @@ if should_run_test super_initialize_short_data; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0"                                                                                                     \
         | solxact encode                                                                                             \
@@ -600,10 +1032,18 @@ if should_run_test super_initialize_long_data; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
            // Extra junk //                                                                                          \
            u64 17                                                                                                    \
         | solxact encode                                                                                             \
@@ -632,10 +1072,18 @@ if should_run_test super_initialize_insufficent_lamports; then
            account $SYSTEM_PROGRAM_PUBKEY                                                                            \
            account $SPL_TOKEN_PROGRAM_PUBKEY                                                                         \
            account $METAPLEX_PROGRAM_PUBKEY                                                                          \
+           account $REFERENCE_STAKE_PUBKEY w                                                                         \
+           account $VOTE_PUBKEY                                                                                      \
+           account $CLOCK_SYSVAR_PUBKEY                                                                              \
+           account $STAKE_HISTORY_SYSVAR_PUBKEY                                                                      \
+           account $STAKE_CONFIG_PUBKEY                                                                              \
+           account $STAKE_PROGRAM_PUBKEY                                                                             \
            // Instruction code 0 = InitializeData //                                                                 \
            u8 0                                                                                                      \
            // Admin pubkey //                                                                                        \
-           pubkey $ADMIN_PUBKEY"                                                                                     \
+           pubkey $ADMIN_PUBKEY                                                                                      \
+           // Initial reward rate, in basis points //                                                                \
+           u32 490"                                                                                                  \
         | solxact encode                                                                                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
@@ -649,21 +1097,61 @@ fi
 # This test cannot be skipped since the creation of a state account is a prerequisite for all other tests
 # Send lamports to the state account, to ensure that if the account already exists, it is properly re-owned
 transfer $LEDGER/admin.json $STATE_PUBKEY 0.1
+INITIALIZE_WINDOW_BEFORE=$((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS))
 assert super_initialize_success                                                                                      \
 `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY                                   \
-     $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $ADMIN_PUBKEY                                          \
+     $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $ADMIN_PUBKEY 490                                      \
     | solxact hash l                                                                                                 \
     | solxact sign $LEDGER/super.json                                                                                \
     | solxact submit l 2>&1`
 
-# Ensure that the state account was created and that its contents are as expected -- should be the admin pubkey
-EXPECTED_STATE_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
-STATE_ACCOUNT_DATA=`get_account_data $STATE_PUBKEY 0 36`
+INITIALIZE_WINDOW_AFTER=$((`clock_unix_timestamp` / LEVEL_CREDIT_WINDOW_SECONDS))
+
+# Prints the little endian bytes of the $1 byte unsigned value $2, as hex
+function le_hex ()
+{
+    local INDEX
+    for INDEX in `seq 0 $(($1 - 1))`; do
+        printf '%02x' $((($2 >> (8 * INDEX)) & 255))
+    done
+}
+
+# The window in which Initialize set the reward rate (a u64 at byte offset 40), which must be the one in which it ran
+INITIALIZE_WINDOW=`get_account_data $STATE_PUBKEY 40 8 | base64 -d | od -An -tu8 -v | tr -d '[:space:]'`
+if [ "$INITIALIZE_WINDOW" -lt "$INITIALIZE_WINDOW_BEFORE" ] || [ "$INITIALIZE_WINDOW" -gt "$INITIALIZE_WINDOW_AFTER" ]
+then
+    echo "FAIL: super_initialize_success: reward rate window $INITIALIZE_WINDOW is not the one in which it ran"
+    exit 1
+fi
+
+# Ensure that the state account was created and that its contents are as expected: the admin pubkey; the reward
+# rate, which is the 490 basis points given, as a fraction of 2^32, rounded down (210453397); the window in which it was
+# set; and no reference stake account snapshot (24 zero bytes).  The whole account is compared, which also checks that
+# it is exactly 72 bytes.
+EXPECTED_STATE_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY; le_hex 4 210453397 | xxd -r -p;  \
+                              le_hex 8 $INITIALIZE_WINDOW | xxd -r -p; head -c 24 /dev/zero) | base64 | tr -d '\n'`
+STATE_ACCOUNT_DATA=`get_account_data $STATE_PUBKEY`
 if [ "$EXPECTED_STATE_ACCOUNT_DATA" != "$STATE_ACCOUNT_DATA" ]; then
     echo "FAIL: super_initialize_success: Incorrect account contents:"
     diff <(echo "$EXPECTED_STATE_ACCOUNT_DATA") <(echo "$STATE_ACCOUNT_DATA")
     exit 1
 fi
+
+
+# Ensure that the reference stake account was created: a stake account holding 2 SOL beyond its rent exempt reserve,
+# all of it delegated to Shinobi Systems (the test validator's vote account), whose stake and withdraw authorities are
+# both the program authority
+REFERENCE_STAKE_JSON=`solana -u l stake-account $REFERENCE_STAKE_PUBKEY --output json`
+for CHECK in "delegatedVoteAccountAddress $VOTE_PUBKEY" "delegatedStake 2000000000" "staker $AUTHORITY_PUBKEY"         \
+             "withdrawer $AUTHORITY_PUBKEY"; do
+    FIELD=`echo $CHECK | cut -d ' ' -f 1`
+    EXPECTED=`echo $CHECK | cut -d ' ' -f 2`
+    ACTUAL=`echo "$REFERENCE_STAKE_JSON" | jq -r ".$FIELD"`
+    if [ "$ACTUAL" != "$EXPECTED" ]; then
+        echo "FAIL: super_initialize_success: reference stake account $FIELD is $ACTUAL, expected $EXPECTED"
+        exit 1
+    fi
+done
 
 
 # Issue a valid additional super_initialize tx that should fail because the initialize cannot be repeated once
@@ -674,7 +1162,7 @@ if should_run_test super_initialize_again; then
     assert_fail super_initialize_again                                                                               \
     'Transaction simulation failed: Error processing Instruction 0: custom program error: 0x44d'                     \
     `SELF_PROGRAM_PUBKEY=$SELF_PROGRAM_PUBKEY SHINOBI_SYSTEMS_VOTE_PUBKEY=$VOTE_PUBKEY                               \
-         $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $RICH_USER1_PUBKEY                                 \
+         $SOURCE/scripts/super_initialize_tx.sh $SUPERUSER_PUBKEY $RICH_USER1_PUBKEY 490                             \
         | solxact hash l                                                                                             \
         | solxact sign $LEDGER/super.json                                                                            \
         | solxact submit l 2>&1`
@@ -687,9 +1175,7 @@ if should_run_test super_initialize_again; then
     fi
 fi
 
-# Ensure that the state account still has the expected contents.  The whole account is compared, which also checks
-# that it is exactly 36 bytes (data type and admin pubkey).
-EXPECTED_STATE_ACCOUNT_DATA=`(echo 01000000 | xxd -r -p; pubkey_binary $ADMIN_PUBKEY) | base64`
+# Ensure that the state account still has the expected contents
 STATE_ACCOUNT_DATA=`get_account_data $STATE_PUBKEY`
 if [ "$EXPECTED_STATE_ACCOUNT_DATA" != "$STATE_ACCOUNT_DATA" ]; then
     echo "FAIL: super_initialize_success: Incorrect account contents:"

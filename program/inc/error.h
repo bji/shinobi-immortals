@@ -146,6 +146,10 @@ typedef enum
     // is empty; a block's whitelist must be created, with its entries, before the block
     Error_WhitelistRequired                            = 1045,
 
+    // MeasureRewardRate was asked to fail if the reward rate had not been measured in the current level credit window,
+    // and it had not been, and could not be measured then
+    Error_RewardRateNotMeasured                        = 1046,
+
     // Errors Error_InvalidAccount_First through Error_InvalidAccount_Last are used to indicate an error in input
     // account, where the specific input field that was faulty is the offset from Error_InvalidAccount_First
     Error_InvalidAccount_First                         = 1100,

@@ -80,6 +80,11 @@ fn rust_structure(name: &str, bytes: &[u8]) -> (usize, usize, Fields) {
             let x: ProgramState = bytemuck::pod_read_unaligned(bytes);
             field!(f, ProgramState, x, data_type, value);
             field!(f, ProgramState, x, admin_pubkey, value);
+            field!(f, ProgramState, x, reward_rate, value);
+            field!(f, ProgramState, x, reward_rate_window, value);
+            field!(f, ProgramState, x, snapshot_stake, value);
+            field!(f, ProgramState, x, snapshot_epoch, value);
+            field!(f, ProgramState, x, snapshot_epoch_start_timestamp, value);
             (size_of::<ProgramState>(), align_of::<ProgramState>(), f)
         }
         "Authority" => {
@@ -92,17 +97,16 @@ fn rust_structure(name: &str, bytes: &[u8]) -> (usize, usize, Fields) {
             let x: BlockConfiguration = bytemuck::pod_read_unaligned(bytes);
             field!(f, BlockConfiguration, x, group_number, value);
             field!(f, BlockConfiguration, x, block_number, value);
+            field!(f, BlockConfiguration, x, mystery_start_price_lamports, value);
+            field!(f, BlockConfiguration, x, minimum_price_lamports, value);
+            field!(f, BlockConfiguration, x, final_start_price_lamports, value);
+            field!(f, BlockConfiguration, x, mystery_phase_duration, value);
+            field!(f, BlockConfiguration, x, reveal_period_duration, value);
+            field!(f, BlockConfiguration, x, auction_duration, value);
+            field!(f, BlockConfiguration, x, final_sale_duration, value);
+            field!(f, BlockConfiguration, x, whitelist_duration, value);
             field!(f, BlockConfiguration, x, total_entry_count, value);
             field!(f, BlockConfiguration, x, total_mystery_count, value);
-            field!(f, BlockConfiguration, x, mystery_phase_duration, value);
-            field!(f, BlockConfiguration, x, mystery_start_price_lamports, value);
-            field!(f, BlockConfiguration, x, reveal_period_duration, value);
-            field!(f, BlockConfiguration, x, minimum_price_lamports, value);
-            field!(f, BlockConfiguration, x, has_auction, value);
-            field!(f, BlockConfiguration, x, duration, value);
-            field!(f, BlockConfiguration, x, final_start_price_lamports, value);
-            field!(f, BlockConfiguration, x, whitelist_duration, value);
-            field!(f, BlockConfiguration, x, expected_annual_reward_bps, value);
             (size_of::<BlockConfiguration>(), align_of::<BlockConfiguration>(), f)
         }
         "Block" => {

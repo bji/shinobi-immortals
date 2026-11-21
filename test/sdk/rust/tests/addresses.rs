@@ -47,6 +47,7 @@ fn fixed_addresses_match_the_program() {
         ("RENT_SYSVAR", id::RENT_SYSVAR),
         ("STAKE_HISTORY_SYSVAR", id::STAKE_HISTORY_SYSVAR),
         ("STAKE_CONFIG_SYSVAR", id::STAKE_CONFIG),
+        ("EPOCH_REWARDS_SYSVAR", id::EPOCH_REWARDS_SYSVAR),
         ("SHINOBI_SYSTEMS_VOTE", id::SHINOBI_SYSTEMS_VOTE),
         ("STATE", id::PROGRAM_STATE),
         ("AUTHORITY", id::AUTHORITY),
@@ -54,6 +55,7 @@ fn fixed_addresses_match_the_program() {
         ("KI_METADATA", id::KI_METADATA),
         ("BID_MARKER_MINT", id::BID_MARKER_MINT),
         ("BID_MARKER_METADATA", id::BID_MARKER_METADATA),
+        ("REFERENCE_STAKE", id::REFERENCE_STAKE),
     ];
     for (name, address) in &known {
         assert_eq!(compiled.get(*name), Some(address), "{} differs from build_program.sh", name);
@@ -69,6 +71,7 @@ fn fixed_addresses_match_the_program() {
         ("AUTHORITY", pda::AUTHORITY_SEED, id::AUTHORITY, id::AUTHORITY_BUMP_SEED),
         ("KI_MINT", pda::KI_MINT_SEED, id::KI_MINT, id::KI_MINT_BUMP_SEED),
         ("BID_MARKER_MINT", pda::BID_MARKER_MINT_SEED, id::BID_MARKER_MINT, id::BID_MARKER_MINT_BUMP_SEED),
+        ("REFERENCE_STAKE", pda::REFERENCE_STAKE_SEED, id::REFERENCE_STAKE, id::REFERENCE_STAKE_BUMP_SEED),
     ] {
         assert_eq!(bump_seeds.get(name), Some(&bump_seed), "{} bump seed differs from build_program.sh", name);
         assert_eq!(Address::find_program_address(&[ &[ seed ] ], &id::PROGRAM_ID), (address, bump_seed),

@@ -77,28 +77,29 @@ const U64_MAX = 18446744073709551615n;
 
 // Superuser instructions ---------------------------------------------------------------------------------------------
 
-compare("Initialize", "super_initialize_tx.sh", [ SUPERUSER, ADMIN ],
-        Base.make_initialize_instruction(SUPERUSER, ADMIN));
+compare("Initialize", "super_initialize_tx.sh", [ SUPERUSER, ADMIN, 650 ],
+        Base.make_initialize_instruction(SUPERUSER, ADMIN, 650));
 
 compare("SetAdmin", "super_set_admin_tx.sh", [ SUPERUSER, OTHER ], Base.make_set_admin_instruction(SUPERUSER, OTHER));
 
 
 // Admin instructions -------------------------------------------------------------------------------------------------
 
-for (let [ has_auction, whitelist_duration ] of [ [ true, random_int(100000) + 1 ], [ false, 0 ] ]) {
+// With an auction (and a whitelist), and without (and with no whitelist)
+for (let [ auction_duration, whitelist_duration ] of [ [ random_int(0xFFFFFFFF) + 1, random_int(100000) + 1 ],
+                                                      [ 0, 0 ] ]) {
     let config = {
         group_number : G, block_number : B, total_entry_count : random_int(0x10000),
         total_mystery_count : random_int(0x10000), mystery_phase_duration : random_int(0x100000000),
         mystery_start_price_lamports : random_bigint(64), reveal_period_duration : random_int(0x100000000),
-        minimum_price_lamports : random_bigint(64), has_auction : has_auction, duration : random_int(0x100000000),
-        final_start_price_lamports : random_bigint(64), whitelist_duration : whitelist_duration,
-        expected_annual_reward_bps : random_int(0x100000000)
+        minimum_price_lamports : random_bigint(64), auction_duration : auction_duration,
+        final_sale_duration : random_int(0x100000000), final_start_price_lamports : random_bigint(64),
+        whitelist_duration : whitelist_duration
     };
-    compare("CreateBlock (has_auction " + has_auction + ")", "admin_create_block_tx.sh",
+    compare("CreateBlock (auction_duration " + auction_duration + ")", "admin_create_block_tx.sh",
             [ ADMIN, G, B, config.total_entry_count, config.total_mystery_count, config.mystery_phase_duration,
               config.mystery_start_price_lamports, config.reveal_period_duration, config.minimum_price_lamports,
-              has_auction, config.duration, config.final_start_price_lamports, whitelist_duration,
-              config.expected_annual_reward_bps ],
+              auction_duration, config.final_sale_duration, config.final_start_price_lamports, whitelist_duration ],
             Base.make_create_block_instruction(ADMIN, config));
 }
 
@@ -206,6 +207,11 @@ compare("UpdateEpochsStaked (staked)", "anyone_update_epochs_staked_tx.sh", [ OT
 compare("UpdateEpochsStaked (not staked)", "anyone_update_epochs_staked_tx.sh", [ OTHER, G, B, I, "none" ],
         Base.make_update_epochs_staked_instruction(ENTRY));
 
+compare("MeasureRewardRate", "anyone_measure_reward_rate_tx.sh", [ OTHER ],
+        Base.make_measure_reward_rate_instruction(false));
+compare("MeasureRewardRate (require measured)", "anyone_measure_reward_rate_tx.sh", [ OTHER, "require_measured" ],
+        Base.make_measure_reward_rate_instruction(true));
+
 
 // Special instructions -----------------------------------------------------------------------------------------------
 
@@ -222,7 +228,8 @@ compare("ReAuthorize (stake account only, token account given)", "special_reauth
 const TESTED_BUILDERS = [
     "initialize", "set_admin", "create_block", "add_entries_to_block", "set_metadata_bytes", "reveal_entries",
     "add_whitelist_entries", "delete_whitelist", "withdraw_excess", "buy", "refund", "bid", "claim_losing", "stake",
-    "destake", "thaw", "harvest", "level_up", "settle_winning_bid", "delegate", "update_epochs_staked", "reauthorize"
+    "destake", "thaw", "harvest", "level_up", "settle_winning_bid", "delegate", "update_epochs_staked",
+    "measure_reward_rate", "reauthorize"
 ].map((name) => "make_" + name + "_instruction");
 for (let builder of Object.keys(Base).filter((k) => /^make_\w+_instruction$/.test(k))) {
     results.check(builder + " is tested", TESTED_BUILDERS.includes(builder));

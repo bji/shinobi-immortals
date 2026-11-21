@@ -298,6 +298,7 @@ STAKE_HISTORY_SYSVAR_PUBKEY="SysvarStakeHistory1111111111111111111111111"
            AUTHORITY_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 2 ]`
              KI_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 3 ]`
      BID_MARKER_MINT_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 7 ]`
+     REFERENCE_STAKE_PUBKEY=`pda $PROGRAM_PUBKEY [ u8 12 ]`
          KI_METADATA_PUBKEY=`pda $METAPLEX_PROGRAM_PUBKEY                                                             \
                                  [ string metadata                                                                    \
                                    pubkey $METAPLEX_PROGRAM_PUBKEY                                                    \
@@ -331,14 +332,64 @@ case $1 in
             exit 1
         fi
 
-        ADMIN_PUBKEY=`get_data_pubkey 4 "$ACCOUNT_DATA"`
-
-        # State is 36 bytes: the data type followed by the admin pubkey
-        if [ "$(echo "$ACCOUNT_DATA" | base64 -d | wc -c)" -ne 36 ]; then
-            echo "State account has invalid size; expected 36"
+        # State is 72 bytes: the data type, the admin pubkey, the reward rate (u32), the window in which it was last
+        # measured (u64), and the reference stake account snapshot: its delegated stake (u64), epoch (u64) and epoch
+        # start timestamp (i64)
+        if [ "$(echo "$ACCOUNT_DATA" | base64 -d | wc -c)" -ne 72 ]; then
+            echo "State account has invalid size; expected 72"
             exit 1
         fi
-        printf '{"state_account":"%s","admin_pubkey":"%s"}\n' "$STATE_PUBKEY" "$ADMIN_PUBKEY"
+
+        ADMIN_PUBKEY=`get_data_pubkey 4 "$ACCOUNT_DATA"`
+
+        # The reward rate, as a fraction of 2^32 per year
+        REWARD_RATE=`get_data_u32 36 "$ACCOUNT_DATA"`
+        REWARD_RATE_WINDOW=`get_data_u64 40 "$ACCOUNT_DATA"`
+        SNAPSHOT_STAKE=`get_data_u64 48 "$ACCOUNT_DATA"`
+        SNAPSHOT_EPOCH=`get_data_u64 56 "$ACCOUNT_DATA"`
+        SNAPSHOT_EPOCH_START_TIMESTAMP=`get_data_u64 64 "$ACCOUNT_DATA"`
+
+        echo -n '{"state_account":"'$STATE_PUBKEY'","admin_pubkey":"'$ADMIN_PUBKEY'",'
+
+        # The reward rate (set by Initialize, then updated by MeasureRewardRate) is shown both as stored, and in basis
+        # points (with its fractional part), and as LevelUp uses it: rounded to the nearest basis point
+        echo -n '"reward_rate":'$REWARD_RATE','
+        echo -n '"reward_rate_bps":'`normalize_float \`echo "10 k $REWARD_RATE 10000 * 4294967296 / p" | dc\``','
+        echo -n '"level_up_reward_bps":'$((($REWARD_RATE*10000+2147483648)/4294967296))','
+        echo -n '"reward_rate_window":'$REWARD_RATE_WINDOW','
+
+        # The snapshot of the reference stake account that the next measurement is made from; a stake of zero means
+        # that there is none
+        if [ "0$SNAPSHOT_STAKE" -eq 0 ]; then
+            echo -n '"snapshot":null,'
+        else
+            echo -n '"snapshot":{"stake":'`to_sol $SNAPSHOT_STAKE`',"epoch":'$SNAPSHOT_EPOCH','
+            echo -n '"epoch_start_timestamp":"'`to_timestamp $SNAPSHOT_EPOCH_START_TIMESTAMP`'"},'
+        fi
+
+        # The reference stake account itself: its balance, and, if it is delegated, its delegation.  A stake account
+        # in the Stake state (2) holds, after the 4 byte state and the 120 byte Meta, the voter pubkey (offset 124),
+        # the delegated stake (156), the activation epoch (164), and the deactivation epoch (172).
+        echo -n '"reference_stake":{"account":"'$REFERENCE_STAKE_PUBKEY'",'
+        REFERENCE_DATA=`get_account_data $RPC_URL $REFERENCE_STAKE_PUBKEY`
+        if [ -z "$REFERENCE_DATA" ]; then
+            echo '"exists":false}}'
+        else
+            echo -n '"balance":'`to_sol \`get_account_lamports $RPC_URL $REFERENCE_STAKE_PUBKEY\``','
+            if [ "0`get_data_u32 0 "$REFERENCE_DATA"`" -eq 2 ]; then
+                echo -n '"voter":"'`get_data_pubkey 124 "$REFERENCE_DATA"`'",'
+                echo -n '"delegated_stake":'`to_sol \`get_data_u64 156 "$REFERENCE_DATA"\``','
+                echo -n '"activation_epoch":'`get_data_u64 164 "$REFERENCE_DATA"`','
+                DEACTIVATION_EPOCH=`get_data_u64 172 "$REFERENCE_DATA"`
+                if [ "$DEACTIVATION_EPOCH" = "18446744073709551615" ]; then
+                    echo '"deactivation_epoch":null}}'
+                else
+                    echo '"deactivation_epoch":'$DEACTIVATION_EPOCH'}}'
+                fi
+            else
+                echo '"delegated":false}}'
+            fi
+        fi
     ;;
 
     authority)
@@ -414,8 +465,9 @@ case $1 in
 
         ACCOUNT_DATA_LEN=`echo "$ACCOUNT_DATA" | base64 -d | wc -c`
 
-        if [ $ACCOUNT_DATA_LEN -lt 104 ]; then
-            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected at least 104"
+        # The Block structure (program/inc/block.h) is 96 bytes, followed by the entries added bitmap
+        if [ $ACCOUNT_DATA_LEN -lt 96 ]; then
+            echo "Block account has invalid size $ACCOUNT_DATA_LEN, expected at least 96"
             exit 1
         fi
 
@@ -430,62 +482,63 @@ case $1 in
 
         echo -n '"block_pubkey":"'$BLOCK_PUBKEY'",'
 
+        # The configuration (BlockConfiguration) starts at offset 8, its fields ordered so that it has no padding: the
+        # group and block numbers, the three u64 prices, the other u32 values, and the two u16 counts
         echo -n '"configuration":{'
         
         echo -n '"group_number":'`get_data_u32 8 "$ACCOUNT_DATA"`','
 
         echo -n '"block_number":'`get_data_u32 12 "$ACCOUNT_DATA"`','
 
-        TOTAL_ENTRY_COUNT=`get_data_u16 16 "$ACCOUNT_DATA"`
+        TOTAL_ENTRY_COUNT=`get_data_u16 60 "$ACCOUNT_DATA"`
         
         echo -n '"total_entry_count":'$TOTAL_ENTRY_COUNT','
 
-        MYSTERY_COUNT=`get_data_u16 18 "$ACCOUNT_DATA"`
+        MYSTERY_COUNT=`get_data_u16 62 "$ACCOUNT_DATA"`
 
         echo -n '"total_mystery_count":'$MYSTERY_COUNT','
 
         if [ "0$MYSTERY_COUNT" -ne 0 ]; then
-            echo -n '"mystery_phase_duration":'`get_data_u32 20 "$ACCOUNT_DATA"`','
+            echo -n '"mystery_phase_duration":'`get_data_u32 40 "$ACCOUNT_DATA"`','
 
-            echo -n '"mystery_start_price":'`to_sol \`get_data_u64 24 "$ACCOUNT_DATA"\``','
+            echo -n '"mystery_start_price":'`to_sol \`get_data_u64 16 "$ACCOUNT_DATA"\``','
         fi
         
-        DURATION=`get_data_u32 32 "$ACCOUNT_DATA"`
+        DURATION=`get_data_u32 44 "$ACCOUNT_DATA"`
         
         echo -n '"reveal_period_duration":'$DURATION','
         
         echo -n '"reveal_period_duration_display":"'`to_duration $DURATION`'",'
         
-        echo -n '"minimum_price":'`to_sol \`get_data_u64 40 "$ACCOUNT_DATA"\``','
+        echo -n '"minimum_price":'`to_sol \`get_data_u64 24 "$ACCOUNT_DATA"\``','
 
-        HAS_AUCTION=`to_bool \`get_data_u8 48 "$ACCOUNT_DATA"\``
+        # A nonzero auction duration means that the block's revealed entries are auctioned for that long; zero means
+        # that there is no auction, and they are instead sold at a price that decays over the final sale duration
+        DURATION=`get_data_u32 48 "$ACCOUNT_DATA"`
 
-        echo -n '"has_auction":'$HAS_AUCTION','
+        echo -n '"auction_duration":'$DURATION','
 
-        # Both the auction and final sale price have the same duration
+        echo -n '"auction_duration_display":"'`to_duration $DURATION`'",'
+
         DURATION=`get_data_u32 52 "$ACCOUNT_DATA"`
 
-        echo -n '"duration":'$DURATION','
+        echo -n '"final_sale_duration":'$DURATION','
 
-        echo -n '"duration_display":"'`to_duration $DURATION`'",'
+        echo -n '"final_sale_duration_display":"'`to_duration $DURATION`'",'
 
-        echo -n '"final_start_price":'`to_sol \`get_data_u64 56 "$ACCOUNT_DATA"\``','
+        echo -n '"final_start_price":'`to_sol \`get_data_u64 32 "$ACCOUNT_DATA"\``','
 
-        WHITELIST_DURATION=`get_data_u32 64 "$ACCOUNT_DATA"`
+        WHITELIST_DURATION=`get_data_u32 56 "$ACCOUNT_DATA"`
         
         echo -n '"whitelist_duration":'$WHITELIST_DURATION','
         
-        echo -n '"whitelist_duration_display":"'`to_duration $WHITELIST_DURATION`'",'
-
-        # The expected annual stake reward rate in basis points, which calibrates the block's entries' level credit
-        # curve
-        echo -n '"expected_annual_reward_bps":'`get_data_u32 68 "$ACCOUNT_DATA"`
+        echo -n '"whitelist_duration_display":"'`to_duration $WHITELIST_DURATION`'"'
 
         echo -n '},'
 
-        echo -n '"added_entries_count":'`get_data_u16 72 "$ACCOUNT_DATA"`','
+        echo -n '"added_entries_count":'`get_data_u16 64 "$ACCOUNT_DATA"`','
 
-        BLOCK_START_TIMESTAMP=`get_data_u64 80 "$ACCOUNT_DATA"`
+        BLOCK_START_TIMESTAMP=`get_data_u64 72 "$ACCOUNT_DATA"`
 
         echo -n '"block_start_timestamp":'$BLOCK_START_TIMESTAMP','
 
@@ -495,9 +548,9 @@ case $1 in
 
         if [ "0$MYSTERY_COUNT" -ne 0 ]; then
         
-            echo -n '"mysteries_sold_count":'`get_data_u16 88 "$ACCOUNT_DATA"`','
+            echo -n '"mysteries_sold_count":'`get_data_u16 80 "$ACCOUNT_DATA"`','
 
-            TIMESTAMP=`get_data_u64 96 "$ACCOUNT_DATA"`
+            TIMESTAMP=`get_data_u64 88 "$ACCOUNT_DATA"`
 
             echo -n '"mystery_phase_end_timestamp":'$TIMESTAMP','
 
@@ -512,7 +565,7 @@ case $1 in
         echo -n '"entries_added":['
 
         # Skip to the entries added bitmap
-        BITMAP_BYTES=`echo "$ACCOUNT_DATA" | base64 -d | dd bs=1 skip=104 status=none | od -An -tu1 -v`
+        BITMAP_BYTES=`echo "$ACCOUNT_DATA" | base64 -d | dd bs=1 skip=96 status=none | od -An -tu1 -v`
 
         N=0
         COMMA=

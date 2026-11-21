@@ -122,6 +122,11 @@ int main(void)
     BEGIN(ProgramState, program_state);
     FIELD(ProgramState, program_state, data_type, Unsigned);
     FIELD(ProgramState, program_state, admin_pubkey, Bytes);
+    FIELD(ProgramState, program_state, reward_rate, Unsigned);
+    FIELD(ProgramState, program_state, reward_rate_window, Unsigned);
+    FIELD(ProgramState, program_state, snapshot_stake, Unsigned);
+    FIELD(ProgramState, program_state, snapshot_epoch, Unsigned);
+    FIELD(ProgramState, program_state, snapshot_epoch_start_timestamp, Signed);
     END();
 
     DECLARE(Authority, authority);
@@ -134,17 +139,16 @@ int main(void)
     BEGIN(BlockConfiguration, config);
     FIELD(BlockConfiguration, config, group_number, Unsigned);
     FIELD(BlockConfiguration, config, block_number, Unsigned);
+    FIELD(BlockConfiguration, config, mystery_start_price_lamports, Unsigned);
+    FIELD(BlockConfiguration, config, minimum_price_lamports, Unsigned);
+    FIELD(BlockConfiguration, config, final_start_price_lamports, Unsigned);
+    FIELD(BlockConfiguration, config, mystery_phase_duration, Unsigned);
+    FIELD(BlockConfiguration, config, reveal_period_duration, Unsigned);
+    FIELD(BlockConfiguration, config, auction_duration, Unsigned);
+    FIELD(BlockConfiguration, config, final_sale_duration, Unsigned);
+    FIELD(BlockConfiguration, config, whitelist_duration, Unsigned);
     FIELD(BlockConfiguration, config, total_entry_count, Unsigned);
     FIELD(BlockConfiguration, config, total_mystery_count, Unsigned);
-    FIELD(BlockConfiguration, config, mystery_phase_duration, Unsigned);
-    FIELD(BlockConfiguration, config, mystery_start_price_lamports, Unsigned);
-    FIELD(BlockConfiguration, config, reveal_period_duration, Unsigned);
-    FIELD(BlockConfiguration, config, minimum_price_lamports, Unsigned);
-    FIELD(BlockConfiguration, config, has_auction, Unsigned);
-    FIELD(BlockConfiguration, config, duration, Unsigned);
-    FIELD(BlockConfiguration, config, final_start_price_lamports, Unsigned);
-    FIELD(BlockConfiguration, config, whitelist_duration, Unsigned);
-    FIELD(BlockConfiguration, config, expected_annual_reward_bps, Unsigned);
     END();
 
     DECLARE(Block, block);

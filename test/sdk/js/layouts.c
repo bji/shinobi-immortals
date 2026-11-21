@@ -155,11 +155,10 @@ static void block(void)
     b.config.mystery_start_price_lamports = next_u64();
     b.config.reveal_period_duration = (uint32_t) next_u64();
     b.config.minimum_price_lamports = next_u64();
-    b.config.has_auction = true;
-    b.config.duration = (uint32_t) next_u64();
+    b.config.auction_duration = (uint32_t) next_u64();
+    b.config.final_sale_duration = (uint32_t) next_u64();
     b.config.final_start_price_lamports = next_u64();
     b.config.whitelist_duration = (uint32_t) next_u64();
-    b.config.expected_annual_reward_bps = (uint32_t) next_u64();
     b.added_entries_count = (uint16_t) next_u64();
     b.block_start_timestamp = random_timestamp();
     b.mysteries_sold_count = (uint16_t) next_u64();
@@ -174,11 +173,10 @@ static void block(void)
     print_u64("mystery_start_price_lamports", b.config.mystery_start_price_lamports);
     print_u64("reveal_period_duration", b.config.reveal_period_duration);
     print_u64("minimum_price_lamports", b.config.minimum_price_lamports);
-    print_u64("has_auction", b.config.has_auction);
-    print_u64("duration", b.config.duration);
+    print_u64("auction_duration", b.config.auction_duration);
+    print_u64("final_sale_duration", b.config.final_sale_duration);
     print_u64("non_auction_start_price_lamports", b.config.final_start_price_lamports);
     print_u64("whitelist_duration", b.config.whitelist_duration);
-    print_u64("expected_annual_reward_bps", b.config.expected_annual_reward_bps);
     print_u64("added_entries_count", b.added_entries_count);
     print_s64("block_start_timestamp", b.block_start_timestamp);
     print_u64("mysteries_sold_count", b.mysteries_sold_count);
@@ -302,6 +300,11 @@ static void program_state(void)
 
     begin_structure("program_state", &s, sizeof(s));
     print_pubkey("admin_address", &s.admin_pubkey);
+    print_u64("reward_rate", s.reward_rate);
+    print_u64("reward_rate_window", s.reward_rate_window);
+    print_u64("snapshot_stake", s.snapshot_stake);
+    print_u64("snapshot_epoch", s.snapshot_epoch);
+    print_s64("snapshot_epoch_start_timestamp", s.snapshot_epoch_start_timestamp);
     end_structure();
 }
 

@@ -8,6 +8,7 @@ typedef enum
     KnownAccount_SuperUser,
     KnownAccount_ProgramState,
     KnownAccount_Authority,
+    KnownAccount_ReferenceStake,
     KnownAccount_KiMint,
     KnownAccount_KiMetadata,
     KnownAccount_BidMarkerMint,
@@ -22,7 +23,8 @@ typedef enum
     KnownAccount_ClockSysvar,
     KnownAccount_RentSysvar,
     KnownAccount_StakeHistorySysvar,
-    KnownAccount_StakeConfig
+    KnownAccount_StakeConfig,
+    KnownAccount_EpochRewardsSysvar
 } KnownAccount;
 
 typedef enum
@@ -73,6 +75,10 @@ static bool check_known_account(const SolAccountInfo *account, KnownAccount know
 
     case KnownAccount_Authority:
         known_pubkey = &(Constants.authority_pubkey);
+        break;
+
+    case KnownAccount_ReferenceStake:
+        known_pubkey = &(Constants.reference_stake_pubkey);
         break;
 
     case KnownAccount_KiMint:
@@ -133,6 +139,10 @@ static bool check_known_account(const SolAccountInfo *account, KnownAccount know
 
     case KnownAccount_StakeConfig:
         known_pubkey = &(Constants.stake_config_pubkey);
+        break;
+
+    case KnownAccount_EpochRewardsSysvar:
+        known_pubkey = &(Constants.epoch_rewards_sysvar_pubkey);
         break;
     }
 

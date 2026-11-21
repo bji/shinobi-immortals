@@ -29,12 +29,15 @@ fn compute(operation: u32, a: u64, b: u64, c: u64, d: u64) -> Option<(&'static s
                calc::compute_ki_harvest(calc::compute_effective_stake_earnings(a, b), as_u32(c))),
         18 => ("compute_ki_harvest_retention", calc::compute_ki_harvest_retention(as_u32(a), b)),
         19 => ("compute_retained_ki_harvest", calc::compute_retained_ki_harvest(a, as_u32(b), c)),
+        20 => ("compute_measured_reward_rate", calc::compute_measured_reward_rate(a, b, c)),
+        21 => ("compute_updated_reward_rate", calc::compute_updated_reward_rate(as_u32(a), b) as u64),
+        22 => ("compute_reward_rate_bps", calc::compute_reward_rate_bps(as_u32(a)) as u64),
         _ => return None,
     })
 }
 
 /// The number of operations that the crate mirrors
-const MIRRORED_OPERATIONS: usize = 7;
+const MIRRORED_OPERATIONS: usize = 10;
 
 
 #[test]

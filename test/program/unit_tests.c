@@ -83,7 +83,7 @@ uint64_t entrypoint(const uint8_t *input)
             break;
 
         case 6:
-            // a packs two uint32_t inputs: level_1_credits in the low 32 bits and expected_annual_reward_bps in the
+            // a packs two uint32_t inputs: level_1_credits in the low 32 bits and the reward rate in basis points in the
             // high 32 bits, because each case carries only four operands
             if (b > UINT32_MAX) {
                 return 4;
@@ -112,7 +112,7 @@ uint64_t entrypoint(const uint8_t *input)
             break;
 
         case 10:
-            // a packs level_1_credits (low 32 bits) and expected_annual_reward_bps (high 32 bits) as for case 6;
+            // a packs level_1_credits (low 32 bits) and the reward rate in basis points (high 32 bits) as for case 6;
             // b is ki_factor, c the target credits, d the windows per year (0 selects the built-in value)
             if (b > UINT32_MAX) {
                 return 4;
@@ -149,6 +149,27 @@ uint64_t entrypoint(const uint8_t *input)
                 return 4;
             }
             actual_result = compute_retained_ki_harvest(a, (uint32_t) b, c);
+            break;
+
+        case 20:
+            // a is the snapshot stake, b the current stake, c the seconds between them
+            actual_result = compute_measured_reward_rate(a, b, c);
+            break;
+
+        case 21:
+            // a is the previous reward rate (a uint32_t), b the measured rate
+            if (a > UINT32_MAX) {
+                return 4;
+            }
+            actual_result = compute_updated_reward_rate((uint32_t) a, b);
+            break;
+
+        case 22:
+            // a is a reward rate (a uint32_t)
+            if (a > UINT32_MAX) {
+                return 4;
+            }
+            actual_result = compute_reward_rate_bps((uint32_t) a);
             break;
 
         default:

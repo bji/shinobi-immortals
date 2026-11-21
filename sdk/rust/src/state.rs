@@ -93,8 +93,8 @@ fn c_string(field: &[u8]) -> &[u8] {
 
 // Program state ------------------------------------------------------------------------------------------------------
 
-/// The program state account (at [`crate::id::PROGRAM_STATE`]), which identifies the admin.  `ProgramState` in
-/// `program/inc/program_state.h`.
+/// The program state account (at [`crate::id::PROGRAM_STATE`]), which identifies the admin, and holds the reward rate
+/// measured by MeasureRewardRate.  `ProgramState` in `program/inc/program_state.h`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
 pub struct ProgramState {
@@ -102,6 +102,19 @@ pub struct ProgramState {
     pub data_type: u32,
     /// The admin, the only account that may perform the admin instructions
     pub admin_pubkey: Address,
+    /// The annual reward rate of a delegator to Shinobi Systems, as a fraction of 2^32 (see
+    /// [`crate::calc::compute_reward_rate_bps`]): set by Initialize, then updated by MeasureRewardRate.  LevelUp uses
+    /// it to calibrate every entry's level credit curve (see [`crate::calc::level_up_reward_bps`]).
+    pub reward_rate: u32,
+    /// The level credit window in which `reward_rate` was last set
+    pub reward_rate_window: u64,
+    /// The delegated stake of the reference stake account snapshot that the next measurement is made from; zero if
+    /// there is none
+    pub snapshot_stake: u64,
+    /// The epoch of that snapshot
+    pub snapshot_epoch: u64,
+    /// The start time of that epoch
+    pub snapshot_epoch_start_timestamp: i64,
 }
 
 
@@ -126,7 +139,7 @@ pub struct Authority {
 // Block --------------------------------------------------------------------------------------------------------------
 
 /// The configuration of a block, set when it is created and never changed.  `BlockConfiguration` in
-/// `program/inc/block.h`, which describes each field fully.
+/// `program/inc/block.h`, which describes each field fully.  Its fields are ordered so that it has no padding.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Pod, Zeroable)]
 pub struct BlockConfiguration {
@@ -134,42 +147,37 @@ pub struct BlockConfiguration {
     pub group_number: u32,
     /// The block's number within its group
     pub block_number: u32,
+    /// The price of a mystery at the start of the mystery phase
+    pub mystery_start_price_lamports: u64,
+    /// The final price of a mystery, the starting price of an auction, and the final price of a revealed entry
+    pub minimum_price_lamports: u64,
+    /// The price of a revealed entry at the start of its sale, if the block has no auction
+    pub final_start_price_lamports: u64,
+    /// Seconds from the completion of the block (`block_start_timestamp`) to the end of its mystery phase
+    pub mystery_phase_duration: u32,
+    /// Seconds after all mysteries are sold within which entries must be revealed, after which a mystery may be
+    /// refunded
+    pub reveal_period_duration: u32,
+    /// Seconds of each revealed entry's auction, or 0 if the block has no auction (see
+    /// [`BlockConfiguration::has_auction()`])
+    pub auction_duration: u32,
+    /// If the block has no auction, the seconds over which a revealed entry's price decays from
+    /// `final_start_price_lamports` to `minimum_price_lamports`; not used if it has one
+    pub final_sale_duration: u32,
+    /// Seconds after the completion of the block during which only whitelisted accounts may buy, or 0 if the block
+    /// has no whitelist period
+    pub whitelist_duration: u32,
     /// The number of entries in the block
     pub total_entry_count: u16,
     /// The number of entries that may be bought as mysteries (before reveal)
     pub total_mystery_count: u16,
-    /// Seconds from the completion of the block (`block_start_timestamp`) to the end of its mystery phase
-    pub mystery_phase_duration: u32,
-    /// The price of a mystery at the start of the mystery phase
-    pub mystery_start_price_lamports: u64,
-    /// Seconds after all mysteries are sold within which entries must be revealed, after which a mystery may be
-    /// refunded
-    pub reveal_period_duration: u32,
-    _padding0: [u8; 4],
-    /// The final price of a mystery, the starting price of an auction, and the final price of a revealed entry
-    pub minimum_price_lamports: u64,
-    /// Whether revealed entries are auctioned (nonzero) or sold at a decaying price (zero); see
-    /// [`BlockConfiguration::has_auction()`]
-    pub has_auction: u8,
-    _padding1: [u8; 3],
-    /// Seconds of each entry's auction, or of the decay of its price from `final_start_price_lamports` to
-    /// `minimum_price_lamports`
-    pub duration: u32,
-    /// The price of a revealed entry at the start of its sale, if the block has no auction
-    pub final_start_price_lamports: u64,
-    /// Seconds after the completion of the block during which only whitelisted accounts may buy, or 0 if the block
-    /// has no whitelist period
-    pub whitelist_duration: u32,
-    /// The expected annual stake reward rate, in basis points (490 is 4.90%), of a stake account delegated to the
-    /// Shinobi Systems validator, which calibrates the level credit curve of every entry of the block.  The block's
-    /// entries cannot be levelled up if it is 0.
-    pub expected_annual_reward_bps: u32,
 }
 
 impl BlockConfiguration {
-    /// Whether the block's revealed entries are auctioned (rather than sold at a decaying price)
+    /// Whether the block's revealed entries are auctioned (rather than sold at a decaying price): whether its
+    /// `auction_duration` is nonzero
     pub fn has_auction(&self) -> bool {
-        self.has_auction != 0
+        self.auction_duration != 0
     }
 }
 
@@ -363,11 +371,12 @@ pub struct Entry {
     _padding0: [u8; 2],
     /// The entry's minimum price, copied from its block's configuration
     pub minimum_price_lamports: u64,
-    /// Whether the entry is auctioned when revealed (see [`Entry::has_auction()`]), copied from its block's
-    /// configuration
+    /// Whether the entry is auctioned when revealed (see [`Entry::has_auction()`]): whether its block's
+    /// `auction_duration` is nonzero
     pub has_auction: u8,
     _padding1: [u8; 3],
-    /// Seconds of the entry's auction (increased by bids that extend it), or of the decay of its price
+    /// Seconds of the entry's auction (its block's `auction_duration`, increased by bids that extend it), or of the
+    /// decay of its price (its block's `final_sale_duration`)
     pub duration: u32,
     /// The price of the revealed entry at the start of its sale, if it has no auction
     pub non_auction_start_price_lamports: u64,
@@ -540,10 +549,10 @@ impl Whitelist {
 
 
 // The sizes of the C structures, as the program's compiler lays them out; the tests check every field's offset too
-const _: () = assert!(core::mem::size_of::<ProgramState>() == 36);
+const _: () = assert!(core::mem::size_of::<ProgramState>() == 72);
 const _: () = assert!(core::mem::size_of::<Authority>() == 16);
-const _: () = assert!(core::mem::size_of::<BlockConfiguration>() == 64);
-const _: () = assert!(core::mem::size_of::<Block>() == 104);
+const _: () = assert!(core::mem::size_of::<BlockConfiguration>() == 56);
+const _: () = assert!(core::mem::size_of::<Block>() == 96);
 const _: () = assert!(core::mem::size_of::<LevelMetadata>() == 308);
 const _: () = assert!(core::mem::size_of::<EntryMetadata>() == 2844);
 const _: () = assert!(core::mem::size_of::<Entry>() == 3192);
